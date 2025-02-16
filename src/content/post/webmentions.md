@@ -5,7 +5,7 @@ publishDate: "16 Jan 2025"
 tags: ["carcassonne", "astro", "programmeren"]
 ---
 
-### Beter worden in Carcassonne: een nieuwe tool op mijn site
+## Beter worden in Carcassonne: een nieuwe tool op mijn site
 
 Vorig jaar heb ik meegedaan aan het NK Carcassonne en ik eindigde op de zesde plaats. Om mijn spel te verbeteren, wil ik tegels beter kunnen tellen. Ik weet eigenlijk nooit precies hoeveel van elk er in het basisspel zitten.
 
@@ -15,7 +15,7 @@ De oefening is gebouwd als een kleine module binnen Astro. Astro is een modern f
 
 [Oefen hier](/carcassonnequiz)
 
-Alle tegelafbeeldingen komen van [Wikicarpedia](https://wikicarpedia.com/){target="_blank" rel="noopener noreferrer"}.
+Alle tegelafbeeldingen komen van [Wikicarpedia](https://wikicarpedia.com/).
 
 De code:
 
