@@ -10,7 +10,7 @@ export function fancyJsHelper() {
   return "Probeer dat met YAML!";
 }
 
-<BaseLayout title={frontmatter.title} fancyJsHelper={fancyJsHelper}>
+<Base title={frontmatter.title} fancyJsHelper={fancyJsHelper}>
   Welkom bij de Carcassonne Quiz
 
 Klik op _antwoorden_ of druk op enter om je antwoord op te geven en verder te gaan. Alle tegelafbeeldingen komen van [Wikicarpedia](https://wikicarpedia.com/).
@@ -18,4 +18,4 @@ Klik op _antwoorden_ of druk op enter om je antwoord op te geven en verder te ga
 import CarcassonneQuiz from '../components/CarcassonneQuiz.astro';
 
 <CarcassonneQuiz client:load />
-</BaseLayout>
+</Base>
