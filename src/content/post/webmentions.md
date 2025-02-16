@@ -13,9 +13,9 @@ Om mezelf (en anderen) te helpen, heb ik een oefening gemaakt die je op mijn web
 
 De oefening is gebouwd als een kleine module binnen Astro. Astro is een modern framework voor statische websites. Hoewel het op het eerste gezicht een eenvoudige webpagina lijkt, bevat het een dynamisch script dat willekeurige tegels toont, je antwoord controleert en een score bijhoudt.
 
-(Oefen hier)[/carcassonnequiz]
+[Oefen hier](/carcassonnequiz)
 
-Alle tegelafbeeldingen komen van[Wikicarpedia](https://wikicarpedia.com/.
+Alle tegelafbeeldingen komen van [Wikicarpedia](https://wikicarpedia.com/){target="_blank" rel="noopener noreferrer"}.
 
 De code:
 
