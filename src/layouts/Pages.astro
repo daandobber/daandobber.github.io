@@ -7,15 +7,9 @@ import Header from "@/components/layout/Header.astro";
 import { siteConfig } from "@/site.config";
 import type { SiteMeta } from "@/types";
 
-interface Props {
-	meta: SiteMeta;
-}
-
-const {
-	meta: { description = siteConfig.description, ogImage, title },
-} = Astro.props;
+const metaData: SiteMeta = Astro.props.meta || {};
+const { description = siteConfig.description, ogImage, title } = metaData;
 ---
-
 <html class="scroll-smooth" lang={siteConfig.lang}>
 	<head>
 		<BaseHead description={description} ogImage={ogImage} title={title} />
