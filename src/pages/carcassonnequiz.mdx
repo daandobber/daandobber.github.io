@@ -1,0 +1,13 @@
+import Layout from '../layouts/Base.astro';
+import CarcassonneQuiz from '../components/CarcassonneQuiz.astro';
+
+export const meta = {
+  title: 'Carcassonne Quiz',
+  description: "We een leuke quiz",
+};
+
+<Layout meta={meta}>
+  <h1>Welkom bij de Carcassonne Quiz</h1>
+  <p>Je kunt hier de quiz spelen:</p>
+  <CarcassonneQuiz client:load />
+</Layout>
