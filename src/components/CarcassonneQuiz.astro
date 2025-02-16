@@ -12,6 +12,7 @@
   }
   table {
     border-collapse: collapse;
+    margin-top: 1em; /* Zodat de tabel iets lager staat */
   }
   table, th, td {
     border: 1px solid #ccc;
@@ -36,8 +37,10 @@
 
   <div id="results">
     <h3>Resultaat</h3>
-    <!-- Totaal resultaat ook bovenin tonen -->
+    <!-- "Nog een keer" knop én totaal-resultaat bovenaan -->
+    <button id="restartQuizBtn" style="display: none;">Nog een keer</button>
     <p id="total-result-top"></p>
+    
     <table>
       <thead>
         <tr>
@@ -49,10 +52,9 @@
       </thead>
       <tbody id="results-table-body"></tbody>
     </table>
-    <!-- Totaal resultaat onderin -->
+    
+    <!-- Totaal resultaat onderaan -->
     <p id="total-result-bottom"></p>
-    <!-- 'Nog een keer' knop om te herstarten -->
-    <button id="restartQuizBtn" style="display: none;">Nog een keer</button>
   </div>
 </div>
 
@@ -192,7 +194,7 @@
       tableBody.appendChild(row);
     });
 
-    // Tekst boven en onder de tabel
+    // Tekst boven én onder de tabel
     const resultText = `Je had ${goodCount} van de ${results.length} goed.`;
     document.getElementById('total-result-top').textContent = resultText;
     document.getElementById('total-result-bottom').textContent = resultText;
