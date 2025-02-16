@@ -37,11 +37,7 @@ export const menuLinks: { path: string; title: string }[] = [
 	},
 	{
 		path: "/notes/",
-		title: "Notities",
-	},
-	{
-		path: "/carcassonnequiz/",
-		title: "Carcassonne Quiz",
+		title: "Microblog",
 	},
 ];
 
