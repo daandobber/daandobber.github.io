@@ -1,5 +1,6 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
+import CarcassonneQuizComponent from "../components/CarcassonneQuiz.astro";
 
 const meta = {
 	description: "De pagina bestaat niet",
@@ -10,4 +11,5 @@ const meta = {
 <PageLayout meta={meta}>
 	<h1 class="title mb-6">404 | Oh nee wat erg, deze pagina bestaat niet</h1>
 	<p class="mb-8">Druk gewoon ergens in het menu ofzo</p>
+	<CarcassonneQuizComponent client:load />
 </PageLayout>
