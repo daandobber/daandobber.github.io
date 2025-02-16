@@ -49,7 +49,6 @@
   button {
 		@apply border border-black;
 	}
-}
 
 	.admonition {
 		--admonition-color: var(--tw-prose-quotes);
