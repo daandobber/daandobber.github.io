@@ -1,15 +1,14 @@
 ---
-import BaseLayout from '../../layouts/Base.astro';
-import CarcassonneQuiz from '../components/CarcassonneQuiz.astro';
+import PageLayout from "@/layouts/Base.astro";
+import CarcassonneQuiz from '@/components/CarcassonneQuiz.astro';
 
 const meta = {
 	title: "Carcassonne Quiz",
 	description: "Wel een leuke quiz",
-	publishDate: "16 februari 2025"
 };
 ---
 
-<BaseLayout meta={meta}>
+<PageLayout meta={meta}>
 	<h1 class="title mb-6">Welkom bij de Carcassonne Quiz</h1>
 	<p>
 		Klik op <em>antwoorden</em> of druk op enter om je antwoord op te geven en verder te gaan.
@@ -17,4 +16,4 @@ const meta = {
 		<a href="https://wikicarpedia.com/" target="_blank" rel="noopener noreferrer">Wikicarpedia</a>.
 	</p>
 	<CarcassonneQuiz client:load />
-</BaseLayout>
+</PageLayout>
