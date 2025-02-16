@@ -1,5 +1,5 @@
 ---
-import { type CollectionEntry } from "astro:content";
+import { type CollectionEntry, getCollection } from "astro:content";
 import SocialList from "@/components/SocialList.astro";
 import PostPreview from "@/components/blog/PostPreview.astro";
 import Note from "@/components/note/Note.astro";
@@ -35,4 +35,20 @@ const allPostsByDate = allPosts
 			}
 		</ul>
 	</section>
+	{
+		latestNotes.length > 0 && (
+			<section class="mt-16">
+				<h2 class="title text-accent mb-6 text-xl">
+					<a href="/notes/">Notes</a>
+				</h2>
+				<ul class="space-y-4" role="list">
+					{latestNotes.map((note) => (
+						<li>
+							<Note note={note} as="h3" isPreview />
+						</li>
+					))}
+				</ul>
+			</section>
+		)
+	}
 </PageLayout>
