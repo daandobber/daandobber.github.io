@@ -47,7 +47,7 @@
 	}
 
   button {
-		@apply border border-black;
+		@apply border border-black px-3 py-2;
 	}
 
 	.admonition {
