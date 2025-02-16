@@ -23,8 +23,8 @@ import rehypeUnwrapImages from "rehype-unwrap-images";
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://astronaut.github.io',
-	base: 'my-repo',
+	site: 'https://daandobber.github.io',
+	base: 'daandobber.github.io',
 	image: {
 		domains: ["webmention.io"],
 	},
