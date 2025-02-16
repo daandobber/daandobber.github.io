@@ -5,9 +5,17 @@ import ThemeProvider from "@/components/ThemeProvider.astro";
 import Footer from "@/components/layout/Footer.astro";
 import Header from "@/components/layout/Header.astro";
 import { siteConfig } from "@/site.config";
+import type { SiteMeta } from "@/types";
 
-const { description = siteConfig.description, ogImage, title } = Astro.props;
+interface Props {
+	meta: SiteMeta;
+}
+
+const {
+	meta: { description = siteConfig.description, ogImage, title },
+} = Astro.props;
 ---
+
 <html class="scroll-smooth" lang={siteConfig.lang}>
 	<head>
 		<BaseHead description={description} ogImage={ogImage} title={title} />
