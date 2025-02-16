@@ -1,15 +1,13 @@
-import Layout from '../layouts/Base.astro';
+---
+layout: ../layouts/Base.astro
+title: 'Carcassonne Quiz'
+description: 'We een leuke quiz'
+---
+
+## Welkom bij de Carcassonne Quiz
+
+Klik op _antwoorden_ of druk op enter om je antwoord op te geven en verder te gaan. Alle tegelafbeeldingen komen van [Wikicarpedia](https://wikicarpedia.com/).
+
 import CarcassonneQuiz from '../components/CarcassonneQuiz.astro';
 
-export const meta = {
-  title: 'Carcassonne Quiz',
-  description: "We een leuke quiz",
-};
-
-<Layout meta={meta}>
-  ## Welkom bij de Carcassonne Quiz/
-
-  Klik op _antwoorden_ of druk op enter om je antwoord op te geven en verder te gaan. Alle tegelafbeeldingen komen van [Wikicarpedia](https://wikicarpedia.com/)./
-
-  <CarcassonneQuiz client:load />
-</Layout>
+<CarcassonneQuiz client:load />
