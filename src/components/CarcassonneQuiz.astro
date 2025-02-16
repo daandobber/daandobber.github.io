@@ -12,7 +12,7 @@
   }
   table {
     border-collapse: collapse;
-    margin-top: 1em; /* Zodat de tabel iets lager staat */
+    margin-top: 1em;
   }
   table, th, td {
     border: 1px solid #ccc;
@@ -28,6 +28,7 @@
 
 <div id="quiz-wrapper">
   <h2>Hoe vaak zit deze tegel in het basisspel?</h2>
+  
   <div id="quiz-container">
     <img id="tegel-image" src="" alt="Tegel">
     <input type="number" id="aantal" placeholder="Aantal">
@@ -37,10 +38,12 @@
 
   <div id="results">
     <h3>Resultaat</h3>
-    <!-- "Nog een keer" knop én totaal-resultaat bovenaan -->
+    <!-- “Nog een keer” knop boven de tabel -->
     <button id="restartQuizBtn" style="display: none;">Nog een keer</button>
-    <p id="total-result-top"></p>
     
+    <!-- Totaal resultaat bovenaan -->
+    <p id="total-result-top"></p>
+
     <table>
       <thead>
         <tr>
@@ -52,7 +55,7 @@
       </thead>
       <tbody id="results-table-body"></tbody>
     </table>
-    
+
     <!-- Totaal resultaat onderaan -->
     <p id="total-result-bottom"></p>
   </div>
@@ -134,7 +137,7 @@
         return;
       }
 
-      feedback.textContent = userAnswer === tile.count
+      feedback.textContent = (userAnswer === tile.count)
         ? 'Goed!'
         : 'Fout! Het juiste aantal is: ' + tile.count;
 
@@ -194,12 +197,12 @@
       tableBody.appendChild(row);
     });
 
-    // Tekst boven én onder de tabel
+    // Tekst boven en onder de tabel
     const resultText = `Je had ${goodCount} van de ${results.length} goed.`;
     document.getElementById('total-result-top').textContent = resultText;
     document.getElementById('total-result-bottom').textContent = resultText;
 
-    // 'Nog een keer' knop tonen
+    // “Nog een keer” knop tonen
     document.getElementById('restartQuizBtn').style.display = 'inline-block';
   }
 
