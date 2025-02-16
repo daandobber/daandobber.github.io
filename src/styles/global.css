@@ -46,6 +46,11 @@
 		@apply text-accent-2 text-2xl font-semibold;
 	}
 
+  button {
+		@apply border border-black;
+	}
+}
+
 	.admonition {
 		--admonition-color: var(--tw-prose-quotes);
 		@apply my-4 border-s-2 border-(--admonition-color) py-4 ps-4;
