@@ -7,6 +7,10 @@ import Header from "@/components/layout/Header.astro";
 import { siteConfig } from "@/site.config";
 import type { SiteMeta } from "@/types";
 
+interface Props {
+	meta: SiteMeta;
+}
+
 const {
   title,
   description = siteConfig.description,
