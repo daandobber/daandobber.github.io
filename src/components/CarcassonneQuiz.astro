@@ -1,4 +1,227 @@
----
+<style>
+  #tegel-image {
+    max-width: 200px;
+    display: block;
+    margin-bottom: 1em;
+  }
+  #quiz-container, #results {
+    margin: 1em 0;
+  }
+  #results {
+    display: none; /* Verberg resultaten in het begin */
+  }
+  table {
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+  .correct {
+    color: green;
+  }
+  .incorrect {
+    color: red;
+  }
+</style>
+
+<div id="quiz-wrapper">
+  <h2>Hoe vaak zit deze tegel in het basisspel?</h2>
+  <div id="quiz-container">
+    <img id="tegel-image" src="" alt="Tegel">
+    <input type="number" id="aantal" placeholder="Aantal">
+    <button id="actieKnop">Antwoorden</button>
+    <p id="feedback"></p>
+  </div>
+
+  <div id="results">
+    <h3>Resultaat</h3>
+    <!-- Totaal resultaat ook bovenin tonen -->
+    <p id="total-result-top"></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Tegel</th>
+          <th>Jouw antwoord</th>
+          <th>Juiste antwoord</th>
+          <th>Resultaat</th>
+        </tr>
+      </thead>
+      <tbody id="results-table-body"></tbody>
+    </table>
+    <!-- Totaal resultaat onderin -->
+    <p id="total-result-bottom"></p>
+    <!-- 'Nog een keer' knop om te herstarten -->
+    <button id="restartQuizBtn" style="display: none;">Nog een keer</button>
+  </div>
+</div>
+
+<script type="module">
+  // Array van tegels
+  const tiles = [
+      { image: '/carcassonnequiz/01-ffrf-02-c.png', count: 2 },
+      { image: '/carcassonnequiz/02-ffff-04-c.png', count: 4 },
+      { image: '/carcassonnequiz/03-cccc-01-s.png', count: 1 },
+      { image: '/carcassonnequiz/04-crfr-04.png',   count: 4 },
+      { image: '/carcassonnequiz/05-cfff-05.png',   count: 5 },
+      { image: '/carcassonnequiz/06-fcfc-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/07-fcfc-01.png',   count: 1 },
+      { image: '/carcassonnequiz/08-cfcf-03.png',   count: 3 },
+      { image: '/carcassonnequiz/09-cffc-02.png',   count: 2 },
+      { image: '/carcassonnequiz/10-crrf-03.png',   count: 3 },
+      { image: '/carcassonnequiz/11-cfrr-03.png',   count: 3 },
+      { image: '/carcassonnequiz/12-crrr-03.png',   count: 3 },
+      { image: '/carcassonnequiz/13-ccff-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/14-ccff-03.png',   count: 3 },
+      { image: '/carcassonnequiz/15-crrc-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/16-crrc-03.png',   count: 3 },
+      { image: '/carcassonnequiz/17-ccfc-01-s.png', count: 1 },
+      { image: '/carcassonnequiz/18-ccfc-03.png',   count: 3 },
+      { image: '/carcassonnequiz/19-ccrc-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/20-ccrc-01.png',   count: 1 },
+      { image: '/carcassonnequiz/21-rfrf-08.png',   count: 8 },
+      { image: '/carcassonnequiz/22-ffrr-09.png',   count: 9 },
+      { image: '/carcassonnequiz/23-frrr-04.png',   count: 4 },
+      { image: '/carcassonnequiz/24-ffff-01.png',   count: 1 }
+  ];
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  let currentIndex = 0;
+  let hasChecked = false;
+  const results = [];
+
+  function loadTile() {
+    const quizContainer = document.getElementById('quiz-container');
+    const resultContainer = document.getElementById('results');
+
+    if (currentIndex >= tiles.length) {
+      quizContainer.style.display = 'none';
+      showResults();
+      return;
+    }
+
+    quizContainer.style.display = 'block';
+    resultContainer.style.display = 'none';
+
+    const tile = tiles[currentIndex];
+    document.getElementById('tegel-image').src = tile.image;
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('aantal').value = '';
+
+    const button = document.getElementById('actieKnop');
+    button.textContent = 'Antwoorden';
+    hasChecked = false;
+  }
+
+  function nextOrCheck() {
+    const feedback = document.getElementById('feedback');
+    const userAnswer = parseInt(document.getElementById('aantal').value, 10);
+    const tile = tiles[currentIndex];
+    const button = document.getElementById('actieKnop');
+
+    if (!hasChecked) {
+      if (isNaN(userAnswer)) {
+        feedback.textContent = 'Vul een getal in.';
+        return;
+      }
+
+      feedback.textContent = userAnswer === tile.count
+        ? 'Goed!'
+        : 'Fout! Het juiste aantal is: ' + tile.count;
+
+      results.push({
+        image: tile.image,
+        correctAnswer: tile.count,
+        userAnswer: userAnswer,
+        isCorrect: userAnswer === tile.count
+      });
+
+      hasChecked = true;
+      button.textContent = 'Volgende';
+    } else {
+      currentIndex++;
+      loadTile();
+    }
+  }
+
+  function showResults() {
+    const resultContainer = document.getElementById('results');
+    resultContainer.style.display = 'block';
+
+    const tableBody = document.getElementById('results-table-body');
+    tableBody.innerHTML = '';
+
+    let goodCount = 0;
+    results.forEach((item) => {
+      if (item.isCorrect) goodCount++;
+
+      const row = document.createElement('tr');
+
+      // Afbeelding
+      const imgCell = document.createElement('td');
+      const imgElement = document.createElement('img');
+      imgElement.src = item.image;
+      imgElement.style.maxWidth = '60px';
+      imgElement.alt = 'Tegel';
+      imgCell.appendChild(imgElement);
+      row.appendChild(imgCell);
+
+      // Jouw antwoord
+      const userAnswerCell = document.createElement('td');
+      userAnswerCell.textContent = item.userAnswer;
+      row.appendChild(userAnswerCell);
+
+      // Juiste antwoord
+      const correctAnswerCell = document.createElement('td');
+      correctAnswerCell.textContent = item.correctAnswer;
+      row.appendChild(correctAnswerCell);
+
+      // Resultaat
+      const resultCell = document.createElement('td');
+      resultCell.textContent = item.isCorrect ? '✓' : '✗';
+      resultCell.classList.add(item.isCorrect ? 'correct' : 'incorrect');
+      row.appendChild(resultCell);
+
+      tableBody.appendChild(row);
+    });
+
+    // Tekst boven en onder de tabel
+    const resultText = `Je had ${goodCount} van de ${results.length} goed.`;
+    document.getElementById('total-result-top').textContent = resultText;
+    document.getElementById('total-result-bottom').textContent = resultText;
+
+    // 'Nog een keer' knop tonen
+    document.getElementById('restartQuizBtn').style.display = 'inline-block';
+  }
+
+  function restartQuiz() {
+    currentIndex = 0;
+    results.length = 0;
+    shuffle(tiles);
+    document.getElementById('quiz-container').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    loadTile();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    shuffle(tiles);
+    loadTile();
+    document.getElementById('actieKnop').addEventListener('click', nextOrCheck);
+    document.getElementById('aantal').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        nextOrCheck();
+      }
+    });
+    document.getElementById('restartQuizBtn').addEventListener('click', restartQuiz);
+  });
+</script>
 ---
 <style>
   #tegel-image {
