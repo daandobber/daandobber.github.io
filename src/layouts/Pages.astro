@@ -1,5 +1,4 @@
 ---
-// Import the necessary components
 import BaseHead from "@/components/BaseHead.astro";
 import SkipLink from "@/components/SkipLink.astro";
 import ThemeProvider from "@/components/ThemeProvider.astro";
@@ -8,8 +7,11 @@ import Header from "@/components/layout/Header.astro";
 import { siteConfig } from "@/site.config";
 import type { SiteMeta } from "@/types";
 
-// Access frontmatter directly
-const { title, description = siteConfig.description, ogImage } = Astro.frontmatter;
+const {
+  title,
+  description = siteConfig.description,
+  ogImage
+} = Astro.props;
 ---
 <html class="scroll-smooth" lang={siteConfig.lang}>
   <head>
