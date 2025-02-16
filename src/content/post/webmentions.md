@@ -1,65 +1,224 @@
 ---
-title: "Adding Webmentions to Astro Cactus"
-description: "This post describes the process of adding webmentions to your own site"
-publishDate: "11 Oct 2023"
-tags: ["webmentions", "astro", "social"]
-updatedDate: 6 December 2024
+title: "Aantal tegels in Carcassonne oefenen"
+description: "Een eenvoudige tool om de tegelverdeling van Carcassonne te oefenen. Gemaakt als een interactieve quiz met Astro, waarin tegels willekeurig worden getoond en het aantal moet worden geraden."
+publishDate: "16 Jan 2025"
+tags: ["carcassonne", "astro", "programmeren"]
 ---
 
-## TLDR
+### Beter worden in Carcassonne: een nieuwe tool op mijn site
 
-1. Add a link on your homepage to either your GitHub profile and/or email address as per [IndieLogin's](https://indielogin.com/setup) instructions. You _could_ do this via `src/components/SocialList.astro`, just be sure to include `isWebmention` to the relevant link if doing so.
-2. Create an account @ [Webmention.io](https://webmention.io/) by entering your website's address.
-3. Add the link feed and api key to a `.env` file with the key `WEBMENTION_URL` and `WEBMENTION_API_KEY` respectively, you could rename `.env.example` found in this template. You can also add the optional `WEBMENTION_PINGBACK` link here too.
-4. Go to [brid.gy](https://brid.gy/) and sign-in to each social account[s] you wish to link.
-5. Publish and build your website, remember to add the api key, and it should now be ready to receive webmentions!
+Vorig jaar heb ik meegedaan aan het NK Carcassonne en ik eindigde op de zesde plaats. Om mijn spel te verbeteren, wil ik tegels beter kunnen tellen. Ik weet eigenlijk nooit precies hoeveel van elk er in het basisspel zitten.
 
-## What are webmentions
+Om mezelf (en anderen) te helpen, heb ik een oefening gemaakt die je op mijn website kunt spelen. Het concept is simpel: je krijgt een afbeelding van een tegel te zien en moet invoeren hoeveel keer deze in het basisspel voorkomt.
 
-Put simply, it's a way to show users who like, comment, repost and more, on various pages on your website via social media.
+De oefening is gebouwd als een kleine module binnen Astro. Astro is een modern framework voor statische websites. Hoewel het op het eerste gezicht een eenvoudige webpagina lijkt, bevat het een dynamisch script dat willekeurige tegels toont, je antwoord controleert en een score bijhoudt.
 
-This theme displays the number of likes, mentions and replies each blog post receives. There are a couple of more webmentions that I haven't included, like reposts, which are currently filtered out, but shouldn't be too difficult to include.
+(Oefen hier)[/carcassonnequiz]
 
-## Steps to add it to your own site
+Alle tegelafbeeldingen komen van[Wikicarpedia](https://wikicarpedia.com/.
 
-Your going to have to create a couple of accounts to get things up-and-running. But, the first thing you need to ensure is that your social links are correct.
-
-### Add link(s) to your profile(s)
-
-Firstly, you need to add a link on your site to prove ownership. If you have a look at [IndieLogin's](https://indielogin.com/setup) instructions, it gives you 2 options, either an email address and/or GitHub account. I've created the component `src/components/SocialList.astro` where you can add your details into the `socialLinks` array, just include the `isWebmention` property to the relevant link which will add the `rel="me authn"` attribute. Whichever way you do it, make sure you have a link in your markup as per IndieLogin's [instructions](https://indielogin.com/setup)
+De code:
 
 ```html
-<a href="https://github.com/your-username" rel="me">GitHub</a>
+---
+---
+<style>
+  #tegel-image {
+    max-width: 200px;
+    display: block;
+    margin-bottom: 1em;
+  }
+  #quiz-container, #results {
+    margin: 1em 0;
+  }
+  #results {
+    display: none;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  table, th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+  .correct {
+    color: green;
+  }
+  .incorrect {
+    color: red;
+  }
+</style>
+
+<div id="quiz-wrapper">
+  <h2>Carcassonne Quiz</h2>
+  <div id="quiz-container">
+    <img id="tegel-image" src="" alt="Tegel">
+    <input type="number" id="aantal" placeholder="Aantal">
+    <button id="actieKnop">Antwoorden</button>
+    <p id="feedback"></p>
+  </div>
+
+  <div id="results">
+    <h3>Resultaat</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Tegel</th>
+          <th>Jouw antwoord</th>
+          <th>Juiste antwoord</th>
+          <th>Resultaat</th>
+        </tr>
+      </thead>
+      <tbody id="results-table-body"></tbody>
+    </table>
+    <p id="total-result"></p>
+  </div>
+</div>
+
+<script type="module">
+  const tiles = [
+      { image: '/carcassonnequiz/01-ffrf-02-c.png', count: 2 },
+      { image: '/carcassonnequiz/02-ffff-04-c.png', count: 4 },
+      { image: '/carcassonnequiz/03-cccc-01-s.png', count: 1 },
+      { image: '/carcassonnequiz/04-crfr-04.png',   count: 4 },
+      { image: '/carcassonnequiz/05-cfff-05.png',   count: 5 },
+      { image: '/carcassonnequiz/06-fcfc-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/07-fcfc-01.png',   count: 1 },
+      { image: '/carcassonnequiz/08-cfcf-03.png',   count: 3 },
+      { image: '/carcassonnequiz/09-cffc-02.png',   count: 2 },
+      { image: '/carcassonnequiz/10-crrf-03.png',   count: 3 },
+      { image: '/carcassonnequiz/11-cfrr-03.png',   count: 3 },
+      { image: '/carcassonnequiz/12-crrr-03.png',   count: 3 },
+      { image: '/carcassonnequiz/13-ccff-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/14-ccff-03.png',   count: 3 },
+      { image: '/carcassonnequiz/15-crrc-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/16-crrc-03.png',   count: 3 },
+      { image: '/carcassonnequiz/17-ccfc-01-s.png', count: 1 },
+      { image: '/carcassonnequiz/18-ccfc-03.png',   count: 3 },
+      { image: '/carcassonnequiz/19-ccrc-02-s.png', count: 2 },
+      { image: '/carcassonnequiz/20-ccrc-01.png',   count: 1 },
+      { image: '/carcassonnequiz/21-rfrf-08.png',   count: 8 },
+      { image: '/carcassonnequiz/22-ffrr-09.png',   count: 9 },
+      { image: '/carcassonnequiz/23-frrr-04.png',   count: 4 },
+      { image: '/carcassonnequiz/24-ffff-01.png',   count: 1 }
+  ];
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  let currentIndex = 0;
+  let hasChecked = false;
+  const results = [];
+
+  function loadTile() {
+    const quizContainer = document.getElementById('quiz-container');
+    const resultContainer = document.getElementById('results');
+
+    if (currentIndex >= tiles.length) {
+      quizContainer.style.display = 'none';
+      showResults();
+      return;
+    }
+
+    quizContainer.style.display = 'block';
+    resultContainer.style.display = 'none';
+
+    const tile = tiles[currentIndex];
+    document.getElementById('tegel-image').src = tile.image;
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('aantal').value = '';
+
+    const button = document.getElementById('actieKnop');
+    button.textContent = 'Antwoorden';
+    hasChecked = false;
+  }
+
+  function nextOrCheck() {
+    const feedback = document.getElementById('feedback');
+    const userAnswer = parseInt(document.getElementById('aantal').value, 10);
+    const tile = tiles[currentIndex];
+    const button = document.getElementById('actieKnop');
+
+    if (!hasChecked) {
+      if (isNaN(userAnswer)) {
+        feedback.textContent = 'Vul een getal in.';
+        return;
+      }
+
+      feedback.textContent = userAnswer === tile.count
+        ? 'Goed!'
+        : 'Fout! Het juiste aantal is: ' + tile.count;
+
+      results.push({
+        image: tile.image,
+        correctAnswer: tile.count,
+        userAnswer: userAnswer,
+        isCorrect: userAnswer === tile.count
+      });
+
+      hasChecked = true;
+      button.textContent = 'Volgende';
+    } else {
+      currentIndex++;
+      loadTile();
+    }
+  }
+
+  function showResults() {
+    const resultContainer = document.getElementById('results');
+    resultContainer.style.display = 'block';
+
+    const tableBody = document.getElementById('results-table-body');
+    tableBody.innerHTML = '';
+
+    let goodCount = 0;
+    results.forEach((item) => {
+      if (item.isCorrect) goodCount++;
+
+      const row = document.createElement('tr');
+
+      const imgCell = document.createElement('td');
+      const imgElement = document.createElement('img');
+      imgElement.src = item.image;
+      imgElement.style.maxWidth = '60px';
+      imgElement.alt = 'Tegel';
+      imgCell.appendChild(imgElement);
+      row.appendChild(imgCell);
+
+      const userAnswerCell = document.createElement('td');
+      userAnswerCell.textContent = item.userAnswer;
+      row.appendChild(userAnswerCell);
+
+      const correctAnswerCell = document.createElement('td');
+      correctAnswerCell.textContent = item.correctAnswer;
+      row.appendChild(correctAnswerCell);
+
+      const resultCell = document.createElement('td');
+      resultCell.textContent = item.isCorrect ? '✓' : '✗';
+      resultCell.classList.add(item.isCorrect ? 'correct' : 'incorrect');
+      row.appendChild(resultCell);
+
+      tableBody.appendChild(row);
+    });
+
+    document.getElementById('total-result').textContent =
+      `Je had ${goodCount} van de ${results.length} goed.`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    shuffle(tiles);
+    loadTile();
+    document.getElementById('actieKnop').addEventListener('click', nextOrCheck);
+    document.getElementById('aantal').addEventListener('keydown', (event) => {
+     if (event.key === 'Enter') {
+       nextOrCheck();
+    }
+  });
+});
+</script>
 ```
-
-### Sign up to Webmention.io
-
-Next, head over to [Webmention.io](https://webmention.io/) and create an account by signing in with your domain name, e.g. `https://astro-cactus.chriswilliams.dev/`. Please note that .app TLDs don't function correctly. Once in, it will give you a couple of links for your domain to accept webmentions. Make a note of these and create a `.env` file (this template include an example `.env.example` which you could rename). Add the link feed and api key with the key/values of `WEBMENTION_URL` and `WEBMENTION_API_KEY` respectively, and the optional `WEBMENTION_PINGBACK` url if required. Please try not to publish this to a repository!
-
-:::note
-You don't have to include the pingback link. Maybe coincidentally, but after adding it I started to receive a higher frequency of spam in my mailbox, informing me that my website could be better. TBH they're not wrong. I've now removed it, but it's up to you.
-:::
-
-### Sign up to Brid.gy
-
-You're now going to have to use [brid.gy](https://brid.gy/). As the name suggests, it links your website to your social media accounts. For every account you want to set up (e.g. Mastodon), click on the relevant button and connect each account you want brid.gy to search. Just to note again, brid.gy currently has an issue with .app TLDs.
-
-## Testing everything works
-
-With everything set, it's now time to build and publish your website. **REMEMBER** to set your environment variables `WEBMENTION_API_KEY` & `WEBMENTION_URL` with your host.
-
-You can check to see if everything is working by sending a test webmention via [webmentions.rocks](https://webmention.rocks/receive/1). Log in with your domain, enter the auth code, and then the url of the page you want to test. For example, to test this page I would add `https://astro-cactus.chriswilliams.dev/posts/webmentions/`. To view it on your website, rebuild or (re)start dev mode locally, and you should see the result at the bottom of your page.
-
-You can also view any test mentions in the browser via their [api](https://github.com/aaronpk/webmention.io#api).
-
-## Things to add, things to consider
-
-- At the moment, fresh webmentions are only fetched on a rebuild or restarting dev mode, which obviously means if you don't update your site very often you wont get a lot of new content. It should be quite trivial to add a cron job to run the `getAndCacheWebmentions()` function in `src/utils/webmentions.ts` and populate your blog with new content. This is probably what I'll add next as a github action.
-
-- I have seen some mentions have duplicates. Unfortunately, they're quite difficult to filter out as they have different id's.
-
-- I'm not a huge fan of the little external link icon for linking to comments/replies. It's not particularly great on mobile due to its size, and will likely change it in the future.
-
-## Acknowledgements
-
-Many thanks to [Kieran McGuire](https://github.com/chrismwilliams/astro-theme-cactus/issues/107#issue-1863931105) for sharing this with me, and the helpful posts. I'd never heard of webmentions before, and now with this update hopefully others will be able to make use of them. Additionally, articles and examples from [kld](https://kld.dev/adding-webmentions/) and [ryanmulligan.dev](https://ryanmulligan.dev/blog/) really helped in getting this set up and integrated, both a great resource if you're looking for more information!
