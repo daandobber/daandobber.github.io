@@ -7,8 +7,16 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - name: Haal repo op
+      - name: Haal volledige repo op
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Zorgt ervoor dat alle bestanden correct worden opgehaald
+
+      - name: Controleer repo-structuur
+        run: ls -lah
+
+      - name: Controleer scripts map
+        run: ls -lah scripts/
 
       - name: Installeer Python
         uses: actions/setup-python@v4
@@ -18,8 +26,15 @@ jobs:
       - name: Installeer dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Draai scraper script
-        run: python scr/scripts/scraper-kruidvat-odorex.py
+      - name: Controleer of script bestaat en draai het
+        run: |
+          if [ -f scripts/scraper-kruidvat-odorex.py ]; then
+            echo "✅ Script gevonden! Nu uitvoeren..."
+            python scripts/scraper-kruidvat-odorex.py
+          else
+            echo "❌ FOUT: Script niet gevonden in scripts/!"
+            exit 1
+          fi
 
       - name: Commit en push data
         run: |
