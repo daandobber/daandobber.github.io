@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 url = "https://www.kruidvat.nl/odorex-0-perfume-deodorant-roller/p/4350718"
-output_file = "src/pages/scrapers.md"  # Zorg dat dit in Astro’s content-map staat
+output_file = "src/pages/scrapers.md"  # Zorg dat dit pad klopt
 
 def check_offer_and_price():
     try:
@@ -35,10 +35,14 @@ def check_offer_and_price():
     return offer, price
 
 def save_to_markdown(offer, price):
-    now = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.today().strftime("%Y-%m-%d")  # Huidige datum
     md_content = f"""---
 title: "Laatste prijsupdate"
-date: "{now}"
+layout: "../layouts/Base.astro"
+meta:
+  articleDate: "{today}"
+  description: "De laatste prijsupdate van Kruidvat Odorex"
+  ogImage: ""
 price: "{price}"
 offer: "{offer}"
 ---
