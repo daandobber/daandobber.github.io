@@ -1,59 +1,57 @@
 import requests
 from bs4 import BeautifulSoup
-import time
-import random
+from datetime import datetime
 
 url = "https://www.kruidvat.nl/odorex-0-perfume-deodorant-roller/p/4350718"
+output_file = "src/content/kruidvat/data.md"  # Zorg dat dit in Astro’s content-map staat
 
 def check_offer_and_price():
-    print("[INFO] Ophalen van pagina...")
-    
     try:
         response = requests.get(
             url, 
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
-            timeout=10  # Timeout van 10 seconden
+            timeout=10
         )
-        response.raise_for_status()  # Foutmelding geven bij slechte response
-    except requests.exceptions.Timeout:
-        print("[ERROR] Timeout! De site reageert niet snel genoeg.")
-        return "Fout bij ophalen pagina", "Onbekende prijs"
+        response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"[ERROR] HTTP-fout: {e}")
-        return "Fout bij ophalen pagina", "Onbekende prijs"
+        return None, None
 
-    print("[INFO] Pagina succesvol opgehaald, starten met parsing...")
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Check offer
     offer_element = soup.find(class_="promotion-labels")
     offer = "Er is een actie" if offer_element else "Er is geen actie"
-    print(f"[INFO] Actie status: {offer}")
 
     # Check price
-    price_decimal_element = soup.find("div", class_="pricebadge__new-price-decimal")
-    price_fractional_element = soup.find("div", class_="pricebadge__new-price-fractional")
+    price_decimal = soup.find("div", class_="pricebadge__new-price-decimal")
+    price_fractional = soup.find("div", class_="pricebadge__new-price-fractional")
 
-    if price_decimal_element and price_fractional_element:
-        price_decimal = price_decimal_element.text.strip()
-        price_fractional = price_fractional_element.text.strip()
-        price = f"{price_decimal}.{price_fractional}"
+    if price_decimal and price_fractional:
+        price = f"{price_decimal.text.strip()}.{price_fractional.text.strip()}"
     else:
-        print("[WARNING] Kon de prijs niet vinden. Controleer de HTML-structuur.")
-        price = "Prijs niet gevonden"
+        price = "Onbekend"
 
-    print(f"[INFO] Gevonden prijs: {price}")
     return offer, price
 
-if __name__ == "__main__":
-    try:
-        start_time = time.time()
-        current_offer, current_price = check_offer_and_price()
-        
-        print("\n[RESULTAAT]")
-        print(current_offer)
-        print(current_price)
-        print(f"\n[INFO] Script voltooid in {round(time.time() - start_time, 2)} seconden.")
+def save_to_markdown(offer, price):
+    now = datetime.now().strftime("%Y-%m-%d")
+    md_content = f"""---
+title: "Laatste prijsupdate"
+date: "{now}"
+price: "{price}"
+offer: "{offer}"
+---
 
-    except KeyboardInterrupt:
-        print("\n[INFO] Script onderbroken door gebruiker. Afsluiten...")
+De prijs van het product is momenteel **€{price}**.
+
+_Status:_ {offer} 🎉
+"""
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(md_content)
+
+if __name__ == "__main__":
+    offer, price = check_offer_and_price()
+    if offer and price:
+        save_to_markdown(offer, price)
+        print("[INFO] Markdown geüpdatet!")
