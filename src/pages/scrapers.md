@@ -1,7 +1,7 @@
 ---
 title: "Laatste prijsupdate"
 layout: "../layouts/Base.astro"
-articleDate: "16 Jan 2025""
+articleDate: "16 Jan 2025"
 description: "De laatste prijsupdate van Kruidvat Odorex"
 ogImage: ""
 price: "4.19"
