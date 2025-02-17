@@ -1,6 +1,6 @@
 ---
 title: "Laatste prijsupdate"
-layout: "../../layouts/Base.astro"
+layout: "../layouts/Base.astro"
 price: "4.19"
 offer: "Er is geen actie"
 ---
