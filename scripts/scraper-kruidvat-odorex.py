@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 url = "https://www.kruidvat.nl/odorex-0-perfume-deodorant-roller/p/4350718"
-output_file = "src/content/kruidvat/data.md"  # Zorg dat dit in Astro’s content-map staat
+output_file = "src/pages/scrapers.md"  # Zorg dat dit in Astro’s content-map staat
 
 def check_offer_and_price():
     try:
