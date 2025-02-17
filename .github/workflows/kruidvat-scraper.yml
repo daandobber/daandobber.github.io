@@ -45,4 +45,10 @@ jobs:
           git add src/pages/scrapers.md
           git commit -m "Update Kruidvat data" || echo "Geen wijzigingen om te committen"
           git push origin main
+      - name: Trigger GitHub Pages Build
+        run: |
+          curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/daandobber/daandobber.github.io/pages/builds
+
       
