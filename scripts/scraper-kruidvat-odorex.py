@@ -1,9 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+import json
 
 url = "https://www.kruidvat.nl/odorex-0-perfume-deodorant-roller/p/4350718"
-output_file = "src/pages/scrapers.md"  # Zorg dat dit pad klopt
+output_file = "src/scripts/scraper-kruidvat-odorex.son"  # Opslaglocatie voor JSON
 
 def check_offer_and_price():
     try:
@@ -34,28 +35,21 @@ def check_offer_and_price():
 
     return offer, price
 
-def save_to_markdown(offer, price):
+def save_to_json(offer, price):
     today = datetime.today().strftime("%Y-%m-%d")  # Huidige datum
-    md_content = f"""---
-title: "Laatste prijsupdate"
-layout: "../layouts/Base.astro"
-meta:
-  articleDate: "{today}"
-  description: "De laatste prijsupdate van Kruidvat Odorex"
-  ogImage: ""
-price: "{price}"
-offer: "{offer}"
----
+    data = {
+        "title": "Laatste prijsupdate",
+        "articleDate": today,
+        "description": "De laatste prijsupdate van Kruidvat Odorex",
+        "price": price,
+        "offer": offer
+    }
 
-De prijs van het product is momenteel **€{price}**.
-
-_Status:_ {offer} 🎉
-"""
     with open(output_file, "w", encoding="utf-8") as f:
-        f.write(md_content)
+        json.dump(data, f, indent=4)
 
 if __name__ == "__main__":
     offer, price = check_offer_and_price()
     if offer and price:
-        save_to_markdown(offer, price)
-        print("[INFO] Markdown geüpdatet!")
+        save_to_json(offer, price)
+        print("[INFO] JSON geüpdatet!")
