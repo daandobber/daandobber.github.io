@@ -19,7 +19,7 @@ jobs:
         run: pip install requests beautifulsoup4
 
       - name: Draai scraper script
-        run: python scripts/scraper-kruidvat-odorex.py
+        run: python scr/scripts/scraper-kruidvat-odorex.py
 
       - name: Commit en push data
         run: |
