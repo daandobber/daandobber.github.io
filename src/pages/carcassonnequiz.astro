@@ -1,17 +1,19 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
-import data from "@/data/kruidvat.json";
+import CarcassonneQuizComponent from "@/components/CarcassonneQuizComponent.astro";
 
 const meta = {
-	title: data.title,
-	description: data.description,
-	articleDate: data.articleDate,
+	title: "Carcassonne Quiz",
+	description: "Wel een leuke quiz",
 };
 ---
 
 <PageLayout meta={meta}>
-	<h1>{data.title}</h1>
-	<p>Datum: <strong>{data.articleDate}</strong></p>
-	<p>Prijs: <strong>€{data.price}</strong></p>
-	<p>Status: {data.offer}</p>
+	<h1 class="title mb-6">Welkom bij de Carcassonne Quiz</h1>
+	<p>
+		Klik op <em>antwoorden</em> of druk op enter om je antwoord op te geven en verder te gaan.
+		Alle tegelafbeeldingen komen van 
+		<a href="https://wikicarpedia.com/" target="_blank" rel="noopener noreferrer">Wikicarpedia</a>.
+	</p>
+	<CarcassonneQuizComponent />
 </PageLayout>
