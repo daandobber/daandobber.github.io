@@ -19,12 +19,12 @@ jobs:
         run: pip install requests beautifulsoup4
 
       - name: Draai scraper script
-        run: python scraper.py  # Zorg dat scraper.py data opslaat in JSON
+        run: python /scripts/scraper-kruidvat-odorex.py
 
       - name: Commit en push data
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add data.json
+          git add src/pages/scrapers.md
           git commit -m "Update Kruidvat data"
           git push
