@@ -1,0 +1,17 @@
+---
+import PageLayout from "@/layouts/Base.astro";
+import data from "@/scripts/scraper-kruidvat-odorex.json";
+
+const meta = {
+	title: data.title,
+	description: data.description,
+	articleDate: data.articleDate,
+};
+---
+
+<PageLayout meta={meta}>
+	<h1>{data.title}</h1>
+	<p>Datum: <strong>{data.articleDate}</strong></p>
+	<p>Prijs: <strong>€{data.price}</strong></p>
+	<p>Status: {data.offer}</p>
+</PageLayout>
