@@ -1,6 +1,6 @@
 ---
 title: "Laatste prijsupdate"
-date: "2025-02-17"
+layout: "../../layouts/Base.astro"
 price: "4.19"
 offer: "Er is geen actie"
 ---
