@@ -1,8 +1,6 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
-
-const response = await fetch('/scripts/scraper-kruidvat-odorex.json');
-const data = await response.json();
+import data from "@/data/scraper-kruidvat-odorex.json";
 
 const meta = {
 	title: data.title,
