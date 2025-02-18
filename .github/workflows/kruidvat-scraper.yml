@@ -28,9 +28,9 @@ jobs:
 
       - name: Controleer of script bestaat en draai het
         run: |
-          if [ -f /scraper-kruidvat-odorex.py ]; then
+          if [ -f scripts/scraper-kruidvat-odorex.py ]; then
             echo "✅ Script gevonden! Nu uitvoeren..."
-            python scraper-kruidvat-odorex.py
+            python scripts/scraper-kruidvat-odorex.py
           else
             echo "❌ FOUT: Script niet gevonden in scripts/!"
             exit 1
