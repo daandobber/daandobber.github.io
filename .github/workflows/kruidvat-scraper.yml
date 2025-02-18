@@ -36,6 +36,9 @@ jobs:
             exit 1
           fi
 
+      - name: Reset lokale wijzigingen om pull mogelijk te maken
+        run: git reset --hard HEAD
+      
       - name: Commit en push data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,14 +46,13 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           
-          # Haal de nieuwste wijzigingen binnen voordat je pusht
-          git pull origin main --rebase
-          
+          git pull origin main --rebase  # Haal nieuwste wijzigingen binnen
+      
           git add scripts/scraper-kruidvat-odorex.json src/pages/scrapers.astro
           git commit -m "Update Kruidvat JSON en pagina" || echo "Geen wijzigingen om te committen"
           
-          # Forceer een push als het nog steeds niet werkt
           git push origin main || (git pull origin main --rebase && git push origin main)
+
 
 
       - name: Trigger GitHub Pages Build
