@@ -20,11 +20,15 @@ def check_offer_and_price():
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Check offer
-    offer_element = soup.find(class_="promotion-labels")
-    offer = "Er is een actie" if offer_element else "Er is geen actie"
+    # Check of er een roundel div is en of er een promotie-afbeelding in zit
+    roundel_div = soup.find("div", class_="roundel")
+    if roundel_div:
+        promo_img = roundel_div.find("img", {"data-src": lambda x: x and "promotion-labels" in x})
+        offer = "Er is een actie" if promo_img else "Er is geen actie"
+    else:
+        offer = "Er is geen actie"
 
-    # Check price
+    # Check prijs
     price_decimal = soup.find("div", class_="pricebadge__new-price-decimal")
     price_fractional = soup.find("div", class_="pricebadge__new-price-fractional")
 
