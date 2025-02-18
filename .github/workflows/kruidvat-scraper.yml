@@ -30,7 +30,7 @@ jobs:
         run: |
           if [ -f /scraper-kruidvat-odorex.py ]; then
             echo "✅ Script gevonden! Nu uitvoeren..."
-            python scripts/scraper-kruidvat-odorex.py
+            python scraper-kruidvat-odorex.py
           else
             echo "❌ FOUT: Script niet gevonden in scripts/!"
             exit 1
