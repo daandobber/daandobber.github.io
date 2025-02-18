@@ -48,7 +48,7 @@ jobs:
           
           git pull origin main --rebase  # Haal nieuwste wijzigingen binnen
       
-          git add scripts/scraper-kruidvat-odorex.json src/pages/scrapers.astro
+          git add src/data/scraper-kruidvat-odorex.json src/pages/scrapers.astro
           git commit -m "Update Kruidvat JSON en pagina" || echo "Geen wijzigingen om te committen"
           
           git push origin main || (git pull origin main --rebase && git push origin main)
