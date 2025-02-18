@@ -1,62 +1,61 @@
-name: Scrape Kruidvat Odorex
+name: Scrape en Update Kruidvat Data
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Dagelijkse run om middernacht
-  workflow_dispatch:  # Handmatige trigger mogelijk
+    - cron: '0 0 * * *'  # Dagelijks om middernacht
+  workflow_dispatch:  # Handmatig starten
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Haal repository op
+      - name: 🛠️ Haal repo op
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Haalt de volledige repo op, voorkomt conflicten
+          fetch-depth: 0  # Haal alle bestanden op
 
-      - name: 🛠️ Controleer structuur
-        run: |
-          ls -lah
-          ls -lah scripts/
+      - name: 📂 Controleer bestanden
+        run: ls -lah scripts/
 
       - name: 🐍 Installeer Python en dependencies
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+
       - run: pip install requests beautifulsoup4
 
-      - name: 🔍 Controleer en draai scraper
+      - name: 🔍 Controleer en voer scraper uit
         run: |
           if [ -f scripts/scraper-kruidvat-odorex.py ]; then
             echo "✅ Script gevonden! Nu uitvoeren..."
             python scripts/scraper-kruidvat-odorex.py
           else
-            echo "❌ FOUT: Script niet gevonden in scripts/!"
+            echo "❌ FOUT: Script niet gevonden!"
             exit 1
           fi
 
-      - name: 📄 Controleer JSON inhoud
-        run: cat src/data/scraper-kruidvat-odorex.json
-
-      - name: 🚀 Commit en push veranderingen
+      - name: 📌 Commit en push nieuwe JSON
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           
-          git add -A  # Voeg ALLE wijzigingen toe
-          
-          if git diff --staged --quiet; then
-            echo "⚠️ Geen wijzigingen gevonden, commit overslaan."
-          else
-            git commit -m "🔄 Update Kruidvat JSON en pagina"
-            git push origin main
-          fi
+          git add src/data/scraper-kruidvat-odorex.json
+          git commit -m "🔄 Update Kruidvat JSON" || echo "Geen wijzigingen om te committen"
+          git push origin main || (git pull origin main --rebase && git push origin main)
 
-      - name: 🌐 Trigger GitHub Pages Build (indien nodig)
+      - name: 🚀 Forceer Astro rebuild en deploy
+        run: |
+          npm install  # Installeer Astro en dependencies
+          npm run build  # Bouw de site opnieuw
+          touch src/pages/scrapers.astro  # Fake wijziging zodat Astro het ziet
+          git add src/pages/scrapers.astro
+          git commit -m "🔄 Force rebuild scrapers page" || echo "Geen wijzigingen om te committen"
+          git push origin main
+
+      - name: 🔄 Trigger GitHub Pages Build
         run: |
           curl -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/daandobber/daandobber.github.io/pages/builds || echo "⚠️ GitHub Pages niet ingeschakeld"
+          https://api.github.com/repos/daandobber/daandobber.github.io/pages/builds
