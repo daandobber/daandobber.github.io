@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 url = "https://www.kruidvat.nl/odorex-0-perfume-deodorant-roller/p/4350718"
-output_file = output_file = "src/scripts/scraper-kruidvat-odorex.json"
+output_file = output_file = "src/data/scraper-kruidvat-odorex.json"
   # JSON-bestand opslaan
 
 def check_offer_and_price():
