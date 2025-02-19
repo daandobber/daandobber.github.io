@@ -45,6 +45,19 @@ jobs:
           git commit -m "🔄 Update Kruidvat JSON" || echo "Geen wijzigingen om te committen"
           git push origin main || (git pull origin main --rebase && git push origin main)
 
+      - name: 📲 Stuur Telegram-melding
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MESSAGE="🛍️ *Kruidvat JSON is geüpdatet!*\n\n💰 *Nieuwe prijs:* €$(jq -r '.price' src/data/scraper-kruidvat-odorex.json)\n🎉 *Actie:* $(jq -r '.offer' src/data/scraper-kruidvat-odorex.json)"
+          
+          curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -d chat_id="$TELEGRAM_CHAT_ID" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
+
       - name: 🚀 Forceer Astro rebuild en deploy
         run: |
           npm install  # Installeer Astro en dependencies
