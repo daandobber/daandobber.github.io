@@ -8,16 +8,17 @@
 
 /* you could refactor below to use light-dark(), depending on your target audience */
 @theme {
-	--color-global-bg: oklch(98.48% 0 0);
-	--color-global-text: oklch(26.99% 0.0096 235.05);
-	--color-link: oklch(55.44% 0.0431 185.69);
-	--color-accent: oklch(55.27% 0.195 19.06);
+	--color-global-bg: oklch(76.68% 0 0);
+	--color-global-text: oklch(0% 0 0);
+	--color-link: oklch(49.57% 0.0991 29.28);
+	--color-accent: oklch(49.57% 0.0991 29.28);
 	--color-accent-2: oklch(18.15% 0 0);
 	--color-quote: oklch(55.27% 0.195 19.06);
 }
 
 @layer base {
 	html {
+		min-height: 100%;
 		color-scheme: light dark;
 		accent-color: var(--color-accent);
 
@@ -30,12 +31,92 @@
 			--color-global-bg: oklch(23.64% 0.0045 248);
 			--color-global-text: oklch(83.54% 0 264);
 			--color-link: oklch(70.44% 0.1133 349);
-			--color-accent: oklch(70.91% 0.1415 163.7);
+			--color-accent: oklch(63.5% 0.1467 286.94);
 			--color-accent-2: oklch(94.66% 0 0);
 			--color-quote: oklch(94.8% 0.106 136.49);
 		}
 	}
+
+	body {
+		margin: 0;
+		padding: 0;
+		min-height: 100%;
+	}
 }
+
+/* 
+   Plaats de achtergrond/raster direct op de body,
+   met aparte kleuren voor light en dark.
+*/
+@layer base {
+
+	/* Light theme */
+	html[data-theme="light"] body {
+		background-color: #8A8A8A;
+		background-image:
+			/* 1) Het raster – verticaal strepen */
+			linear-gradient(0deg,
+				transparent 24%,
+				rgba(255, 255, 255, 0.05) 25%,
+				rgba(255, 255, 255, 0.05) 26%,
+				transparent 27%,
+				transparent 74%,
+				rgba(255, 255, 255, 0.05) 75%,
+				rgba(255, 255, 255, 0.05) 76%,
+				transparent 77%,
+				transparent),
+			/* 2) Het raster – horizontaal strepen */
+			linear-gradient(90deg,
+				transparent 24%,
+				rgba(255, 255, 255, 0.05) 25%,
+				rgba(255, 255, 255, 0.05) 26%,
+				transparent 27%,
+				transparent 74%,
+				rgba(255, 255, 255, 0.05) 75%,
+				rgba(255, 255, 255, 0.05) 76%,
+				transparent 77%,
+				transparent),
+			/* 3) Pas daarna de ondoorzichtige verticale kleurverloop */
+			linear-gradient(#8A8A8A, #282828);
+
+		background-repeat: repeat, repeat, no-repeat;
+		background-size: 50px 50px, 50px 50px, 100% 100%;
+	}
+
+	/* Dark theme */
+	html[data-theme="dark"] body {
+		background-color: #333333;
+		background-image:
+			/* 1) Raster verticaal */
+			linear-gradient(0deg,
+				transparent 24%,
+				rgba(255, 255, 255, 0.05) 25%,
+				rgba(255, 255, 255, 0.05) 26%,
+				transparent 27%,
+				transparent 74%,
+				rgba(255, 255, 255, 0.05) 75%,
+				rgba(255, 255, 255, 0.05) 76%,
+				transparent 77%,
+				transparent),
+			/* 2) Raster horizontaal */
+			linear-gradient(90deg,
+				transparent 24%,
+				rgba(255, 255, 255, 0.05) 25%,
+				rgba(255, 255, 255, 0.05) 26%,
+				transparent 27%,
+				transparent 74%,
+				rgba(255, 255, 255, 0.05) 75%,
+				rgba(255, 255, 255, 0.05) 76%,
+				transparent 77%,
+				transparent),
+			/* 3) Donkere verticale gradient */
+			linear-gradient(#333333, #111111);
+
+		background-repeat: repeat, repeat, no-repeat;
+		background-size: 50px 50px, 50px 50px, 100% 100%;
+	}
+}
+
 
 @layer components {
 	.cactus-link {
@@ -46,7 +127,7 @@
 		@apply text-accent-2 text-2xl font-semibold;
 	}
 
-  button {
+	button {
 		@apply border border-black px-3 py-2;
 	}
 
@@ -55,7 +136,8 @@
 		@apply my-4 border-s-2 border-(--admonition-color) py-4 ps-4;
 
 		.admonition-title {
-			@apply my-0! flex items-center gap-2 text-base font-bold text-(--admonition-color) capitalize;
+			@apply my-0 flex items-center gap-2 text-base font-bold text-(--admonition-color) capitalize;
+
 			&:before {
 				@apply inline-block h-4 w-4 shrink-0 overflow-visible bg-(--admonition-color) align-middle content-[''];
 				mask-size: contain;
@@ -66,7 +148,7 @@
 
 		.admonition-content {
 			> :last-child {
-				@apply mb-0!;
+				@apply mb-0;
 			}
 		}
 
@@ -127,4 +209,22 @@
 	--tw-prose-links: var(--color-global-text);
 	--tw-prose-quotes: var(--color-quote);
 	--tw-prose-th-borders: #666;
+}
+
+@layer base {
+	.content-box {
+		background-color: rgba(255, 255, 255, 0.7);
+		/* lichtere achtergrond */
+		padding: 2rem;
+		/* wat ruimte in het kader */
+		border-radius: 0.5rem;
+		/* afrondingen naar smaak */
+	}
+
+	[data-theme="dark"] .content-box {
+		background-color: rgba(40, 40, 40, 0.7);
+		/* donkerder variant voor dark */
+		color: #fff;
+		/* voor contrast */
+	}
 }
