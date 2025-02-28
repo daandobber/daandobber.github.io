@@ -1,0 +1,87 @@
+---
+import PageLayout from "@/layouts/Base.astro";
+import StatsSection from "@/components/StatsSection.astro";
+import QuestLogSection from "@/components/QuestLogSection.astro";
+import InventorySection from "@/components/InventorySection.astro";
+
+const meta = {
+	title: "D&D CV",
+	description: "Een CV geïnspireerd op een D&D character sheet",
+};
+
+const character = {
+	name: "Daan Dobber",
+	class: "Implementation Advisor",
+	level: 10,
+	race: "Human",
+	background: "Marketing & IT",
+	alignment: "Neutral Good",
+};
+
+const abilities = [
+	{ name: "Strength", value: 12 },
+	{ name: "Dexterity", value: 14 },
+	{ name: "Constitution", value: 13 },
+	{ name: "Intelligence", value: 17 },
+	{ name: "Wisdom", value: 15 },
+	{ name: "Charisma", value: 16 },
+];
+
+const quests = [
+	{
+		period: "2023 - heden",
+		title: "Implementatie Adviseur, eLoo",
+		description:
+			"Verantwoordelijk voor de implementatie en configuratie van software, training geven aan scholen en verbeteren van bedrijfsprocessen binnen Zoho.",
+	},
+	{
+		period: "2020 - 2023",
+		title: "Event Manager, HKU",
+		description:
+			"Productie en leiding van evenementen voor het Conservatorium en HKU Theater. Digitaliseren van evenementen tijdens coronacrisis.",
+	},
+	{
+		period: "2016 - 2020",
+		title: "Marketing & Communicatie, Marnix Academie",
+		description:
+			"Verantwoordelijk voor interne en externe communicatie. Digitalisering, contentcreatie, UNESCO-keurmerk en organisatie van evenementen.",
+	},
+	{
+		period: "2014 - 2016",
+		title: "Eigenaar, Bottle Rocket",
+		description:
+			"Advies over social media, SEO en contentstrategie. Workshops en opdrachten voor Staatsbosbeheer, Bosbros en EMS Films.",
+	},
+	{
+		period: "2012 - 2013",
+		title: "Floormanager, Floor Amsterdam",
+		description:
+			"Coördineren van evenementen en aansturen van medewerkers. Gastheer en aanspreekpunt tijdens evenementen.",
+	},
+];
+
+const inventory = [
+	"Agile / Scrum / Projectmanagement",
+	"Zoho CRM / Desk / Projects",
+	"Microsoft Office & Google G-Suite",
+	"HTML / Python / Serverbeheer",
+	"Adobe Suite (Photoshop, Premiere, InDesign)",
+	"SEO, Social Media & Online Marketing",
+	"WordPress / Drupal / DNN / Kentico",
+];
+---
+
+<PageLayout meta={meta}>
+	<h1 class="title mb-6">D&D-achtig CV</h1>
+	<p class="mb-6">
+		Een CV in de stijl van een D&D character sheet. In dark mode blijft het perkament goed zichtbaar
+		en de tekst leesbaar.
+	</p>
+
+	<!-- Omhul met de nieuwe klasse .dnd-sheet -->
+	<div class="dnd-sheet">
+		<StatsSection character={character} abilities={abilities} />
+		<QuestLogSection quests={quests} />
+		<InventorySection items={inventory} />
+	</div>
+</PageLayout>
