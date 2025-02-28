@@ -1,0 +1,30 @@
+---
+const { character, abilities } = Astro.props;
+---
+
+<section class="mb-6 rounded-md border-2 border-stone-800 p-4 dark:border-white">
+	<h2 class="mb-3 text-center text-xl font-bold tracking-wider uppercase">Stats</h2>
+	<!-- Karakterinformatie zoals Class, Race, etc. -->
+	<div class="mb-4 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+		<div>
+			<span class="font-semibold">Class & Level:</span>
+			{character.class}, Level {character.level}
+		</div>
+		<div><span class="font-semibold">Race:</span> {character.race}</div>
+		<div><span class="font-semibold">Background:</span> {character.background}</div>
+		<div><span class="font-semibold">Alignment:</span> {character.alignment}</div>
+	</div>
+	<!-- Stat attributen met waarde -->
+	<div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+		{
+			abilities.map(({ name, value }) => (
+				<div class="flex flex-col items-center">
+					<div class="flex h-12 w-12 items-center justify-center rounded-full border-2 border-stone-800 text-lg font-bold dark:border-white">
+						{value}
+					</div>
+					<div class="mt-1 text-sm font-semibold uppercase">{name}</div>
+				</div>
+			))
+		}
+	</div>
+</section>

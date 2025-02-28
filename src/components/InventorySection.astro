@@ -1,0 +1,17 @@
+---
+const { items } = Astro.props;
+---
+
+<section class="rounded-md border-2 border-stone-800 p-4 dark:border-white">
+	<h2 class="mb-3 text-center text-xl font-bold tracking-wider uppercase">Inventory</h2>
+	<ul class="list-none">
+		{
+			items.map((item) => (
+				<li class="flex items-center border-b border-stone-700 py-1 last:border-0">
+					<span class="mr-2 text-lg">✦</span>
+					<span>{item}</span>
+				</li>
+			))
+		}
+	</ul>
+</section>
