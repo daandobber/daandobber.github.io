@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>ASCII Ambient Bos – Visueel + Audio Effecten</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; color:#ccc; font-family:monospace; }
+#topBar {
+    position: fixed; top:0; left:0; right:0; height:50px;
+    background: rgba(0,0,0,0.8); z-index:1000;
+    display: flex; align-items:center; gap:10px; padding:10px;
+}
+#topBar button { padding:5px 15px; font-size:14px; }
+#asciiArea {
+    position: absolute; top:50px; left:0; right:0; bottom:260px;
+    padding:8px; overflow:auto; white-space:pre; font-size:14px; line-height:14px;
+}
+#bottomBar {
+    position: fixed; left:0; right:0; bottom:0; height:250px;
+    background: rgba(0,0,0,0.8); z-index:1000;
+    overflow:auto; display: flex; flex-wrap:wrap; align-items:flex-start;
+    gap:10px; padding:10px;
+}
+.column {
+    display: flex; flex-direction: column; align-items:center; gap:8px;
+    padding: 5px; background: rgba(0,0,0,0.5); border-radius:4px;
+}
+.column h3 { margin:0; color:#fff; font-size:14px; }
+.knob {
+    display: flex; flex-direction: column; align-items:center;
+}
+.knob label { font-size:12px; }
+.knob input[type="range"] { width:140px; }
+.lfoAssign {
+    display: flex; gap:4px; font-size:10px; margin-top:2px;
+}
+.lfoAssign label { display: inline-block; }
+.cell { display:inline-block; }
+</style>
+</head>
+<body>
+<!-- Topbar -->
+<div id="topBar">
+    <button id="randomBtn">Random</button>
+    <button id="saveBtn">Afbeelding Opslaan</button>
+</div>
+<!-- ASCII Area -->
+<div id="asciiArea"></div>
+<!-- Bottombar met visuele groepen en LFO-checks -->
+<div id="bottomBar">
+    <!-- LFO Controllers -->
+    <div class="column">
+        <h3>LFO Controllers</h3>
+        <div class="knob">
+            <label>LFO 1 Snelheid</label>
+            <input type="range" min="0" max="100" value="10" id="lfo1speed">
+            <label>LFO 1 Diepte</label>
+            <input type="range" min="0" max="100" value="20" id="lfo1depth">
+        </div>
+        <div class="knob">
+            <label>LFO 2 Snelheid</label>
+            <input type="range" min="0" max="100" value="5" id="lfo2speed">
+            <label>LFO 2 Diepte</label>
+            <input type="range" min="0" max="100" value="10" id="lfo2depth">
+        </div>
+        <div class="knob">
+            <label>LFO 3 Snelheid</label>
+            <input type="range" min="0" max="100" value="30" id="lfo3speed">
+            <label>LFO 3 Diepte</label>
+            <input type="range" min="0" max="100" value="5" id="lfo3depth">
+        </div>
+    </div>
+    <!-- Lucht -->
+    <div class="column">
+        <h3>Lucht</h3>
+        <div class="knob">
+            <label>Lucht Grootte</label>
+            <input type="range" min="5" max="20" value="10" data-param="skySize">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="skySize"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="skySize"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="skySize"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Lucht Kleur</label>
+            <input type="range" min="0" max="360" value="200" data-param="skyHue">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="skyHue"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="skyHue"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="skyHue"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Lucht Gradient</label>
+            <input type="range" min="0" max="100" value="50" data-param="skyGrad">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="skyGrad"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="skyGrad"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="skyGrad"></label>
+            </div>
+        </div>
+    </div>
+    <!-- Zon & Akkoorden -->
+    <div class="column">
+        <h3>Zon & Akkoorden</h3>
+        <div class="knob">
+            <label>Zon Grootte</label>
+            <input type="range" min="1" max="15" value="10" data-param="sunSize">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="sunSize"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="sunSize"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="sunSize"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Zon Kleur</label>
+            <input type="range" min="0" max="360" value="60" data-param="sunHue">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="sunHue"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="sunHue"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="sunHue"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Zon Pos X</label>
+            <input type="range" min="0" max="100" value="50" data-param="sunX">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="sunX"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="sunX"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="sunX"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Zon Pos Y</label>
+            <input type="range" min="0" max="100" value="20" data-param="sunY">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="sunY"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="sunY"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="sunY"></label>
+            </div>
+        </div>
+        <!-- Akkoorden parameters geïntegreerd in deze groep -->
+        <div class="knob">
+            <label>Chord Root</label>
+            <input type="range" min="50" max="300" value="120" data-param="chordRoot">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="chordRoot"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="chordRoot"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="chordRoot"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Chord Fade</label>
+            <input type="range" min="0" max="100" value="40" data-param="chordFade">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="chordFade"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="chordFade"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="chordFade"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Scale Steps</label>
+            <input type="range" min="1" max="12" value="5" data-param="scaleSteps">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="scaleSteps"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="scaleSteps"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="scaleSteps"></label>
+            </div>
+        </div>
+    </div>
+    <!-- Zee -->
+    <div class="column">
+        <h3>Zee</h3>
+        <div class="knob">
+            <label>Zee Grootte</label>
+            <input type="range" min="2" max="20" value="8" data-param="waterSize">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="waterSize"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="waterSize"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="waterSize"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Zee Kleur</label>
+            <input type="range" min="0" max="360" value="180" data-param="waterHue">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="waterHue"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="waterHue"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="waterHue"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Zee Gradient</label>
+            <input type="range" min="0" max="100" value="50" data-param="waterGrad">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="waterGrad"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="waterGrad"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="waterGrad"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Zee Effect</label>
+            <input type="range" min="0" max="100" value="50" data-param="waterEffect">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="waterEffect"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="waterEffect"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="waterEffect"></label>
+            </div>
+        </div>
+    </div>
+    <!-- Bos & Bergen -->
+    <div class="column">
+        <h3>Bos & Bergen</h3>
+        <div class="knob">
+            <label>Bos Grootte</label>
+            <input type="range" min="3" max="15" value="6" data-param="bosSize">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="bosSize"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="bosSize"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="bosSize"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Bos Kleur</label>
+            <input type="range" min="0" max="360" value="120" data-param="bosHue">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="bosHue"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="bosHue"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="bosHue"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Bos Gradient</label>
+            <input type="range" min="0" max="100" value="50" data-param="bosGrad">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="bosGrad"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="bosGrad"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="bosGrad"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Bos Effect</label>
+            <input type="range" min="0" max="100" value="50" data-param="bosEffect">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="bosEffect"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="bosEffect"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="bosEffect"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Bos Golf</label>
+            <input type="range" min="0" max="100" value="10" data-param="bosWave">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="bosWave"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="bosWave"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="bosWave"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Berg Golf</label>
+            <input type="range" min="0" max="100" value="10" data-param="bergWave">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="bergWave"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="bergWave"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="bergWave"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Berg Grootte</label>
+            <input type="range" min="1" max="10" value="3" data-param="mountainSize">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="mountainSize"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="mountainSize"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="mountainSize"></label>
+            </div>
+        </div>
+    </div>
+    <!-- Vogel & Rotatie -->
+    <div class="column">
+        <h3>Vogel & Rotatie</h3>
+        <div class="knob">
+            <label>Vogel Kans</label>
+            <input type="range" min="0" max="100" value="10" data-param="birdChance">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="birdChance"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="birdChance"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="birdChance"></label>
+            </div>
+        </div>
+        <div class="knob">
+            <label>Rotatie</label>
+            <input type="range" min="0" max="360" value="0" data-param="rotation">
+            <div class="lfoAssign">
+                <label>L1 <input type="checkbox" data-lfo="1" data-param="rotation"></label>
+                <label>L2 <input type="checkbox" data-lfo="2" data-param="rotation"></label>
+                <label>L3 <input type="checkbox" data-lfo="3" data-param="rotation"></label>
+            </div>
+        </div>
+    </div>
+</div>
+<canvas id="hiddenCanvas" style="display:none;"></canvas>
+<script>
+// === Parameteropslag met LFO's ===
+let paramValues = {};
+document.querySelectorAll('input[type="range"][data-param]').forEach(sl => {
+    let name = sl.dataset.param;
+    paramValues[name] = { base: parseFloat(sl.value), lfo1:false, lfo2:false, lfo3:false, lfoOffset:0 };
+    sl.addEventListener("input", () => { 
+        paramValues[name].base = parseFloat(sl.value); 
+        updateAudio(); // Update audio bij parameter wijziging
+    });
+});
+function getParam(name){ 
+    return paramValues[name] ? paramValues[name].base + (paramValues[name].lfoOffset || 0) : 0; 
+}
+// === LFO checkbox verwerking ===
+const lfoChecks = document.querySelectorAll('input[type="checkbox"][data-lfo]');
+lfoChecks.forEach(ch => {
+    let paramName = ch.dataset.param;
+    let lfoId = ch.dataset.lfo;
+    ch.addEventListener("change", () => {
+        if(!paramValues[paramName])
+            paramValues[paramName] = { base:0, lfo1:false, lfo2:false, lfo3:false, lfoOffset:0 };
+        paramValues[paramName]["lfo" + lfoId] = ch.checked;
+    });
+});
+// === LFO Controllers ===
+const lfo1speed = document.getElementById("lfo1speed");
+const lfo1depth = document.getElementById("lfo1depth");
+const lfo2speed = document.getElementById("lfo2speed");
+const lfo2depth = document.getElementById("lfo2depth");
+const lfo3speed = document.getElementById("lfo3speed");
+const lfo3depth = document.getElementById("lfo3depth");
+
+function updateLFOOffset(timeSec, lfoId, speed, depth){
+    let freq = 0.01 + (speed * 0.05);
+    let amp = depth;
+    let value = Math.sin(timeSec * 2 * Math.PI * freq) * amp * 0.1;
+    for (let param in paramValues){
+        if (paramValues[param]["lfo" + lfoId]) {
+            paramValues[param]["lfoVal" + lfoId] = value;
+        } else {
+            paramValues[param]["lfoVal" + lfoId] = 0;
+        }
+    }
+}
+function updateAllLFOs(t){
+    let tSec = t / 1000;
+    updateLFOOffset(tSec, 1, parseFloat(lfo1speed.value), parseFloat(lfo1depth.value));
+    updateLFOOffset(tSec, 2, parseFloat(lfo2speed.value), parseFloat(lfo2depth.value));
+    updateLFOOffset(tSec, 3, parseFloat(lfo3speed.value), parseFloat(lfo3depth.value));
+    for (let param in paramValues){
+        let sum = (paramValues[param].lfoVal1||0) + (paramValues[param].lfoVal2||0) + (paramValues[param].lfoVal3||0);
+        paramValues[param].lfoOffset = sum;
+    }
+}
+// === Audio Setup ===
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// Master Gain
+const masterGain = audioCtx.createGain();
+masterGain.connect(audioCtx.destination);
+masterGain.gain.value = 0.7;
+
+// Filter Node
+const filterNode = audioCtx.createBiquadFilter();
+filterNode.type = "lowpass";
+filterNode.frequency.value = 5000; // Default waarde
+filterNode.connect(masterGain);
+
+// Reverb
+const convolver = audioCtx.createConvolver();
+convolver.buffer = createReverbImpulse(3); // 3 seconden galm
+
+const reverbGain = audioCtx.createGain();
+reverbGain.gain.value = 0.5; // Initiële reverb mix
+filterNode.connect(reverbGain);
+reverbGain.connect(convolver);
+convolver.connect(masterGain);
+
+// Delay
+const delayNode = audioCtx.createDelay(2);
+const delayGain = audioCtx.createGain();
+delayGain.gain.value = 0.3;
+delayNode.delayTime.value = 0.3;
+filterNode.connect(delayGain);
+delayGain.connect(delayNode);
+delayNode.connect(masterGain);
+
+// OSCILLATORS – drie aparte oscillatoren voor akkoorden
+const chordOsc1 = audioCtx.createOscillator();
+chordOsc1.type = "sine";
+chordOsc1.start();
+
+const chordOsc2 = audioCtx.createOscillator();
+chordOsc2.type = "triangle";
+chordOsc2.start();
+
+const chordOsc3 = audioCtx.createOscillator();
+chordOsc3.type = "square";
+chordOsc3.start();
+
+const chordG1 = audioCtx.createGain();
+chordOsc1.connect(chordG1); chordG1.connect(filterNode);
+
+const chordG2 = audioCtx.createGain();
+chordOsc2.connect(chordG2); chordG2.connect(filterNode);
+
+const chordG3 = audioCtx.createGain();
+chordOsc3.connect(chordG3); chordG3.connect(filterNode);
+
+// PAD Oscillator
+const padOsc = audioCtx.createOscillator();
+padOsc.type = "sawtooth";
+padOsc.start();
+
+const padGain = audioCtx.createGain();
+padOsc.connect(padGain); padGain.connect(filterNode);
+
+// Noise – via extra filters
+const noiseBuf = createPinkNoise();
+const noiseSrc = audioCtx.createBufferSource();
+noiseSrc.buffer = noiseBuf;
+noiseSrc.loop = true;
+
+const noiseGain = audioCtx.createGain();
+noiseGain.gain.value = 0.02; // Basis volume
+
+const extraLPF = audioCtx.createBiquadFilter();
+extraLPF.type = "lowpass";
+extraLPF.frequency.value = 1000;
+
+const extraHPF = audioCtx.createBiquadFilter();
+extraHPF.type = "highpass";
+extraHPF.frequency.value = 200;
+
+noiseGain.connect(extraLPF);
+extraLPF.connect(extraHPF);
+extraHPF.connect(masterGain);
+noiseGain.connect(masterGain); // Direct noise
+
+noiseSrc.connect(noiseGain);
+noiseSrc.start();
+
+// LFO for Audio Modulation (from second script)
+let audioLfos = {};
+
+// Initialize additional LFOs
+function initAudioLFOs() {
+    // LFO for reverb modulation
+    audioLfos.reverb = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain()
+    };
+    audioLfos.reverb.osc.type = 'sine';
+    audioLfos.reverb.osc.frequency.value = 0.5;
+    audioLfos.reverb.gain.value = 0;
+    audioLfos.reverb.osc.connect(audioLfos.reverb.gain);
+    audioLfos.reverb.gain.connect(reverbGain.gain); // Corrected connection
+    audioLfos.reverb.osc.start();
+
+    // LFO for amplitude modulation
+    audioLfos.amp = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain()
+    };
+    audioLfos.amp.osc.type = 'sine';
+    audioLfos.amp.osc.frequency.value = 0.3;
+    audioLfos.amp.gain.value = 0;
+    audioLfos.amp.osc.connect(audioLfos.amp.gain);
+    audioLfos.amp.gain.connect(masterGain.gain);
+    audioLfos.amp.osc.start();
+
+    // LFO for vibrato
+    audioLfos.vibrato = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain()
+    };
+    audioLfos.vibrato.osc.type = 'sine';
+    audioLfos.vibrato.osc.frequency.value = 6;
+    audioLfos.vibrato.gain.value = 0;
+    audioLfos.vibrato.osc.connect(audioLfos.vibrato.gain);
+    audioLfos.vibrato.gain.connect(chordOsc1.frequency);
+    audioLfos.vibrato.gain.connect(chordOsc2.frequency);
+    audioLfos.vibrato.gain.connect(chordOsc3.frequency);
+    audioLfos.vibrato.osc.start();
+
+    // LFO for auto-pan
+    const panner = audioCtx.createStereoPanner();
+    panner.pan.value = 0;
+    masterGain.disconnect();
+    masterGain.connect(panner);
+    panner.connect(audioCtx.destination);
+
+    audioLfos.pan = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain(),
+        panner: panner
+    };
+    audioLfos.pan.osc.type = 'sine';
+    audioLfos.pan.osc.frequency.value = 0.1;
+    audioLfos.pan.gain.value = 0;
+    audioLfos.pan.osc.connect(audioLfos.pan.gain);
+    audioLfos.pan.gain.connect(panner.pan);
+    audioLfos.pan.osc.start();
+}
+initAudioLFOs();
+
+// Update afgeleide audio-effecten
+function updateDerivedAudio(){
+    // Lucht
+    reverbGain.gain.value = getParam("skySize") * 0.005;
+
+    // Filter parameters
+    // Gebruik 'skyHue' als filter frequentie basis
+    filterNode.frequency.value = getParam("skyHue") * 2;
+
+    // Delay
+    delayNode.delayTime.value = (getParam("skyGrad") / 100) + 0.1;
+    delayGain.gain.value = getParam("waterEffect") * 0.01;
+
+    // Zon – Akkoorden
+    let baseGain = 2.0 * (getParam("sunSize")/15) * (1 - getParam("chordFade")/100);
+    chordG1.gain.value = baseGain;
+    chordG2.gain.value = baseGain;
+    chordG3.gain.value = baseGain;
+    padOsc.frequency.value = 110 + (getParam("sunHue")/360)*110;
+
+    // Zee
+    noiseGain.gain.value = getParam("waterSize") * 0.005;
+
+    // Bergen
+    filterNode.Q.value = getParam("bosGrad") ? getParam("bosGrad") : filterNode.Q.value;
+
+    // Update Chords
+    updateChords();
+
+    // Update PAD Volume (geen padVol slider, stel een vaste waarde in)
+    padGain.gain.value = 0.1; // Statische waarde
+}
+
+// Update Chords – bereken frequenties op basis van chordRoot, chordFade en scaleSteps
+const scale = [0,2,4,5,7,9,11,12];
+function updateChords(){
+    const root = getParam("chordRoot");
+    const fade = getParam("chordFade") / 100;
+    const steps = parseInt(getParam("scaleSteps"));
+    chordG1.gain.value = 2.0 * (1 - fade);
+    chordG2.gain.value = 2.0 * (1 - fade);
+    chordG3.gain.value = 2.0 * (1 - fade);
+    let i1 = 0, i2 = steps, i3 = steps * 2;
+    if(i1 >= scale.length) i1 = scale.length - 1;
+    if(i2 >= scale.length) i2 = scale.length - 1;
+    if(i3 >= scale.length) i3 = scale.length - 1;
+    chordOsc1.frequency.value = root * Math.pow(2, scale[i1] / 12);
+    chordOsc2.frequency.value = root * Math.pow(2, scale[i2] / 12);
+    chordOsc3.frequency.value = root * Math.pow(2, scale[i3] / 12);
+}
+
+// Pink Noise Generator
+function createPinkNoise(){
+    const size = 2 * audioCtx.sampleRate;
+    const buf = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+    const out = buf.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < size; i++){
+        const w = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + w * 0.0555179;
+        b1 = 0.99332 * b1 + w * 0.0750759;
+        b2 = 0.96900 * b2 + w * 0.1538520;
+        b3 = 0.86650 * b3 + w * 0.3104856;
+        b4 = 0.55000 * b4 + w * 0.5329522;
+        b5 = -0.7616 * b5 - w * 0.0168980;
+        out[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6;
+        out[i] *= 0.11;
+        b6 = w * 0.115926;
+    }
+    return buf;
+}
+
+// Reverb Impulse Response Generator
+function createReverbImpulse(len = 2){
+    const sr = audioCtx.sampleRate, length = sr * len;
+    const buf = audioCtx.createBuffer(2, length, sr);
+    for (let c = 0; c < 2; c++){
+        const ch = buf.getChannelData(c);
+        for (let i = 0; i < length; i++){
+            const t = i / length;
+            ch[i] = (Math.random() * 2 - 1) * (1 - t);
+        }
+    }
+    return buf;
+}
+
+// Start audio context on user interaction
+function unlockAudio() {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+// Hoofdlus: update LFO's, teken scene en update audio continu
+function mainLoop(t){
+    updateAllLFOs(t);
+    drawScene();
+    updateAudio();
+    requestAnimationFrame(mainLoop);
+}
+requestAnimationFrame(mainLoop);
+
+// === Visuele Scene ===
+const asciiArea = document.getElementById("asciiArea");
+const ROWS = 30, COLS = 80;
+let asciiBuffer = [];
+
+function initAscii(){
+    asciiBuffer = [];
+    for (let r = 0; r < ROWS; r++){
+        let row = [];
+        for (let c = 0; c < COLS; c++){
+            row.push({ ch: ' ', fg: '#fff' });
+        }
+        asciiBuffer.push(row);
+    }
+}
+
+function renderAscii(){
+    let combinedRotation = getParam("rotation") + (getParam("chordRoot") / 10);
+    let html = "";
+    for (let r = 0; r < ROWS; r++){
+        for (let c = 0; c < COLS; c++){
+            let cell = asciiBuffer[r][c];
+            let ch = (cell.ch === ' ') ? '&nbsp;' : cell.ch;
+            html += `<span class="cell" style="color:${cell.fg}; transform: rotate(${combinedRotation}deg);">${ch}</span>`;
+        }
+        html += "\n";
+    }
+    asciiArea.innerHTML = html;
+}
+
+function drawScene(){
+    initAscii();
+    let skySz = getParam("skySize");
+    let skyH = getParam("skyHue");
+    let sunSz = getParam("sunSize");
+    let sunH = getParam("sunHue");
+    let watSz = getParam("waterSize");
+    let watH = getParam("waterHue");
+    let bChance = getParam("birdChance");
+    let skyGrd = getParam("skyGrad");
+    let waterGrd = getParam("waterGrad");
+    let bosGrd = getParam("bosGrad");
+    let waterEffect = getParam("waterEffect");
+    let mountainSize = getParam("mountainSize");
+    let scaleSteps = getParam("scaleSteps");
+    let chordFade = getParam("chordFade");
+
+    let skyRows = Math.min(parseInt(skySz), ROWS - 10);
+    let waterRows = Math.min(parseInt(watSz), ROWS - skyRows - 5);
+    let remainingRows = ROWS - skyRows - waterRows;
+    let mountainRows = Math.floor(remainingRows * (mountainSize / 10));
+    let bosTop = skyRows + mountainRows;
+    let bosRows = remainingRows - mountainRows;
+
+    // Lucht
+    for (let r = 0; r < skyRows; r++){
+        let ratio = r / (skyRows - 1 || 1);
+        let lig = 60 + (ratio * skyGrd * 0.3);
+        for (let c = 0; c < COLS; c++){
+            asciiBuffer[r][c].ch = '░';
+            asciiBuffer[r][c].fg = `hsl(${skyH},60%,${lig}%)`;
+        }
+    }
+
+    // Zon
+    let sunPosX = Math.floor((getParam("sunX") / 100) * COLS);
+    let sunPosY = Math.floor((getParam("sunY") / 100) * skyRows);
+    for (let r = 0; r < skyRows; r++){
+        for (let c = 0; c < COLS; c++){
+            let dx = c - sunPosX;
+            let dy = r - sunPosY;
+            if (dx * dx + dy * dy < (sunSz * 2) * (sunSz * 2) / 4){
+                asciiBuffer[r][c].ch = '▓';
+                asciiBuffer[r][c].fg = `hsl(${sunH},80%,60%)`;
+            } else {
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < sunSz * 3){
+                    let gradientLig = 60 - (distance / (sunSz * 3)) * 30;
+                    asciiBuffer[r][c].fg = `hsl(${sunH},80%,${gradientLig}%)`;
+                }
+            }
+        }
+    }
+
+    // Zee
+    for (let r = ROWS - waterRows; r < ROWS; r++){
+        for (let c = 0; c < COLS; c++){
+            let ratio = (r - (ROWS - waterRows)) / (waterRows - 1 || 1);
+            let lig = 50 + (ratio * waterGrd * 0.3);
+            asciiBuffer[r][c].ch = '~';
+            asciiBuffer[r][c].fg = `hsl(${watH},50%,${lig}%)`;
+        }
+    }
+    if (waterEffect > 0){
+        let shift = Math.floor((waterEffect / 100) * 5);
+        for (let r = ROWS - waterRows; r < ROWS; r++){
+            asciiBuffer[r].push(...asciiBuffer[r].splice(0, shift));
+        }
+    }
+
+    // Bergen
+    let bergWave = getParam("bergWave");
+    for (let r = skyRows; r < skyRows + mountainRows; r++){
+        for (let c = 0; c < COLS; c++){
+            let ratio = (r - skyRows) / (mountainRows - 1 || 1);
+            let offset = Math.floor(Math.sin((r + bergWave/10)) * (bergWave/20));
+            let cc = (c + offset + COLS) % COLS;
+            let lig = 35 + (ratio * bosGrd * 0.3);
+            asciiBuffer[r][cc].ch = '^';
+            asciiBuffer[r][cc].fg = `hsl(${skyH},30%,${lig}%)`;
+        }
+    }
+
+    // Bos
+    let bosWave = getParam("bosWave");
+    for (let r = bosTop; r < bosTop + bosRows; r++){
+        for (let c = 0; c < COLS; c++){
+            let ratio = (r - bosTop) / (bosRows - 1 || 1);
+            let offset = Math.floor(Math.sin((r + bosWave/10)) * (bosWave/20));
+            let cc = (c + offset + COLS) % COLS;
+            let lig = 35 + (ratio * bosGrd * 0.3);
+            asciiBuffer[r][cc].ch = '█';
+            asciiBuffer[r][cc].fg = `hsl(${getParam("bosHue")},50%,${lig}%)`;
+        }
+    }
+
+    // Vogels
+    for (let r = 0; r < skyRows; r++){
+        if (Math.random() < getParam("birdChance") * 0.001){
+            let cc = Math.floor(Math.random() * COLS);
+            asciiBuffer[r][cc].ch = 'v';
+            asciiBuffer[r][cc].fg = '#fff';
+        }
+    }
+
+    renderAscii();
+}
+
+// === Audio Update Function ===
+function updateAudio(){
+    unlockAudio();
+    updateDerivedAudio();
+}
+
+// === Audio Settings Integration ===
+// Geen extra sliders toegevoegd, gebruik bestaande sliders voor audio-parameters
+
+// === Randomize knop: reset sliders ===
+document.getElementById("randomBtn").addEventListener("click", () => {
+    document.querySelectorAll('input[type="range"][data-param]').forEach(sl => {
+        const mx = parseFloat(sl.max) || 100;
+        const mn = parseFloat(sl.min) || 0;
+        const rv = Math.random() * (mx - mn) + mn;
+        sl.value = rv.toFixed(0);
+        const name = sl.dataset.param;
+        paramValues[name].base = parseFloat(sl.value);
+    });
+    document.querySelectorAll('input[type="checkbox"][data-lfo]').forEach(cb => {
+        cb.checked = Math.random() < 0.5;
+        let paramName = cb.dataset.param;
+        let lfoId = cb.dataset.lfo;
+        paramValues[paramName]["lfo" + lfoId] = cb.checked;
+    });
+    updateAudio(); // Update audio na randomisatie
+});
+
+// === Save knop: ASCII als PNG ===
+document.getElementById("saveBtn").addEventListener("click", () => {
+    const canvas = document.getElementById('hiddenCanvas');
+    canvas.width = COLS * 10;
+    canvas.height = ROWS * 14;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '14px monospace';
+    for (let r = 0; r < ROWS; r++){
+        let rowText = '';
+        for (let c = 0; c < COLS; c++){
+            rowText += asciiBuffer[r][c].ch;
+        }
+        // Gebruik de kleur van de eerste cel in de rij
+        ctx.fillStyle = asciiBuffer[r][0].fg;
+        ctx.fillText(rowText, 0, (r + 1) * 14);
+    }
+    const link = document.createElement('a');
+    link.download = 'ascii_ambient_bos.png';
+    link.href = canvas.toDataURL();
+    link.click();
+});
+
+// === Initialiseer alle controls naar startwaarden ===
+document.querySelectorAll('input[type="range"][data-param]').forEach(sl => sl.dispatchEvent(new Event('input')));
+document.querySelectorAll('input[type="checkbox"][data-lfo]').forEach(cb => cb.dispatchEvent(new Event('change')));
+
+// === LFO Integratie ===
+document.querySelectorAll('input[type="range"][data-param]').forEach(sl => {
+    sl.addEventListener("input", updateAudio);
+});
+
+// === Initialize Audio Parameters ===
+function initializeAudioParameters(){
+    updateDerivedAudio();
+}
+initializeAudioParameters();
+</script>
+</body>
+</html>
