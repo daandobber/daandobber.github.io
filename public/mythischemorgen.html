@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <title>ASCII Ambient Bos – Modulair Patch Systeem</title>
+  <title>ASCII Ambient Bos – Modulair Patch Systeem met CRT & Blur/Resonator</title>
   <style>
     /* Topbar met knoppen */
     #topBar {
@@ -152,25 +152,22 @@
   
   <!-- Parameter-sliders -->
   <div id="sliders">
-    <!-- Harmonie Filter -->
+    <!-- Bestaande parameters -->
     <div class="knob">
       <div class="connector param-in" data-param="harmFilter"></div>
       <label>Harmonie</label>
       <input type="range" min="0" max="100" value="7" data-param="harmFilter">
     </div>
-    <!-- Algemene Lowpass -->
     <div class="knob">
       <div class="connector param-in" data-param="generalLP"></div>
       <label>Rust</label>
       <input type="range" min="0" max="100" value="50" data-param="generalLP">
     </div>
-    <!-- Nieuwe slider: Emotie -->
     <div class="knob">
       <div class="connector param-in" data-param="emotie"></div>
       <label>Emotie</label>
       <input type="range" min="0" max="100" value="50" data-param="emotie">
     </div>
-    <!-- Overige parameters -->
     <div class="knob">
       <div class="connector param-in" data-param="skySize"></div>
       <label>Lucht Grootte</label>
@@ -186,7 +183,6 @@
       <label>Lucht Gradient</label>
       <input type="range" min="0" max="100" value="50" data-param="skyGrad">
     </div>
-    <!-- Zon -->
     <div class="knob">
       <div class="connector param-in" data-param="sunSize"></div>
       <label>Zon Grootte</label>
@@ -207,7 +203,6 @@
       <label>Zon Pos Y</label>
       <input type="range" min="0" max="100" value="20" data-param="sunY">
     </div>
-    <!-- Akkoord -->
     <div class="knob">
       <div class="connector param-in" data-param="chordRoot"></div>
       <label>Sprookjes</label>
@@ -223,7 +218,6 @@
       <label>Scale Steps</label>
       <input type="range" min="1" max="12" value="5" data-param="scaleSteps">
     </div>
-    <!-- Zee -->
     <div class="knob">
       <div class="connector param-in" data-param="waterSize"></div>
       <label>Zee Grootte</label>
@@ -244,7 +238,6 @@
       <label>Zee Effect</label>
       <input type="range" min="0" max="100" value="50" data-param="waterEffect">
     </div>
-    <!-- Bos -->
     <div class="knob">
       <div class="connector param-in" data-param="bosSize"></div>
       <label>Bos Grootte</label>
@@ -262,7 +255,7 @@
     </div>
     <div class="knob">
       <div class="connector param-in" data-param="bosEffect"></div>
-      <label>Bos Vibrato<br></label>
+      <label>Bos Vibrato</label>
       <input type="range" min="0" max="100" value="50" data-param="bosEffect">
     </div>
     <div class="knob">
@@ -270,7 +263,6 @@
       <label>Bos Golf</label>
       <input type="range" min="0" max="100" value="10" data-param="bosWave">
     </div>
-    <!-- Berg -->
     <div class="knob">
       <div class="connector param-in" data-param="bergWave"></div>
       <label>Berg Golf</label>
@@ -290,6 +282,23 @@
       <div class="connector param-in" data-param="rotation"></div>
       <label>Rotatie</label>
       <input type="range" min="0" max="360" value="0" data-param="rotation">
+    </div>
+    <!-- Toegevoegde oude effecten -->
+    <div class="knob">
+      <label>Blur Gloss</label>
+      <input type="range" min="0" max="100" value="0" data-param="blurGloss">
+    </div>
+    <div class="knob">
+      <label>Resonator Freq</label>
+      <input type="range" min="50" max="1000" value="200" data-param="resonatorFreq">
+    </div>
+    <div class="knob">
+      <label>Resonator Q</label>
+      <input type="range" min="1" max="10" value="3" data-param="resonatorQ">
+    </div>
+    <div class="knob">
+      <label>Resonator Mix</label>
+      <input type="range" min="0" max="100" value="0" data-param="resonatorMix">
     </div>
   </div>
   
@@ -326,18 +335,22 @@
     const ROWS = 30, COLS = 80;
     let asciiBuffer = [];
     
-    // === ASCII Rendering ===
+    // === ASCII Rendering met CRT-effect ===
     function initAscii() {
       asciiBuffer = Array.from({length: ROWS}, () =>
         Array.from({length: COLS}, () => ({ ch: ' ', fg: '#fff' }))
       );
     }
     function renderAscii() {
+      let combinedRotation = getParam("rotation") + (getParam("chordRoot") / 10);
+      let mixFactor = getParam("resonatorMix") / 100; // 0 tot 1
       let html = "";
       for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
           const cell = asciiBuffer[r][c];
-          html += `<span style="color:${cell.fg}">${cell.ch === ' ' ? '&nbsp;' : cell.ch}</span>`;
+          let ch = cell.ch === ' ' ? '&nbsp;' : cell.ch;
+          let textShadow = mixFactor > 0 ? `text-shadow: 0 0 ${mixFactor * 40}px ${cell.fg};` : "";
+          html += `<span style="color:${cell.fg}; transform: rotate(${combinedRotation}deg); ${textShadow}">${ch}</span>`;
         }
         html += "\n";
       }
@@ -513,8 +526,7 @@
         const phase = time * 0.001 * 2 * Math.PI * frequency;
         const modOsc = Math.sin(phase);
         const modFactor = parseFloat(patch.slider.value) / 100;
-        const modulation = modOsc * lfoDepth * 0.1 * modFactor;
-        paramValues[patch.param].mod = modulation;
+        paramValues[patch.param].mod = modOsc * lfoDepth * 0.1 * modFactor;
         const paramSlider = document.querySelector(`input[data-param="${patch.param}"]`);
         if (paramSlider) {
           const baseParam = parseFloat(paramSlider.dataset.base) || parseFloat(paramSlider.value);
@@ -531,15 +543,11 @@
     function quantizeFrequency(freq) {
       const rootNote = 261.63; // Middle C
       let emotieVal = getParam("emotie")/100;
-      // Kies toonladder: minor als emotie < 0.5, major anders.
       let scale = (emotieVal < 0.5)
-        ? [0,2,3,5,7,8,10,12]  // minor
-        : [0,2,4,5,7,9,11,12]; // major
-      // In dit voorbeeld gebruiken we vaste intervallen: 0, +2, +4 semitonen
-      // Voor een extra globale shift gebruiken we:
-      let globalNoteShift = 1 + ((getParam("emotie") - 50) / 250); // 0.8 tot 1.2
+        ? [0,2,3,5,7,8,10,12]
+        : [0,2,4,5,7,9,11,12];
+      let globalNoteShift = 1 + ((getParam("emotie") - 50)/250);
       let semitones = 12 * Math.log2(freq / rootNote);
-      // Zoek het dichtstbijzijnde getal in de schaal
       let nearest = scale[0];
       let minDiff = Math.abs(semitones - scale[0]);
       for (let i = 1; i < scale.length; i++) {
@@ -613,7 +621,7 @@
     }
     finalReverb.buffer = createFinalReverbImpulse(3);
     
-    // --- Bouw de nieuwe audio-keten ---
+    // --- Bouw de audio-keten ---
     const masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.7;
     const filterNode = audioCtx.createBiquadFilter();
@@ -623,8 +631,17 @@
     masterGain.disconnect();
     masterGain.connect(harmonyFilter);
     harmonyFilter.connect(generalLowpass);
+    // --- Voeg Resonator-effect toe (oude effect) ---
+    const resonatorNode = audioCtx.createBiquadFilter();
+    resonatorNode.type = "bandpass";
+    resonatorNode.frequency.value = 200;
+    resonatorNode.Q.value = 3;
+    generalLowpass.connect(resonatorNode);
+    const resonatorGainNode = audioCtx.createGain();
+    resonatorGainNode.gain.value = 0;
+    resonatorNode.connect(resonatorGainNode);
+    resonatorGainNode.connect(finalReverb);
     generalLowpass.connect(finalReverb);
-    // De pan-node wordt gekoppeld in initAudioLFOs
     
     // --- Akkoord-oscillatoren & pad ---
     const chordOsc1 = audioCtx.createOscillator();
@@ -726,7 +743,6 @@
       };
       audioLfos.vibrato.osc.type = 'sine';
       audioLfos.vibrato.osc.frequency.value = 6;
-      // Deze gain wordt later ook beïnvloed door emotie
       audioLfos.vibrato.gain.value = getParam("bosEffect") * 0.5;
       audioLfos.vibrato.osc.connect(audioLfos.vibrato.gain);
       audioLfos.vibrato.gain.connect(chordOsc1.frequency);
@@ -746,7 +762,6 @@
       audioLfos.pan.gain.connect(audioLfos.pan.panner.pan);
       audioLfos.pan.panner.pan.value = 0;
       try { masterGain.disconnect(); } catch(e) { }
-      // Bouw de keten: masterGain → harmonyFilter → generalLowpass → finalReverb → pan → destination
       masterGain.connect(harmonyFilter);
       harmonyFilter.connect(generalLowpass);
       generalLowpass.connect(finalReverb);
@@ -758,47 +773,34 @@
     
     // === Update Derived Audio Parameters & Visuele Filters ===
     function updateDerivedAudio() {
-      // Harmonie Filter cutoff
       harmonyFilter.cutoff = getParam("harmFilter")/100;
       harmonyFilter.resonance = 3.99;
       
-      // Filter Node: sky parameters
       let specVal = getParam("skyHue")/360;
       filterNode.frequency.value = 100 + (20000-100)*specVal;
       filterNode.Q.value = 0.7 + (getParam("skyGrad")/100)*(20-0.7);
       
-      // "De Rand van de Nacht": basisfrequentie via sunSize
       let nachtVal = getParam("sunSize")/15;
       let baseFreq = baseFreqMin + (baseFreqMax - baseFreqMin)*nachtVal;
       baseFreq = quantizeFrequency(baseFreq);
       nachtOsc1.frequency.value = baseFreq;
       nachtOsc2.frequency.value = baseFreq*1.5;
       
-      // "Plasma Drup": chordFade voor crossfade
       let plasmaVal = getParam("chordFade")/100;
       chordG1.gain.value = 1 - plasmaVal;
       chordG2.gain.value = plasmaVal;
       
-      // "Kosmische Trilling": bosEffect voor vibrato
       audioLfos.vibrato.gain.value = getParam("bosEffect")*0.5;
       
-      // "Neon Bries": bosWave voor filter LFO
       lfoFilter.frequency.value = 0.2 + (getParam("bosWave")/100)*1.8;
       lfoFilterGain.gain.value = (getParam("bosWave")/100)*1000;
       
-      // "Zwevende Luchtbel": rotation voor pan
       let rot = getParam("rotation");
       audioLfos.pan.gain.value = rot/360;
       audioLfos.pan.osc.frequency.value = 0.1 + (rot/360)*0.9;
       
-      // Nieuwe "Emotie" parameter: bepaal globale toonshift en mixer-factor
       let emotieVal = getParam("emotie")/100;
-      // Globale toonshift: 0.8 (lage emotie) tot 1.2 (hoge emotie)
       let globalNoteShift = 1 + ((getParam("emotie") - 50)/250);
-      // Mixer factor voor de akkoorden: 0.8 tot 1.2
-      let mixerFactor = 0.8 + (emotieVal * 0.4);
-      
-      // Update de akkoordoscillatoren met vaste intervallen (0, +2, +4 semitonen) én de globale toonshift
       let newFreq1 = quantizeFrequency(getParam("chordRoot") * Math.pow(2, 0/12) * globalNoteShift);
       let newFreq2 = quantizeFrequency(getParam("chordRoot") * Math.pow(2, 2/12) * globalNoteShift);
       let newFreq3 = quantizeFrequency(getParam("chordRoot") * Math.pow(2, 4/12) * globalNoteShift);
@@ -806,15 +808,12 @@
       chordOsc2.frequency.value = newFreq2;
       chordOsc3.frequency.value = newFreq3;
       
-      // Pas de gain van de akkoorden aan met mixerFactor
       let baseGainNew = 2.0 * (getParam("sunSize")/15) * (1 - getParam("chordFade")/100);
-      chordG1.gain.value = baseGainNew * mixerFactor;
-      chordG2.gain.value = baseGainNew * mixerFactor;
-      chordG3.gain.value = baseGainNew * mixerFactor;
+      chordG1.gain.value = baseGainNew;
+      chordG2.gain.value = baseGainNew;
+      chordG3.gain.value = baseGainNew;
       
       padOsc.frequency.value = quantizeFrequency(110 + (getParam("sunHue")/360)*110);
-      
-      // Zee-noise
       noiseGain.gain.value = getParam("waterSize")*0.05;
       seaFilter.frequency.value = 200 + (getParam("waterEffect")/100)*1800;
       seaFilter.Q.value = 1 + (getParam("waterGrad")/100)*20;
@@ -822,13 +821,22 @@
       updateChords();
       padGain.gain.value = 0.1;
       
-      // Visuele filters op asciiArea
+      // Visuele filters met extra blur effect (grayscale is verwijderd)
       let blurVal = (getParam("skyGrad")/100)*5;
+      let blurGlossVal = (getParam("blurGloss")/100)*10;
+      let totalBlur = blurVal + blurGlossVal;
       let hueRotateVal = (getParam("skyHue")/360)*360;
-      let grayVal = 1 - (getParam("waterGrad")/100);
       let bright = 1 + Math.sin(audioCtx.currentTime * 2 * Math.PI * 0.3) * (getParam("chordFade")/200);
       document.getElementById("asciiArea").style.filter =
-        `blur(${blurVal}px) hue-rotate(${hueRotateVal}deg) grayscale(${grayVal}) brightness(${bright})`;
+        `blur(${totalBlur}px) hue-rotate(${hueRotateVal}deg) brightness(${bright})`;
+      
+      // Update resonator effect parameters
+      let resFreq = getParam("resonatorFreq");
+      let resQ = getParam("resonatorQ");
+      resonatorNode.frequency.value = resFreq;
+      resonatorNode.Q.value = resQ;
+      let resMix = getParam("resonatorMix");
+      resonatorGainNode.gain.value = resMix / 50;
     }
     
     // === Update Chords (met vaste 2-noten intervallen) ===
@@ -838,7 +846,6 @@
         ? [0,2,3,5,7,8,10,12]
         : [0,2,4,5,7,9,11,12];
       const root = getParam("chordRoot");
-      // Vaste intervallen: 0, +2, +4 semitonen
       let freq1 = quantizeFrequency(root * Math.pow(2, currentScale[0]/12));
       let freq2 = quantizeFrequency(root * Math.pow(2, 2/12));
       let freq3 = quantizeFrequency(root * Math.pow(2, 4/12));
