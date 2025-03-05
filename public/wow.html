@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>ASCII Ambient Bos – Modulair Patch Systeem (Volledig)</title>
+  <style>
+    /* Topbar met knoppen */
+    #topBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+    }
+    /* Basis styling */
+    body {
+      background: #000;
+      color: #ccc;
+      font-family: monospace;
+      margin: 0;
+      padding: 0;
+    }
+    /* ASCII display (scene) */
+    #asciiArea {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 50%;
+      bottom: 20px;
+      overflow: auto;
+      padding: 8px;
+      background: #000;
+      color: #ccc;
+      white-space: pre;
+      font-size: 14px;
+      line-height: 14px;
+      transition: transform 0.05s, filter 0.1s;
+    }
+    /* Container voor de parameter-sliders */
+    #sliders {
+      position: absolute;
+      top: 60px;
+      right: 0;
+      bottom: 20px;
+      width: 24%;
+      overflow-y: auto;
+      border-left: 1px solid #444;
+      padding: 10px;
+    }
+    #sliders > div {
+      margin-bottom: 20px;
+      position: relative;
+    }
+    /* Container voor de LFO-controles */
+    #speeds {
+      position: absolute;
+      top: 60px;
+      right: 25%;
+      bottom: 20px;
+      width: 24%;
+      overflow-y: auto;
+      border-left: 1px solid #444;
+      padding: 10px;
+    }
+    #speeds > div {
+      margin-bottom: 20px;
+      position: relative;
+    }
+    input[type="range"] {
+      width: 100%;
+      margin-top: 5px;
+    }
+    /* Connectoren (voor parameters & LFO’s) */
+    .connector {
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border: 3px solid #666;
+      border-radius: 50%;
+      position: absolute;
+      cursor: pointer;
+      z-index: 5;
+    }
+    .param-in {
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #00ccff;
+    }
+    .lfo-out {
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff6600;
+    }
+    /* Patch kabel */
+    .patch-cable {
+      position: absolute;
+      height: 4px;
+      background: #fff;
+      transform-origin: 0 0;
+      z-index: 4;
+      border-radius: 2px;
+    }
+    /* Compacte mod-slider */
+    .mod-slider {
+      position: absolute;
+      width: 40px;
+      height: 4px;
+      z-index: 10000;
+      background: rgba(0,0,0,0.9);
+      border-radius: 2px;
+      border: 1px solid #666;
+    }
+    input[type="range"].mod-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 40px !important;
+    }
+    input[type="range"].mod-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 8px;
+      width: 8px;
+      border-radius: 50%;
+      background: #ff6600;
+      border: 1px solid #666;
+      margin-top: -2px;
+    }
+    input[type="range"].mod-slider::-webkit-slider-runnable-track {
+      height: 4px;
+      background: #444;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Topbar -->
+  <div id="topBar">
+    <button id="randomBtn">Random</button>
+    <button id="saveBtn">Afbeelding Opslaan</button>
+  </div>
+  
+  <!-- ASCII Scene -->
+  <div id="asciiArea"></div>
+  
+  <!-- Parameter-sliders -->
+  <div id="sliders">
+    <!-- Basisparameters (een selectie; voeg eventueel meer toe) -->
+    <div class="knob">
+      <div class="connector param-in" data-param="harmFilter"></div>
+      <label>Harmonie</label>
+      <input type="range" min="0" max="100" value="7" data-param="harmFilter">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="generalLP"></div>
+      <label>Rust</label>
+      <input type="range" min="0" max="100" value="50" data-param="generalLP">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="emotie"></div>
+      <label>Emotie</label>
+      <input type="range" min="0" max="100" value="50" data-param="emotie">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="skySize"></div>
+      <label>Lucht Grootte</label>
+      <input type="range" min="5" max="20" value="10" data-param="skySize">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="skyHue"></div>
+      <label>Lucht Kleur</label>
+      <input type="range" min="0" max="360" value="200" data-param="skyHue">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="skyGrad"></div>
+      <label>Lucht Gradient</label>
+      <input type="range" min="0" max="100" value="50" data-param="skyGrad">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="sunSize"></div>
+      <label>Zon Grootte</label>
+      <input type="range" min="1" max="15" value="10" data-param="sunSize">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="sunHue"></div>
+      <label>Zon Kleur</label>
+      <input type="range" min="0" max="360" value="60" data-param="sunHue">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="sunX"></div>
+      <label>Zon Pos X</label>
+      <input type="range" min="0" max="100" value="50" data-param="sunX">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="sunY"></div>
+      <label>Zon Pos Y</label>
+      <input type="range" min="0" max="100" value="20" data-param="sunY">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="chordRoot"></div>
+      <label>Sprookjes</label>
+      <input type="range" min="50" max="300" value="120" data-param="chordRoot">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="chordFade"></div>
+      <label>Mystiek</label>
+      <input type="range" min="0" max="100" value="40" data-param="chordFade">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="scaleSteps"></div>
+      <label>Scale Steps</label>
+      <input type="range" min="1" max="12" value="5" data-param="scaleSteps">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="waterSize"></div>
+      <label>Zee Grootte</label>
+      <input type="range" min="2" max="20" value="8" data-param="waterSize">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="waterHue"></div>
+      <label>Zee Kleur</label>
+      <input type="range" min="0" max="360" value="180" data-param="waterHue">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="waterGrad"></div>
+      <label>Zee Gradient</label>
+      <input type="range" min="0" max="100" value="50" data-param="waterGrad">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="waterEffect"></div>
+      <label>Zee Effect</label>
+      <input type="range" min="0" max="100" value="50" data-param="waterEffect">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="bosSize"></div>
+      <label>Bos Grootte</label>
+      <input type="range" min="3" max="15" value="6" data-param="bosSize">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="bosHue"></div>
+      <label>Bos Kleur</label>
+      <input type="range" min="0" max="360" value="120" data-param="bosHue">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="bosGrad"></div>
+      <label>Zucht</label>
+      <input type="range" min="0" max="100" value="50" data-param="bosGrad">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="bosEffect"></div>
+      <label>Bos Vibrato</label>
+      <input type="range" min="0" max="100" value="50" data-param="bosEffect">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="bosWave"></div>
+      <label>Bos Golf</label>
+      <input type="range" min="0" max="100" value="10" data-param="bosWave">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="bergWave"></div>
+      <label>Berg Golf</label>
+      <input type="range" min="0" max="100" value="10" data-param="bergWave">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="mountainSize"></div>
+      <label>Berg Grootte</label>
+      <input type="range" min="1" max="10" value="3" data-param="mountainSize">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="birdChance"></div>
+      <label>Vogel Kans</label>
+      <input type="range" min="0" max="100" value="10" data-param="birdChance">
+    </div>
+    <div class="knob">
+      <div class="connector param-in" data-param="rotation"></div>
+      <label>Rotatie</label>
+      <input type="range" min="0" max="360" value="0" data-param="rotation">
+    </div>
+    <!-- Oude effecten -->
+    <div class="knob">
+      <label>Blur Gloss</label>
+      <input type="range" min="0" max="100" value="0" data-param="blurGloss">
+    </div>
+    <div class="knob">
+      <label>Resonator Freq</label>
+      <input type="range" min="50" max="1000" value="200" data-param="resonatorFreq">
+    </div>
+    <div class="knob">
+      <label>Resonator Q</label>
+      <input type="range" min="1" max="10" value="3" data-param="resonatorQ">
+    </div>
+    <div class="knob">
+      <label>Resonator Mix</label>
+      <input type="range" min="0" max="100" value="0" data-param="resonatorMix">
+    </div>
+    <!-- Nieuwe Wortels-slider -->
+    <div class="knob">
+      <label>Wortels</label>
+      <input type="range" min="0" max="100" value="50" data-param="wortels">
+    </div>
+    <!-- Synth Parameters (oude synth functionaliteit) -->
+    <div class="knob">
+      <label>Lucht Volume</label>
+      <input type="range" min="0" max="100" value="0" data-param="luchtVolume">
+    </div>
+    <div class="knob">
+      <label>Lucht Filter Freq</label>
+      <input type="range" min="100" max="1000" value="500" data-param="luchtFilterFreq">
+    </div>
+    <div class="knob">
+      <label>Lucht Filter Q</label>
+      <input type="range" min="0" max="10" value="1" data-param="luchtFilterQ">
+    </div>
+    <div class="knob">
+      <label>Zon Volume</label>
+      <input type="range" min="0" max="100" value="0" data-param="zonVolume">
+    </div>
+    <div class="knob">
+      <label>Zon Filter Freq</label>
+      <input type="range" min="100" max="1000" value="500" data-param="zonFilterFreq">
+    </div>
+    <div class="knob">
+      <label>Zon Filter Q</label>
+      <input type="range" min="0" max="10" value="1" data-param="zonFilterQ">
+    </div>
+    <div class="knob">
+      <label>Zee Volume</label>
+      <input type="range" min="0" max="100" value="0" data-param="zeeVolume">
+    </div>
+    <div class="knob">
+      <label>Zee Filter Freq</label>
+      <input type="range" min="200" max="1000" value="330" data-param="zeeFilterFreq">
+    </div>
+    <div class="knob">
+      <label>Zee Filter Q</label>
+      <input type="range" min="0" max="10" value="0" data-param="zeeFilterQ">
+    </div>
+    <div class="knob">
+      <label>Land Volume</label>
+      <input type="range" min="0" max="100" value="0" data-param="landVolume">
+    </div>
+    <div class="knob">
+      <label>Land Filter Freq</label>
+      <input type="range" min="50" max="200" value="110" data-param="landFilterFreq">
+    </div>
+    <div class="knob">
+      <label>Land Filter Q</label>
+      <input type="range" min="0" max="10" value="1" data-param="landFilterQ">
+    </div>
+  </div>
+  
+  <!-- LFO Controllers -->
+  <div id="speeds">
+    <div class="knob">
+      <label>LFO 1 Snelheid</label>
+      <input type="range" min="0" max="100" value="20" id="lfo1speed">
+      <label>LFO 1 Diepte</label>
+      <input type="range" min="0" max="100" value="20" id="lfo1depth">
+      <div class="connector lfo-out" data-lfo="1" style="position:relative; margin-top:10px;"></div>
+    </div>
+    <div class="knob">
+      <label>LFO 2 Snelheid</label>
+      <input type="range" min="0" max="100" value="20" id="lfo2speed">
+      <label>LFO 2 Diepte</label>
+      <input type="range" min="0" max="100" value="20" id="lfo2depth">
+      <div class="connector lfo-out" data-lfo="2" style="position:relative; margin-top:10px;"></div>
+    </div>
+    <div class="knob">
+      <label>LFO 3 Snelheid</label>
+      <input type="range" min="0" max="100" value="20" id="lfo3speed">
+      <label>LFO 3 Diepte</label>
+      <input type="range" min="0" max="100" value="20" id="lfo3depth">
+      <div class="connector lfo-out" data-lfo="3" style="position:relative; margin-top:10px;"></div>
+    </div>
+  </div>
+  
+  <!-- Verborgen canvas voor opslaan -->
+  <canvas id="hiddenCanvas" style="display:none;"></canvas>
+  
+  <script>
+    // === Global definitions ===
+    const ROWS = 30, COLS = 80;
+    let asciiBuffer = [];
+    
+    // === ASCII Rendering met CRT-effect ===
+    function initAscii() {
+      asciiBuffer = Array.from({length: ROWS}, () =>
+        Array.from({length: COLS}, () => ({ ch: ' ', fg: '#fff' }))
+      );
+    }
+    function renderAscii() {
+      let combinedRotation = getParam("rotation") + (getParam("chordRoot") / 10);
+      let mixFactor = getParam("resonatorMix") / 100;
+      let html = "";
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = asciiBuffer[r][c];
+          let ch = cell.ch === ' ' ? '&nbsp;' : cell.ch;
+          let textShadow = mixFactor > 0 ? `text-shadow: 0 0 ${mixFactor * 40}px ${cell.fg};` : "";
+          html += `<span style="color:${cell.fg}; transform: rotate(${combinedRotation}deg); ${textShadow}">${ch}</span>`;
+        }
+        html += "\n";
+      }
+      document.getElementById("asciiArea").innerHTML = html;
+    }
+    function drawScene() {
+      initAscii();
+      // Sky
+      const skyRows = Math.min(getParam("skySize"), ROWS - 10);
+      const skyHue = getParam("skyHue");
+      for (let r = 0; r < skyRows; r++) {
+        const lightness = 60 + (r/skyRows*20);
+        for (let c = 0; c < COLS; c++) {
+          asciiBuffer[r][c] = { ch: '░', fg: `hsl(${skyHue}, 60%, ${lightness}%)` };
+        }
+      }
+      // Zon
+      const sunSize = getParam("sunSize");
+      const sunHue = getParam("sunHue");
+      const sunX = Math.floor(getParam("sunX")/100 * COLS);
+      const sunY = Math.floor(getParam("sunY")/100 * skyRows);
+      for (let r = 0; r < skyRows; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const dx = c - sunX, dy = r - sunY;
+          const dist = Math.sqrt(dx*dx+dy*dy);
+          if(dist < sunSize) {
+            asciiBuffer[r][c] = { ch: '☼', fg: `hsl(${sunHue}, 100%, 80%)` };
+          }
+        }
+      }
+      // Zee
+      const waterRows = Math.min(getParam("waterSize"), ROWS - skyRows - 5);
+      const waterHue = getParam("waterHue");
+      for (let r = ROWS-waterRows; r < ROWS; r++) {
+        const lightness = 50 + ((r-(ROWS-waterRows))/waterRows*20);
+        for (let c = 0; c < COLS; c++) {
+          asciiBuffer[r][c] = { ch: '~', fg: `hsl(${waterHue}, 50%, ${lightness}%)` };
+        }
+      }
+      // Bergen
+      const mountainRows = Math.floor((ROWS - skyRows - waterRows) * (getParam("mountainSize")/10));
+      const bergWave = getParam("bergWave");
+      for (let r = skyRows; r < skyRows + mountainRows; r++) {
+        const ratio = (r-skyRows)/mountainRows;
+        const offset = Math.floor(Math.sin((r+bergWave/10))*(bergWave/20));
+        for (let c = 0; c < COLS; c++) {
+          const cc = (c+offset+COLS)%COLS;
+          const lightness = 35 + (ratio*20);
+          asciiBuffer[r][cc] = { ch: '^', fg: `hsl(${skyHue}, 30%, ${lightness}%)` };
+        }
+      }
+      // Bos
+      const bosRows = ROWS - skyRows - waterRows - mountainRows;
+      const bosTop = skyRows + mountainRows;
+      const bosWave = getParam("bosWave");
+      const bosHue = getParam("bosHue");
+      for (let r = bosTop; r < bosTop+bosRows; r++) {
+        const ratio = (r-bosTop)/bosRows;
+        const offset = Math.floor(Math.sin((r+bosWave/10))*(bosWave/20));
+        for (let c = 0; c < COLS; c++) {
+          const cc = (c+offset+COLS)%COLS;
+          const lightness = 35 + (ratio*20);
+          asciiBuffer[r][cc] = { ch: '█', fg: `hsl(${bosHue}, 50%, ${lightness}%)` };
+        }
+      }
+      // Vogels
+      const birdChance = getParam("birdChance");
+      for (let r = 0; r < skyRows; r++) {
+        if(Math.random() < birdChance*0.001) {
+          const cc = Math.floor(Math.random()*COLS);
+          asciiBuffer[r][cc] = { ch: 'v', fg: '#fff' };
+          triggerBirdSound();
+        }
+      }
+      renderAscii();
+    }
+    
+    // === Parameter Management ===
+    const paramValues = {};
+    function getParam(name) {
+      return (paramValues[name]?.base || 0) + (paramValues[name]?.mod || 0);
+    }
+    document.querySelectorAll('input[data-param]').forEach(input => {
+      const param = input.dataset.param;
+      paramValues[param] = { base: parseFloat(input.value), mod: 0 };
+      input.addEventListener('input', () => {
+        paramValues[param].base = parseFloat(input.value);
+        if (!input.dataset.base) input.dataset.base = input.value;
+      });
+    });
+    
+    // === Patch Cable Systeem (voor LFO-CV) ===
+    let activeCable = null, dragStart = null;
+    let patches = new Map();
+    function removePatch(patchId) {
+      const patch = patches.get(patchId);
+      if (patch) {
+        patch.cable.remove();
+        patch.slider.remove();
+        patches.delete(patchId);
+      }
+    }
+    document.querySelectorAll('.connector').forEach(conn => {
+      conn.addEventListener('mousedown', startDrag);
+    });
+    function startDrag(e) {
+      if (!e.target.classList.contains('lfo-out')) return;
+      activeCable = document.createElement('div');
+      activeCable.className = 'patch-cable';
+      document.body.appendChild(activeCable);
+      dragStart = { element: e.target, x: e.clientX, y: e.clientY, lfo: e.target.dataset.lfo };
+      document.addEventListener('mousemove', updateDrag);
+      document.addEventListener('mouseup', finishDrag);
+    }
+    function updateDrag(e) {
+      if (!activeCable) return;
+      const startX = dragStart.x, startY = dragStart.y;
+      const endX = e.clientX, endY = e.clientY;
+      const length = Math.sqrt((endX - startX)**2 + (endY - startY)**2);
+      const angle = Math.atan2(endY - startY, endX - startX);
+      activeCable.style.width = length + 'px';
+      activeCable.style.left = startX + 'px';
+      activeCable.style.top = startY + 'px';
+      activeCable.style.transform = `rotate(${angle}rad)`;
+    }
+    function finishDrag(e) {
+      document.removeEventListener('mousemove', updateDrag);
+      document.removeEventListener('mouseup', finishDrag);
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      if (target && target.classList.contains('param-in')) {
+        createPatch(target, e);
+      } else {
+        activeCable.remove();
+      }
+      activeCable = null;
+      dragStart = null;
+    }
+    function createPatch(target, e) {
+      const lfoId = dragStart.lfo;
+      const param = target.dataset.param;
+      const patchId = `${lfoId}-${param}`;
+      if (patches.has(patchId)) {
+        patches.get(patchId).cable.remove();
+        patches.get(patchId).slider.remove();
+        patches.delete(patchId);
+      }
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.min = 0; slider.max = 100; slider.value = 50;
+      slider.className = 'mod-slider';
+      slider.style.left = ((dragStart.x + e.clientX)/2) + 'px';
+      slider.style.top = ((dragStart.y + e.clientY)/2) + 'px';
+      slider.dataset.base = slider.value;
+      document.body.appendChild(slider);
+      patches.set(patchId, { lfo: lfoId, param: param, cable: activeCable, slider: slider });
+      slider.addEventListener('dblclick', ev => { ev.stopPropagation(); removePatch(patchId); });
+      activeCable.addEventListener('dblclick', ev => { ev.stopPropagation(); removePatch(patchId); });
+      const updatePosition = () => {
+        const startRect = dragStart.element.getBoundingClientRect();
+        const endRect = target.getBoundingClientRect();
+        slider.style.left = ((startRect.left + endRect.left)/2) + 'px';
+        slider.style.top = ((startRect.top + endRect.top)/2) + 'px';
+      };
+      window.addEventListener('resize', updatePosition);
+    }
+    function updateLFOs(time) {
+      patches.forEach((patch, id) => {
+        const lfoSpeed = parseFloat(document.getElementById(`lfo${patch.lfo}speed`).value);
+        const lfoDepth = parseFloat(document.getElementById(`lfo${patch.lfo}depth`).value);
+        const frequency = 0.1 + (lfoSpeed * 0.05);
+        const phase = time * 0.001 * 2 * Math.PI * frequency;
+        const modOsc = Math.sin(phase);
+        const modFactor = parseFloat(patch.slider.value) / 100;
+        paramValues[patch.param].mod = modOsc * lfoDepth * 0.1 * modFactor;
+        const paramSlider = document.querySelector(`input[data-param="${patch.param}"]`);
+        if (paramSlider) {
+          const baseParam = parseFloat(paramSlider.dataset.base) || parseFloat(paramSlider.value);
+          const range = parseFloat(paramSlider.max) - parseFloat(paramSlider.min);
+          const amplitude = range * 0.1;
+          let newParamValue = baseParam + modOsc * amplitude * (lfoDepth/100) * modFactor;
+          newParamValue = Math.max(parseFloat(paramSlider.min), Math.min(parseFloat(paramSlider.max), newParamValue));
+          paramSlider.value = newParamValue;
+        }
+      });
+    }
+    
+    // === Quantizer functie (C-majeur / C-minor toonladder) ===
+    function quantizeFrequency(freq) {
+      const rootNote = 261.63; // Middle C
+      let emotieVal = getParam("emotie")/100;
+      let scale = emotieVal < 0.5 ? [0,2,3,5,7,8,10,12] : [0,2,4,5,7,9,11,12];
+      let globalNoteShift = 1 + ((getParam("emotie") - 50)/250);
+      let semitones = 12 * Math.log2(freq / rootNote);
+      let nearest = scale[0], minDiff = Math.abs(semitones - scale[0]);
+      for (let i = 1; i < scale.length; i++) {
+        let diff = Math.abs(semitones - scale[i]);
+        if (diff < minDiff) { minDiff = diff; nearest = scale[i]; }
+      }
+      return rootNote * Math.pow(2, nearest/12) * globalNoteShift;
+    }
+    
+    // === Audio Setup & Extra Effect Nodes ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioLfos = {};
+    
+    // Harmonie Filter
+    const bufferSize = 4096;
+    const harmonyFilter = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+    let in1HF = 0, in2HF = 0, in3HF = 0, in4HF = 0;
+    let out1HF = 0, out2HF = 0, out3HF = 0, out4HF = 0;
+    harmonyFilter.cutoff = getParam("harmFilter")/100;
+    harmonyFilter.resonance = 3.99;
+    harmonyFilter.onaudioprocess = function(e) {
+      let input = e.inputBuffer.getChannelData(0), output = e.outputBuffer.getChannelData(0);
+      let f = harmonyFilter.cutoff * 1.16, fb = harmonyFilter.resonance * (1.0 - 0.15 * f * f);
+      for (let i = 0; i < bufferSize; i++) {
+        input[i] -= out4HF * fb;
+        input[i] *= 0.35013 * (f * f) * (f * f);
+        out1HF = input[i] + 0.3 * in1HF + (1 - f) * out1HF; in1HF = input[i];
+        out2HF = out1HF + 0.3 * in2HF + (1 - f) * out2HF; in2HF = out1HF;
+        out3HF = out2HF + 0.3 * in3HF + (1 - f) * out3HF; in3HF = out2HF;
+        out4HF = out3HF + 0.3 * in4HF + (1 - f) * out4HF; in4HF = out3HF;
+        output[i] = out4HF;
+      }
+    };
+    
+    // Algemene Lowpass
+    const generalLowpass = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+    let lastOutLP = 0.0;
+    generalLowpass.onaudioprocess = function(e) {
+      let input = e.inputBuffer.getChannelData(0), output = e.outputBuffer.getChannelData(0);
+      let smoothing = (getParam("generalLP")/100) * 0.9;
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = smoothing * lastOutLP + (1 - smoothing) * input[i];
+        lastOutLP = output[i];
+      }
+    };
+    
+    // Final Reverb
+    const finalReverb = audioCtx.createConvolver();
+    function createFinalReverbImpulse(duration = 3) {
+      const sr = audioCtx.sampleRate, length = sr * duration;
+      const impulse = audioCtx.createBuffer(2, length, sr);
+      for (let c = 0; c < 2; c++) {
+        const channelData = impulse.getChannelData(c);
+        for (let i = 0; i < length; i++) {
+          const t = i/length;
+          channelData[i] = (Math.random()*2-1)*(1-t);
+        }
+      }
+      return impulse;
+    }
+    finalReverb.buffer = createFinalReverbImpulse(3);
+    
+    // Bouw audio-keten
+    const masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.7;
+    const filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = "lowpass"; filterNode.frequency.value = 5000;
+    filterNode.connect(masterGain);
+    masterGain.disconnect();
+    masterGain.connect(harmonyFilter);
+    harmonyFilter.connect(generalLowpass);
+    // Resonator-effect
+    const resonatorNode = audioCtx.createBiquadFilter();
+    resonatorNode.type = "bandpass"; resonatorNode.frequency.value = 200; resonatorNode.Q.value = 3;
+    generalLowpass.connect(resonatorNode);
+    const resonatorGainNode = audioCtx.createGain();
+    resonatorGainNode.gain.value = 0;
+    resonatorNode.connect(resonatorGainNode);
+    resonatorGainNode.connect(finalReverb);
+    generalLowpass.connect(finalReverb);
+    
+    // Chord Oscillators & Pad
+    const chordOsc1 = audioCtx.createOscillator(); chordOsc1.type = "sine"; chordOsc1.start();
+    const chordOsc2 = audioCtx.createOscillator(); chordOsc2.type = "triangle"; chordOsc2.start();
+    const chordOsc3 = audioCtx.createOscillator(); chordOsc3.type = "square"; chordOsc3.start();
+    const chordG1 = audioCtx.createGain(); chordOsc1.connect(chordG1); chordG1.connect(filterNode);
+    const chordG2 = audioCtx.createGain(); chordOsc2.connect(chordG2); chordG2.connect(filterNode);
+    const chordG3 = audioCtx.createGain(); chordOsc3.connect(chordG3); chordG3.connect(filterNode);
+    const padOsc = audioCtx.createOscillator(); padOsc.type = "sawtooth"; padOsc.start();
+    const padGain = audioCtx.createGain(); padOsc.connect(padGain); padGain.connect(filterNode);
+    
+    // Noise (Zee)
+    const noiseBuf = (function createPinkNoise(){
+      const size = 2 * audioCtx.sampleRate;
+      const buf = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+      const out = buf.getChannelData(0);
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+      for(let i=0;i<size;i++){
+        const w = Math.random()*2-1;
+        b0 = 0.99886*b0 + w*0.0555179;
+        b1 = 0.99332*b1 + w*0.0750759;
+        b2 = 0.96900*b2 + w*0.1538520;
+        b3 = 0.86650*b3 + w*0.3104856;
+        b4 = 0.55000*b4 + w*0.5329522;
+        b5 = -0.7616*b5 - w*0.0168980;
+        out[i] = b0+b1+b2+b3+b4+b5+b6;
+        out[i] *= 0.11;
+        b6 = w*0.115926;
+      }
+      return buf;
+    })();
+    const noiseSrc = audioCtx.createBufferSource();
+    noiseSrc.buffer = noiseBuf; noiseSrc.loop = true;
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = getParam("waterSize")*0.05;
+    noiseSrc.connect(noiseGain);
+    const seaFilter = audioCtx.createBiquadFilter();
+    seaFilter.type = "bandpass";
+    seaFilter.frequency.value = 200 + (getParam("waterEffect")/100)*1800;
+    seaFilter.Q.value = 1 + (getParam("waterGrad")/100)*20;
+    noiseGain.connect(seaFilter);
+    seaFilter.connect(masterGain);
+    noiseSrc.start();
+    
+    // Extra Effects
+    // De Rand van de Nacht
+    const baseFreqMin = 100, baseFreqMax = 400;
+    const nachtOsc1 = audioCtx.createOscillator(); const nachtOsc2 = audioCtx.createOscillator();
+    nachtOsc1.type = 'sine'; nachtOsc2.type = 'square';
+    const nachtGain = audioCtx.createGain(); nachtGain.gain.value = 0.5;
+    nachtOsc1.connect(nachtGain); nachtOsc2.connect(nachtGain);
+    nachtGain.connect(filterNode);
+    nachtOsc1.start(); nachtOsc2.start();
+    // Neon Bries
+    const lfoFilter = audioCtx.createOscillator(); const lfoFilterGain = audioCtx.createGain();
+    lfoFilter.type = 'sine'; lfoFilter.frequency.value = 0.2 + (getParam("bosWave")/100)*1.8;
+    lfoFilterGain.gain.value = (getParam("bosWave")/100)*1000;
+    lfoFilter.connect(lfoFilterGain); lfoFilterGain.connect(filterNode.frequency);
+    lfoFilter.start();
+    
+    // --- Synths: Lucht, Zon, Zee, Land ---
+    // Lucht Synth
+    const luchtOscillators = [], luchtGains = [];
+    const luchtFilter = audioCtx.createBiquadFilter();
+    luchtFilter.type = "lowpass";
+    luchtFilter.frequency.value = getParam("luchtFilterFreq") || 500;
+    luchtFilter.Q.value = getParam("luchtFilterQ") || 1;
+    for(let i=0;i<3;i++){
+      const osc = audioCtx.createOscillator();
+      osc.type = "sine"; osc.frequency.value = 440;
+      osc.start();
+      const gain = audioCtx.createGain();
+      gain.gain.value = getParam("luchtVolume")/100 || 0;
+      osc.connect(gain); gain.connect(luchtFilter);
+      luchtOscillators.push(osc); luchtGains.push(gain);
+    }
+    luchtFilter.connect(filterNode);
+    
+    // Zon Synth
+    const zonOscillators = [], zonGains = [];
+    const zonFilter = audioCtx.createBiquadFilter();
+    zonFilter.type = "bandpass";
+    zonFilter.frequency.value = getParam("zonFilterFreq") || 500;
+    zonFilter.Q.value = getParam("zonFilterQ") || 1;
+    for(let i=0;i<3;i++){
+      const osc = audioCtx.createOscillator();
+      osc.type = "triangle"; osc.frequency.value = 220;
+      osc.start();
+      const gain = audioCtx.createGain();
+      gain.gain.value = getParam("zonVolume")/100 || 0;
+      osc.connect(gain); gain.connect(zonFilter);
+      zonOscillators.push(osc); zonGains.push(gain);
+    }
+    zonFilter.connect(filterNode);
+    
+    // Zee Synth
+    const zeeOscillators = [], zeeGains = [];
+    const zeeFilter = audioCtx.createBiquadFilter();
+    zeeFilter.type = "highshelf";
+    zeeFilter.frequency.value = getParam("zeeFilterFreq") || 330;
+    zeeFilter.gain.value = getParam("zeeFilterQ") || 0;
+    for(let i=0;i<3;i++){
+      const osc = audioCtx.createOscillator();
+      osc.type = "square"; osc.frequency.value = 330;
+      osc.start();
+      const gain = audioCtx.createGain();
+      gain.gain.value = getParam("zeeVolume")/100 || 0;
+      osc.connect(gain); gain.connect(zeeFilter);
+      zeeOscillators.push(osc); zeeGains.push(gain);
+    }
+    zeeFilter.connect(filterNode);
+    
+    // Land Synth
+    const landOscillators = [], landGains = [];
+    const landFilter = audioCtx.createBiquadFilter();
+    landFilter.type = "lowpass";
+    landFilter.frequency.value = getParam("landFilterFreq") || 110;
+    landFilter.Q.value = getParam("landFilterQ") || 1;
+    for(let i=0;i<3;i++){
+      const osc = audioCtx.createOscillator();
+      osc.type = "sine"; osc.frequency.value = 110;
+      osc.start();
+      const gain = audioCtx.createGain();
+      gain.gain.value = getParam("landVolume")/100 || 0;
+      osc.connect(gain); gain.connect(landFilter);
+      landOscillators.push(osc); landGains.push(gain);
+    }
+    landFilter.connect(filterNode);
+    
+    // Vogel Geluid
+    let lastBirdSoundTime = 0;
+    function triggerBirdSound() {
+      const now = audioCtx.currentTime;
+      if(now - lastBirdSoundTime < 2) return;
+      lastBirdSoundTime = now;
+      const birdOsc = audioCtx.createOscillator();
+      birdOsc.type = "sine";
+      birdOsc.frequency.value = 1200 + Math.random()*200;
+      const birdGain = audioCtx.createGain();
+      birdGain.gain.setValueAtTime(0, now);
+      birdGain.gain.linearRampToValueAtTime(0.1, now+0.05);
+      birdGain.gain.linearRampToValueAtTime(0, now+0.2);
+      birdOsc.connect(birdGain); birdGain.connect(masterGain);
+      birdOsc.start(now); birdOsc.stop(now+0.3);
+    }
+    
+    // --- Wortels (suboscillatoren) voor extra diepte ---
+    const wortelsOsc1 = audioCtx.createOscillator(), wortelsOsc2 = audioCtx.createOscillator();
+    wortelsOsc1.type = wortelsOsc2.type = "sine";
+    wortelsOsc1.start(); wortelsOsc2.start();
+    const wortelsGain1 = audioCtx.createGain(), wortelsGain2 = audioCtx.createGain();
+    const wortelsPan1 = audioCtx.createStereoPanner(), wortelsPan2 = audioCtx.createStereoPanner();
+    const wortelsFilter = audioCtx.createBiquadFilter();
+    wortelsFilter.type = "lowpass"; wortelsFilter.frequency.value = 500;
+    wortelsOsc1.connect(wortelsGain1); wortelsOsc2.connect(wortelsGain2);
+    wortelsGain1.connect(wortelsPan1); wortelsGain2.connect(wortelsPan2);
+    wortelsPan1.connect(wortelsFilter); wortelsPan2.connect(wortelsFilter);
+    wortelsFilter.connect(masterGain);
+    function computeWortelsGains(v) {
+      let gain1, gain2;
+      if(v <= 0.25) { gain1 = 1 - 0.5*(v/0.25); gain2 = 0.5*(v/0.25); }
+      else if(v <= 0.75) { gain1 = 0.5; gain2 = 0.5; }
+      else { gain1 = 0.5 - 0.5*((v-0.75)/0.25); gain2 = 0.5 + 0.5*((v-0.75)/0.25); }
+      return [gain1, gain2];
+    }
+    function computeWortelsPan(v) {
+      let pan1, pan2;
+      if(v <= 0.25) { pan1 = -1; pan2 = 1; }
+      else if(v <= 0.75) {
+        if(v <= 0.5) {
+          let t = (v-0.25)/0.25;
+          pan1 = -1 + t*1; pan2 = 1 - t*1;
+        } else {
+          let t = (v-0.5)/0.25;
+          pan1 = 0 + t*1; pan2 = 0 - t*1;
+        }
+      } else { pan1 = 1; pan2 = -1; }
+      return [pan1, pan2];
+    }
+    
+    // --- Update functies voor synths ---
+    function updateLuchtSynth() {
+      const luchtVolume = getParam("luchtVolume")/100;
+      luchtFilter.frequency.value = getParam("luchtFilterFreq");
+      luchtFilter.Q.value = getParam("luchtFilterQ");
+      luchtGains.forEach(g => { g.gain.setTargetAtTime(luchtVolume, audioCtx.currentTime, 0.3); });
+    }
+    function updateZonSynth() {
+      const zonVolume = getParam("zonVolume")/100;
+      zonFilter.frequency.value = getParam("zonFilterFreq");
+      zonFilter.Q.value = getParam("zonFilterQ");
+      zonGains.forEach(g => { g.gain.setTargetAtTime(zonVolume, audioCtx.currentTime, 0.3); });
+    }
+    function updateZeeSynth() {
+      const zeeVolume = getParam("zeeVolume")/100;
+      zeeFilter.frequency.value = getParam("zeeFilterFreq");
+      zeeFilter.gain.setTargetAtTime(getParam("zeeFilterQ"), audioCtx.currentTime, 0.3);
+      zeeGains.forEach(g => { g.gain.setTargetAtTime(zeeVolume, audioCtx.currentTime, 0.3); });
+    }
+    function updateLandSynth() {
+      const landVolume = getParam("landVolume")/100;
+      landFilter.frequency.value = getParam("landFilterFreq");
+      landFilter.Q.setTargetAtTime(getParam("landFilterQ"), audioCtx.currentTime, 0.3);
+      landGains.forEach(g => { g.gain.setTargetAtTime(landVolume, audioCtx.currentTime, 0.3); });
+    }
+    function updateSynths() {
+      updateLuchtSynth(); updateZonSynth(); updateZeeSynth(); updateLandSynth();
+    }
+    
+    // --- Audio LFO's uit het nieuwe systeem en mixer ---
+    function initAudioLFOs() {
+      audioLfos.amp = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain()
+      };
+      audioLfos.amp.osc.type = 'sine'; audioLfos.amp.osc.frequency.value = 0.3;
+      audioLfos.amp.gain.value = 0;
+      audioLfos.amp.osc.connect(audioLfos.amp.gain);
+      audioLfos.amp.gain.connect(masterGain.gain);
+      audioLfos.amp.osc.start();
+      
+      audioLfos.vibrato = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain()
+      };
+      audioLfos.vibrato.osc.type = 'sine'; audioLfos.vibrato.osc.frequency.value = 6;
+      audioLfos.vibrato.gain.value = getParam("bosEffect") * 0.5;
+      audioLfos.vibrato.osc.connect(audioLfos.vibrato.gain);
+      audioLfos.vibrato.gain.connect(chordOsc1.frequency);
+      audioLfos.vibrato.gain.connect(chordOsc2.frequency);
+      audioLfos.vibrato.gain.connect(chordOsc3.frequency);
+      audioLfos.vibrato.osc.start();
+      
+      audioLfos.pan = {
+        osc: audioCtx.createOscillator(),
+        gain: audioCtx.createGain(),
+        panner: audioCtx.createStereoPanner()
+      };
+      audioLfos.pan.osc.type = 'sine';
+      audioLfos.pan.osc.frequency.value = 0.1 + (getParam("rotation")/360)*0.9;
+      audioLfos.pan.gain.value = getParam("rotation")/360;
+      audioLfos.pan.osc.connect(audioLfos.pan.gain);
+      audioLfos.pan.gain.connect(audioLfos.pan.panner.pan);
+      audioLfos.pan.panner.pan.value = 0;
+      try { masterGain.disconnect(); } catch(e) {}
+      masterGain.connect(harmonyFilter);
+      harmonyFilter.connect(generalLowpass);
+      generalLowpass.connect(finalReverb);
+      finalReverb.connect(audioLfos.pan.panner);
+      audioLfos.pan.panner.connect(audioCtx.destination);
+      audioLfos.pan.osc.start();
+    }
+    initAudioLFOs();
+    
+    // === Update Derived Audio Parameters & Visuele Filters ===
+    function updateDerivedAudio() {
+      harmonyFilter.cutoff = getParam("harmFilter")/100;
+      harmonyFilter.resonance = 3.99;
+      
+      let specVal = getParam("skyHue")/360;
+      filterNode.frequency.value = 100 + (20000-100)*specVal;
+      filterNode.Q.value = 0.7 + (getParam("skyGrad")/100)*(20-0.7);
+      
+      let nachtVal = getParam("sunSize")/15;
+      let baseFreq = baseFreqMin + (baseFreqMax - baseFreqMin)*nachtVal;
+      baseFreq = quantizeFrequency(baseFreq);
+      nachtOsc1.frequency.value = baseFreq;
+      nachtOsc2.frequency.value = baseFreq*1.5;
+      
+      let plasmaVal = getParam("chordFade")/100;
+      chordG1.gain.value = 1 - plasmaVal;
+      chordG2.gain.value = plasmaVal;
+      
+      audioLfos.vibrato.gain.value = getParam("bosEffect")*0.5;
+      
+      lfoFilter.frequency.value = 0.2 + (getParam("bosWave")/100)*1.8;
+      lfoFilterGain.gain.value = (getParam("bosWave")/100)*1000;
+      
+      let rot = getParam("rotation");
+      audioLfos.pan.gain.value = rot/360;
+      audioLfos.pan.osc.frequency.value = 0.1 + (rot/360)*0.9;
+      
+      let emotieVal = getParam("emotie")/100;
+      let globalNoteShift = 1 + ((getParam("emotie") - 50)/250);
+      let newFreq1 = quantizeFrequency(getParam("chordRoot") * Math.pow(2, 0/12) * globalNoteShift);
+      let newFreq2 = quantizeFrequency(getParam("chordRoot") * Math.pow(2, 2/12) * globalNoteShift);
+      let newFreq3 = quantizeFrequency(getParam("chordRoot") * Math.pow(2, 4/12) * globalNoteShift);
+      chordOsc1.frequency.value = newFreq1;
+      chordOsc2.frequency.value = newFreq2;
+      chordOsc3.frequency.value = newFreq3;
+      
+      let baseGainNew = 2.0 * (getParam("sunSize")/15) * (1 - getParam("chordFade")/100);
+      chordG1.gain.value = baseGainNew;
+      chordG2.gain.value = baseGainNew;
+      chordG3.gain.value = baseGainNew;
+      
+      padOsc.frequency.value = quantizeFrequency(110 + (getParam("sunHue")/360)*110);
+      noiseGain.gain.value = getParam("waterSize")*0.05;
+      seaFilter.frequency.value = 200 + (getParam("waterEffect")/100)*1800;
+      seaFilter.Q.value = 1 + (getParam("waterGrad")/100)*20;
+      
+      updateChords();
+      padGain.gain.value = 0.1;
+      
+      // Visuele filters: alleen blurGloss gebruikt
+      let blurGlossVal = (getParam("blurGloss")/100)*10;
+      document.getElementById("asciiArea").style.filter =
+        `blur(${blurGlossVal}px) hue-rotate(${(getParam("skyHue")/360)*360}deg) brightness(${1 + Math.sin(audioCtx.currentTime * 2 * Math.PI * 0.3)*(getParam("chordFade")/200)})`;
+      
+      // Resonator parameters
+      let resFreq = getParam("resonatorFreq");
+      let resQ = getParam("resonatorQ");
+      resonatorNode.frequency.value = resFreq;
+      resonatorNode.Q.value = resQ;
+      let resMix = getParam("resonatorMix");
+      resonatorGainNode.gain.value = resMix / 50;
+      
+      // Wortels update
+      let wortelsVal = getParam("wortels"); // 0-100
+      let v = wortelsVal/100;
+      let [wGain1, wGain2] = computeWortelsGains(v);
+      let [wPan1, wPan2] = computeWortelsPan(v);
+      wortelsGain1.gain.value = wGain1;
+      wortelsGain2.gain.value = wGain2;
+      wortelsPan1.pan.value = wPan1;
+      wortelsPan2.pan.value = wPan2;
+      wortelsFilter.frequency.value = 200 + v * 300;
+      let baseRoot = quantizeFrequency(getParam("chordRoot"));
+      wortelsOsc1.frequency.value = baseRoot / 2;
+      wortelsOsc2.frequency.value = baseRoot / 4;
+    }
+    
+    // Update Chords
+    function updateChords() {
+      let emotieVal = getParam("emotie")/100;
+      let currentScale = emotieVal < 0.5 ? [0,2,3,5,7,8,10,12] : [0,2,4,5,7,9,11,12];
+      const root = getParam("chordRoot");
+      let freq1 = quantizeFrequency(root * Math.pow(2, currentScale[0]/12));
+      let freq2 = quantizeFrequency(root * Math.pow(2, 2/12));
+      let freq3 = quantizeFrequency(root * Math.pow(2, 4/12));
+      chordOsc1.frequency.value = freq1;
+      chordOsc2.frequency.value = freq2;
+      chordOsc3.frequency.value = freq3;
+    }
+    
+    // Animatie Loop voor visuals
+    function animate() { requestAnimationFrame(animate); }
+    requestAnimationFrame(animate);
+    
+    // Audio update & hoofdlus
+    function updateAudio() {
+      unlockAudio();
+      updateDerivedAudio();
+      updateSynths();
+    }
+    function unlockAudio() { if(audioCtx.state === 'suspended') audioCtx.resume(); }
+    function mainLoop(t) {
+      updateLFOs(t);
+      drawScene();
+      updateAudio();
+      requestAnimationFrame(mainLoop);
+    }
+    requestAnimationFrame(mainLoop);
+    
+    // Randomize & Save
+    document.getElementById("randomBtn")?.addEventListener("click", () => {
+      document.querySelectorAll('input[type="range"][data-param]').forEach(sl => {
+        const mx = parseFloat(sl.max)||100, mn = parseFloat(sl.min)||0;
+        const rv = Math.random()*(mx-mn)+mn;
+        sl.value = rv.toFixed(0);
+        const name = sl.dataset.param;
+        paramValues[name].base = parseFloat(sl.value);
+      });
+      updateAudio();
+    });
+    document.getElementById("saveBtn")?.addEventListener("click", () => {
+      const canvas = document.getElementById('hiddenCanvas');
+      canvas.width = COLS*10; canvas.height = ROWS*14;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.font = '14px monospace';
+      for(let r=0; r<ROWS; r++){
+        let rowText = '';
+        for(let c=0; c<COLS; c++){
+          rowText += asciiBuffer[r][c].ch;
+        }
+        ctx.fillStyle = asciiBuffer[r][0].fg;
+        ctx.fillText(rowText,0,(r+1)*14);
+      }
+      const link = document.createElement('a');
+      link.download = 'ascii_ambient_bos.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+    document.querySelectorAll('input[type="range"][data-param]').forEach(sl => {
+      sl.addEventListener("input", updateAudio);
+    });
+    
+    function initializeAudioParameters() { updateDerivedAudio(); }
+    initializeAudioParameters();
+  </script>
+  <!-- Verborgen canvas voor opslaan -->
+  <canvas id="hiddenCanvas" style="display:none;"></canvas>
+</body>
+</html>
