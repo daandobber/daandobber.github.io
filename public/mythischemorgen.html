@@ -821,8 +821,8 @@
       updateChords();
       padGain.gain.value = 0.1;
       
-      // Visuele filters met extra blur effect (grayscale is verwijderd)
-      let blurVal = (getParam("skyGrad")/100)*5;
+      // Visuele filters met extra blur effect (hier wordt de blur van skyGrad niet langer meegerekend)
+      let blurVal = 0; // Geen blur vanuit "lucht gradient"
       let blurGlossVal = (getParam("blurGloss")/100)*10;
       let totalBlur = blurVal + blurGlossVal;
       let hueRotateVal = (getParam("skyHue")/360)*360;
