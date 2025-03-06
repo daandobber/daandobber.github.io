@@ -1,0 +1,111 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #222;
+  color: #fff;
+}
+
+/* Global banner */
+.global-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  background: #444;
+  padding: 10px;
+  font-size: 0.9em;
+}
+
+.global-timer {
+  flex: 0 0 150px;
+  text-align: left;
+}
+
+.global-timer #timerDisplay {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.global-controls {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.global-controls .control-group {
+  flex: 1 1 200px;
+}
+
+/* Container */
+.container {
+  display: flex;
+  height: calc(100vh - 70px);
+  overflow: hidden;
+}
+
+.canvas-container {
+  flex: 2;
+  background: #111;
+  position: relative;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.channels {
+  flex: 1;
+  background: #333;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  font-size: 0.85em;
+}
+
+.channel {
+  border: 1px solid #555;
+  padding: 5px;
+  margin-bottom: 8px;
+}
+
+.wave-toggle label {
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.compact-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.compact-row label {
+  flex: 1;
+  min-width: 80px;
+}
+
+.sequence {
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.sequence .note {
+  width: calc(100% / 8 - 2px);
+  box-sizing: border-box;
+}
+
+.sequence .note select,
+.sequence .note .note-octave-label {
+  display: block;
+  width: 100%;
+  margin-bottom: 2px;
+  text-align: center;
+  font-size: 0.8em;
+}
