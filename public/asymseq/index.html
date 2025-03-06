@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>asymseq</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Global banner -->
+  <div class="global-banner">
+    <div class="global-timer">
+      <div id="timerDisplay">0.00</div>
+    </div>
+    <div class="global-controls">
+      <div class="control-group">
+        <label>BPM:
+          <input type="range" id="bpm" min="30" max="300" step="1" value="120">
+          <span id="bpmValue">120</span>
+        </label>
+        <button id="tapTempo">Tap</button>
+      </div>
+      <div class="control-group">
+        <label>Attack:
+          <input type="range" id="attack" min="0" max="2" step="0.01" value="0.1">
+        </label>
+        <label>Release:
+          <input type="range" id="release" min="0" max="0.5" step="0.01" value="0.2">
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Filter Freq:
+          <input type="range" id="filterFrequency" min="0" max="2000" step="1" value="800">
+        </label>
+        <label>Filter Q:
+          <input type="range" id="filterQ" min="0.5" max="10" step="0.1" value="1.5">
+        </label>
+        <label>Reverb Wet:
+          <input type="range" id="reverbWetness" min="0" max="1" step="0.01" value="0.5">
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Key:
+          <select id="globalKey">
+            <option value="C">C</option>
+            <option value="D" selected>D</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="G">G</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+          </select>
+        </label>
+        <label>Scale:
+          <select id="globalScale">
+            <option value="major">Major</option>
+            <option value="minor" selected>Mineur</option>
+          </select>
+        </label>
+      </div>
+      <div class="control-group">
+        <button id="randomize">Randomize Sequences</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="container">
+    <!-- Tijdlijn -->
+    <div class="canvas-container">
+      <canvas id="sequencerCanvas"></canvas>
+    </div>
+    <!-- Kanaalbediening -->
+    <div class="channels">
+      <!-- Kanaal 0 -->
+      <div class="channel" id="channel0">
+        <div class="wave-toggle">
+          <label><input type="checkbox" id="channel0-wave-sine" value="sine" checked> Sine</label>
+          <label><input type="checkbox" id="channel0-wave-square" value="square"> Square</label>
+          <label><input type="checkbox" id="channel0-wave-sawtooth" value="sawtooth"> Sawtooth</label>
+          <label><input type="checkbox" id="channel0-wave-triangle" value="triangle"> Triangle</label>
+        </div>
+        <label>Offset:
+          <input type="range" id="channel0-offset" min="-0.5" max="0.5" step="0.01" value="0">
+        </label>
+        <div class="compact-row">
+          <label>Seg:
+            <input type="range" id="channel0-segments" min="1" max="16" step="1" value="4">
+          </label>
+          <label>Noten:
+            <input type="range" id="channel0-noteCount" min="1" max="8" step="1" value="8">
+          </label>
+        </div>
+        <div class="sequence" id="sequence0"></div>
+      </div>
+      <!-- Kanaal 1 -->
+      <div class="channel" id="channel1">
+        <div class="wave-toggle">
+          <label><input type="checkbox" id="channel1-wave-sine" value="sine" checked> Sine</label>
+          <label><input type="checkbox" id="channel1-wave-square" value="square"> Square</label>
+          <label><input type="checkbox" id="channel1-wave-sawtooth" value="sawtooth"> Sawtooth</label>
+          <label><input type="checkbox" id="channel1-wave-triangle" value="triangle"> Triangle</label>
+        </div>
+        <label>Offset:
+          <input type="range" id="channel1-offset" min="-0.5" max="0.5" step="0.01" value="0">
+        </label>
+        <div class="compact-row">
+          <label>Seg:
+            <input type="range" id="channel1-segments" min="1" max="16" step="1" value="6">
+          </label>
+          <label>Noten:
+            <input type="range" id="channel1-noteCount" min="1" max="8" step="1" value="8">
+          </label>
+        </div>
+        <div class="sequence" id="sequence1"></div>
+      </div>
+      <!-- Kanaal 2 -->
+      <div class="channel" id="channel2">
+        <div class="wave-toggle">
+          <label><input type="checkbox" id="channel2-wave-sine" value="sine" checked> Sine</label>
+          <label><input type="checkbox" id="channel2-wave-square" value="square"> Square</label>
+          <label><input type="checkbox" id="channel2-wave-sawtooth" value="sawtooth"> Sawtooth</label>
+          <label><input type="checkbox" id="channel2-wave-triangle" value="triangle"> Triangle</label>
+        </div>
+        <label>Offset:
+          <input type="range" id="channel2-offset" min="-0.5" max="0.5" step="0.01" value="0">
+        </label>
+        <div class="compact-row">
+          <label>Seg:
+            <input type="range" id="channel2-segments" min="1" max="16" step="1" value="5">
+          </label>
+          <label>Noten:
+            <input type="range" id="channel2-noteCount" min="1" max="8" step="1" value="8">
+          </label>
+        </div>
+        <div class="sequence" id="sequence2"></div>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
