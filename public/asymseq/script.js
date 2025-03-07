@@ -1,9 +1,32 @@
-// Effect controls
+// Eerst audioCtx initialiseren
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// EFFECT CONTROLS
 const filterFrequencyControl = document.getElementById('filterFrequency');
 const filterQControl = document.getElementById('filterQ');
 const reverbWetnessControl = document.getElementById('reverbWetness');
+const delayWetControl = document.getElementById('delayWet');
+const delayTimeSlider = document.getElementById('delayTime');
+const delayTimeValueDisplay = document.getElementById('delayTimeValue');
+const delayFeedbackControl = document.getElementById('delayFeedback');
+const delayFeedbackValueDisplay = document.getElementById('delayFeedbackValue');
+delayFeedbackControl.addEventListener("input", () => {
+  delayFeedbackValueDisplay.textContent = parseFloat(delayFeedbackControl.value).toFixed(2);
+});
+const delayTimeOptions = [
+  { label: "1/32", factor: 1/8 },
+  { label: "1/24", factor: 1/6 },
+  { label: "1/16", factor: 1/4 },
+  { label: "1/12", factor: 1/3 },
+  { label: "1/8",  factor: 1/2 },
+  { label: "1/4",  factor: 1 }
+];
+delayTimeSlider.addEventListener("input", () => {
+  let index = parseInt(delayTimeSlider.value);
+  delayTimeValueDisplay.textContent = delayTimeOptions[index].label;
+});
 
-// UI elements
+// UI
 const attackControl = document.getElementById('attack');
 const releaseControl = document.getElementById('release');
 const bpmSlider = document.getElementById('bpm');
@@ -13,7 +36,6 @@ const timerDisplay = document.getElementById('timerDisplay');
 const globalKeySelect = document.getElementById('globalKey');
 const globalScaleSelect = document.getElementById('globalScale');
 
-// BPM slider update
 bpmSlider.addEventListener("input", () => {
   bpmValueDisplay.textContent = bpmSlider.value;
 });
@@ -21,7 +43,7 @@ function getBPM() {
   return parseFloat(bpmSlider.value);
 }
 
-// Tap Tempo
+// TAP TEMPO
 let lastTapTime = 0;
 let tapIntervals = [];
 tapTempoButton.addEventListener('click', () => {
@@ -38,7 +60,7 @@ tapTempoButton.addEventListener('click', () => {
   lastTapTime = now;
 });
 
-// Toonladder: bereken toonladder op basis van key en scale
+// Toonladder
 function getScale(key, scaleType) {
   const semitoneNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const intervals = scaleType === "major" ? [0,2,4,5,7,9,11] : [0,2,3,5,7,8,10];
@@ -65,28 +87,54 @@ function getScale(key, scaleType) {
   });
 }
 
-// Channels
+// Kanalen
 const channelIds = [0, 1, 2];
 const channels = channelIds.map(i => {
+  const channelElement = document.getElementById(`channel${i}`);
   const waveForms = [];
   ['sine','square','sawtooth','triangle'].forEach(type => {
     const el = document.getElementById(`channel${i}-wave-${type}`);
     if (el) waveForms.push(el);
   });
+  const setChordBtn = channelElement.querySelector('.setChord');
+  const indicatorDirEl = channelElement.querySelector('.indicator-direction');
   return {
     waveCheckboxes: waveForms,
     offset: document.getElementById(`channel${i}-offset`),
     segmentsInput: document.getElementById(`channel${i}-segments`),
     noteCountInput: document.getElementById(`channel${i}-noteCount`),
     sequenceDiv: document.getElementById(`sequence${i}`),
+    barChangeDiv: channelElement.querySelector('.bar-change'),
+    // Indien aanwezig, indicator select per kanaal
+    indicatorDirection: channelElement.querySelector('.indicator-direction'),
     sequenceData: null,
     currentStep: 0,
     prevLocalTime: 0,
-    triggered: []
+    triggered: [],
+    barChangeStep: 0,
+    lastTriggeredSegment: null,
+    glowTime: 0,
+    lastTriggeredFreq: 0,
+    // Voor individuele Set to Chord knop
+    setChordBtn: setChordBtn,
+    // Voor note order in pingpong mode
+    stepDirection: 1
   };
 });
 
-// updateSequence: bouwt per kanaal de piano roll met maximaal 8 noten
+// Voeg per kanaal eventlistener toe voor "Set to Chord" knop (individueel)
+channels.forEach(chan => {
+  chan.setChordBtn.addEventListener('click', () => {
+    const scale = getScale(globalKeySelect.value, globalScaleSelect.value);
+    const chord = [scale[0], scale[2], scale[4]]; // triade
+    chan.noteCountInput.value = chord.length;
+    chan.segmentsInput.value = chord.length;
+    chan.sequenceData = chord.map(t => ({ note: t.freq, octave: "0" }));
+    updateSequence(chan);
+  });
+});
+
+// UpdateSequence behoudt bestaande sequenceData (randomisering) als deze al bestaat
 function updateSequence(channel, channelIndex) {
   const count = parseInt(channel.noteCountInput.value);
   const scale = getScale(globalKeySelect.value, globalScaleSelect.value);
@@ -96,25 +144,25 @@ function updateSequence(channel, channelIndex) {
       channel.sequenceData.push({ note: scale[i % scale.length].freq, octave: "0" });
     }
   } else {
+    // Als er meer noten nodig zijn, voeg dan random noten toe
     if (count > channel.sequenceData.length) {
       for (let i = channel.sequenceData.length; i < count; i++) {
-        channel.sequenceData.push({ note: scale[i % scale.length].freq, octave: "0" });
+        const randomNote = scale[Math.floor(Math.random() * scale.length)];
+        const randomOctave = (Math.floor(Math.random() * 5) - 2).toString();
+        channel.sequenceData.push({ note: randomNote.freq, octave: randomOctave });
       }
     } else if (count < channel.sequenceData.length) {
       channel.sequenceData = channel.sequenceData.slice(0, count);
     }
-    for (let i = 0; i < channel.sequenceData.length; i++) {
-      const newNote = scale[i % scale.length];
-      channel.sequenceData[i].note = newNote.freq;
-    }
   }
-  
+  // Bouw de HTML op basis van sequenceData (laat bestaande waarden intact)
   let html = "";
   for (let i = 0; i < channel.sequenceData.length; i++) {
     const data = channel.sequenceData[i];
     html += `<div class="note">`;
     html += `<select class="note-select">`;
     scale.forEach(n => {
+      // Laat de random waarde behouden
       html += `<option value="${n.freq}" ${n.freq === data.note ? "selected" : ""}>${n.name}</option>`;
     });
     html += `</select>`;
@@ -131,9 +179,7 @@ function updateSequence(channel, channelIndex) {
   }
   channel.sequenceDiv.innerHTML = html;
   channel.steps = Array.from(channel.sequenceDiv.getElementsByClassName("note"));
-  if (channel.currentStep >= channel.steps.length) {
-    channel.currentStep = 0;
-  }
+  channel.currentStep = 0;
 }
 
 channels.forEach((ch, idx) => {
@@ -147,6 +193,22 @@ globalScaleSelect.addEventListener("change", () => {
   channels.forEach((ch, idx) => updateSequence(ch, idx));
 });
 
+// Voeg per kanaal een eigen indicator direction toe als extra
+channels.forEach(chan => {
+  if (!chan.indicatorDirection) {
+    // Indien ontbreekt, maak een default select en voeg toe aan compact-row
+    const sel = document.createElement("select");
+    sel.classList.add("indicator-direction");
+    sel.innerHTML = `<option value="ltr" selected>&rarr;</option>
+                     <option value="rtl">&larr;</option>
+                     <option value="pingpong">&harr;</option>`;
+    chan.indicatorDirection = sel;
+    chan.sequenceDiv.parentNode.insertBefore(sel, chan.sequenceDiv);
+  }
+  // Stel de standaard stepDirection in voor pingpong
+  chan.stepDirection = 1;
+});
+
 // Canvas setup
 const canvas = document.getElementById('sequencerCanvas');
 const ctx = canvas.getContext('2d');
@@ -157,27 +219,43 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// AudioContext en effectketen
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const dryGain = audioCtx.createGain();
-const wetGain = audioCtx.createGain();
-dryGain.connect(audioCtx.destination);
-wetGain.connect(audioCtx.destination);
-
+// AUDIO GRAPH
+// 1. Synth -> Lowpass Filter
 const masterFilter = audioCtx.createBiquadFilter();
 masterFilter.type = "lowpass";
 masterFilter.frequency.value = parseFloat(filterFrequencyControl.value);
 masterFilter.Q.value = parseFloat(filterQControl.value);
 
-const convolver = audioCtx.createConvolver();
-convolver.buffer = createImpulseResponse(3, 2);
+// 2. Delay-block: split in droog/wet en met feedback
+const delayNode = audioCtx.createDelay();
+const delayDryGain = audioCtx.createGain();
+const delayWetGain = audioCtx.createGain();
+const delayMixGain = audioCtx.createGain();
+masterFilter.connect(delayDryGain);
+masterFilter.connect(delayNode);
+delayNode.connect(delayWetGain);
+delayDryGain.connect(delayMixGain);
+delayWetGain.connect(delayMixGain);
+const delayFeedbackGain = audioCtx.createGain();
+delayFeedbackGain.gain.value = parseFloat(delayFeedbackControl.value);
+delayWetGain.connect(delayFeedbackGain);
+delayFeedbackGain.connect(delayNode);
 
-masterFilter.connect(dryGain);
-masterFilter.connect(convolver);
-convolver.connect(wetGain);
+// 3. Reverb-block: delay output gaat naar convolver
+const reverbConvolver = audioCtx.createConvolver();
+reverbConvolver.buffer = createImpulseResponse(3, 2);
+const reverbDryGain = audioCtx.createGain();
+const reverbWetGain = audioCtx.createGain();
+const reverbMixGain = audioCtx.createGain();
+delayMixGain.connect(reverbDryGain);
+delayMixGain.connect(reverbConvolver);
+reverbConvolver.connect(reverbWetGain);
+reverbDryGain.connect(reverbMixGain);
+reverbWetGain.connect(reverbMixGain);
+reverbMixGain.connect(audioCtx.destination);
 
-// playOscillator: stuurt oscillator via gain naar masterFilter
-function playOscillator(frequency, waveform) {
+// PLAY OSCILLATOR MET GLOW
+function playOscillator(frequency, waveform, noteElement, chan, segmentIndex) {
   const osc = audioCtx.createOscillator();
   osc.type = waveform;
   osc.frequency.value = frequency;
@@ -194,14 +272,29 @@ function playOscillator(frequency, waveform) {
   gainNode.gain.linearRampToValueAtTime(0, now + attack + release);
   osc.start(now);
   osc.stop(now + attack + release);
+  
+  // Glow op de noot zelf
+  if (noteElement) {
+    const minFreq = 261.63, maxFreq = 987.77;
+    let hue = ((frequency - minFreq) / (maxFreq - minFreq)) * 360;
+    hue = Math.max(0, Math.min(360, hue));
+    noteElement.style.transition = "background-color 0.3s ease";
+    noteElement.style.backgroundColor = `hsl(${hue},70%,50%)`;
+    setTimeout(() => { noteElement.style.backgroundColor = ""; }, 300);
+  }
+  
+  // Sla triggerdata op voor glow op de scheidingslijn (rechterkant van segment)
+  chan.lastTriggeredSegment = segmentIndex;
+  chan.glowTime = performance.now();
+  chan.lastTriggeredFreq = frequency;
 }
 
-// Helper: per kanaal geselecteerde wavevormen
+// Haal geselecteerde wavevormen per kanaal op
 function getSelectedWaveforms(chan) {
   return chan.waveCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
 }
 
-// Globale fase en update-loop op basis van BPM (16 bars cyclus, nu BPM/960)
+// UPDATE-LOOP
 let internalPhase = 0;
 let lastUpdateTime = performance.now();
 function initTriggered(chan) {
@@ -220,9 +313,17 @@ function update() {
   
   masterFilter.frequency.value = parseFloat(filterFrequencyControl.value);
   masterFilter.Q.value = parseFloat(filterQControl.value);
-  const wet = parseFloat(reverbWetnessControl.value);
-  wetGain.gain.value = wet;
-  dryGain.gain.value = 1 - wet;
+  
+  // Update delay parameters
+  let delayIndex = parseInt(delayTimeSlider.value);
+  delayNode.delayTime.value = (60 / bpm) * delayTimeOptions[delayIndex].factor;
+  delayDryGain.gain.value = 1 - parseFloat(delayWetControl.value);
+  delayWetGain.gain.value = parseFloat(delayWetControl.value);
+  delayFeedbackGain.gain.value = parseFloat(delayFeedbackControl.value);
+  
+  // Update reverb parameters
+  reverbDryGain.gain.value = 1 - parseFloat(reverbWetnessControl.value);
+  reverbWetGain.gain.value = parseFloat(reverbWetnessControl.value);
   
   timerDisplay.textContent = internalPhase.toFixed(2);
   
@@ -230,8 +331,20 @@ function update() {
     const offset = parseFloat(chan.offset.value);
     let localTime = internalPhase + offset;
     localTime = ((localTime % 1) + 1) % 1;
-    if (localTime < chan.prevLocalTime) {
-      chan.currentStep = 0;
+    
+    if (localTime < chan.prevLocalTime || localTime < 0.01) {
+      if (chan.barChangeDiv) {
+        const dropdowns = Array.from(chan.barChangeDiv.querySelectorAll('.bar-change-option'));
+        if (dropdowns.length > 0) {
+          dropdowns.forEach((dd, idx) => {
+            dd.classList.toggle("active-dropdown", idx === chan.barChangeStep);
+          });
+          const change = parseInt(dropdowns[chan.barChangeStep].value);
+          let newSeg = parseInt(chan.segmentsInput.value) + change;
+          chan.segmentsInput.value = Math.max(1, Math.min(newSeg, 16));
+          chan.barChangeStep = (chan.barChangeStep + 1) % dropdowns.length;
+        }
+      }
       initTriggered(chan);
     }
     chan.prevLocalTime = localTime;
@@ -241,22 +354,30 @@ function update() {
       let threshold = (j + 1) / segCount;
       if (localTime >= threshold && !chan.triggered[j]) {
         if (chan.steps.length === 0) continue;
-        if (chan.currentStep >= chan.steps.length) chan.currentStep = 0;
-        const noteContainer = chan.steps[chan.currentStep];
-        if (!noteContainer) continue;
-        const noteSelect = noteContainer.querySelector(".note-select");
-        const noteOctave = noteContainer.querySelector(".note-octave");
+        const noteElement = chan.steps[chan.currentStep];
+        if (!noteElement) continue;
+        const noteSelect = noteElement.querySelector(".note-select");
+        const noteOctave = noteElement.querySelector(".note-octave");
         if (!noteSelect || !noteOctave) continue;
         const baseFreq = parseFloat(noteSelect.value);
         const octaveOffset = parseInt(noteOctave.value);
         const freq = baseFreq * Math.pow(2, octaveOffset);
         const waveforms = getSelectedWaveforms(chan);
         if (waveforms.length === 0) waveforms.push("sine");
-        waveforms.forEach(wf => {
-          playOscillator(freq, wf);
-        });
+        waveforms.forEach(wf => playOscillator(freq, wf, noteElement, chan, j));
         chan.triggered[j] = true;
-        chan.currentStep = (chan.currentStep + 1) % chan.steps.length;
+        // Update currentStep op basis van indicator direction per kanaal
+        const dir = chan.indicatorDirection.value;
+        if(dir === "ltr"){
+          chan.currentStep = (chan.currentStep + 1) % chan.steps.length;
+        } else if(dir === "rtl"){
+          chan.currentStep = (chan.currentStep - 1 + chan.steps.length) % chan.steps.length;
+        } else if(dir === "pingpong"){
+          // Pingpong: wissel richting bij grenzen
+          if(chan.currentStep === 0) chan.stepDirection = 1;
+          if(chan.currentStep === chan.steps.length - 1) chan.stepDirection = -1;
+          chan.currentStep = (chan.currentStep + chan.stepDirection + chan.steps.length) % chan.steps.length;
+        }
       }
     }
   });
@@ -285,60 +406,73 @@ function draw() {
       ctx.lineTo(x, yCenter + 15);
       ctx.stroke();
     }
-    const localTime = ((internalPhase + parseFloat(chan.offset.value)) % 1 + 1) % 1;
-    const indicatorX = margin + (localTime * usableWidth);
+    // Bereken indicatorpositie per kanaal op basis van diens indicator direction
+    const offset = parseFloat(chan.offset.value);
+    let localTime = internalPhase + offset;
+    localTime = ((localTime % 1) + 1) % 1;
+    const dir = chan.indicatorDirection.value;
+    let pos;
+    if(dir === "ltr"){
+      pos = localTime;
+    } else if(dir === "rtl"){
+      pos = 1 - localTime;
+    } else if(dir === "pingpong"){
+      let t = localTime * 2;
+      pos = t > 1 ? 2 - t : t;
+    } else {
+      pos = localTime;
+    }
+    const indicatorX = margin + pos * usableWidth;
     ctx.strokeStyle = '#ff0';
     ctx.beginPath();
     ctx.moveTo(indicatorX, yCenter - 20);
     ctx.lineTo(indicatorX, yCenter + 20);
     ctx.stroke();
+    
+    // Teken glow op de scheidingslijn van het laatst getriggerde segment
+    if (performance.now() - chan.glowTime < 300 && chan.lastTriggeredSegment !== null) {
+      const elapsed = performance.now() - chan.glowTime;
+      const alpha = 1 - (elapsed / 300);
+      const glowX = margin + ((chan.lastTriggeredSegment + 1) / segCount) * usableWidth;
+      const minFreq = 261.63, maxFreq = 987.77;
+      let hue = ((chan.lastTriggeredFreq - minFreq) / (maxFreq - minFreq)) * 360;
+      hue = Math.max(0, Math.min(360, hue));
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(glowX, yCenter, 10, 0, 2 * Math.PI);
+      const gradient = ctx.createRadialGradient(glowX, yCenter, 0, glowX, yCenter, 10);
+      gradient.addColorStop(0, `hsla(${hue},70%,50%,${alpha})`);
+      gradient.addColorStop(1, `hsla(${hue},70%,50%,0)`);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.restore();
+    }
   });
 }
 
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 document.body.addEventListener('click', () => {
   if (audioCtx.state !== 'running') audioCtx.resume();
 });
 update();
 
-// Randomize knop: randomiseert per kanaal de segments, noteCount, offset en de sequenceData
+// "Randomize Sequences" knop – maak de noten random (en behoud de random waarden)
 document.getElementById('randomize').addEventListener('click', () => {
   channels.forEach(chan => {
-    // Random segments: minimaal 1 tot 16
     chan.segmentsInput.value = Math.floor(Math.random() * 16) + 1;
-    // Random noteCount: minimaal 1 tot 8
     chan.noteCountInput.value = Math.floor(Math.random() * 8) + 1;
-    // Random offset: tussen -0.5 en 0.5, afgerond op 2 decimalen
     chan.offset.value = (Math.random() - 0.5).toFixed(2);
-    // Randomize sequenceData: voor elke noot een random noot en random octave
     const scale = getScale(globalKeySelect.value, globalScaleSelect.value);
     const count = parseInt(chan.noteCountInput.value);
-    if (!chan.sequenceData) chan.sequenceData = [];
+    // Maak een nieuwe sequenceData volledig random
+    chan.sequenceData = [];
     for (let i = 0; i < count; i++) {
       const randomNote = scale[Math.floor(Math.random() * scale.length)];
       const randomOctave = (Math.floor(Math.random() * 5) - 2).toString();
-      if (chan.sequenceData[i]) {
-        chan.sequenceData[i].note = randomNote.freq;
-        chan.sequenceData[i].octave = randomOctave;
-      } else {
-        chan.sequenceData.push({ note: randomNote.freq, octave: randomOctave });
-      }
-    }
-    if (chan.sequenceData.length > count) {
-      chan.sequenceData = chan.sequenceData.slice(0, count);
+      chan.sequenceData.push({ note: randomNote.freq, octave: randomOctave });
     }
     updateSequence(chan);
   });
 });
-
-// Canvas resize
-function resizeCanvas() {
-  canvas.width = document.querySelector('.canvas-container').clientWidth;
-  canvas.height = document.querySelector('.canvas-container').clientHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
 
 // Helper: maak impulse response voor reverb
 function createImpulseResponse(duration, decay) {
