@@ -29,13 +29,27 @@
       </div>
       <div class="control-group">
         <label>Filter Freq:
-          <input type="range" id="filterFrequency" min="0" max="2000" step="1" value="800">
+          <input type="range" id="filterFrequency" min="0" max="2000" step="1" value="1300">
         </label>
         <label>Filter Q:
           <input type="range" id="filterQ" min="0.5" max="10" step="0.1" value="1.5">
         </label>
         <label>Reverb Wet:
           <input type="range" id="reverbWetness" min="0" max="1" step="0.01" value="0.5">
+        </label>
+      </div>
+      <!-- Delay effect -->
+      <div class="control-group">
+        <label>Delay Time:
+          <input type="range" id="delayTime" min="0" max="5" step="1" value="2">
+          <span id="delayTimeValue">1/16</span>
+        </label>
+        <label>Delay Wet:
+          <input type="range" id="delayWet" min="0" max="1" step="0.01" value="0.1">
+        </label>
+        <label>Delay Feedback:
+          <input type="range" id="delayFeedback" min="0" max="0.95" step="0.01" value="0.5">
+          <span id="delayFeedbackValue">0.50</span>
         </label>
       </div>
       <div class="control-group">
@@ -70,7 +84,7 @@
     </div>
     <!-- Kanaalbediening -->
     <div class="channels">
-      <!-- Kanaal 0 -->
+      <!-- Per kanaal, hieronder 3 balken -->
       <div class="channel" id="channel0">
         <div class="wave-toggle">
           <label><input type="checkbox" id="channel0-wave-sine" value="sine" checked> Sine</label>
@@ -89,9 +103,75 @@
             <input type="range" id="channel0-noteCount" min="1" max="8" step="1" value="8">
           </label>
         </div>
+        <!-- Indicator Direction per kanaal -->
+        <div class="channel-direction">
+          <label>Indicator Direction:
+            <select class="indicator-direction">
+              <option value="ltr" selected>&rarr;</option>
+              <option value="rtl">&larr;</option>
+              <option value="pingpong">&harr;</option>
+            </select>
+          </label>
+        </div>
         <div class="sequence" id="sequence0"></div>
+        <div class="bar-change">
+          <span>Segment verandering:</span>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+        </div>
+        <button class="setChord">Set to Chord</button>
       </div>
-      <!-- Kanaal 1 -->
+      
       <div class="channel" id="channel1">
         <div class="wave-toggle">
           <label><input type="checkbox" id="channel1-wave-sine" value="sine" checked> Sine</label>
@@ -110,9 +190,61 @@
             <input type="range" id="channel1-noteCount" min="1" max="8" step="1" value="8">
           </label>
         </div>
+        <div class="channel-direction">
+          <label>Indicator Direction:
+            <select class="indicator-direction">
+              <option value="ltr" selected>&rarr;</option>
+              <option value="rtl">&larr;</option>
+              <option value="pingpong">&harr;</option>
+            </select>
+          </label>
+        </div>
         <div class="sequence" id="sequence1"></div>
+        <div class="bar-change">
+          <span>Segment verandering:</span>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+        </div>
+        <button class="setChord">Set to Chord</button>
       </div>
-      <!-- Kanaal 2 -->
+      
       <div class="channel" id="channel2">
         <div class="wave-toggle">
           <label><input type="checkbox" id="channel2-wave-sine" value="sine" checked> Sine</label>
@@ -131,10 +263,76 @@
             <input type="range" id="channel2-noteCount" min="1" max="8" step="1" value="8">
           </label>
         </div>
+        <div class="channel-direction">
+          <label>Indicator Direction:
+            <select class="indicator-direction">
+              <option value="ltr" selected>&rarr;</option>
+              <option value="rtl">&larr;</option>
+              <option value="pingpong">&harr;</option>
+            </select>
+          </label>
+        </div>
         <div class="sequence" id="sequence2"></div>
+        <div class="bar-change">
+          <span>Segment verandering:</span>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+          <select class="bar-change-option">
+            <option value="-5">-5</option>
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">+1</option>
+            <option value="2">+2</option>
+            <option value="3">+3</option>
+            <option value="4">+4</option>
+            <option value="5">+5</option>
+          </select>
+        </div>
+        <button class="setChord">Set to Chord</button>
       </div>
     </div>
   </div>
+  
   <script src="script.js"></script>
 </body>
 </html>
