@@ -1,0 +1,63 @@
+---
+const { collectionData } = Astro.props;
+---
+<div id="cd-collection">
+  <div style="margin-bottom: 1rem;">
+    <button id="toggle-covers">Album Covers</button>
+    <button id="toggle-list">Lijstweergave</button>
+    <input type="text" id="search-field" placeholder="Zoeken..." style="margin-left: 1rem;" />
+  </div>
+  <div id="covers-view" style="display: block;">
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+      {collectionData.map(item => (
+        <img
+          src={item.basic_information.cover_image}
+          alt={item.basic_information.title}
+          style="width: 150px; height: 150px; object-fit: cover;"
+          data-title={item.basic_information.title}
+        />
+      ))}
+    </div>
+  </div>
+  <div id="list-view" style="display: none;">
+    <ul>
+      {collectionData.map(item => (
+        <li data-title={item.basic_information.title}>{item.basic_information.title}</li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+<script is:inline>
+  const searchField = document.getElementById('search-field');
+  const toggleCovers = document.getElementById('toggle-covers');
+  const toggleList = document.getElementById('toggle-list');
+  const coversView = document.getElementById('covers-view');
+  const listView = document.getElementById('list-view');
+
+  toggleCovers.addEventListener('click', () => {
+    coversView.style.display = 'block';
+    listView.style.display = 'none';
+  });
+
+  toggleList.addEventListener('click', () => {
+    coversView.style.display = 'none';
+    listView.style.display = 'block';
+  });
+
+  searchField.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+
+    // Filter de album covers
+    coversView.querySelectorAll('img').forEach(img => {
+      const title = img.getAttribute('data-title').toLowerCase();
+      img.style.display = title.includes(searchTerm) ? 'block' : 'none';
+    });
+
+    // Filter de lijstweergave
+    listView.querySelectorAll('li').forEach(li => {
+      const title = li.getAttribute('data-title').toLowerCase();
+      li.style.display = title.includes(searchTerm) ? 'list-item' : 'none';
+    });
+  });
+</script>
