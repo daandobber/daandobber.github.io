@@ -1,0 +1,27 @@
+---
+import PageLayout from "@/layouts/Base.astro";
+import CdCollection from "@/components/CdCollection.jsx";
+
+const meta = {
+  title: "Mijn CD-collectie",
+  description: "Overzicht van mijn cd's via de Discogs API",
+};
+
+// Gebruik de omgevingsvariabelen (zorg dat deze niet met de prefix ASTRO_PUBLIC_ worden gebruikt zodat ze niet in de client terechtkomen)
+const apiToken = import.meta.env.DISC_TOKEN;
+const discogsUsername = import.meta.env.DISC_USERNAME;
+const apiUrl = `https://api.discogs.com/users/${discogsUsername}/collection/folders/0/releases?token=${apiToken}`;
+
+let collectionData = [];
+try {
+  const res = await fetch(apiUrl);
+  const json = await res.json();
+  collectionData = json.releases || [];
+} catch (error) {
+  console.error("Fout bij ophalen Discogs data:", error);
+}
+---
+<PageLayout meta={meta}>
+  <h1 class="title mb-6">Mijn CD-collectie</h1>
+  <CdCollection collectionData={collectionData} client:load />
+</PageLayout>
