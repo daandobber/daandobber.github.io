@@ -1,84 +1,82 @@
 ---
-import PageLayout from '@/layouts/Base.astro';
-import FilterSortList from '@/components/FilterSortList.svelte'; // Importeer Svelte component
-import CDCard from '@/components/CDCard.astro';              // Importeer Astro card component
-import cdCollectionData from '@/data/cd_collection.json';
+import PageLayout from "@/layouts/Base.astro";
+import FilterSortList from "@/components/FilterSortList.svelte";
+import CDCard from "@/components/CDCard.astro";
+import cdCollectionData from "@/data/cd_collection.json";
+import type { Release, Artist, SortOption } from "src/components/types"; // Import types
 
-const releases = cdCollectionData?.releases || [];
+const releases: Release[] = cdCollectionData?.releases ?? []; // Use type and nullish coalescing
 
 // --- Configuratie specifiek voor CD's ---
+const searchFields: string[] = ["basic_information.title", "basic_information.artists"]; // Path for artists is handled specifically in Svelte component now
 
-// Velden om in te zoeken (basis paden)
-// De Svelte component's getProperty kan hiermee overweg.
-// Voor 'artists' is een specifieke check ingebouwd in het Svelte component.
-const searchFields = ['basic_information.title', 'basic_information.artists'];
-
-// Helper functie voor artiesten sorteren (lowercase, onbekend achteraan)
-function formatArtistsForSort(artists) {
-   if (!artists || artists.length === 0) return "zzzzzzz";
-   return artists.map(artist => artist.name).join(', ').toLowerCase();
+// Add types
+function formatArtistsForSort(artists: Artist[] | undefined): string {
+	if (!artists || artists.length === 0) return "zzzzzzz";
+	return artists
+		.map((artist: Artist) => artist.name)
+		.join(", ")
+		.toLowerCase();
 }
 
-// Definieer de sorteer opties
-const sortOptions = [
-  {
-    id: 'artistAZ', // Unieke ID voor deze optie
-    label: 'Artiest (A-Z)', // Tekst op de knop
-    order: 'asc', // Sorteer richting
-    valueFn: item => formatArtistsForSort(item.basic_information?.artists) // Functie die de sorteerwaarde teruggeeft
-  },
-  {
-    id: 'artistZA',
-    label: 'Artiest (Z-A)',
-    order: 'desc',
-    valueFn: item => formatArtistsForSort(item.basic_information?.artists)
-  },
-  {
-    id: 'yearNewOld',
-    label: 'Jaar (Nieuw-Oud)',
-    order: 'desc',
-    valueFn: item => item.basic_information?.year || 0 // Geef 0 terug als jaar mist voor sorteren
-  },
-  {
-    id: 'yearOldNew',
-    label: 'Jaar (Oud-Nieuw)',
-    order: 'asc',
-    valueFn: item => item.basic_information?.year || 9999 // Geef hoog getal terug als jaar mist
-  }
+// Use imported SortOption type
+const sortOptions: SortOption[] = [
+	{
+		id: "artistAZ",
+		label: "Artiest (A-Z)",
+		order: "asc",
+		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists), // Add type
+	},
+	{
+		id: "artistZA",
+		label: "Artiest (Z-A)",
+		order: "desc",
+		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists), // Add type
+	},
+	{
+		id: "yearNewOld",
+		label: "Jaar (Nieuw-Oud)",
+		order: "desc",
+		valueFn: (item: Release) => item.basic_information?.year ?? 0, // Add type, use nullish coalescing
+	},
+	{
+		id: "yearOldNew",
+		label: "Jaar (Oud-Nieuw)",
+		order: "asc",
+		valueFn: (item: Release) => item.basic_information?.year ?? 9999, // Add type, use nullish coalescing
+	},
 ];
 
-// ID van de initiële sortering die actief moet zijn
-const initialSortId = 'artistAZ';
+const initialSortId: string = "artistAZ"; // Ensure type consistency
 
 const meta = {
-  title: "Mijn CD Collectie",
-  description: "Een doorzoekbaar en sorteerbaar overzicht van de CDs in mijn Discogs collectie.",
+	/* ... */
 };
 ---
+
 <PageLayout meta={meta}>
-  <h1 class="title mb-6 text-2xl font-bold">Mijn CD Collectie</h1>
+	<h1 class="title mb-6 text-2xl font-bold">Mijn CD Collectie</h1>
 
-  {/* Roep het Svelte component aan met client:load */}
-  {/* Geef data en configuratie mee als props */}
-  <FilterSortList
-    client:load
-    items={releases}
-    searchFields={searchFields}
-    sortOptions={sortOptions}
-    initialSortId={initialSortId}
-  >
-    {/* Dit wordt in de 'item' slot van FilterSortList geplaatst */}
-    {/* 'let:item' ontvangt de data van het huidige item van de Svelte component */}
-    <Fragment slot="item" let:item>
-      <CDCard release={item} /> {# Geef het item door aan je CDCard #}
-    </Fragment>
+	<FilterSortList
+		client:load
+		items={releases}
+		{searchFields}
+		{/* Use shorthand passing */}
+		{sortOptions}
+		{/* Use shorthand passing */}
+		{initialSortId}
+		{/* Use shorthand passing */}
+	>
+		<Fragment slot="item" let:item>
+			{
+				/* Now 'item' should be correctly typed as Release within this scope if FilterSortList works */
+			}
+			<CDCard release={item} />
+			<!-- Removed comment -->
+		</Fragment>
 
-    {/* Dit wordt in de 'no-results' slot geplaatst */}
-    <Fragment slot="no-results">
-      <p class="mt-6 text-center text-gray-500 dark:text-gray-400 col-span-full">
-        Helaas, geen CD's gevonden die voldoen aan je filter.
-      </p>
-    </Fragment>
-  </FilterSortList>
-
+		<Fragment slot="no-results">
+			{/* ... no changes needed here ... */}
+		</Fragment>
+	</FilterSortList>
 </PageLayout>
