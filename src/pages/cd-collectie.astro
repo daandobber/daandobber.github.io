@@ -1,18 +1,59 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
-import CdCollection from "@/components/CdCollection.astro";
+import cdCollectionData from "@/data/cd_collection.json";
+
+const releases = cdCollectionData?.releases || []; 
 
 const meta = {
-  title: "Mijn CD-collectie",
-  description: "Overzicht van mijn cd's gebaseerd op Discogs-data",
+  title: "Mijn CD Collectie",
+  description: "Een overzicht van de CDs in mijn Discogs collectie.",
 };
 
-// Laad de JSON-data lokaal in:
-import cdData from '../data/cd_collection.json';
-const collectionData = cdData.releases || [];
+function formatArtists(artists) {
+  if (!artists || artists.length === 0) {
+    return "Onbekende Artiest";
+  }
+  return artists.map(artist => artist.name).join(', ');
+}
 ---
 
 <PageLayout meta={meta}>
-  <h1 class="title mb-6">Mijn CD-collectie</h1>
-  <CdCollection collectionData={collectionData} client:load />
+  <h1 class="title mb-6 text-2xl font-bold">Mijn CD Collectie</h1>
+
+  {releases.length > 0 ? (
+    <p class="mb-8">Hier is een overzicht van de releases uit mijn Discogs collectie.</p>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      {releases.map(release => (
+        <div class="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-md bg-white dark:bg-gray-800 flex flex-col">
+          <img
+            src={release.basic_information?.cover_image || '/images/placeholder-cover.png'}
+            alt={`Cover van ${release.basic_information?.title || 'album'}`}
+            class="w-full h-auto aspect-square object-cover"
+            loading="lazy"
+            onerror="this.onerror=null; this.src='/images/placeholder-cover.png';" // Fallback image
+          />
+          <div class="p-4 flex flex-col flex-grow">
+            <h2 class="text-base font-semibold mb-1 line-clamp-2">{release.basic_information?.title || 'Geen Titel'}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{formatArtists(release.basic_information?.artists)}</p>
+            {release.basic_information?.year && release.basic_information.year > 0 && (
+              <p class="text-xs text-gray-500 dark:text-gray-500 mt-auto pt-1">{release.basic_information.year}</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p>Mijn collectie is nog leeg of de data kon niet geladen worden. Probeer het later opnieuw.</p>
+  )}
+
 </PageLayout>
+
+<style>
+/* Optionele extra styling voor line-clamp als Tailwind JIT/plugin niet actief is */
+.line-clamp-2 {
+   overflow: hidden;
+   display: -webkit-box;
+   -webkit-box-orient: vertical;
+   -webkit-line-clamp: 2;
+}
+</style>
