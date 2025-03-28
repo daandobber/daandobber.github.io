@@ -1,0 +1,698 @@
+{
+  "releases": [
+    {
+      "id": 1135985,
+      "instance_id": 1970321198,
+      "date_added": "2025-03-20T23:29:08-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1135985,
+        "master_id": 219001,
+        "master_url": "https://api.discogs.com/masters/219001",
+        "resource_url": "https://api.discogs.com/releases/1135985",
+        "thumb": "https://i.discogs.com/87FCDw671lokqm5Z8ll94nvR3Heq3SUOFHH0cxmXZHE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMzU5/ODUtMTE5NTA1MjUz/NS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/2oMjcnbwerFLC3KojtinjjXnzAldGtF2_89wp2e_Y0A/rs:fit/g:sm/q:90/h:580/w:580/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMzU5/ODUtMTE5NTA1MjUz/NS5qcGVn.jpeg",
+        "title": "A Guide To Love, Loss & Desperation",
+        "year": 2007,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Stereo"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Wombats",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 793943,
+            "resource_url": "https://api.discogs.com/artists/793943"
+          }
+        ],
+        "labels": [
+          {
+            "name": "14th Floor Records",
+            "catno": "5051442 3337 2 5",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 20418,
+            "resource_url": "https://api.discogs.com/labels/20418"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 15110832,
+      "instance_id": 1970320883,
+      "date_added": "2025-03-20T23:28:03-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 15110832,
+        "master_id": 169537,
+        "master_url": "https://api.discogs.com/masters/169537",
+        "resource_url": "https://api.discogs.com/releases/15110832",
+        "thumb": "https://i.discogs.com/HN_EZdOV51UGvs6vkRDfLuxNlOLxvePFpo301ec1kl0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MTEw/ODMyLTE1ODY4MDIz/NTctNjUwNy5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/fjVR3PM71Lby7lckOUWbJWNA8NctBGsWFfSKVBmEEo8/rs:fit/g:sm/q:90/h:603/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MTEw/ODMyLTE1ODY4MDIz/NTctNjUwNy5qcGVn.jpeg",
+        "title": "I've Been Expecting You",
+        "year": 2002,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Robbie Williams",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 17212,
+            "resource_url": "https://api.discogs.com/artists/17212"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Chrysalis",
+            "catno": "7243 5 40004 2 3",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 3198,
+            "resource_url": "https://api.discogs.com/labels/3198"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Pop Rock",
+          "Ballad"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 15899130,
+      "instance_id": 1970320793,
+      "date_added": "2025-03-20T23:27:38-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 15899130,
+        "master_id": 43262,
+        "master_url": "https://api.discogs.com/masters/43262",
+        "resource_url": "https://api.discogs.com/releases/15899130",
+        "thumb": "https://i.discogs.com/UyDpjqyEqP-M6mIJjyQAWxejNbejuLzCUHTQPitkYGg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1ODk5/MTMwLTE2MDEwNDI5/MzQtNTg0MC5wbmc.jpeg",
+        "cover_image": "https://i.discogs.com/V2xfV1XhOCuU8qYzFunkaTXRgLq787XvxrP_plQS5z4/rs:fit/g:sm/q:90/h:429/w:445/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1ODk5/MTMwLTE2MDEwNDI5/MzQtNTg0MC5wbmc.jpeg",
+        "title": "From Time To Time  (The Singles Collection)",
+        "year": 1991,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Paul Young",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 63617,
+            "resource_url": "https://api.discogs.com/artists/63617"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "SMP 3049.1",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Soft Rock",
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 10971017,
+      "instance_id": 1970320844,
+      "date_added": "2025-03-20T23:27:51-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 10971017,
+        "master_id": 80622,
+        "master_url": "https://api.discogs.com/masters/80622",
+        "resource_url": "https://api.discogs.com/releases/10971017",
+        "thumb": "https://i.discogs.com/gGOqmdlDCOuWy0yCD8NqSH41_gaNTPJefqvjcO1WY20/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwOTcx/MDE3LTE1ODkyNTAz/MzgtMjE1MS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/PdroEblKBHuWPsOV0onx4nsnT3jnKGUwwodfOkrjDDg/rs:fit/g:sm/q:90/h:591/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwOTcx/MDE3LTE1ODkyNTAz/MzgtMjE1MS5qcGVn.jpeg",
+        "title": "Bang!",
+        "year": 1993,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "World Party",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 38211,
+            "resource_url": "https://api.discogs.com/artists/38211"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Ensign",
+            "catno": "0946 3 21991 2 6",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 106343,
+            "resource_url": "https://api.discogs.com/labels/106343"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 15409135,
+      "instance_id": 1970320967,
+      "date_added": "2025-03-20T23:28:23-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 15409135,
+        "master_id": 114327,
+        "master_url": "https://api.discogs.com/masters/114327",
+        "resource_url": "https://api.discogs.com/releases/15409135",
+        "thumb": "https://i.discogs.com/LxSVBdbeJZt2LRoB-IqjmsaScxqdxEYJqpxCPD3QooU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDA5/MTM1LTE1OTEwNTk2/NzMtOTYzMy5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/-tjVXML3GGHEJapkYX869ojEhMGC6YDImeNdTY1F4Gs/rs:fit/g:sm/q:90/h:597/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDA5/MTM1LTE1OTEwNTk2/NzMtOTYzMy5qcGVn.jpeg",
+        "title": "Welenga (Conscience Universelle)",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Wes",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 68127,
+            "resource_url": "https://api.discogs.com/artists/68127"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Epic",
+            "catno": "758.423/2-485146",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1005,
+            "resource_url": "https://api.discogs.com/labels/1005"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Pop",
+          "Folk, World, & Country"
+        ],
+        "styles": [
+          "Ethno-pop",
+          "Euro House"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1313339,
+      "instance_id": 1969844168,
+      "date_added": "2025-03-20T11:08:54-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1313339,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/1313339",
+        "thumb": "https://i.discogs.com/S_oek2y9irOwXRgKkVZLHiMjyzsCItbnAooGrzb-AFE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzMTMz/MzktMTI0NjI3NTcz/OC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/sVhdc1bvIcl5YdjGLY9BgMzFc9KeaePjQBo42ZJ7nzk/rs:fit/g:sm/q:90/h:595/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzMTMz/MzktMTI0NjI3NTcz/OC5qcGVn.jpeg",
+        "title": "Nancy Sinatra And Friends",
+        "year": 2004,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Nancy Sinatra",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 135246,
+            "resource_url": "https://api.discogs.com/artists/135246"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Falcon Neue Medien",
+            "catno": "3714",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 32686,
+            "resource_url": "https://api.discogs.com/labels/32686"
+          },
+          {
+            "name": "Universe (2)",
+            "catno": "3714",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 36681,
+            "resource_url": "https://api.discogs.com/labels/36681"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop",
+          "Folk, World, & Country"
+        ],
+        "styles": [
+          "Soft Rock",
+          "Country",
+          "Vocal"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 4750153,
+      "instance_id": 1970320688,
+      "date_added": "2025-03-20T23:27:18-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 4750153,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/4750153",
+        "thumb": "https://i.discogs.com/-5DS5Q9Gp_gAtSv2FYivwsiLGGKPN3HhGd4y84ka9Tg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3NTAx/NTMtMTQ2MjQ3NDcx/Mi0yMzA3LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/cYs06Fhl_cdk-ML799yU4jeZcqGIKvXijjLvmZwkKfo/rs:fit/g:sm/q:90/h:566/w:560/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3NTAx/NTMtMTQ2MjQ3NDcx/Mi0yMzA3LmpwZWc.jpeg",
+        "title": "Gold",
+        "year": 1993,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Yardbirds",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 262455,
+            "resource_url": "https://api.discogs.com/artists/262455"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Gold",
+            "catno": "GOLD 050",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 60909,
+            "resource_url": "https://api.discogs.com/labels/60909"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Blues"
+        ],
+        "styles": [
+          "Rhythm & Blues"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 704539,
+      "instance_id": 1969869110,
+      "date_added": "2025-03-20T11:34:06-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 704539,
+        "master_id": 392536,
+        "master_url": "https://api.discogs.com/masters/392536",
+        "resource_url": "https://api.discogs.com/releases/704539",
+        "thumb": "https://i.discogs.com/EFic4i-viHoSe5BmXVdmBwloam3PH7LEMbVf5mijBZ8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwNDUz/OS0xNTU5MTc1MDA0/LTcxNTEuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/Ra7eKU86gLDhyY3dllwAFTzFr6z5MP0wWcIU538JwX8/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwNDUz/OS0xNTU5MTc1MDA0/LTcxNTEuanBlZw.jpeg",
+        "title": "Bulletproof",
+        "year": 2001,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Enhanced"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "K-Otic",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 99126,
+            "resource_url": "https://api.discogs.com/artists/99126"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Jive",
+            "catno": "9241182",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2186,
+            "resource_url": "https://api.discogs.com/labels/2186"
+          },
+          {
+            "name": "Zomba",
+            "catno": "9241182",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 25066,
+            "resource_url": "https://api.discogs.com/labels/25066"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Europop",
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 18235030,
+      "instance_id": 1970321024,
+      "date_added": "2025-03-20T23:28:36-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 18235030,
+        "master_id": 68455,
+        "master_url": "https://api.discogs.com/masters/68455",
+        "resource_url": "https://api.discogs.com/releases/18235030",
+        "thumb": "https://i.discogs.com/Z6-CKYTDCH6GEqRnf-IoMSsoJQQYGBy1TBXeMJsxriU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MjM1/MDMwLTE2MTgwNTY0/OTItMjQwNy5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/cUvkwf0DDFCRWg8AM8lRZ2R2EtH5nPK-rHiDhSlaGsc/rs:fit/g:sm/q:90/h:496/w:500/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MjM1/MDMwLTE2MTgwNTY0/OTItMjQwNy5qcGVn.jpeg",
+        "title": "Tommy",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue",
+              "Remastered",
+              "Repress"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Who",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 196766,
+            "resource_url": "https://api.discogs.com/artists/196766"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Polydor",
+            "catno": "531 043-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1610,
+            "resource_url": "https://api.discogs.com/labels/1610"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Psychedelic Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 5820683,
+      "instance_id": 1970321072,
+      "date_added": "2025-03-20T23:28:44-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 5820683,
+        "master_id": 719038,
+        "master_url": "https://api.discogs.com/masters/719038",
+        "resource_url": "https://api.discogs.com/releases/5820683",
+        "thumb": "https://i.discogs.com/han4-rhMOmbXOTkXCR33VY6cIT4npQK0MNkGqB_O_vc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU4MjA2/ODMtMTQ3NjgwMTgy/NC02OTU2LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/-Qll7WScS6yGLFCmGrl9VQcp_X9OE4ZnebjQkfFshHQ/rs:fit/g:sm/q:90/h:539/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU4MjA2/ODMtMTQ3NjgwMTgy/NC02OTU2LmpwZWc.jpeg",
+        "title": "Eight Classic Albums",
+        "year": 2013,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "4",
+            "descriptions": [
+              "Compilation",
+              "Remastered"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Hank Williams",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 256313,
+            "resource_url": "https://api.discogs.com/artists/256313"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Real Gone",
+            "catno": "RGMCD037",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 419015,
+            "resource_url": "https://api.discogs.com/labels/419015"
+          }
+        ],
+        "genres": [
+          "Folk, World, & Country"
+        ],
+        "styles": [
+          "Country"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1941889,
+      "instance_id": 1970321396,
+      "date_added": "2025-03-20T23:29:50-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1941889,
+        "master_id": 114327,
+        "master_url": "https://api.discogs.com/masters/114327",
+        "resource_url": "https://api.discogs.com/releases/1941889",
+        "thumb": "https://i.discogs.com/49RPxZNxUWlSML9bVEDKPqBJGTPhuSHS_Tkfx1GJ6Y0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5NDE4/ODktMTI1NDQ4ODg2/My5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/Oh1Ili9uj7AHbXJR1gFVE26Bp3L4TqYllVoAg0d5slY/rs:fit/g:sm/q:90/h:489/w:488/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5NDE4/ODktMTI1NDQ4ODg2/My5qcGVn.jpeg",
+        "title": "Welenga (Universal Consciousness)",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Wes",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 68127,
+            "resource_url": "https://api.discogs.com/artists/68127"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Saint George",
+            "catno": "SAN 485146-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 9714,
+            "resource_url": "https://api.discogs.com/labels/9714"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Pop",
+          "Folk, World, & Country"
+        ],
+        "styles": [
+          "Tribal House",
+          "Ambient"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 8212876,
+      "instance_id": 1970320934,
+      "date_added": "2025-03-20T23:28:13-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 8212876,
+        "master_id": 10348,
+        "master_url": "https://api.discogs.com/masters/10348",
+        "resource_url": "https://api.discogs.com/releases/8212876",
+        "thumb": "https://i.discogs.com/dsSduVDNHPth-sMAvMW4B2C6cn2p5SILzpGjNb08KXM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTgyMTI4/NzYtMTQ1NzI1NTg4/Ny03MzE0LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/ekPpSqyW8BhNvMQJai8yt8Vv5N2oEvrQa291jh4c3lI/rs:fit/g:sm/q:90/h:532/w:529/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTgyMTI4/NzYtMTQ1NzI1NTg4/Ny03MzE0LmpwZWc.jpeg",
+        "title": "Get Behind Me Satan",
+        "year": 2005,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The White Stripes",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 116345,
+            "resource_url": "https://api.discogs.com/artists/116345"
+          }
+        ],
+        "labels": [
+          {
+            "name": "XL Recordings Ltd.",
+            "catno": "XLCD 191",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 43718,
+            "resource_url": "https://api.discogs.com/labels/43718"
+          },
+          {
+            "name": "Third Man Records",
+            "catno": "XLCD 191",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 89238,
+            "resource_url": "https://api.discogs.com/labels/89238"
+          },
+          {
+            "name": "Playground Music Scandinavia",
+            "catno": "XLCD 191",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 6651,
+            "resource_url": "https://api.discogs.com/labels/6651"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Rock & Roll",
+          "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    }
+  ]
+}
