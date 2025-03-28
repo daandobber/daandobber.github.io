@@ -32,7 +32,7 @@ jobs:
           DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
           DISCOGS_USERNAME: ${{ secrets.DISCOGS_USERNAME }}
         # Zorg dat je Python script 'fetch_discogs.py' heet en in de root van je repo staat
-        run: python scripts/fetch_discogs.py
+        run: python scripts/Workspace_discogs.py
 
       - name: Commit and push if changes
         # Gebruikt een action die het committen/pushen versimpelt
