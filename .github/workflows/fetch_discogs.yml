@@ -1,0 +1,42 @@
+name: Fetch Discogs Collection Daily
+
+on:
+  schedule:
+    # Draait elke dag om 05:00 UTC (pas eventueel aan)
+    # Gebruik https://crontab.guru/ om de cron syntax te begrijpen
+    - cron: '0 5 * * *'
+  workflow_dispatch: # Maakt handmatig draaien mogelijk via de Actions tab
+
+jobs:
+  fetch-and-update:
+    runs-on: ubuntu-latest # Gebruik een standaard Linux runner
+    permissions:
+      contents: write # Geef de job toestemming om code te schrijven (committen)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # Haalt je code op
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x' # Gebruik een recente Python 3 versie
+          cache: 'pip' # Versnelt installatie door dependencies te cachen
+
+      - name: Install dependencies
+        run: pip install requests # Installeert de benodigde library
+
+      - name: Run Python script to fetch Discogs data
+        env:
+          # Geef de secrets door als omgevingsvariabelen aan het script
+          DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
+          DISCOGS_USERNAME: ${{ secrets.DISCOGS_USERNAME }}
+        run: python fetch_discogs.py # Voer je script uit
+
+      - name: Commit and push if changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update Discogs collection data" # Commit bericht
+          file_pattern: src/data/cd_collection.json # Alleen deze file committen als hij gewijzigd is
+          commit_user_name: "GitHub Actions Bot" # Naam van de committer
+          commit_user_email: "actions@github.com" # E-mail van de committer
+          commit_author: "GitHub Actions Bot <actions@github.com>" # Auteur van de commit
