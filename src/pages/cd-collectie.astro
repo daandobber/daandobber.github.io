@@ -1,59 +1,84 @@
 ---
-import PageLayout from "@/layouts/Base.astro";
-import cdCollectionData from "@/data/cd_collection.json";
+import PageLayout from '@/layouts/Base.astro';
+import FilterSortList from '@/components/FilterSortList.svelte'; // Importeer Svelte component
+import CDCard from '@/components/CDCard.astro';              // Importeer Astro card component
+import cdCollectionData from '@/data/cd_collection.json';
 
-const releases = cdCollectionData?.releases || []; 
+const releases = cdCollectionData?.releases || [];
+
+// --- Configuratie specifiek voor CD's ---
+
+// Velden om in te zoeken (basis paden)
+// De Svelte component's getProperty kan hiermee overweg.
+// Voor 'artists' is een specifieke check ingebouwd in het Svelte component.
+const searchFields = ['basic_information.title', 'basic_information.artists'];
+
+// Helper functie voor artiesten sorteren (lowercase, onbekend achteraan)
+function formatArtistsForSort(artists) {
+   if (!artists || artists.length === 0) return "zzzzzzz";
+   return artists.map(artist => artist.name).join(', ').toLowerCase();
+}
+
+// Definieer de sorteer opties
+const sortOptions = [
+  {
+    id: 'artistAZ', // Unieke ID voor deze optie
+    label: 'Artiest (A-Z)', // Tekst op de knop
+    order: 'asc', // Sorteer richting
+    valueFn: item => formatArtistsForSort(item.basic_information?.artists) // Functie die de sorteerwaarde teruggeeft
+  },
+  {
+    id: 'artistZA',
+    label: 'Artiest (Z-A)',
+    order: 'desc',
+    valueFn: item => formatArtistsForSort(item.basic_information?.artists)
+  },
+  {
+    id: 'yearNewOld',
+    label: 'Jaar (Nieuw-Oud)',
+    order: 'desc',
+    valueFn: item => item.basic_information?.year || 0 // Geef 0 terug als jaar mist voor sorteren
+  },
+  {
+    id: 'yearOldNew',
+    label: 'Jaar (Oud-Nieuw)',
+    order: 'asc',
+    valueFn: item => item.basic_information?.year || 9999 // Geef hoog getal terug als jaar mist
+  }
+];
+
+// ID van de initiële sortering die actief moet zijn
+const initialSortId = 'artistAZ';
 
 const meta = {
   title: "Mijn CD Collectie",
-  description: "Een overzicht van de CDs in mijn Discogs collectie.",
+  description: "Een doorzoekbaar en sorteerbaar overzicht van de CDs in mijn Discogs collectie.",
 };
-
-function formatArtists(artists) {
-  if (!artists || artists.length === 0) {
-    return "Onbekende Artiest";
-  }
-  return artists.map(artist => artist.name).join(', ');
-}
 ---
-
 <PageLayout meta={meta}>
   <h1 class="title mb-6 text-2xl font-bold">Mijn CD Collectie</h1>
 
-  {releases.length > 0 ? (
-    <p class="mb-8">Hier is een overzicht van de releases uit mijn Discogs collectie.</p>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-      {releases.map(release => (
-        <div class="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-md bg-white dark:bg-gray-800 flex flex-col">
-          <img
-            src={release.basic_information?.cover_image || '/images/placeholder-cover.png'}
-            alt={`Cover van ${release.basic_information?.title || 'album'}`}
-            class="w-full h-auto aspect-square object-cover"
-            loading="lazy"
-            onerror="this.onerror=null; this.src='/images/placeholder-cover.png';" // Fallback image
-          />
-          <div class="p-4 flex flex-col flex-grow">
-            <h2 class="text-base font-semibold mb-1 line-clamp-2">{release.basic_information?.title || 'Geen Titel'}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">{formatArtists(release.basic_information?.artists)}</p>
-            {release.basic_information?.year && release.basic_information.year > 0 && (
-              <p class="text-xs text-gray-500 dark:text-gray-500 mt-auto pt-1">{release.basic_information.year}</p>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <p>Mijn collectie is nog leeg of de data kon niet geladen worden. Probeer het later opnieuw.</p>
-  )}
+  {/* Roep het Svelte component aan met client:load */}
+  {/* Geef data en configuratie mee als props */}
+  <FilterSortList
+    client:load
+    items={releases}
+    searchFields={searchFields}
+    sortOptions={sortOptions}
+    initialSortId={initialSortId}
+  >
+    {/* Dit wordt in de 'item' slot van FilterSortList geplaatst */}
+    {/* 'let:item' ontvangt de data van het huidige item van de Svelte component */}
+    <Fragment slot="item" let:item>
+      <CDCard release={item} /> {# Geef het item door aan je CDCard #}
+    </Fragment>
+
+    {/* Dit wordt in de 'no-results' slot geplaatst */}
+    <Fragment slot="no-results">
+      <p class="mt-6 text-center text-gray-500 dark:text-gray-400 col-span-full">
+        Helaas, geen CD's gevonden die voldoen aan je filter.
+      </p>
+    </Fragment>
+  </FilterSortList>
 
 </PageLayout>
-
-<style>
-/* Optionele extra styling voor line-clamp als Tailwind JIT/plugin niet actief is */
-.line-clamp-2 {
-   overflow: hidden;
-   display: -webkit-box;
-   -webkit-box-orient: vertical;
-   -webkit-line-clamp: 2;
-}
-</style>
