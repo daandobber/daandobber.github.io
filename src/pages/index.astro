@@ -1,31 +1,45 @@
 ---
-import { type CollectionEntry, getCollection } from "astro:content";
+import { type CollectionEntry } from "astro:content";
 import PostPreview from "@/components/blog/PostPreview.astro";
-import Note from "@/components/note/Note.astro";
 import { getAllPosts } from "@/data/post";
 import PageLayout from "@/layouts/Base.astro";
 import { collectionDateSort } from "@/utils/date";
+import BlueskyPostComponent from "@/components/BlueskyPost.astro";
+import blueskyPostsRaw from "@/data/bluesky_posts.json";
+import type { BlueskyPost } from "@/types";
 
-// Posts
+interface BlueskyPost {
+	uri: string;
+	cid: string;
+	author_handle: string;
+	author_display_name: string;
+	author_avatar: string;
+	text: string;
+	created_at: string;
+	likes: number;
+	reposts: number;
+	replies: number;
+	embeds?: {
+		type: "images" | string;
+		images?: { thumb: string; fullsize: string; alt: string }[];
+	} | null;
+}
+const blueskyPosts: BlueskyPost[] = blueskyPostsRaw as BlueskyPost[];
+
+// Blog Posts (ongewijzigd)
 const MAX_POSTS = 10;
 const allPosts = await getAllPosts();
 const allPostsByDate = allPosts
 	.sort(collectionDateSort)
 	.slice(0, MAX_POSTS) as CollectionEntry<"post">[];
-
-// Notes
-const MAX_NOTES = 5;
-const allNotes = await getCollection("note");
-const latestNotes = allNotes.sort(collectionDateSort).slice(0, MAX_NOTES);
 ---
 
 <PageLayout meta={{ title: "Home" }}>
 	<section>
 		<h1 class="title mb-6">Hallo wereld!</h1>
-		<p class="mb-4">
-			Welkom op mijn website. Deze site is gebouwd met Astro, een moderne sitegenerator. Dit houdt in dat alle pagina’s vooraf worden opgebouwd tot eenvoudige HTML-bestanden, wat resulteert in een snelle en veilige website. Hier publiceer ik af en toe mijn projecten en experimenten. Misschien schrijf ik af en toe ook een blog? Gaan we nog wel zien.
-		</p>
+		<p class="mb-4">Welkom op mijn website...</p>
 	</section>
+
 	<section class="mt-16">
 		<h2 class="title text-accent mb-6 text-xl"><a href="/posts/">Posts</a></h2>
 		<ul class="space-y-4" role="list">
@@ -38,17 +52,22 @@ const latestNotes = allNotes.sort(collectionDateSort).slice(0, MAX_NOTES);
 			}
 		</ul>
 	</section>
+
 	{
-		latestNotes.length > 0 && (
+		blueskyPosts && blueskyPosts.length > 0 && (
 			<section class="mt-16">
 				<h2 class="title text-accent mb-6 text-xl">
-					<a href="/notes/">Microblog</a>
+					<a
+						href={`https://bsky.app/profile/${blueskyPosts[0].author_handle}`}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						Microblog (Bluesky)
+					</a>
 				</h2>
-				<ul class="space-y-4" role="list">
-					{latestNotes.map((note) => (
-						<li>
-							<Note note={note} as="h3" isPreview />
-						</li>
+				<ul class="space-y-6" role="list">
+					{blueskyPosts.map((post) => (
+						<BlueskyPostComponent post={post} />
 					))}
 				</ul>
 			</section>

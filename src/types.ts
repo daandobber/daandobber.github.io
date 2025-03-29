@@ -111,3 +111,20 @@ export interface SiteMeta {
 	ogImage?: string;
 	articleDate?: string;
 }
+
+export interface BlueskyPost {
+	uri: string;
+	cid: string;
+	author_handle: string;
+	author_display_name: string;
+	author_avatar: string;
+	text: string;
+	created_at: string; // ISO 8601 string
+	likes: number;
+	reposts: number;
+	replies: number;
+	embeds?: {
+	  type: 'images' | string;
+	  images?: { thumb: string; fullsize: string; alt: string }[];
+	} | null;
+  }
