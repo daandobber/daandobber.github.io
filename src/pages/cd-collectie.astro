@@ -64,21 +64,9 @@ const meta: SiteMeta = {
 		client:load
 		items={releases}
 		searchFields={searchFields}
-		{/* Gebruik shorthand als prop naam = variabele naam */}
 		sortOptions={sortOptions}
-		{/* Gebruik shorthand */}
 		initialSortId={initialSortId}
-		{/* Gebruik shorthand */}
 	>
-		<Fragment slot="item" let:item>
-			{/* Render CDCard alleen als 'item' een waarde heeft */}
-			{item && <CDCard release={item} />}
-		</Fragment>
-
-		<Fragment slot="no-results">
-			<p class="col-span-full mt-6 text-center text-gray-500 dark:text-gray-400">
-				Helaas, geen CD's gevonden die voldoen aan je filter.
-			</p>
-		</Fragment>
+		{/* ... slots ... */}
 	</FilterSortList>
 </PageLayout>
