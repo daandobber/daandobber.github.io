@@ -55,6 +55,200 @@
       "folder_id": 1
     },
     {
+      "id": 782750,
+      "instance_id": 1978253733,
+      "date_added": "2025-03-28T14:38:32-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 782750,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/782750",
+        "thumb": "https://i.discogs.com/PqwCpoey5Z4yb6nQrcgCGiTmd2V85EQp-kc514o-1Fc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc4Mjc1/MC0xNDQ5MDg3MjU4/LTg0MjIuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/B5tk_3l_q-wI0xOBbNBiDqof49UDeTKHDBS7Og4zVxM/rs:fit/g:sm/q:90/h:599/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc4Mjc1/MC0xNDQ5MDg3MjU4/LTg0MjIuanBlZw.jpeg",
+        "title": "TMF Hitzone 6",
+        "year": 1999,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "BMG",
+            "catno": "74321 661082",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1003,
+            "resource_url": "https://api.discogs.com/labels/1003"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Hip Hop",
+          "Latin",
+          "Funk / Soul",
+          "Pop"
+        ],
+        "styles": [
+          "Trance",
+          "Synth-pop",
+          "Disco",
+          "Contemporary R&B"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 3280004,
+      "instance_id": 1978253562,
+      "date_added": "2025-03-28T14:38:18-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 3280004,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/3280004",
+        "thumb": "https://i.discogs.com/l0lEjWA6fp-A3R4I-Q_sCE-v7Vs-8GFJn6LXF3h6zXw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyODAw/MDQtMTUwODUwMzg0/NS01MDQ1LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/SByI_UXIGK5QZ0mfMAx0qpBHPA0E5Ro92TrGs5bty_w/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyODAw/MDQtMTUwODUwMzg0/NS01MDQ1LmpwZWc.jpeg",
+        "title": "The Sunday Morning Club",
+        "year": 2001,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          },
+          {
+            "name": "DVD",
+            "qty": "1",
+            "descriptions": [
+              "PAL",
+              "DVD-Video"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "BMG Nederland BV",
+            "catno": "74321 740702",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 248879,
+            "resource_url": "https://api.discogs.com/labels/248879"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Pop"
+        ],
+        "styles": [
+          "Downtempo",
+          "House",
+          "Deep House",
+          "Progressive House",
+          "Electro",
+          "Drum n Bass"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 11093722,
+      "instance_id": 1978255650,
+      "date_added": "2025-03-28T14:40:32-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 11093722,
+        "master_id": 1262078,
+        "master_url": "https://api.discogs.com/masters/1262078",
+        "resource_url": "https://api.discogs.com/releases/11093722",
+        "thumb": "https://i.discogs.com/Te28i4_YcE8CLOD1urR_nAnlr2ANm_1ll9Dc4AIIvzw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMDkz/NzIyLTE1MTMzNzQw/MTItNjMzNS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/j-2aYM5m9sLMInZqtsuZr3QdFfVeHDjwDr79yd9eQzo/rs:fit/g:sm/q:90/h:535/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMDkz/NzIyLTE1MTMzNzQw/MTItNjMzNS5qcGVn.jpeg",
+        "title": "The Animal Spirits",
+        "year": 2017,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "James Holden",
+            "anv": "",
+            "join": "&",
+            "role": "",
+            "tracks": "",
+            "id": 4214,
+            "resource_url": "https://api.discogs.com/artists/4214"
+          },
+          {
+            "name": "The Animal Spirits",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 6099814,
+            "resource_url": "https://api.discogs.com/artists/6099814"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Border Community",
+            "catno": "50BCCD",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 15646,
+            "resource_url": "https://api.discogs.com/labels/15646"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Jazz"
+        ],
+        "styles": [
+          "Experimental",
+          "Drone",
+          "IDM",
+          "Avant-garde Jazz",
+          "Free Improvisation"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 15110832,
       "instance_id": 1970320883,
       "date_added": "2025-03-20T23:28:03-07:00",
@@ -106,6 +300,63 @@
         "styles": [
           "Pop Rock",
           "Ballad"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 267663,
+      "instance_id": 1978252383,
+      "date_added": "2025-03-28T14:37:01-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 267663,
+        "master_id": 12049,
+        "master_url": "https://api.discogs.com/masters/12049",
+        "resource_url": "https://api.discogs.com/releases/267663",
+        "thumb": "https://i.discogs.com/CEUuaEktoiHEoWPFxOnlQAQG12d6QVVkTS4OeDxkGWc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI2NzY2/My0xMjk0Nzc2NTI4/LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/x7b9G67JX_mfUK-pml9EGjrrz42ICnDDljkcYRz9mj4/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI2NzY2/My0xMjk0Nzc2NTI4/LmpwZWc.jpeg",
+        "title": "Highlights From Jeff Wayne's Musical Version Of The War Of The Worlds",
+        "year": 1997,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue",
+              "Remastered",
+              "Stereo"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Jeff Wayne",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 24818,
+            "resource_url": "https://api.discogs.com/artists/24818"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "CDX 32356",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Modern Classical",
+          "Disco"
         ]
       },
       "folder_id": 1
@@ -458,6 +709,240 @@
       "folder_id": 1
     },
     {
+      "id": 1300439,
+      "instance_id": 1978253220,
+      "date_added": "2025-03-28T14:37:56-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1300439,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/1300439",
+        "thumb": "https://i.discogs.com/JZbu0c6cNLQ8uFPLPyUREMpyJOmzOFb05xILxmojaDo/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzMDA0/MzktMTIyMzA3Mjc5/My5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/mDj6Uyb9rA1aJANcdXBVZoYE2dmv4jfnm50S8bUV-Ms/rs:fit/g:sm/q:90/h:592/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzMDA0/MzktMTIyMzA3Mjc5/My5qcGVn.jpeg",
+        "title": "London Calling - De Officiële Soundtrack!",
+        "year": 2008,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Promo",
+              "Sampler"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "London Calling",
+            "catno": "LCR001",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 118687,
+            "resource_url": "https://api.discogs.com/labels/118687"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Indie Rock",
+          "Punk",
+          "Garage Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 860719,
+      "instance_id": 1978254513,
+      "date_added": "2025-03-28T14:39:20-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 860719,
+        "master_id": 1336357,
+        "master_url": "https://api.discogs.com/masters/1336357",
+        "resource_url": "https://api.discogs.com/releases/860719",
+        "thumb": "https://i.discogs.com/_BBsLlDBdR1FOJioQUYhEwB6kojP6-QJg3ldtok3kjA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg2MDcx/OS0xNDY1NzQxMzQ5/LTMxMzAuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/HhK3-PWF-eKvGUAOIGsJeB0GRaJKg8zaBab_Mev31kM/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg2MDcx/OS0xNDY1NzQxMzQ5/LTMxMzAuanBlZw.jpeg",
+        "title": "Disco 2006",
+        "year": 2006,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Mixed"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Erol Alkan",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 117051,
+            "resource_url": "https://api.discogs.com/artists/117051"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Mixmag",
+            "catno": "MIXMAG 01/07",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 268,
+            "resource_url": "https://api.discogs.com/labels/268"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Tech House",
+          "Electro"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 9523277,
+      "instance_id": 1978255428,
+      "date_added": "2025-03-28T14:40:16-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 9523277,
+        "master_id": 1117794,
+        "master_url": "https://api.discogs.com/masters/1117794",
+        "resource_url": "https://api.discogs.com/releases/9523277",
+        "thumb": "https://i.discogs.com/lJdTfA3Pm5w5QCPZoUei3A9uHnDI5n083wLl86_ageM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk1MjMy/NzctMTU4NDM4MDQz/Mi05MjAyLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/PBBnb2SFn4qluPhB8qLuUs2xD9Tu3qYQYuA0l-c6GKE/rs:fit/g:sm/q:90/h:500/w:500/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk1MjMy/NzctMTU4NDM4MDQz/Mi05MjAyLmpwZWc.jpeg",
+        "title": "Best Chillout",
+        "year": 2005,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Silverfox (5)",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 4633518,
+            "resource_url": "https://api.discogs.com/artists/4633518"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Not On Label",
+            "catno": "APWCD6538e",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1818,
+            "resource_url": "https://api.discogs.com/labels/1818"
+          },
+          {
+            "name": "Not On Label",
+            "catno": "09355",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1818,
+            "resource_url": "https://api.discogs.com/labels/1818"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Ambient"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 11922218,
+      "instance_id": 1978252116,
+      "date_added": "2025-03-28T14:36:48-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 11922218,
+        "master_id": 1811330,
+        "master_url": "https://api.discogs.com/masters/1811330",
+        "resource_url": "https://api.discogs.com/releases/11922218",
+        "thumb": "https://i.discogs.com/Gi50QAjNlz-OrkpuJtLZw9iZAjMeg54s3IBiy052yis/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExOTIy/MjE4LTE1MjQ4MDU2/NzctMjI4Mi5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/6-A2y6ICl4BW0OSGp7881XaOQEP66LWfZFywmEnbvG0/rs:fit/g:sm/q:90/h:589/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExOTIy/MjE4LTE1MjQ4MDU2/NzctMjI4Mi5qcGVn.jpeg",
+        "title": "Ska",
+        "year": 2000,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Pegasus",
+            "catno": "PEG CD 271",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 38097,
+            "resource_url": "https://api.discogs.com/labels/38097"
+          },
+          {
+            "name": "Pegasus",
+            "catno": "GAS 0000271 PEG",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 38097,
+            "resource_url": "https://api.discogs.com/labels/38097"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Ska"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 18235030,
       "instance_id": 1970321024,
       "date_added": "2025-03-20T23:28:36-07:00",
@@ -619,6 +1104,195 @@
         "styles": [
           "Tribal House",
           "Ambient"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 459326,
+      "instance_id": 1978253943,
+      "date_added": "2025-03-28T14:38:44-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 459326,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/459326",
+        "thumb": "https://i.discogs.com/-qJccRCmzl3eNl2RvrxKbO7rQiSyL64XFSclpZJvlig/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ1OTMy/Ni0xMzM4NTcwMDgy/LTIwMTYuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/QNbiqm6gMnRIfyiJ4syTB-kP26UvJM7D6IA_HBXxk_c/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ1OTMy/Ni0xMzM4NTcwMDgy/LTIwMTYuanBlZw.jpeg",
+        "title": "I Wanna Be A One Day Fly",
+        "year": 2001,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "One Day Fly",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 318345,
+            "resource_url": "https://api.discogs.com/artists/318345"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Sony Music Local",
+            "catno": "SML 671287 1",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 40559,
+            "resource_url": "https://api.discogs.com/labels/40559"
+          },
+          {
+            "name": "Sony Music Local",
+            "catno": "6712871000",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 40559,
+            "resource_url": "https://api.discogs.com/labels/40559"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 525512,
+      "instance_id": 1978254942,
+      "date_added": "2025-03-28T14:39:48-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 525512,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/525512",
+        "thumb": "https://i.discogs.com/2MBHIM_7cgwx2SSE4wn1XSJoIBjVsN3N6rFftivVPds/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUyNTUx/Mi0xMTI4MTI3NzY1/LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/PQJkXdR4qemUkOAhsCX-oDrUYFKIkxlU3NDWkYd3dLM/rs:fit/g:sm/q:90/h:508/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUyNTUx/Mi0xMTI4MTI3NzY1/LmpwZWc.jpeg",
+        "title": "Back To The 80's Pop & Wave (De Hits Uit De Jaren '80)",
+        "year": 2001,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "3",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Sony Music Media",
+            "catno": "501266 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 65249,
+            "resource_url": "https://api.discogs.com/labels/65249"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Hip Hop",
+          "Rock",
+          "Funk / Soul",
+          "Pop",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Ambient",
+          "Dance-pop",
+          "Disco",
+          "Downtempo",
+          "Europop",
+          "Glam",
+          "Hi NRG",
+          "Indie Rock",
+          "Mod",
+          "New Wave",
+          "Pop Rap",
+          "Pop Rock",
+          "Post-Punk",
+          "Ska",
+          "Soul",
+          "Soundtrack",
+          "Synth-pop"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 218266,
+      "instance_id": 1978254723,
+      "date_added": "2025-03-28T14:39:33-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 218266,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/218266",
+        "thumb": "https://i.discogs.com/_HKzscAevFpZ375cKpOW_0vY6m4eOq8C7A7ETMshwxY/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxODI2/Ni0xMzA4MTMyMjkz/LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/h_StxZk9x4JYnnL5SSVyg7vzzh8EjmbYU8mAwmx67yo/rs:fit/g:sm/q:90/h:468/w:469/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxODI2/Ni0xMzA4MTMyMjkz/LmpwZWc.jpeg",
+        "title": "Lounge Café",
+        "year": 2001,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "The Music Marketeers",
+            "catno": "muma 65391",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 98034,
+            "resource_url": "https://api.discogs.com/labels/98034"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Downtempo"
         ]
       },
       "folder_id": 1
