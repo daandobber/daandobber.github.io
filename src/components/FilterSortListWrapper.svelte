@@ -1,9 +1,9 @@
 <script lang="ts">
 	import FilterSortList from "@/components/FilterSortList.svelte";
-	import CDCard from "@/components/CDCard.astro";
+	import CDCard from "@/components/CDCard.svelte";
 	import type { Release, SortOption } from "@/types";
 
-	// Definieer de props van de wrapper
+	// Props doorgeven aan de wrapper
 	export let items: Release[] = [];
 	export let searchFields: string[] = [];
 	export let sortOptions: SortOption[] = [];
