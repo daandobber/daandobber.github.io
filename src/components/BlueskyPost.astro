@@ -1,10 +1,6 @@
 ---
-// src/components/bluesky/BlueskyPost.astro
 import FormattedDate from "@/components/FormattedDate.astro";
 
-// Definieer het type voor de 'post' prop.
-// Het is aan te raden deze interface in een gedeeld bestand te zetten (bv. src/types.ts)
-// en hier te importeren, maar voor nu definiëren we het hier opnieuw.
 interface BlueskyPost {
   uri: string;
   cid: string;
@@ -28,7 +24,6 @@ interface Props {
 
 const { post } = Astro.props;
 
-// Maak een link naar de originele post op Bluesky
 const postUrl = `https://bsky.app/profile/${post.author_handle}/post/${post.uri.split('/').pop()}`;
 ---
 
