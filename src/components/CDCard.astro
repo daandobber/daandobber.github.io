@@ -1,44 +1,58 @@
 ---
-import type { Release, Artist } from '@/types'; 
+import type { Release, Artist } from "@/types";
 
 export interface Props {
-  release: Release | undefined | null;
+	release: Release | undefined | null;
 }
 
 const { release } = Astro.props;
+
 if (!release) {
-  return null;
+	return null;
 }
 
 function formatArtists(artists: Artist[] | undefined): string {
-  if (!artists || artists.length === 0) return "Onbekende Artiest";
-  return artists.map((artist: Artist) => artist.name).join(', ');
+	if (!artists || artists.length === 0) return "Onbekende Artiest";
+	return artists.map((artist: Artist) => artist.name).join(", ");
 }
 
 const artists = formatArtists(release.basic_information?.artists);
-const title = release.basic_information?.title ?? 'Geen Titel';
+const title = release.basic_information?.title ?? "Geen Titel";
 const year = release.basic_information?.year;
-const cover = release.basic_information?.cover_image ?? '/images/placeholder-cover.png';
+const cover = release.basic_information?.cover_image ?? "/images/placeholder-cover.png";
 const altText = `Cover van ${title} door ${artists}`;
 ---
-<div class="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-md bg-white dark:bg-gray-800 flex flex-col">
-  <img src={cover} alt={altText} class="w-full h-auto aspect-square object-cover bg-gray-200 dark:bg-gray-600" loading="lazy" onerror="this.onerror=null; this.src='/images/placeholder-cover.png';" />
-  <div class="p-4 flex flex-col flex-grow">
-    <h2 class="text-base font-semibold mb-1 line-clamp-2" title={title}>{title}</h2>
-    <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2" title={artists}>{artists}</p>
-    {year && year > 0 ? (
-      <p class="text-xs text-gray-500 dark:text-gray-500 mt-auto pt-1">{year}</p>
-    ) : (
-      <p class="text-xs text-gray-500 dark:text-gray-500 mt-auto pt-1">&nbsp;</p> <!-- Removed comment -->
-    )}
-  </div>
+
+<div
+	class="flex flex-col overflow-hidden rounded-lg border border-gray-300 bg-white shadow-md dark:border-gray-700 dark:bg-gray-800"
+>
+	<img
+		src={cover}
+		alt={altText}
+		class="aspect-square h-auto w-full bg-gray-200 object-cover dark:bg-gray-600"
+		loading="lazy"
+		onerror="this.onerror=null; this.src='/images/placeholder-cover.png';"
+	/>
+	<div class="flex flex-grow flex-col p-4">
+		<h2 class="mb-1 line-clamp-2 text-base font-semibold" title={title}>{title}</h2>
+		<p class="mb-2 line-clamp-2 text-sm text-gray-600 dark:text-gray-400" title={artists}>
+			{artists}
+		</p>
+		{
+			year && year > 0 ? (
+				<p class="mt-auto pt-1 text-xs text-gray-500 dark:text-gray-500">{year}</p>
+			) : (
+				<p class="mt-auto pt-1 text-xs text-gray-500 dark:text-gray-500">&nbsp;</p>
+			)
+		}
+	</div>
 </div>
 
 <style>
-.line-clamp-2 {
-   overflow: hidden;
-   display: -webkit-box;
-   -webkit-box-orient: vertical;
-   -webkit-line-clamp: 2;
-}
+	.line-clamp-2 {
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+	}
 </style>

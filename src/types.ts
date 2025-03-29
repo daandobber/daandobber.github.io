@@ -84,31 +84,30 @@ export type AdmonitionType = "tip" | "note" | "important" | "caution" | "warning
 
 export interface Artist {
 	name: string;
-  }
-  
-  export interface BasicInformation {
+}
+
+export interface BasicInformation {
 	title?: string;
 	artists?: Artist[];
 	year?: number;
 	cover_image?: string;
-  }
-  
-  export interface Release {
+}
+
+export interface Release {
 	id: number | string;
 	basic_information?: BasicInformation;
+}
 
-  }
- 
-  export interface SortOption {
+export interface SortOption {
 	id: string;
 	label: string;
 	order: 'asc' | 'desc';
 	sortKey: 'artist' | 'year' | 'title';
-  }
+}
 
-  export interface SiteMeta {
+export interface SiteMeta {
 	title: string;
 	description?: string;
 	ogImage?: string;
 	articleDate?: string;
-  }
+}

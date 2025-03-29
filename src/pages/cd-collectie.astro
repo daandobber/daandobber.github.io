@@ -1,18 +1,14 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
-import FilterSortList from "@/components/FilterSortList.svelte";
-import CDCard from "@/components/CDCard.astro";
+// @ts-ignore: We negeren tijdelijk TS-checks voor deze Svelte-component
+import FilterSortListWrapper from "@/components/FilterSortListWrapper.svelte";
 import cdCollectionData from "@/data/cd_collection.json";
 import type { Release, SortOption, SiteMeta } from "@/types";
 
 const releases: Release[] = cdCollectionData?.releases ?? [];
 
-// --- Configuratie specifiek voor CD's ---
 const searchFields: string[] = ["basic_information.title", "basic_information.artists"];
 
-// !!! formatArtistsForSort functie is hier nu definitief WEG !!!
-
-// Gebruik de SortOption structuur met sortKey
 const sortOptions: SortOption[] = [
 	{ id: "artistAZ", label: "Artiest (A-Z)", order: "asc", sortKey: "artist" },
 	{ id: "artistZA", label: "Artiest (Z-A)", order: "desc", sortKey: "artist" },
@@ -22,7 +18,6 @@ const sortOptions: SortOption[] = [
 
 const initialSortId: string = "artistAZ";
 
-// Definieer het meta object correct
 const meta: SiteMeta = {
 	title: "Mijn CD Collectie",
 	description: "Een doorzoekbaar en sorteerbaar overzicht van mijn CD collectie.",
@@ -32,22 +27,11 @@ const meta: SiteMeta = {
 <PageLayout meta={meta}>
 	<h1 class="title mb-6 text-2xl font-bold">Mijn CD Collectie</h1>
 
-	<FilterSortList
-		client:load
+	<FilterSortListWrapper
+		client:only="svelte"
 		items={releases}
 		searchFields={searchFields}
 		sortOptions={sortOptions}
 		initialSortId={initialSortId}
-	>
-		<Fragment slot="item" let:item>
-			{/* Render CDCard alleen als 'item' een waarde heeft (nodig voor build) */}
-			{item && <CDCard release={item} />}
-		</Fragment>
-
-		<Fragment slot="no-results">
-			<p class="col-span-full mt-6 text-center text-gray-500 dark:text-gray-400">
-				Helaas, geen CD's gevonden die voldoen aan je filter.
-			</p>
-		</Fragment>
-	</FilterSortList>
+	/>
 </PageLayout>

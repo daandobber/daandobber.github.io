@@ -3,3 +3,8 @@ declare module "@pagefind/default-ui" {
 		constructor(arg: unknown);
 	}
 }
+declare module '*.astro' {
+	export interface AstroComponentFactoryProps {}
+	const Component: Astro.ComponentFactory<AstroComponentFactoryProps>;
+	export default Component;
+}

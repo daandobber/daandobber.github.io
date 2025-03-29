@@ -1,26 +1,17 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	// Gebruik correcte alias voor types
 	import type { Release, SortOption, Artist } from "@/types";
 
-	// --- Props ---
 	export let items: Release[] = [];
 	export let searchFields: string[] = [];
 	export let sortOptions: SortOption[] = [];
+	// Stel initialSortId in op basis van sortOptions
+	export let initialSortId: string | null = sortOptions[0] ? sortOptions[0].id : null;
 
-	// --- CORRECTIE HIER voor initialSortId ---
-	// Haal de eerste optie apart op
-	const firstOption = sortOptions[0];
-	// Gebruik die variabele om de default waarde veiliger te bepalen
-	export let initialSortId: string | null = firstOption ? firstOption.id : null;
-	// --- EINDE CORRECTIE ---
-
-	// --- Internal State ---
 	let searchTerm: string = "";
-	let currentSortId: string | null = initialSortId; // Nu geïnitialiseerd met de veiligere waarde
+	let currentSortId: string | null = initialSortId;
 	let debouncedSearchTerm: string = "";
 
-	// --- Debounce Logic ---
 	let debounceTimer: number;
 	$: {
 		clearTimeout(debounceTimer);
@@ -32,7 +23,6 @@
 		clearTimeout(debounceTimer);
 	});
 
-	// --- Helpers ---
 	function getProperty(obj: any, path: string): any {
 		try {
 			return path
@@ -51,7 +41,6 @@
 			.toLowerCase();
 	}
 
-	// --- Derived State ---
 	$: activeSortOption =
 		sortOptions.find((opt) => opt.id === currentSortId) ||
 		(sortOptions.length > 0 ? sortOptions[0] : undefined);
@@ -131,7 +120,6 @@
 		return filtered;
 	}
 
-	// --- Event Handler ---
 	function handleSortClick(id: string) {
 		currentSortId = id;
 	}
@@ -179,3 +167,10 @@
 		{/each}
 	</div>
 </div>
+
+<style>
+	.sort-button.active {
+		/* Voeg hier je styling toe indien nodig */
+	}
+	/* Verwijder lege CSS-regels */
+</style>
