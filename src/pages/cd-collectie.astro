@@ -1,16 +1,17 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
 import FilterSortList from "@/components/FilterSortList.svelte";
+// @ts-expect-error - TS/Astro linter ziet gebruik in slot soms niet goed
 import CDCard from "@/components/CDCard.astro";
 import cdCollectionData from "@/data/cd_collection.json";
-import type { Release, Artist, SortOption } from "src/components/types"; // Import types
+// Gebruik het correcte pad met alias naar src/types.ts
+import type { Release, Artist, SortOption, SiteMeta } from "@/types"; // Importeer ook SiteMeta
 
-const releases: Release[] = cdCollectionData?.releases ?? []; // Use type and nullish coalescing
+const releases: Release[] = cdCollectionData?.releases ?? [];
 
 // --- Configuratie specifiek voor CD's ---
-const searchFields: string[] = ["basic_information.title", "basic_information.artists"]; // Path for artists is handled specifically in Svelte component now
+const searchFields: string[] = ["basic_information.title", "basic_information.artists"];
 
-// Add types
 function formatArtistsForSort(artists: Artist[] | undefined): string {
 	if (!artists || artists.length === 0) return "zzzzzzz";
 	return artists
@@ -19,38 +20,40 @@ function formatArtistsForSort(artists: Artist[] | undefined): string {
 		.toLowerCase();
 }
 
-// Use imported SortOption type
 const sortOptions: SortOption[] = [
 	{
 		id: "artistAZ",
 		label: "Artiest (A-Z)",
 		order: "asc",
-		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists), // Add type
+		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists),
 	},
 	{
 		id: "artistZA",
 		label: "Artiest (Z-A)",
 		order: "desc",
-		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists), // Add type
+		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists),
 	},
 	{
 		id: "yearNewOld",
 		label: "Jaar (Nieuw-Oud)",
 		order: "desc",
-		valueFn: (item: Release) => item.basic_information?.year ?? 0, // Add type, use nullish coalescing
+		valueFn: (item: Release) => item.basic_information?.year ?? 0,
 	},
 	{
 		id: "yearOldNew",
 		label: "Jaar (Oud-Nieuw)",
 		order: "asc",
-		valueFn: (item: Release) => item.basic_information?.year ?? 9999, // Add type, use nullish coalescing
+		valueFn: (item: Release) => item.basic_information?.year ?? 9999,
 	},
 ];
 
-const initialSortId: string = "artistAZ"; // Ensure type consistency
+const initialSortId: string = "artistAZ";
 
-const meta = {
-	/* ... */
+// Definieer het meta object correct met vereiste velden zoals 'title'
+const meta: SiteMeta = {
+	title: "Mijn CD Collectie", // Vereiste titel toegevoegd
+	description: "Een doorzoekbaar en sorteerbaar overzicht van mijn CD collectie.", // Beschrijving toegevoegd/aangepast
+	// Voeg hier andere vereiste velden uit SiteMeta toe indien nodig
 };
 ---
 
@@ -60,23 +63,22 @@ const meta = {
 	<FilterSortList
 		client:load
 		items={releases}
-		{searchFields}
-		{/* Use shorthand passing */}
-		{sortOptions}
-		{/* Use shorthand passing */}
-		{initialSortId}
-		{/* Use shorthand passing */}
+		searchFields={searchFields}
+		{/* Gebruik shorthand als prop naam = variabele naam */}
+		sortOptions={sortOptions}
+		{/* Gebruik shorthand */}
+		initialSortId={initialSortId}
+		{/* Gebruik shorthand */}
 	>
 		<Fragment slot="item" let:item>
-			{
-				/* Now 'item' should be correctly typed as Release within this scope if FilterSortList works */
-			}
-			<CDCard release={item} />
-			<!-- Removed comment -->
+			{/* Render CDCard alleen als 'item' een waarde heeft */}
+			{item && <CDCard release={item} />}
 		</Fragment>
 
 		<Fragment slot="no-results">
-			{/* ... no changes needed here ... */}
+			<p class="col-span-full mt-6 text-center text-gray-500 dark:text-gray-400">
+				Helaas, geen CD's gevonden die voldoen aan je filter.
+			</p>
 		</Fragment>
 	</FilterSortList>
 </PageLayout>
