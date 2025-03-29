@@ -1,25 +1,24 @@
 ---
-// src/components/CDCard.astro
-import type { Release, Artist } from 'src/components/types'; // Import defined types
+import type { Release, Artist } from '@/types'; 
 
 export interface Props {
-  release: Release; // Use the defined type
+  release: Release | undefined | null;
 }
 
 const { release } = Astro.props;
+if (!release) {
+  return null;
+}
 
-// Helper functie binnen dit component
-// Add types to parameter and return type
 function formatArtists(artists: Artist[] | undefined): string {
   if (!artists || artists.length === 0) return "Onbekende Artiest";
-  // Add type to map parameter
   return artists.map((artist: Artist) => artist.name).join(', ');
 }
 
 const artists = formatArtists(release.basic_information?.artists);
-const title = release.basic_information?.title ?? 'Geen Titel'; // Use nullish coalescing
+const title = release.basic_information?.title ?? 'Geen Titel';
 const year = release.basic_information?.year;
-const cover = release.basic_information?.cover_image ?? '/images/placeholder-cover.png'; // Use nullish coalescing
+const cover = release.basic_information?.cover_image ?? '/images/placeholder-cover.png';
 const altText = `Cover van ${title} door ${artists}`;
 ---
 <div class="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-md bg-white dark:bg-gray-800 flex flex-col">
