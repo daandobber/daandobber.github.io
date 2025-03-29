@@ -1,0 +1,65 @@
+name: Scheduled Build & Deploy with Bluesky Fetch
+
+on:
+  schedule:
+    # Draai elke dag om 05:00 UTC (pas aan naar wens)
+    - cron: '0 5 * * *'
+  workflow_dispatch: # Om handmatig te kunnen triggeren
+
+permissions:
+  contents: write # Nodig om wijzigingen te committen (de JSON)
+  pages: write
+  id-token: write
+
+jobs:
+  fetch_build_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Kies een passende Python versie
+
+      - name: Install Python dependencies
+        run: pip install atproto
+
+      - name: Fetch Bluesky Posts
+        env:
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+        run: python ./scripts/fetch_bluesky.py # Zorg dat het pad klopt
+
+      - name: Commit updated data # OPTIONEEL MAAR AANBEVOLEN
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update Bluesky posts data"
+          file_pattern: "src/data/bluesky_posts.json" # Zorg dat het pad klopt
+          # Optioneel: commit_options: '--no-verify'
+          # Optioneel: push_options: '--force' # Kan nodig zijn afhankelijk van branch protection
+          skip_dirty_check: false # Commit alleen als er wijzigingen zijn
+          skip_fetch: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Kies je Node versie
+          cache: 'npm'
+
+      - name: Install Node.js dependencies
+        run: npm install
+
+      - name: Build Astro site
+        run: npm run build
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist # Standaard output map van Astro
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        # Requires configure pages step in repo settings: https://github.com/actions/deploy-pages#usage
