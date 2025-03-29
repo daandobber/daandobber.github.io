@@ -1,0 +1,76 @@
+---
+// src/components/bluesky/BlueskyPost.astro
+import FormattedDate from "@/components/FormattedDate.astro";
+
+// Definieer het type voor de 'post' prop.
+// Het is aan te raden deze interface in een gedeeld bestand te zetten (bv. src/types.ts)
+// en hier te importeren, maar voor nu definiëren we het hier opnieuw.
+interface BlueskyPost {
+  uri: string;
+  cid: string;
+  author_handle: string;
+  author_display_name: string;
+  author_avatar: string;
+  text: string;
+  created_at: string; // ISO 8601 string
+  likes: number;
+  reposts: number;
+  replies: number;
+  embeds?: {
+    type: 'images' | string;
+    images?: { thumb: string; fullsize: string; alt: string }[];
+  } | null;
+}
+
+interface Props {
+  post: BlueskyPost;
+}
+
+const { post } = Astro.props;
+
+// Maak een link naar de originele post op Bluesky
+const postUrl = `https://bsky.app/profile/${post.author_handle}/post/${post.uri.split('/').pop()}`;
+---
+
+<li class="bluesky-post-item p-4 border rounded-md dark:border-gray-700">
+    <div class="flex items-center mb-2">
+        <img src={post.author_avatar} alt={`Avatar van ${post.author_display_name}`} class="w-10 h-10 rounded-full mr-3" />
+        <div>
+            <strong class="font-semibold">{post.author_display_name}</strong>
+            <a href={`https://bsky.app/profile/${post.author_handle}`} target="_blank" rel="noopener noreferrer" class="text-gray-500 dark:text-gray-400 ml-2">@{post.author_handle}</a>
+        </div>
+    </div>
+    <div class="post-content mb-2 prose prose-sm prose-cactus dark:prose-invert max-w-none">
+        <p>{post.text}</p>
+        {post.embeds?.type === 'images' && post.embeds.images && (
+            <div class="flex gap-2 mt-2 flex-wrap">
+                {post.embeds.images.map(img => (
+                     <a href={img.fullsize} target="_blank" rel="noopener noreferrer" title={img.alt || 'Bekijk afbeelding'}>
+                         <img src={img.thumb} alt={img.alt || 'Bluesky afbeelding'} class="max-w-xs max-h-48 rounded" loading="lazy" />
+                     </a>
+                ))}
+            </div>
+        )}
+    </div>
+    <div class="text-xs text-gray-500 dark:text-gray-400">
+        <a href={postUrl} target="_blank" rel="noopener noreferrer" class="hover:underline">
+            <FormattedDate date={new Date(post.created_at)} />
+        </a>
+        <span class="mx-1">&middot;</span>
+        <span>{post.likes} Likes</span>
+        <span class="mx-1">&middot;</span>
+        <span>{post.reposts} Reposts</span>
+    </div>
+</li>
+
+<style>
+/* Scoped CSS voor dit component */
+.bluesky-post-item {
+  /* basis styling */
+}
+.post-content p {
+    margin-bottom: 0.5rem; /* Kleinere marge binnen de post */
+    white-space: pre-wrap; /* Behoud witruimte en line breaks uit Bluesky */
+}
+/* Voeg hier eventuele andere styles toe die specifiek zijn voor een post item */
+</style>
