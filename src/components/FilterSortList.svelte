@@ -1,19 +1,38 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import type { Release, SortOption } from "src/components/types";
+	// Gebruik correcte alias voor types
+	import type { Release, SortOption, Artist } from "@/types";
 
 	// --- Props ---
 	export let items: Release[] = [];
 	export let searchFields: string[] = [];
 	export let sortOptions: SortOption[] = [];
-	export let initialSortId: string | null =
-		sortOptions.length > 0 ? (sortOptions[0]?.id ?? null) : null;
+
+	// --- CORRECTIE HIER voor initialSortId ---
+	// Haal de eerste optie apart op
+	const firstOption = sortOptions[0];
+	// Gebruik die variabele om de default waarde veiliger te bepalen
+	export let initialSortId: string | null = firstOption ? firstOption.id : null;
+	// --- EINDE CORRECTIE ---
 
 	// --- Internal State ---
 	let searchTerm: string = "";
-	let currentSortId: string | null = initialSortId;
+	let currentSortId: string | null = initialSortId; // Nu geïnitialiseerd met de veiligere waarde
+	let debouncedSearchTerm: string = "";
 
-	// --- Helper ---
+	// --- Debounce Logic ---
+	let debounceTimer: number;
+	$: {
+		clearTimeout(debounceTimer);
+		debounceTimer = window.setTimeout(() => {
+			debouncedSearchTerm = searchTerm;
+		}, 250);
+	}
+	onDestroy(() => {
+		clearTimeout(debounceTimer);
+	});
+
+	// --- Helpers ---
 	function getProperty(obj: any, path: string): any {
 		try {
 			return path
@@ -24,39 +43,75 @@
 		}
 	}
 
+	function formatArtistsForSort(artists: Artist[] | undefined): string {
+		if (!artists || artists.length === 0) return "zzzzzzz";
+		return artists
+			.map((artist: Artist) => artist.name)
+			.join(", ")
+			.toLowerCase();
+	}
+
 	// --- Derived State ---
 	$: activeSortOption =
 		sortOptions.find((opt) => opt.id === currentSortId) ||
 		(sortOptions.length > 0 ? sortOptions[0] : undefined);
+	$: displayedItems = computeDisplayedItems(
+		items,
+		debouncedSearchTerm,
+		searchFields,
+		activeSortOption,
+	);
 
-	$: displayedItems = (() => {
-		const lowerSearchTerm = searchTerm.toLowerCase().trim();
-		let filtered = items.filter((item: Release) => {
-			if (!lowerSearchTerm) return true;
-			return searchFields.some((fieldPath) => {
+	function computeDisplayedItems(
+		originalItems: Release[],
+		filterTerm: string,
+		fieldsToSearch: string[],
+		sortOption?: SortOption,
+	): Release[] {
+		const lowerFilterTerm = filterTerm.toLowerCase().trim();
+
+		let filtered = originalItems.filter((item: Release) => {
+			if (!lowerFilterTerm) return true;
+			return fieldsToSearch.some((fieldPath) => {
 				if (fieldPath.includes("artists")) {
 					const artists = getProperty(item, "basic_information.artists");
-					if (Array.isArray(artists)) {
-						return artists.some((a) => a.name?.toLowerCase().includes(lowerSearchTerm));
-					}
-					return false;
+					return (
+						Array.isArray(artists) &&
+						artists.some((a) => a.name?.toLowerCase().includes(lowerFilterTerm))
+					);
 				} else {
 					const value = getProperty(item, fieldPath);
-					if (typeof value === "string") {
-						return value.toLowerCase().includes(lowerSearchTerm);
-					}
+					return typeof value === "string" && value.toLowerCase().includes(lowerFilterTerm);
 				}
-				return false;
 			});
 		});
 
-		if (activeSortOption) {
-			const { valueFn, order } = activeSortOption;
+		if (sortOption) {
+			const { sortKey, order } = sortOption;
 			const sortOrder = order === "asc" ? 1 : -1;
 
 			filtered.sort((a: Release, b: Release) => {
-				const valA = valueFn(a);
-				const valB = valueFn(b);
+				let valA: string | number;
+				let valB: string | number;
+
+				switch (sortKey) {
+					case "artist":
+						valA = formatArtistsForSort(a.basic_information?.artists);
+						valB = formatArtistsForSort(b.basic_information?.artists);
+						break;
+					case "year":
+						valA = a.basic_information?.year ?? (order === "asc" ? 9999 : 0);
+						valB = b.basic_information?.year ?? (order === "asc" ? 9999 : 0);
+						break;
+					case "title":
+						valA = getProperty(a, "basic_information.title") || "";
+						valB = getProperty(b, "basic_information.title") || "";
+						break;
+					default:
+						valA = 0;
+						valB = 0;
+				}
+
 				let comparison = 0;
 				if (typeof valA === "string" && typeof valB === "string") {
 					comparison = valA.localeCompare(valB);
@@ -64,7 +119,8 @@
 					if (valA < valB) comparison = -1;
 					if (valA > valB) comparison = 1;
 				}
-				if (comparison === 0) {
+
+				if (comparison === 0 && sortKey !== "title") {
 					const titleA = getProperty(a, "basic_information.title") || "";
 					const titleB = getProperty(b, "basic_information.title") || "";
 					return titleA.localeCompare(titleB);
@@ -73,26 +129,12 @@
 			});
 		}
 		return filtered;
-	})();
+	}
 
-	// --- Event Handlers ---
+	// --- Event Handler ---
 	function handleSortClick(id: string) {
 		currentSortId = id;
 	}
-
-	let debounceTimer: number;
-	function handleInput(event: Event) {
-		clearTimeout(debounceTimer);
-		const target = event.target as HTMLInputElement;
-		const value = target.value;
-		debounceTimer = window.setTimeout(() => {
-			searchTerm = value;
-		}, 250);
-	}
-
-	onDestroy(() => {
-		clearTimeout(debounceTimer);
-	});
 </script>
 
 <div class="filter-sort-list-container">
@@ -104,10 +146,8 @@
 			placeholder="Filter..."
 			class="p-2 border border-gray-300 dark:border-gray-700 rounded-md w-full bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 			bind:value={searchTerm}
-			on:input={handleInput}
 		/>
 	</div>
-
 	{#if sortOptions.length > 0}
 		<div class="mb-6 flex flex-wrap gap-2 items-center">
 			<span class="text-sm font-medium mr-2">Sorteer op:</span>
@@ -127,7 +167,6 @@
 			{/each}
 		</div>
 	{/if}
-
 	<div class="list-items-container grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
 		{#each displayedItems as item (item.id)}
 			<slot name="item" {item}></slot>

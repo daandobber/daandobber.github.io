@@ -1,59 +1,31 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
 import FilterSortList from "@/components/FilterSortList.svelte";
-// @ts-expect-error - TS/Astro linter ziet gebruik in slot soms niet goed
 import CDCard from "@/components/CDCard.astro";
 import cdCollectionData from "@/data/cd_collection.json";
-// Gebruik het correcte pad met alias naar src/types.ts
-import type { Release, Artist, SortOption, SiteMeta } from "@/types"; // Importeer ook SiteMeta
+import type { Release, SortOption, SiteMeta } from "@/types";
 
 const releases: Release[] = cdCollectionData?.releases ?? [];
 
 // --- Configuratie specifiek voor CD's ---
 const searchFields: string[] = ["basic_information.title", "basic_information.artists"];
 
-function formatArtistsForSort(artists: Artist[] | undefined): string {
-	if (!artists || artists.length === 0) return "zzzzzzz";
-	return artists
-		.map((artist: Artist) => artist.name)
-		.join(", ")
-		.toLowerCase();
-}
+// !!! formatArtistsForSort functie is hier nu definitief WEG !!!
 
+// Gebruik de SortOption structuur met sortKey
 const sortOptions: SortOption[] = [
-	{
-		id: "artistAZ",
-		label: "Artiest (A-Z)",
-		order: "asc",
-		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists),
-	},
-	{
-		id: "artistZA",
-		label: "Artiest (Z-A)",
-		order: "desc",
-		valueFn: (item: Release) => formatArtistsForSort(item.basic_information?.artists),
-	},
-	{
-		id: "yearNewOld",
-		label: "Jaar (Nieuw-Oud)",
-		order: "desc",
-		valueFn: (item: Release) => item.basic_information?.year ?? 0,
-	},
-	{
-		id: "yearOldNew",
-		label: "Jaar (Oud-Nieuw)",
-		order: "asc",
-		valueFn: (item: Release) => item.basic_information?.year ?? 9999,
-	},
+	{ id: "artistAZ", label: "Artiest (A-Z)", order: "asc", sortKey: "artist" },
+	{ id: "artistZA", label: "Artiest (Z-A)", order: "desc", sortKey: "artist" },
+	{ id: "yearNewOld", label: "Jaar (Nieuw-Oud)", order: "desc", sortKey: "year" },
+	{ id: "yearOldNew", label: "Jaar (Oud-Nieuw)", order: "asc", sortKey: "year" },
 ];
 
 const initialSortId: string = "artistAZ";
 
-// Definieer het meta object correct met vereiste velden zoals 'title'
+// Definieer het meta object correct
 const meta: SiteMeta = {
-	title: "Mijn CD Collectie", // Vereiste titel toegevoegd
-	description: "Een doorzoekbaar en sorteerbaar overzicht van mijn CD collectie.", // Beschrijving toegevoegd/aangepast
-	// Voeg hier andere vereiste velden uit SiteMeta toe indien nodig
+	title: "Mijn CD Collectie",
+	description: "Een doorzoekbaar en sorteerbaar overzicht van mijn CD collectie.",
 };
 ---
 
@@ -67,6 +39,15 @@ const meta: SiteMeta = {
 		sortOptions={sortOptions}
 		initialSortId={initialSortId}
 	>
-		{/* ... slots ... */}
+		<Fragment slot="item" let:item>
+			{/* Render CDCard alleen als 'item' een waarde heeft (nodig voor build) */}
+			{item && <CDCard release={item} />}
+		</Fragment>
+
+		<Fragment slot="no-results">
+			<p class="col-span-full mt-6 text-center text-gray-500 dark:text-gray-400">
+				Helaas, geen CD's gevonden die voldoen aan je filter.
+			</p>
+		</Fragment>
 	</FilterSortList>
 </PageLayout>
