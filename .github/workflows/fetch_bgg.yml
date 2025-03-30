@@ -1,0 +1,43 @@
+name: Fetch BGG Collection Daily
+
+on:
+  schedule:
+    # Draait elke dag om 05:05 UTC (iets later, of zelfde tijd als Discogs is ook OK)
+    - cron: '5 5 * * *' # 5 minuten na de Discogs run, of houd '0 5 * * *' aan
+  workflow_dispatch: # Maakt handmatig draaien mogelijk
+
+jobs:
+  fetch-bgg: # Job naam aangepast voor duidelijkheid
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Nodig om te committen
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: pip install requests
+
+      - name: Run Python script to fetch BGG data
+        env:
+          BGG_USERNAME: ${{ secrets.BGG_USERNAME }}
+        # BELANGRIJK: Controleer dit pad!
+        # Aanname: Je hebt fetch_bgg_collection.py nu ook in de 'scripts' map gezet voor consistentie.
+        # Als het nog in de root staat, gebruik: python fetch_bgg_collection.py
+        run: python scripts/fetch_bgg_collection.py
+
+      - name: Commit and push if BGG data changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update BGG collection data"
+          # Alleen het BGG JSON bestand committen
+          file_pattern: "src/data/bgg_collection.json"
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
+          commit_author: "GitHub Actions Bot <actions@github.com>"
+          # branch: jouw-branch-naam # Optioneel
