@@ -45,7 +45,7 @@ jobs:
           BGG_USERNAME: ${{ secrets.BGG_USERNAME }}
         # BELANGRIJK: Pas het pad aan als je fetch_bgg_collection.py ergens anders hebt opgeslagen!
         # Aanname: het staat in de root van je repository.
-        run: python fetch_bgg_collection.py
+        run: python scripts/fetch_bgg_collection.py
 
       # --- Commit & Push Stap (Aangepast) ---
       - name: Commit and push if data changed
