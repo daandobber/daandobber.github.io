@@ -249,6 +249,176 @@
       "folder_id": 1
     },
     {
+      "id": 48123,
+      "instance_id": 1979847384,
+      "date_added": "2025-03-30T01:26:38-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 48123,
+        "master_id": 27940,
+        "master_url": "https://api.discogs.com/masters/27940",
+        "resource_url": "https://api.discogs.com/releases/48123",
+        "thumb": "https://i.discogs.com/Sfgxzbn0NhRtKhMlIxN6lRCnpd7s2d7-DLJM2cgZGsI/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ4MTIz/LTEyNTA3NjMyMTQu/anBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/6DBOdVbae2_A-O6pnRDgHh42yKD35vqaiv0Rl6c9mhk/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ4MTIz/LTEyNTA3NjMyMTQu/anBlZw.jpeg",
+        "title": "Hits Unlimited",
+        "year": 1995,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "text": "Benelux Edition",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "2 Unlimited",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 4057,
+            "resource_url": "https://api.discogs.com/artists/4057"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Byte Records",
+            "catno": "BYTE 106-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2371,
+            "resource_url": "https://api.discogs.com/labels/2371"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Euro House"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 147617,
+      "instance_id": 1979845524,
+      "date_added": "2025-03-30T01:23:20-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 147617,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/147617",
+        "thumb": "https://i.discogs.com/-SDXRZMNQf6IpEfugKaogUuf6tXu4mF7FbyeWDpaWLA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NzYx/Ny0xMDc1ODAzODg3/LmpwZw.jpeg",
+        "cover_image": "https://i.discogs.com/chd9enZmLMEeXUAr3rIxES1OP-NI2L4Co8OHJ4nNG0Y/rs:fit/g:sm/q:90/h:150/w:160/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NzYx/Ny0xMDc1ODAzODg3/LmpwZw.jpeg",
+        "title": "Earwork 04",
+        "year": 2002,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Capital Recordings",
+            "catno": "CREC 1004",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 13773,
+            "resource_url": "https://api.discogs.com/labels/13773"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Leftfield",
+          "Dub",
+          "Downtempo"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1080332,
+      "instance_id": 1979845371,
+      "date_added": "2025-03-30T01:23:03-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1080332,
+        "master_id": 293923,
+        "master_url": "https://api.discogs.com/masters/293923",
+        "resource_url": "https://api.discogs.com/releases/1080332",
+        "thumb": "https://i.discogs.com/eH9LVA47yovq8GFBm8afNN0hyZpfPnsr_c6p3Y3mT6w/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwODAz/MzItMTY2OTMyMDE4/Mi02NDY0LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/QnaebwezXrAVoW1nx8KXuIU4v-St6xe4MuH0d7XQznQ/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwODAz/MzItMTY2OTMyMDE4/Mi02NDY0LmpwZWc.jpeg",
+        "title": "Lambada",
+        "year": 1989,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "CBS",
+            "catno": "465599 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 3072,
+            "resource_url": "https://api.discogs.com/labels/3072"
+          },
+          {
+            "name": "CBS",
+            "catno": "CBS 465599 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 3072,
+            "resource_url": "https://api.discogs.com/labels/3072"
+          }
+        ],
+        "genres": [
+          "Latin"
+        ],
+        "styles": [
+          "Lambada"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 15110832,
       "instance_id": 1970320883,
       "date_added": "2025-03-20T23:28:03-07:00",
@@ -300,6 +470,66 @@
         "styles": [
           "Pop Rock",
           "Ballad"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1568018,
+      "instance_id": 1979844828,
+      "date_added": "2025-03-30T01:22:04-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1568018,
+        "master_id": 129712,
+        "master_url": "https://api.discogs.com/masters/129712",
+        "resource_url": "https://api.discogs.com/releases/1568018",
+        "thumb": "https://i.discogs.com/SJuvt8P3s9ZL0u3FWC-HQbYSTOImWLJNOB8tPsq1xhM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1Njgw/MTgtMTI1MTU2Mjg0/MS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/ZJ7pNWDl7YYZxpxYNAJrwW3tPGYr8Ugt3Kq1Vsg-nnw/rs:fit/g:sm/q:90/h:592/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1Njgw/MTgtMTI1MTU2Mjg0/MS5qcGVn.jpeg",
+        "title": "The '96 Brit Awards",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "483873 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Hip Hop",
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Acoustic",
+          "Britpop",
+          "Pop Rock",
+          "House"
         ]
       },
       "folder_id": 1
@@ -417,6 +647,79 @@
       "folder_id": 1
     },
     {
+      "id": 1817122,
+      "instance_id": 1979846817,
+      "date_added": "2025-03-30T01:25:32-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1817122,
+        "master_id": 71589,
+        "master_url": "https://api.discogs.com/masters/71589",
+        "resource_url": "https://api.discogs.com/releases/1817122",
+        "thumb": "https://i.discogs.com/t0HFBiq7mM2ri8qFUjfMC_-lKHCcDWlWbrnDdbknkOg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MTcx/MjItMTI1MzM1MTk5/My5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/j1OMOEkCu-2tkmvJ4Tlh_XgxTYHVq9pMI6ZWeg76bVA/rs:fit/g:sm/q:90/h:596/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MTcx/MjItMTI1MzM1MTk5/My5qcGVn.jpeg",
+        "title": "Trainspotting (Music From The Motion Picture)",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation",
+              "Club Edition"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "EMI Premier",
+            "catno": "7243 8 37190 2 0",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 22210,
+            "resource_url": "https://api.discogs.com/labels/22210"
+          },
+          {
+            "name": "EMI Music Canada",
+            "catno": "7243 8 37190 2 0",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 76974,
+            "resource_url": "https://api.discogs.com/labels/76974"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Rock",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Soundtrack",
+          "Garage Rock",
+          "Punk",
+          "Ambient",
+          "Leftfield",
+          "Indie Rock",
+          "Synth-pop",
+          "Progressive House",
+          "Techno",
+          "Britpop"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 10971017,
       "instance_id": 1970320844,
       "date_added": "2025-03-20T23:27:51-07:00",
@@ -465,6 +768,69 @@
         ],
         "styles": [
           "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1927203,
+      "instance_id": 1979845653,
+      "date_added": "2025-03-30T01:23:32-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1927203,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/1927203",
+        "thumb": "https://i.discogs.com/N7boHO0mS3ZA3GCDgV8rRYZ7szfm9AFjOpPEKEt2nZ0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5Mjcy/MDMtMTI2NTQ3MTIy/Ni5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/9inE73NzXiVnYmFwcDzHQYID6RVXDzT3_3oqckATPQM/rs:fit/g:sm/q:90/h:514/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5Mjcy/MDMtMTI2NTQ3MTIy/Ni5qcGVn.jpeg",
+        "title": "Now Dance Hits 97 Jaaroverzicht",
+        "year": 1997,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "2",
+            "descriptions": [
+              "Compilation"
+            ]
+          },
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Mixed"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "EVA",
+            "catno": "8236602",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2637,
+            "resource_url": "https://api.discogs.com/labels/2637"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Pop"
+        ],
+        "styles": [
+          "House",
+          "Euro House",
+          "Happy Hardcore"
         ]
       },
       "folder_id": 1
@@ -711,6 +1077,322 @@
       "folder_id": 1
     },
     {
+      "id": 505215,
+      "instance_id": 1979844501,
+      "date_added": "2025-03-30T01:21:23-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 505215,
+        "master_id": 101755,
+        "master_url": "https://api.discogs.com/masters/101755",
+        "resource_url": "https://api.discogs.com/releases/505215",
+        "thumb": "https://i.discogs.com/BQn7nkZy08CsWfu5O5BCr3qbHlGfx10Talz90fwijt8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUwNTIx/NS0xNTE0NTA1MDgw/LTkzMTguanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/OS2WR4nio9IVRZpKQ6hFmjuq6cmTm0Z10cpjkSp9Qa8/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUwNTIx/NS0xNTE0NTA1MDgw/LTkzMTguanBlZw.jpeg",
+        "title": "Jackie Brown (Music From The Miramax Motion Picture)",
+        "year": 1997,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Maverick",
+            "catno": "9362-46841-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1685,
+            "resource_url": "https://api.discogs.com/labels/1685"
+          },
+          {
+            "name": "Warner Bros. Records",
+            "catno": "9362-46841-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1000,
+            "resource_url": "https://api.discogs.com/labels/1000"
+          },
+          {
+            "name": "A Band Apart",
+            "catno": "9362-46841-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 90818,
+            "resource_url": "https://api.discogs.com/labels/90818"
+          }
+        ],
+        "genres": [
+          "Hip Hop",
+          "Rock",
+          "Funk / Soul",
+          "Non-Music",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Rhythm & Blues",
+          "Disco",
+          "Funk",
+          "Soul",
+          "Country Rock",
+          "Dialogue",
+          "Soundtrack"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 15355508,
+      "instance_id": 1979844048,
+      "date_added": "2025-03-30T01:20:31-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 15355508,
+        "master_id": 79753,
+        "master_url": "https://api.discogs.com/masters/79753",
+        "resource_url": "https://api.discogs.com/releases/15355508",
+        "thumb": "https://i.discogs.com/F3nHvJXugebc77y2JaUnsuaPCiOjkrJQjLlc2Ovq7os/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MzU1/NTA4LTE1OTAyMzI1/MDItNjIzMC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/LsVgq_Ls3FWLn2iaOKJ7HHNiowXBMAFuO4_8RNxzELs/rs:fit/g:sm/q:90/h:516/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MzU1/NTA4LTE1OTAyMzI1/MDItNjIzMC5qcGVn.jpeg",
+        "title": "Jesus Christ Superstar",
+        "year": 1995,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "2",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Andrew Lloyd Webber And Tim Rice",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 1677801,
+            "resource_url": "https://api.discogs.com/artists/1677801"
+          }
+        ],
+        "labels": [
+          {
+            "name": "MCA Records",
+            "catno": "810 501-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 878,
+            "resource_url": "https://api.discogs.com/labels/878"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Classic Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 11030460,
+      "instance_id": 1979847168,
+      "date_added": "2025-03-30T01:26:14-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 11030460,
+        "master_id": 96906,
+        "master_url": "https://api.discogs.com/masters/96906",
+        "resource_url": "https://api.discogs.com/releases/11030460",
+        "thumb": "https://i.discogs.com/GvcQ_g7-9dsDtBiyZ4vmqZS3JWWAgesf61Q3TFWOPuE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMDMw/NDYwLTE1MDg1NzY3/OTMtNTE5OS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/VXyWoaq0SuTiujydSayygQwwTaGdpYdevLvoR_B13GE/rs:fit/g:sm/q:90/h:594/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMDMw/NDYwLTE1MDg1NzY3/OTMtNTE5OS5qcGVn.jpeg",
+        "title": "Reservoir Dogs (Original Motion Picture Soundtrack)",
+        "year": 1992,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "MCA Records",
+            "catno": "MCAD-10541",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 878,
+            "resource_url": "https://api.discogs.com/labels/878"
+          },
+          {
+            "name": "MCA Records",
+            "catno": "MCAD 10541",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 878,
+            "resource_url": "https://api.discogs.com/labels/878"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Non-Music",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Soundtrack",
+          "Speech",
+          "Soft Rock",
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 25621876,
+      "instance_id": 1979845992,
+      "date_added": "2025-03-30T01:24:12-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 25621876,
+        "master_id": 41794,
+        "master_url": "https://api.discogs.com/masters/41794",
+        "resource_url": "https://api.discogs.com/releases/25621876",
+        "thumb": "https://i.discogs.com/ecXR6sXCOWt-mPjI1Gw9eZ9etD6m9xqasxOf-UhtUds/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1NjIx/ODc2LTE2NzI0ODIw/NjQtNjU2My5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/mvb1ZqtLsiEj1qWIgHdGo8VWdy7kLuvkZvjwEyE3wtU/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1NjIx/ODc2LTE2NzI0ODIw/NjQtNjU2My5qcGVn.jpeg",
+        "title": "The Lion King (Original Motion Picture Soundtrack)",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "text": "PMDC UK",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Mercury",
+            "catno": "522 690-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 39357,
+            "resource_url": "https://api.discogs.com/labels/39357"
+          }
+        ],
+        "genres": [
+          "Pop",
+          "Folk, World, & Country",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Modern Classical",
+          "Vocal",
+          "Ballad",
+          "Soundtrack",
+          "African"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 6320036,
+      "instance_id": 1979844954,
+      "date_added": "2025-03-30T01:22:19-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 6320036,
+        "master_id": 83982,
+        "master_url": "https://api.discogs.com/masters/83982",
+        "resource_url": "https://api.discogs.com/releases/6320036",
+        "thumb": "https://i.discogs.com/Kg2V_KChfPGwR4g5g3QEcN9EAodBA51_CLPZIghaMHw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYzMjAw/MzYtMTQxNjM4OTQ0/MS00OTk5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/orRW4uTt05wISK6o-FZBw-QipfcFzut4Ors0tP2-Blw/rs:fit/g:sm/q:90/h:562/w:564/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYzMjAw/MzYtMTQxNjM4OTQ0/MS00OTk5LmpwZWc.jpeg",
+        "title": "O Brother, Where Art Thou? (Music From The Motion Picture)",
+        "year": 2000,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Mercury (2)",
+            "catno": "170 069-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 154631,
+            "resource_url": "https://api.discogs.com/labels/154631"
+          }
+        ],
+        "genres": [
+          "Folk, World, & Country",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Soundtrack",
+          "Country",
+          "Bluegrass"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 860719,
       "instance_id": 1978254513,
       "date_added": "2025-03-28T14:39:20-07:00",
@@ -943,6 +1625,67 @@
       "folder_id": 1
     },
     {
+      "id": 442533,
+      "instance_id": 1979846646,
+      "date_added": "2025-03-30T01:25:17-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 442533,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/442533",
+        "thumb": "https://i.discogs.com/M-l29sJZuhjbGXFGn-LdWBWs517wdModYbn9XY83xxo/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ0MjUz/My0xNDkzOTI0NjYy/LTU4NDYuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/mWNazXVkMPLMFwxYudNAOS95XOs2OZS2SWibGzw1q08/rs:fit/g:sm/q:90/h:597/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ0MjUz/My0xNDkzOTI0NjYy/LTU4NDYuanBlZw.jpeg",
+        "title": "The Best Tracks From The Best Albums Of 1999",
+        "year": 1999,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Q Magazine",
+            "catno": "QMAGDEC 99",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 10445,
+            "resource_url": "https://api.discogs.com/labels/10445"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Jazz",
+          "Rock"
+        ],
+        "styles": [
+          "Pop Rock",
+          "Indie Rock",
+          "House",
+          "Big Beat",
+          "Big Band",
+          "Downtempo",
+          "Britpop"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 5820683,
       "instance_id": 1970321072,
       "date_added": "2025-03-20T23:28:44-07:00",
@@ -992,6 +1735,57 @@
         ],
         "styles": [
           "Country"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 12315166,
+      "instance_id": 1979845071,
+      "date_added": "2025-03-30T01:22:34-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 12315166,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/12315166",
+        "thumb": "https://i.discogs.com/Pd-1QcHEHs264k067xin_Zmqt-oPzOIQNDt3jsx3svg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMzE1/MTY2LTE1MzI3NzY0/OTQtNjU4Ni5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/9k4sn2KdrfNip_ClaOSaoJnQoDGMYp2t1Ve_b8_Suxw/rs:fit/g:sm/q:90/h:500/w:500/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMzE1/MTY2LTE1MzI3NzY0/OTQtNjU4Ni5qcGVn.jpeg",
+        "title": "Magnolia: Music From The Motion Picture",
+        "year": 1999,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Aimee Mann",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 11068,
+            "resource_url": "https://api.discogs.com/artists/11068"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Reprise Records",
+            "catno": "9362-47638-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 157,
+            "resource_url": "https://api.discogs.com/labels/157"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Soundtrack"
         ]
       },
       "folder_id": 1
@@ -1048,6 +1842,124 @@
         "styles": [
           "Tribal House",
           "Ambient"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 21802648,
+      "instance_id": 1979846118,
+      "date_added": "2025-03-30T01:24:25-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 21802648,
+        "master_id": 1508315,
+        "master_url": "https://api.discogs.com/masters/1508315",
+        "resource_url": "https://api.discogs.com/releases/21802648",
+        "thumb": "https://i.discogs.com/T3OuJx3tUUk5xXkixaMNTdNEwDYgURnxctQkPIKgBEA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxODAy/NjQ4LTE2NDI2MDQ4/NzMtNDczNy5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/28zyc-Gb4PyqCztBVfo-UJcZhqpxnN3FhXeVRUWJOvc/rs:fit/g:sm/q:90/h:300/w:300/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxODAy/NjQ4LTE2NDI2MDQ4/NzMtNDczNy5qcGVn.jpeg",
+        "title": "Music From The Lord Of The Rings Trilogy",
+        "year": 2004,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "2",
+            "text": "Dolby Surround",
+            "descriptions": [
+              "HDCD",
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The City Of Prague Philharmonic",
+            "anv": "The City Of Prague Philharmonic Orchestra",
+            "join": ",",
+            "role": "",
+            "tracks": "",
+            "id": 189913,
+            "resource_url": "https://api.discogs.com/artists/189913"
+          },
+          {
+            "name": "Crouch End Festival Chorus",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 386995,
+            "resource_url": "https://api.discogs.com/artists/386995"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Silva Screen",
+            "catno": "FILMCDX 372",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 3217,
+            "resource_url": "https://api.discogs.com/labels/3217"
+          }
+        ],
+        "genres": [
+          "Stage & Screen"
+        ],
+        "styles": [
+          "Score"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 9139717,
+      "instance_id": 1979845929,
+      "date_added": "2025-03-30T01:24:05-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 9139717,
+        "master_id": 946641,
+        "master_url": "https://api.discogs.com/masters/946641",
+        "resource_url": "https://api.discogs.com/releases/9139717",
+        "thumb": "https://i.discogs.com/sbQrs3S75McWrsyXe1fqfTME-QAHL9Fyedw9Ues4dBM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkxMzk3/MTctMTQ3NTQ1NzQ1/Mi01ODAxLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/XugXvQsHnW2Tckw_oudpvltvvtosGa19vLOsWEXNklY/rs:fit/g:sm/q:90/h:300/w:300/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkxMzk3/MTctMTQ3NTQ1NzQ1/Mi01ODAxLmpwZWc.jpeg",
+        "title": "Natural Stress Relief - Solitudes Music For Your Healh",
+        "year": 1998,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Dan Gibson",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 430876,
+            "resource_url": "https://api.discogs.com/artists/430876"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Solitudes",
+            "catno": "12157",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 55392,
+            "resource_url": "https://api.discogs.com/labels/55392"
+          }
+        ],
+        "genres": [
+          "Non-Music"
+        ],
+        "styles": [
+          "Health-Fitness",
+          "Therapy"
         ]
       },
       "folder_id": 1
@@ -1189,6 +2101,168 @@
       "folder_id": 1
     },
     {
+      "id": 1845663,
+      "instance_id": 1979846400,
+      "date_added": "2025-03-30T01:24:49-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1845663,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/1845663",
+        "thumb": "https://i.discogs.com/FJBb3PKOAYvdbDUBKzHsTrcJUHh29iIJ_dawgMCsWfM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4NDU2/NjMtMTM0OTU1Njk0/MS02NjY3LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/zOKhCBzaWH1eJS29moSywcQX9V6Hy2qF_xDfUPn6iEE/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4NDU2/NjMtMTM0OTU1Njk0/MS02NjY3LmpwZWc.jpeg",
+        "title": "Jij Bent De Zon",
+        "year": 2000,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Jop",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 553997,
+            "resource_url": "https://api.discogs.com/artists/553997"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Sony Music MM",
+            "catno": "TTS 11983",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 60729,
+            "resource_url": "https://api.discogs.com/labels/60729"
+          }
+        ],
+        "genres": [
+          "Pop"
+        ],
+        "styles": [
+          "Europop"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1921581,
+      "instance_id": 1979845812,
+      "date_added": "2025-03-30T01:23:54-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1921581,
+        "master_id": 236313,
+        "master_url": "https://api.discogs.com/masters/236313",
+        "resource_url": "https://api.discogs.com/releases/1921581",
+        "thumb": "https://i.discogs.com/xay8LEl24hhzMnPRmbnMIjvi2IxwxlnL8TajIES9Ylk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5MjE1/ODEtMTI1MjYwODAz/NC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/d-_-zo3Nr5op_BmOd-3OqjNwnlhUdFWaAFl2EtjpRaA/rs:fit/g:sm/q:90/h:614/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5MjE1/ODEtMTI1MjYwODAz/NC5qcGVn.jpeg",
+        "title": "Synthesizer Spectacular",
+        "year": 1987,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Stereo"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Star Inc.",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 250841,
+            "resource_url": "https://api.discogs.com/artists/250841"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Star Inc. Music",
+            "catno": "CD 86014",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 526605,
+            "resource_url": "https://api.discogs.com/labels/526605"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Synth-pop"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 798371,
+      "instance_id": 1979846964,
+      "date_added": "2025-03-30T01:25:50-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 798371,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/798371",
+        "thumb": "https://i.discogs.com/R-JvlD6WPhDyW8oqUatxzAQl90otLEOn_snKFpaVVTM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc5ODM3/MS0xMzUzODQ0NTcy/LTk2MDkuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/yjjgTYtQE8E7pjDkDuSgvvUIIDGzje3t5w-mxIVd2V4/rs:fit/g:sm/q:90/h:596/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc5ODM3/MS0xMzUzODQ0NTcy/LTk2MDkuanBlZw.jpeg",
+        "title": "Radio 538 Hits",
+        "year": 1997,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "The Music Marketeers",
+            "catno": "muma 65250",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 98034,
+            "resource_url": "https://api.discogs.com/labels/98034"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Pop"
+        ],
+        "styles": [
+          "Euro House",
+          "Happy Hardcore"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 218266,
       "instance_id": 1978254723,
       "date_added": "2025-03-28T14:39:33-07:00",
@@ -1237,6 +2311,67 @@
         ],
         "styles": [
           "Downtempo"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 800757,
+      "instance_id": 1979846307,
+      "date_added": "2025-03-30T01:24:40-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 800757,
+        "master_id": 245036,
+        "master_url": "https://api.discogs.com/masters/245036",
+        "resource_url": "https://api.discogs.com/releases/800757",
+        "thumb": "https://i.discogs.com/U6ndd8620nYsZqLEkkOcW8ox9YX21rlWNMS_013_fX4/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTgwMDc1/Ny0xMjY2NzU0OTk4/LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/wvgUQdIR66K5686dtKhRxXJAQM77LQSZwehLQK9Au4U/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTgwMDc1/Ny0xMjY2NzU0OTk4/LmpwZWc.jpeg",
+        "title": "Email To Berlin",
+        "year": 1999,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Double Date",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 280849,
+            "resource_url": "https://api.discogs.com/artists/280849"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Whiplash! Records",
+            "catno": "2004120",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 13475,
+            "resource_url": "https://api.discogs.com/labels/13475"
+          },
+          {
+            "name": "Whiplash! Records",
+            "catno": "COR0013",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 13475,
+            "resource_url": "https://api.discogs.com/labels/13475"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Euro House"
         ]
       },
       "folder_id": 1
