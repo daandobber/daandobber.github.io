@@ -1,0 +1,54 @@
+---
+import PageLayout from "@/layouts/Base.astro";
+// @ts-ignore: Importeer de Svelte component (wordt nog gemaakt)
+import FilterSortBoardGameListWrapper from "@/components/FilterSortBoardGameListWrapper.svelte";
+// Importeer de JSON data gegenereerd door het Python script
+import bggCollectionData from "@/data/bgg_collection.json";
+import type { BoardGame, SortOption, SiteMeta } from "@/types"; // Zorg dat BoardGame type bestaat in @/types
+
+const games: BoardGame[] = bggCollectionData?.games ?? [];
+
+// Definieer velden voor tekst zoeken
+const searchFields: string[] = ["name", "categories", "mechanics"]; // Zoek ook in categorie/mechanics?
+
+// Definieer sorteeropties voor bordspellen
+const sortOptions: SortOption[] = [
+	{ id: "nameAZ", label: "Naam (A-Z)", order: "asc", sortKey: "name" },
+	{ id: "nameZA", label: "Naam (Z-A)", order: "desc", sortKey: "name" },
+	{ id: "yearNewOld", label: "Jaar (Nieuw-Oud)", order: "desc", sortKey: "yearpublished" },
+	{ id: "yearOldNew", label: "Jaar (Oud-Nieuw)", order: "asc", sortKey: "yearpublished" },
+	{ id: "ratingHighLow", label: "Rating (Hoog-Laag)", order: "desc", sortKey: "average_rating" },
+	{ id: "ratingLowHigh", label: "Rating (Laag-Hoog)", order: "asc", sortKey: "average_rating" },
+	{ id: "weightHighLow", label: "Gewicht (Hoog-Laag)", order: "desc", sortKey: "weight" },
+	{ id: "weightLowHigh", label: "Gewicht (Laag-Hoog)", order: "asc", sortKey: "weight" },
+	// Voeg meer opties toe indien nodig (bv. speeltijd)
+];
+
+const initialSortId: string = "nameAZ"; // Standaard sortering
+
+// Definieer alle unieke categorieën voor de filter dropdown/multiselect
+// Set gebruiken om duplicaten te verwijderen
+const allCategories = [...new Set(games.flatMap((game) => game.categories || []))].sort();
+
+const meta: SiteMeta = {
+	title: "Mijn Bordspel Collectie",
+	description: "Een doorzoekbaar en filterbaar overzicht van mijn bordspel collectie.",
+};
+---
+
+<PageLayout meta={meta}>
+	<h1 class="title mb-6 text-2xl font-bold">Mijn Bordspel Collectie</h1>
+
+	<FilterSortBoardGameListWrapper
+		client:load
+		{/* client:only kan ook, load zorgt dat het eerder interactief is */}
+		items={games}
+		searchFields={searchFields}
+		sortOptions={sortOptions}
+		initialSortId={initialSortId}
+		availableCategories={allCategories}
+		{/* Geef categorieën door */}
+		initialShowExpansions={false}
+		{/* Standaard uitbreidingen verbergen */}
+	/>
+</PageLayout>
