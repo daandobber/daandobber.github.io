@@ -470,62 +470,6 @@
       "folder_id": 1
     },
     {
-      "id": 15409135,
-      "instance_id": 1970320967,
-      "date_added": "2025-03-20T23:28:23-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 15409135,
-        "master_id": 114327,
-        "master_url": "https://api.discogs.com/masters/114327",
-        "resource_url": "https://api.discogs.com/releases/15409135",
-        "thumb": "https://i.discogs.com/LxSVBdbeJZt2LRoB-IqjmsaScxqdxEYJqpxCPD3QooU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDA5/MTM1LTE1OTEwNTk2/NzMtOTYzMy5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/-tjVXML3GGHEJapkYX869ojEhMGC6YDImeNdTY1F4Gs/rs:fit/g:sm/q:90/h:597/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1NDA5/MTM1LTE1OTEwNTk2/NzMtOTYzMy5qcGVn.jpeg",
-        "title": "Welenga (Conscience Universelle)",
-        "year": 1996,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Wes",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 68127,
-            "resource_url": "https://api.discogs.com/artists/68127"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Epic",
-            "catno": "758.423/2-485146",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1005,
-            "resource_url": "https://api.discogs.com/labels/1005"
-          }
-        ],
-        "genres": [
-          "Electronic",
-          "Pop",
-          "Folk, World, & Country"
-        ],
-        "styles": [
-          "Ethno-pop",
-          "Euro House"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
       "id": 1313339,
       "instance_id": 1969844168,
       "date_added": "2025-03-20T11:08:54-07:00",
