@@ -1,14 +1,11 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
-// @ts-ignore: Importeer de Svelte component (wordt nog gemaakt)
 import FilterSortBoardGameListWrapper from "@/components/FilterSortBoardGameListWrapper.svelte";
-// Importeer de JSON data gegenereerd door het Python script
 import bggCollectionData from "@/data/bgg_collection.json";
 import type { BoardGame, SortOption, SiteMeta } from "@/types"; // Zorg dat BoardGame type bestaat in @/types
 
 const games: BoardGame[] = bggCollectionData?.games ?? [];
 
-// Definieer velden voor tekst zoeken
 const searchFields: string[] = ["name", "categories", "mechanics"]; // Zoek ook in categorie/mechanics?
 
 // Definieer sorteeropties voor bordspellen
@@ -40,15 +37,12 @@ const meta: SiteMeta = {
 	<h1 class="title mb-6 text-2xl font-bold">Mijn Bordspel Collectie</h1>
 
 	<FilterSortBoardGameListWrapper
-		client:load
-		{/* client:only kan ook, load zorgt dat het eerder interactief is */}
+		client:only="svelte"
 		items={games}
 		searchFields={searchFields}
 		sortOptions={sortOptions}
 		initialSortId={initialSortId}
 		availableCategories={allCategories}
-		{/* Geef categorieën door */}
 		initialShowExpansions={false}
-		{/* Standaard uitbreidingen verbergen */}
 	/>
 </PageLayout>
