@@ -3,9 +3,9 @@
     {
       "id": "173346",
       "name": "7 Wonders Duel",
-      "yearpublished": 2016,
-      "image": "https://cf.geekdo-images.com/sLJkcfxCND6Z8nsb4iACiw__original/img/gorCGYKUx6F7I8PqRoeTs9iLeis=/0x0/filters:format(jpeg)/pic3295285.jpg",
-      "thumbnail": "https://cf.geekdo-images.com/sLJkcfxCND6Z8nsb4iACiw__thumb/img/gajiojCjmSOulNeoJiEjbJ9k9fs=/fit-in/200x150/filters:strip_icc()/pic3295285.jpg",
+      "yearpublished": 2015,
+      "image": "https://cf.geekdo-images.com/zdagMskTF7wJBPjX74XsRw__original/img/Ju836WNSaW7Mab9Vjq2TJ_FqhWQ=/0x0/filters:format(jpeg)/pic2576399.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/zdagMskTF7wJBPjX74XsRw__thumb/img/gV1-ckZSIC-dCxxpq1Y7GmPITzQ=/fit-in/200x150/filters:strip_icc()/pic2576399.jpg",
       "status": {
         "own": true,
         "prevowned": false,
@@ -18,19 +18,42 @@
         "lastmodified": "2024-08-21 02:41:35"
       },
       "numplays": 38,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 10,
+      "weight": 2.2243,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 8.08875,
+      "categories": [
+        "Ancient",
+        "Card Game",
+        "City Building",
+        "Civilization",
+        "Economic"
+      ],
+      "mechanics": [
+        "End Game Bonuses",
+        "Income",
+        "Layering",
+        "Market",
+        "Modular Board",
+        "Multi-Use Cards",
+        "Once-Per-Game Abilities",
+        "Open Drafting",
+        "Set Collection",
+        "Sudden Death Ending",
+        "Tags",
+        "Tech Trees / Tech Tracks",
+        "Tug of War",
+        "Variable Player Powers",
+        "Variable Set-up",
+        "Victory Points as a Resource"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "359999",
@@ -50,19 +73,36 @@
         "lastmodified": "2024-07-12 04:09:20"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 120,
+      "minplaytime": 30,
+      "maxplaytime": 120,
+      "minage": 12,
+      "weight": 3.5217,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.67306,
+      "categories": [
+        "Animals",
+        "Economic",
+        "Farming"
+      ],
+      "mechanics": [
+        "Advantage Token",
+        "Automatic Resource Growth",
+        "Closed Drafting",
+        "Enclosure",
+        "Hand Management",
+        "Increase Value of Unchosen Resources",
+        "Solo / Solitaire Game",
+        "Team-Based Game",
+        "Turn Order: Claim Action",
+        "Variable Player Powers",
+        "Variable Set-up",
+        "Worker Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "311545",
@@ -82,18 +122,27 @@
         "lastmodified": "2024-04-03 02:10:13"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 120,
+      "minplaytime": 60,
+      "maxplaytime": 120,
+      "minage": 12,
+      "weight": 3.25,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
+      "average_rating": 8.20575,
+      "categories": [
+        "Expansion for Base-game",
+        "Animals",
+        "Farming"
+      ],
+      "mechanics": [
+        "Enclosure",
+        "Hand Management",
+        "Open Drafting",
+        "Worker Placement"
+      ],
+      "is_expansion": true,
       "best_with_players": null
     },
     {
@@ -114,19 +163,28 @@
         "lastmodified": "2024-04-03 02:13:17"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 120,
+      "minplaytime": 60,
+      "maxplaytime": 120,
+      "minage": 12,
+      "weight": 3.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 8.5759,
+      "categories": [
+        "Expansion for Base-game",
+        "Animals",
+        "Farming"
+      ],
+      "mechanics": [
+        "Enclosure",
+        "Hand Management",
+        "Open Drafting",
+        "Worker Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
     },
     {
       "id": "205418",
@@ -146,19 +204,25 @@
         "lastmodified": "2024-01-23 11:47:16"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.4,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.0411,
+      "categories": [
+        "Animals",
+        "Farming"
+      ],
+      "mechanics": [
+        "Automatic Resource Growth",
+        "Worker Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "3"
     },
     {
       "id": "43018",
@@ -178,19 +242,25 @@
         "lastmodified": "2024-04-03 02:09:16"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 5,
+      "playingtime": 200,
+      "minplaytime": 100,
+      "maxplaytime": 200,
+      "minage": 12,
+      "weight": 3.5589,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 8.051,
+      "categories": [
+        "Economic",
+        "Expansion for Base-game",
+        "Farming"
+      ],
+      "mechanics": [
+        "Worker Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "4"
     },
     {
       "id": "357563",
@@ -210,19 +280,32 @@
         "lastmodified": "2024-07-09 00:50:40"
       },
       "numplays": 3,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 30,
+      "minplaytime": 20,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 1.8051,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.47252,
+      "categories": [
+        "Ancient",
+        "City Building",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Auction: Dutch",
+        "End Game Bonuses",
+        "Layering",
+        "Open Drafting",
+        "Pattern Building",
+        "Solo / Solitaire Game",
+        "Tile Placement",
+        "Turn Order: Progressive"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "3"
     },
     {
       "id": "376556",
@@ -242,18 +325,24 @@
         "lastmodified": "2024-01-25 00:50:52"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 60,
+      "minplaytime": 30,
+      "maxplaytime": 60,
+      "minage": 8,
+      "weight": 0.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
+      "average_rating": 10.0,
+      "categories": [
+        "Expansion for Base-game",
+        "Fan Expansion",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
+      "is_expansion": true,
       "best_with_players": null
     },
     {
@@ -274,19 +363,24 @@
         "lastmodified": "2024-07-09 00:50:52"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.77917,
+      "categories": [
+        "Card Game",
+        "Music"
+      ],
+      "mechanics": [
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "10547",
@@ -306,19 +400,34 @@
         "lastmodified": "2024-03-15 05:31:49"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 3,
+      "maxplayers": 6,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 12,
+      "weight": 2.3974,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.01729,
+      "categories": [
+        "Adventure",
+        "Exploration",
+        "Horror",
+        "Miniatures"
+      ],
+      "mechanics": [
+        "Dice Rolling",
+        "Map Addition",
+        "Modular Board",
+        "Player Elimination",
+        "Role Playing",
+        "Storytelling",
+        "Team-Based Game",
+        "Traitor Game",
+        "Variable Player Powers"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "5"
     },
     {
       "id": "11",
@@ -338,19 +447,29 @@
         "lastmodified": "2024-01-23 11:47:29"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 7,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 12,
+      "weight": 1.6677,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.06946,
+      "categories": [
+        "Card Game",
+        "Farming",
+        "Negotiation"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Multi-Use Cards",
+        "Negotiation",
+        "Set Collection",
+        "Trading"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "5"
     },
     {
       "id": "822",
@@ -370,19 +489,28 @@
         "lastmodified": "2024-07-12 04:09:25"
       },
       "numplays": 119,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 1.8889,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.41256,
+      "categories": [
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Enclosure",
+        "Map Addition",
+        "Pattern Building",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "822",
@@ -402,19 +530,28 @@
         "lastmodified": "2024-01-24 16:43:18"
       },
       "numplays": 119,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 1.8889,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.41256,
+      "categories": [
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Enclosure",
+        "Map Addition",
+        "Pattern Building",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "230914",
@@ -434,19 +571,27 @@
         "lastmodified": "2024-01-23 05:41:53"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 7,
+      "weight": 1.9621,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 8.06948,
+      "categories": [
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Pattern Building",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "291518",
@@ -466,18 +611,24 @@
         "lastmodified": "2024-01-25 00:51:12"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 1.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
+      "average_rating": 7.43889,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
+      "is_expansion": true,
       "best_with_players": null
     },
     {
@@ -498,19 +649,27 @@
         "lastmodified": "2024-01-23 11:42:05"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 7,
+      "weight": 1.8375,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 8.03004,
+      "categories": [
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Map Addition",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "400565",
@@ -530,18 +689,23 @@
         "lastmodified": "2024-01-25 00:51:30"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 0.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
+      "average_rating": 6.61111,
+      "categories": [
+        "City Building",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Map Addition"
+      ],
+      "is_expansion": true,
       "best_with_players": null
     },
     {
@@ -562,19 +726,28 @@
         "lastmodified": "2024-01-27 07:41:00"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 8,
+      "weight": 1.8824,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.03017,
+      "categories": [
+        "Animals",
+        "Exploration",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Map Addition",
+        "Tile Placement",
+        "Track Movement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "239586",
@@ -594,18 +767,23 @@
         "lastmodified": "2024-01-27 07:41:08"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 8,
+      "weight": 1.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
+      "average_rating": 7.47222,
+      "categories": [
+        "Expansion for Base-game",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
+      "is_expansion": true,
       "best_with_players": null
     },
     {
@@ -626,19 +804,26 @@
         "lastmodified": "2024-01-24 16:41:20"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 1.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.38542,
+      "categories": [
+        "City Building",
+        "Expansion for Base-game",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "372334",
@@ -658,18 +843,25 @@
         "lastmodified": "2024-01-25 00:51:57"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 5,
+      "minplaytime": 30,
+      "maxplaytime": 5,
+      "minage": 8,
+      "weight": 0.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
+      "average_rating": 7.32759,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
       "best_with_players": null
     },
     {
@@ -690,19 +882,26 @@
         "lastmodified": "2024-01-24 16:41:42"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 1.5714,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.05202,
+      "categories": [
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "217006",
@@ -722,19 +921,26 @@
         "lastmodified": "2024-01-24 16:42:58"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 1.9333,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.41797,
+      "categories": [
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
     },
     {
       "id": "15158",
@@ -754,19 +960,29 @@
         "lastmodified": "2024-01-24 16:41:50"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 13,
+      "weight": 1.9933,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 6.80748,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Fantasy",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Take That",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
     },
     {
       "id": "21385",
@@ -786,19 +1002,27 @@
         "lastmodified": "2024-01-24 16:42:47"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 8,
+      "weight": 2.1667,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 6.58616,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
     },
     {
       "id": "31784",
@@ -818,19 +1042,27 @@
         "lastmodified": "2024-01-24 16:42:00"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 2.0191,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.14778,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
     },
     {
       "id": "33458",
@@ -850,19 +1082,26 @@
         "lastmodified": "2024-01-24 16:42:36"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.1923,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 6.84762,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
     },
     {
       "id": "66646",
@@ -882,19 +1121,28 @@
         "lastmodified": "2024-01-24 16:42:08"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.0594,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.03106,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Auction / Bidding",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "4"
     },
     {
       "id": "153773",
@@ -914,19 +1162,26 @@
         "lastmodified": "2024-01-24 16:42:27"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 40,
+      "minplaytime": 40,
+      "maxplaytime": 40,
+      "minage": 8,
+      "weight": 1.8824,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.33805,
+      "categories": [
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "4390",
@@ -946,19 +1201,28 @@
         "lastmodified": "2024-01-27 07:40:43"
       },
       "numplays": 1,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 8,
+      "weight": 1.9219,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.13498,
+      "categories": [
+        "Prehistoric",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Enclosure",
+        "Map Addition",
+        "Pattern Building",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "256065",
@@ -978,19 +1242,24 @@
         "lastmodified": "2024-01-27 07:40:29"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 7,
+      "weight": 1.76,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.01204,
+      "categories": [
+        "Animals",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "7717",
@@ -1010,19 +1279,26 @@
         "lastmodified": "2024-01-23 11:41:44"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 1.9837,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.10332,
+      "categories": [
+        "City Building",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "End Game Bonuses",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "104634",
@@ -1042,19 +1318,27 @@
         "lastmodified": "2024-01-24 16:42:17"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 1.5556,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 6.89028,
+      "categories": [
+        "City Building",
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "143404",
@@ -1074,19 +1358,26 @@
         "lastmodified": "2024-01-27 05:33:39"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 2,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 10,
+      "weight": 2.0986,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.88014,
+      "categories": [
+        "Fantasy",
+        "Puzzle"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Solo / Solitaire Game",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "1"
     },
     {
       "id": "13",
@@ -1106,19 +1397,34 @@
         "lastmodified": "2024-01-24 16:39:39"
       },
       "numplays": 1,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 3,
+      "maxplayers": 4,
+      "playingtime": 120,
+      "minplaytime": 60,
+      "maxplaytime": 120,
+      "minage": 10,
+      "weight": 2.2876,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.094,
+      "categories": [
+        "Economic",
+        "Negotiation"
+      ],
+      "mechanics": [
+        "Chaining",
+        "Dice Rolling",
+        "Hexagon Grid",
+        "Income",
+        "Modular Board",
+        "Negotiation",
+        "Network and Route Building",
+        "Race",
+        "Random Production",
+        "Trading",
+        "Variable Set-up"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "11971",
@@ -1138,19 +1444,27 @@
         "lastmodified": "2025-02-20 05:02:18"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.1005,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.80443,
+      "categories": [
+        "Bluffing",
+        "Card Game",
+        "Party Game"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Set Collection",
+        "Single Loser Game"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "5"
     },
     {
       "id": "324856",
@@ -1170,19 +1484,31 @@
         "lastmodified": "2024-07-09 00:51:05"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 10,
+      "weight": 2.0369,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 8.10376,
+      "categories": [
+        "Adventure",
+        "Card Game",
+        "Deduction",
+        "Mythology",
+        "Nautical"
+      ],
+      "mechanics": [
+        "Communication Limits",
+        "Cooperative Game",
+        "Hand Management",
+        "Scenario / Mission / Campaign Game",
+        "Trick-taking"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "284083",
@@ -1202,19 +1528,29 @@
         "lastmodified": "2024-01-26 10:59:01"
       },
       "numplays": 3,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 10,
+      "weight": 1.954,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.78066,
+      "categories": [
+        "Card Game",
+        "Science Fiction",
+        "Space Exploration"
+      ],
+      "mechanics": [
+        "Communication Limits",
+        "Cooperative Game",
+        "Hand Management",
+        "Scenario / Mission / Campaign Game",
+        "Trick-taking"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "225694",
@@ -1234,19 +1570,29 @@
         "lastmodified": "2024-01-26 15:42:58"
       },
       "numplays": 1,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 3,
+      "maxplayers": 8,
+      "playingtime": 45,
+      "minplaytime": 15,
+      "maxplaytime": 45,
+      "minage": 12,
+      "weight": 1.8273,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.76861,
+      "categories": [
+        "Deduction",
+        "Party Game",
+        "Spies / Secret Agents",
+        "Word Game"
+      ],
+      "mechanics": [
+        "Communication Limits",
+        "Paper-and-Pencil",
+        "Targeted Clues",
+        "Team-Based Game"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "6"
     },
     {
       "id": "397598",
@@ -1266,19 +1612,38 @@
         "lastmodified": "2024-07-12 04:10:02"
       },
       "numplays": 2,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 6,
+      "playingtime": 120,
+      "minplaytime": 60,
+      "maxplaytime": 120,
+      "minage": 13,
+      "weight": 3.4932,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 8.72056,
+      "categories": [
+        "Movies / TV / Radio theme",
+        "Novel-based",
+        "Political",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Automatic Resource Growth",
+        "Card Play Conflict Resolution",
+        "Deck, Bag, and Pool Building",
+        "Delayed Purchase",
+        "Force Commitment",
+        "Increase Value of Unchosen Resources",
+        "Multi-Use Cards",
+        "Open Drafting",
+        "Solo / Solitaire Game",
+        "Team-Based Game",
+        "Turn Order: Progressive",
+        "Variable Player Powers",
+        "Worker Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "223040",
@@ -1298,19 +1663,28 @@
         "lastmodified": "2025-02-20 05:02:22"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 14,
+      "weight": 1.8117,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.5095,
+      "categories": [
+        "Card Game",
+        "Fantasy"
+      ],
+      "mechanics": [
+        "End Game Bonuses",
+        "Hand Management",
+        "Open Drafting",
+        "Set Collection",
+        "Tags"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "3"
     },
     {
       "id": "258",
@@ -1330,19 +1704,24 @@
         "lastmodified": "2024-01-23 11:42:24"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 30,
+      "minplaytime": 5,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 1.3888,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 5.6759,
+      "categories": [
+        "Card Game"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "172",
@@ -1362,19 +1741,28 @@
         "lastmodified": "2024-04-03 02:16:44"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 3,
+      "maxplayers": 6,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 10,
+      "weight": 1.2527,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.26094,
+      "categories": [
+        "Card Game",
+        "Economic"
+      ],
+      "mechanics": [
+        "Auction / Bidding",
+        "Auction: Sealed Bid",
+        "Auction: Turn Order Until Pass",
+        "Hand Management",
+        "Selection Order Bid"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "5"
     },
     {
       "id": "366013",
@@ -1394,19 +1782,34 @@
         "lastmodified": "2024-01-27 07:45:03"
       },
       "numplays": 2,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 6,
+      "playingtime": 60,
+      "minplaytime": 30,
+      "maxplaytime": 60,
+      "minage": 10,
+      "weight": 2.1877,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 8.02618,
+      "categories": [
+        "Racing",
+        "Sports"
+      ],
+      "mechanics": [
+        "Catch the Leader",
+        "Deck, Bag, and Pool Building",
+        "Hand Management",
+        "Programmed Movement",
+        "Push Your Luck",
+        "Race",
+        "Simulation",
+        "Simultaneous Action Selection",
+        "Solo / Solitaire Game",
+        "Track Movement",
+        "Variable Set-up"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "6"
     },
     {
       "id": "355326",
@@ -1426,19 +1829,44 @@
         "lastmodified": "2024-11-26 12:46:59"
       },
       "numplays": 2,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 120,
+      "minplaytime": 90,
+      "maxplaytime": 120,
+      "minage": 14,
+      "weight": 3.4483,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.87211,
+      "categories": [
+        "Adventure",
+        "Exploration",
+        "Fantasy",
+        "Fighting",
+        "Video Game Theme"
+      ],
+      "mechanics": [
+        "Action Points",
+        "Alliances",
+        "Area Majority / Influence",
+        "Campaign / Battle Card Driven",
+        "Cooperative Game",
+        "Dice Rolling",
+        "Events",
+        "Grid Movement",
+        "Hexagon Grid",
+        "Income",
+        "Modular Board",
+        "Movement Points",
+        "Player Elimination",
+        "Scenario / Mission / Campaign Game",
+        "Semi-Cooperative Game",
+        "Solo / Solitaire Game",
+        "Tile Placement",
+        "Zone of Control"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "154597",
@@ -1458,19 +1886,31 @@
         "lastmodified": "2024-01-24 16:39:22"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 9,
+      "weight": 2.2348,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.69546,
+      "categories": [
+        "Abstract Strategy",
+        "Animals"
+      ],
+      "mechanics": [
+        "Enclosure",
+        "Grid Movement",
+        "Hexagon Grid",
+        "Pattern Movement",
+        "Pieces as Map",
+        "Slide / Push",
+        "Three Dimensional Movement",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "134253",
@@ -1490,19 +1930,29 @@
         "lastmodified": "2024-01-27 05:33:26"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 1,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 13,
+      "weight": 2.0352,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.78826,
+      "categories": [
+        "Card Game",
+        "Dice"
+      ],
+      "mechanics": [
+        "Critical Hits and Failures",
+        "Dice Rolling",
+        "Hand Management",
+        "Open Drafting",
+        "Solo / Solitaire Game",
+        "Stat Check Resolution"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "1"
     },
     {
       "id": "383597",
@@ -1522,19 +1972,36 @@
         "lastmodified": "2024-04-26 03:52:05"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 120,
+      "minplaytime": 15,
+      "maxplaytime": 120,
+      "minage": 12,
+      "weight": 0.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.91538,
+      "categories": [
+        "Adventure",
+        "Card Game",
+        "Dice",
+        "Exploration",
+        "Travel"
+      ],
+      "mechanics": [
+        "Action / Event",
+        "Card Play Conflict Resolution",
+        "Command Cards",
+        "Deck Construction",
+        "Dice Rolling",
+        "Events",
+        "Hand Management",
+        "Multi-Use Cards",
+        "Role Playing",
+        "Storytelling"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "1245",
@@ -1554,19 +2021,24 @@
         "lastmodified": "2024-01-27 07:41:46"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 20,
+      "minplaytime": 10,
+      "maxplaytime": 20,
+      "minage": 7,
+      "weight": 1.3494,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 5.83964,
+      "categories": [
+        "Abstract Strategy",
+        "Memory"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "272738",
@@ -1586,19 +2058,36 @@
         "lastmodified": "2024-01-23 05:42:10"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 12,
+      "weight": 2.1488,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.07539,
+      "categories": [
+        "Animals",
+        "Fighting",
+        "Movies / TV / Radio theme",
+        "Nautical"
+      ],
+      "mechanics": [
+        "Action Points",
+        "Area Movement",
+        "Card Play Conflict Resolution",
+        "Hidden Movement",
+        "Map Deformation",
+        "Map Reduction",
+        "Modular Board",
+        "Player Elimination",
+        "Secret Unit Deployment",
+        "Team-Based Game",
+        "Variable Player Powers"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "107529",
@@ -1618,19 +2107,33 @@
         "lastmodified": "2024-01-23 05:44:17"
       },
       "numplays": 18,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.0654,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.93715,
+      "categories": [
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Chaining",
+        "Enclosure",
+        "Grid Movement",
+        "Hexagon Grid",
+        "Modular Board",
+        "Network and Route Building",
+        "Pattern Building",
+        "Tile Placement",
+        "Variable Set-up"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "139993",
@@ -1650,19 +2153,29 @@
         "lastmodified": "2024-04-03 02:06:25"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.325,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.55071,
+      "categories": [
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Chaining",
+        "Enclosure",
+        "Grid Movement",
+        "Modular Board",
+        "Network and Route Building"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "3"
     },
     {
       "id": "204583",
@@ -1682,19 +2195,27 @@
         "lastmodified": "2024-01-23 05:43:11"
       },
       "numplays": 26,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 25,
+      "minplaytime": 15,
+      "maxplaytime": 25,
+      "minage": 8,
+      "weight": 1.2307,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.29896,
+      "categories": [
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Enclosure",
+        "Open Drafting",
+        "Tile Placement",
+        "Turn Order: Claim Action"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "240909",
@@ -1714,19 +2235,30 @@
         "lastmodified": "2024-01-23 05:43:21"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 20,
+      "minplaytime": 15,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.6591,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.17084,
+      "categories": [
+        "Expansion for Base-game",
+        "Fantasy",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Open Drafting",
+        "Pattern Building",
+        "Take That",
+        "Tile Placement",
+        "Turn Order: Claim Action"
+      ],
+      "is_expansion": true,
+      "best_with_players": "5"
     },
     {
       "id": "823",
@@ -1746,19 +2278,30 @@
         "lastmodified": "2024-01-27 07:41:22"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 90,
+      "minplaytime": 60,
+      "maxplaytime": 90,
+      "minage": 12,
+      "weight": 2.5323,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.73599,
+      "categories": [
+        "Adventure",
+        "Fantasy",
+        "Novel-based"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Dice Rolling",
+        "Hand Management",
+        "Player Elimination",
+        "Set Collection",
+        "Variable Player Powers"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "50",
@@ -1778,19 +2321,30 @@
         "lastmodified": "2024-07-09 00:52:29"
       },
       "numplays": 19,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 10,
+      "weight": 1.4757,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.2495,
+      "categories": [
+        "Card Game",
+        "Exploration",
+        "Math"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Melding and Splaying",
+        "Ordering",
+        "Push Your Luck",
+        "Score-and-Reset Game",
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "277085",
@@ -1810,19 +2364,29 @@
         "lastmodified": "2024-01-24 16:40:44"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 10,
+      "weight": 1.1172,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.51446,
+      "categories": [
+        "Card Game",
+        "Deduction",
+        "Renaissance"
+      ],
+      "mechanics": [
+        "Deduction",
+        "Hand Management",
+        "Player Elimination",
+        "Score-and-Reset Game",
+        "Take That"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "244992",
@@ -1842,19 +2406,26 @@
         "lastmodified": "2024-01-23 11:43:58"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.0794,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.7413,
+      "categories": [
+        "Card Game",
+        "Number"
+      ],
+      "mechanics": [
+        "Communication Limits",
+        "Cooperative Game",
+        "Hand Management"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "287607",
@@ -1874,19 +2445,27 @@
         "lastmodified": "2024-07-09 00:51:35"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.3421,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.9024,
+      "categories": [
+        "Card Game",
+        "Deduction",
+        "Number"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Hand Management",
+        "Real-Time"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "358124",
@@ -1906,19 +2485,24 @@
         "lastmodified": "2024-01-24 16:40:09"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 5,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 8,
+      "weight": 2.12,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.31281,
+      "categories": [
+        "Medieval"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "387378",
@@ -1938,19 +2522,28 @@
         "lastmodified": "2024-01-27 07:45:15"
       },
       "numplays": 1,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 60,
+      "minplaytime": 30,
+      "maxplaytime": 60,
+      "minage": 8,
+      "weight": 1.7157,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.195,
+      "categories": [
+        "Animals",
+        "Dice",
+        "Space Exploration"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Dice Rolling",
+        "Push Your Luck",
+        "Track Movement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "5"
     },
     {
       "id": "130060",
@@ -1970,19 +2563,29 @@
         "lastmodified": "2024-01-27 05:36:28"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 7,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 10,
+      "weight": 2.3714,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.03119,
+      "categories": [
+        "Bluffing",
+        "Card Game",
+        "City Building",
+        "Fantasy",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Open Drafting",
+        "Variable Phase Order",
+        "Variable Player Powers"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "147949",
@@ -2002,19 +2605,32 @@
         "lastmodified": "2024-01-26 10:59:17"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 3,
+      "maxplayers": 10,
+      "playingtime": 10,
+      "minplaytime": 10,
+      "maxplaytime": 10,
+      "minage": 8,
+      "weight": 1.3779,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.04323,
+      "categories": [
+        "Bluffing",
+        "Card Game",
+        "Deduction",
+        "Horror",
+        "Party Game"
+      ],
+      "mechanics": [
+        "Hidden Roles",
+        "Role Playing",
+        "Roles with Asymmetric Information",
+        "Traitor Game",
+        "Variable Player Powers",
+        "Voting"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "6"
     },
     {
       "id": "156336",
@@ -2034,19 +2650,30 @@
         "lastmodified": "2024-01-27 05:34:01"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 2,
+      "playingtime": 15,
+      "minplaytime": 15,
+      "maxplaytime": 15,
+      "minage": 10,
+      "weight": 1.5945,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.04228,
+      "categories": [
+        "Card Game",
+        "Exploration",
+        "Fantasy"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Hand Management",
+        "Move Through Deck",
+        "Open Drafting",
+        "Set Collection",
+        "Solo / Solitaire Game"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "1"
     },
     {
       "id": "300531",
@@ -2066,19 +2693,31 @@
         "lastmodified": "2024-01-23 05:43:34"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 60,
+      "minplaytime": 45,
+      "maxplaytime": 60,
+      "minage": 10,
+      "weight": 2.646,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.67493,
+      "categories": [
+        "Card Game",
+        "Exploration",
+        "Prehistoric"
+      ],
+      "mechanics": [
+        "Action / Event",
+        "Cooperative Game",
+        "Deck, Bag, and Pool Building",
+        "Memory",
+        "Scenario / Mission / Campaign Game",
+        "Simultaneous Action Selection",
+        "Variable Set-up"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "30549",
@@ -2098,19 +2737,30 @@
         "lastmodified": "2024-01-25 00:49:24"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.3975,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.52655,
+      "categories": [
+        "Medical"
+      ],
+      "mechanics": [
+        "Action Points",
+        "Cooperative Game",
+        "Hand Management",
+        "Multi-Use Cards",
+        "Point to Point Movement",
+        "Set Collection",
+        "Tags",
+        "Variable Player Powers"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "411875",
@@ -2130,19 +2780,27 @@
         "lastmodified": "2024-09-10 14:28:54"
       },
       "numplays": 4,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 1.1507,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.08052,
+      "categories": [
+        "Animals",
+        "Card Game"
+      ],
+      "mechanics": [
+        "Connections",
+        "Open Drafting",
+        "Score-and-Reset Game",
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "339052",
@@ -2162,17 +2820,26 @@
         "lastmodified": "2024-03-14 07:39:01"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 10,
+      "weight": 2.5,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.26397,
+      "categories": [
+        "City Building",
+        "Medieval",
+        "Puzzle"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "End Game Bonuses",
+        "Line Drawing",
+        "Square Grid"
+      ],
       "is_expansion": false,
       "best_with_players": null
     },
@@ -2194,19 +2861,24 @@
         "lastmodified": "2024-01-27 05:35:20"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 10,
+      "weight": 2.5,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.01311,
+      "categories": [
+        "Ancient",
+        "Civilization"
+      ],
+      "mechanics": [
+        "Hand Management"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "3"
     },
     {
       "id": "244521",
@@ -2226,19 +2898,31 @@
         "lastmodified": "2024-01-27 05:34:54"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 10,
+      "weight": 1.9429,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.81028,
+      "categories": [
+        "Medieval"
+      ],
+      "mechanics": [
+        "Catch the Leader",
+        "Deck, Bag, and Pool Building",
+        "Delayed Purchase",
+        "Dice Rolling",
+        "Events",
+        "Open Drafting",
+        "Push Your Luck",
+        "Simultaneous Action Selection",
+        "Variable Set-up"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "25669",
@@ -2258,19 +2942,26 @@
         "lastmodified": "2024-01-27 05:37:29"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 6,
+      "weight": 1.586,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.77421,
+      "categories": [
+        "Abstract Strategy"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Pattern Building",
+        "Square Grid",
+        "Tile Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "4"
     },
     {
       "id": "171489",
@@ -2290,19 +2981,24 @@
         "lastmodified": "2024-01-27 05:37:06"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.4444,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.0619,
+      "categories": [
+        "Card Game"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "329082",
@@ -2322,19 +3018,29 @@
         "lastmodified": "2024-07-09 00:53:56"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 40,
+      "minplaytime": 20,
+      "maxplaytime": 40,
+      "minage": 14,
+      "weight": 2.273,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.79307,
+      "categories": [
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Action Points",
+        "Action Queue",
+        "Hand Management",
+        "Take That",
+        "Variable Player Powers"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "245654",
@@ -2354,19 +3060,31 @@
         "lastmodified": "2024-01-23 11:43:19"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 6,
+      "playingtime": 30,
+      "minplaytime": 20,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 1.4488,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.16352,
+      "categories": [
+        "Dice",
+        "Trains"
+      ],
+      "mechanics": [
+        "Bingo",
+        "Connections",
+        "Dice Rolling",
+        "Line Drawing",
+        "Network and Route Building",
+        "Paper-and-Pencil",
+        "Simultaneous Action Selection",
+        "Solo / Solitaire Game"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "287589",
@@ -2386,19 +3104,26 @@
         "lastmodified": "2024-01-23 05:42:26"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 60,
+      "minplaytime": 30,
+      "maxplaytime": 60,
+      "minage": 10,
+      "weight": 2.5056,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.90877,
+      "categories": [
+        "Farming",
+        "Industry / Manufacturing",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Worker Placement"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "3"
     },
     {
       "id": "128882",
@@ -2418,19 +3143,37 @@
         "lastmodified": "2024-04-26 03:51:06"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 5,
+      "maxplayers": 10,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 13,
+      "weight": 1.7409,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.50459,
+      "categories": [
+        "Bluffing",
+        "Card Game",
+        "Deduction",
+        "Fantasy",
+        "Medieval",
+        "Negotiation",
+        "Party Game",
+        "Spies / Secret Agents"
+      ],
+      "mechanics": [
+        "Finale Ending",
+        "Hidden Roles",
+        "Roles with Asymmetric Information",
+        "Simultaneous Action Selection",
+        "Team-Based Game",
+        "Traitor Game",
+        "Variable Player Powers",
+        "Voting"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "7"
     },
     {
       "id": "372",
@@ -2450,19 +3193,26 @@
         "lastmodified": "2024-07-09 00:54:09"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 8,
+      "weight": 1.6855,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.36128,
+      "categories": [
+        "Card Game"
+      ],
+      "mechanics": [
+        "Card Play Conflict Resolution",
+        "Hand Management",
+        "Melding and Splaying",
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "438",
@@ -2482,19 +3232,27 @@
         "lastmodified": "2024-01-23 11:46:51"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 45,
+      "maxplaytime": 45,
+      "minage": 10,
+      "weight": 1.9443,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 6.50461,
+      "categories": [
+        "Deduction",
+        "Travel"
+      ],
+      "mechanics": [
+        "Hidden Movement",
+        "Point to Point Movement",
+        "Secret Unit Deployment",
+        "Team-Based Game"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "367220",
@@ -2514,19 +3272,30 @@
         "lastmodified": "2024-07-09 00:54:32"
       },
       "numplays": 73,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 1.4751,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.48663,
+      "categories": [
+        "Animals",
+        "Card Game",
+        "Nautical"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Open Drafting",
+        "Push Your Luck",
+        "Score-and-Reset Game",
+        "Set Collection",
+        "Sudden Death Ending"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "329560",
@@ -2546,17 +3315,23 @@
         "lastmodified": "2024-04-26 03:51:53"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 8,
+      "playingtime": 45,
+      "minplaytime": 15,
+      "maxplaytime": 45,
+      "minage": 10,
+      "weight": 1.6667,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.095,
+      "categories": [
+        "Card Game"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Matching",
+        "Push Your Luck"
+      ],
       "is_expansion": false,
       "best_with_players": null
     },
@@ -2578,19 +3353,29 @@
         "lastmodified": "2024-07-25 06:41:52"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 3,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 15,
+      "maxplaytime": 45,
+      "minage": 10,
+      "weight": 1.113,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.18436,
+      "categories": [
+        "Bluffing",
+        "Card Game",
+        "Party Game"
+      ],
+      "mechanics": [
+        "Auction / Bidding",
+        "Bids As Wagers",
+        "Hand Management",
+        "Player Elimination",
+        "Predictive Bid"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "5"
     },
     {
       "id": "364073",
@@ -2610,19 +3395,28 @@
         "lastmodified": "2024-03-14 07:39:25"
       },
       "numplays": 15,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 10,
+      "weight": 2.0126,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.90426,
+      "categories": [
+        "Card Game",
+        "Economic",
+        "Renaissance"
+      ],
+      "mechanics": [
+        "Contracts",
+        "Open Drafting",
+        "Race",
+        "Set Collection"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "355199",
@@ -2642,19 +3436,30 @@
         "lastmodified": "2024-04-03 02:06:08"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 12,
+      "weight": 2.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.83673,
+      "categories": [
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Delayed Purchase",
+        "Hand Management",
+        "Open Drafting",
+        "Solo / Solitaire Game",
+        "Take That"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "182631",
@@ -2674,19 +3479,29 @@
         "lastmodified": "2024-04-06 02:03:11"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 12,
+      "weight": 1.8954,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.79272,
+      "categories": [
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Delayed Purchase",
+        "Hand Management",
+        "Open Drafting",
+        "Take That"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "231376",
@@ -2706,19 +3521,25 @@
         "lastmodified": "2024-04-12 15:23:46"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.5,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.57708,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "231369",
@@ -2738,19 +3559,25 @@
         "lastmodified": "2024-04-12 15:23:53"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.8333,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.63792,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "231370",
@@ -2770,19 +3597,25 @@
         "lastmodified": "2024-04-12 15:24:14"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.75,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.61612,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "231371",
@@ -2802,19 +3635,25 @@
         "lastmodified": "2024-04-12 15:24:00"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.75,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.65976,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "231372",
@@ -2834,19 +3673,25 @@
         "lastmodified": "2024-04-12 15:24:22"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.6,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.61378,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "231373",
@@ -2866,19 +3711,25 @@
         "lastmodified": "2024-04-12 15:24:06"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.8333,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.65135,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "166702",
@@ -2898,19 +3749,28 @@
         "lastmodified": "2024-04-06 02:08:11"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.9623,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.70617,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "166707",
@@ -2930,19 +3790,28 @@
         "lastmodified": "2024-04-06 02:07:55"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.8947,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.14674,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "166704",
@@ -2962,19 +3831,28 @@
         "lastmodified": "2024-04-06 02:09:17"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 2.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.70447,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "166708",
@@ -2994,19 +3872,28 @@
         "lastmodified": "2024-04-06 02:08:55"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.9556,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.04002,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "230253",
@@ -3026,19 +3913,30 @@
         "lastmodified": "2024-04-06 02:02:57"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 20,
+      "maxplaytime": 45,
+      "minage": 12,
+      "weight": 1.8806,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
+      "average_rating": 7.92729,
+      "categories": [
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Player Elimination",
+        "Solo / Solitaire Game",
+        "Take That"
+      ],
       "is_expansion": false,
-      "best_with_players": null
+      "best_with_players": "2"
     },
     {
       "id": "287286",
@@ -3058,19 +3956,29 @@
         "lastmodified": "2024-04-06 02:03:43"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 20,
+      "minplaytime": 20,
+      "maxplaytime": 20,
+      "minage": 12,
+      "weight": 1.6667,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.30423,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Hand Management",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "224182",
@@ -3090,19 +3998,30 @@
         "lastmodified": "2024-04-06 03:09:19"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.6667,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.67756,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Cooperative Game",
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Player Elimination",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "208503",
@@ -3122,19 +4041,28 @@
         "lastmodified": "2024-04-26 03:52:46"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 2.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.81371,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "208501",
@@ -3154,19 +4082,28 @@
         "lastmodified": "2024-04-26 03:52:49"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 2.0,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.77471,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "202247",
@@ -3186,19 +4123,28 @@
         "lastmodified": "2024-04-06 02:04:00"
       },
       "numplays": 0,
-      "minplayers": null,
-      "maxplayers": null,
-      "playingtime": null,
-      "minplaytime": null,
-      "maxplaytime": null,
-      "minage": null,
-      "weight": null,
+      "minplayers": 2,
+      "maxplayers": 2,
+      "playingtime": 0,
+      "minplaytime": 20,
+      "maxplaytime": 0,
+      "minage": 12,
+      "weight": 1.875,
       "rating": null,
-      "average_rating": null,
-      "categories": [],
-      "mechanics": [],
-      "is_expansion": false,
-      "best_with_players": null
+      "average_rating": 7.3061,
+      "categories": [
+        "Expansion for Base-game",
+        "Card Game",
+        "Fighting",
+        "Science Fiction"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Open Drafting",
+        "Take That"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "208502",
