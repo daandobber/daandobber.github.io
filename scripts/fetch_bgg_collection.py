@@ -19,7 +19,7 @@ FETCH_DETAILS = True # MOET True zijn om expansies betrouwbaar te identificeren
 REQUEST_TIMEOUT = 60
 RETRY_ATTEMPTS = 5
 RETRY_BACKOFF = 1
-BATCH_SIZE = 50
+BATCH_SIZE = 10
 SLEEP_BETWEEN_BATCHES = 5
 
 # --- Helper Functies ---
