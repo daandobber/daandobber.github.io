@@ -3226,7 +3226,7 @@
       "minage": 12,
       "weight": 2.0,
       "rating": null,
-      "average_rating": 7.31201,
+      "average_rating": 7.31285,
       "categories": [
         "Expansion for Base-game",
         "Card Game",
@@ -3389,7 +3389,7 @@
       "minage": 12,
       "weight": 2.341,
       "rating": null,
-      "average_rating": 7.60188,
+      "average_rating": 7.60217,
       "categories": [
         "Arabian",
         "Card Game"
@@ -3430,9 +3430,9 @@
       "minplaytime": 120,
       "maxplaytime": 120,
       "minage": 12,
-      "weight": 3.2664,
+      "weight": 3.2667,
       "rating": null,
-      "average_rating": 8.35047,
+      "average_rating": 8.35054,
       "categories": [
         "Economic",
         "Environmental",
@@ -3488,7 +3488,7 @@
       "minage": 6,
       "weight": 1.1031,
       "rating": null,
-      "average_rating": 5.46671,
+      "average_rating": 5.46678,
       "categories": [
         "Card Game",
         "Children's Game",
@@ -3571,7 +3571,7 @@
       "minage": 7,
       "weight": 1.1579,
       "rating": null,
-      "average_rating": 6.18659,
+      "average_rating": 6.1876,
       "categories": [
         "Racing"
       ],
@@ -3608,9 +3608,9 @@
       "minplaytime": 40,
       "maxplaytime": 70,
       "minage": 10,
-      "weight": 2.4704,
+      "weight": 2.4709,
       "rating": null,
-      "average_rating": 8.02434,
+      "average_rating": 8.02408,
       "categories": [
         "Animals",
         "Card Game",
@@ -3656,7 +3656,7 @@
       "minage": 10,
       "weight": 2.4315,
       "rating": null,
-      "average_rating": 8.33401,
+      "average_rating": 8.33387,
       "categories": [
         "Expansion for Base-game",
         "Animals",
