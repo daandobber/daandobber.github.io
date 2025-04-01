@@ -1,40 +1,35 @@
 <script lang="ts">
-	import { onDestroy } from "svelte";
-	import type { BoardGame, SortOption as GenericSortOption } from "@/types"; // Gebruik generieke SortOption of maak BoardGameSortOption
-	import BoardGameCard from "./BoardGameCard.svelte"; // Importeer je card component
+	import { onDestroy } from 'svelte';
+	import type { BoardGame, SortOption as GenericSortOption } from '@/types';
+	import BoardGameCard from './BoardGameCard.svelte';
 
-	// Definieer een specifiek type voor sort keys hier als je GenericSortOption gebruikt
-	type BoardGameSortKey = keyof BoardGame; // Of specifieke keys: 'name' | 'yearpublished' | 'weight' | ...
+	type BoardGameSortKey = keyof BoardGame;
 	interface BoardGameSortOption extends GenericSortOption {
 		sortKey: BoardGameSortKey;
 	}
 
-	// Props
 	export let items: BoardGame[] = [];
-	export let searchFields: string[] = []; // bv. ['name', 'categories', 'mechanics']
-	export let sortOptions: BoardGameSortOption[] = []; // Gebruik het specifiekere type
+	export let searchFields: string[] = [];
+	export let sortOptions: BoardGameSortOption[] = [];
 	export let initialSortId: string | null = sortOptions[0] ? sortOptions[0].id : null;
 	export let availableCategories: string[] = [];
 	export let initialShowExpansions: boolean = false;
 
-	// Constanten voor sliders (veranderd naar 'let' om ze beschikbaar te maken in template)
-	let MAX_PLAYTIME_DISPLAY = 360; // Max waarde voor de slider UI (kan hoger zijn in data)
+	let MAX_PLAYTIME_DISPLAY = 360;
 	let MAX_WEIGHT = 5.0;
 
-	// Interne state voor filters
-	let searchTerm: string = "";
+	let searchTerm: string = '';
 	let currentSortId: string | null = initialSortId;
 	let showExpansions: boolean = initialShowExpansions;
-	let selectedPlayers: number | null = null; // Voor 'Speelbaar met X'
-	let filterBestWith: boolean = false; // Voor 'Best met X'
+	let selectedPlayers: number | null = null;
+	let filterBestWith: boolean = false;
 	let selectedCategories: string[] = [];
 	let minPlaytime: number = 0;
-	let maxPlaytime: number = MAX_PLAYTIME_DISPLAY; // Start slider op max display waarde
+	let maxPlaytime: number = MAX_PLAYTIME_DISPLAY;
 	let minWeight: number = 0;
-	let maxWeight: number = MAX_WEIGHT; // Start slider op BGG max
+	let maxWeight: number = MAX_WEIGHT;
 
-	// Debounce search input
-	let debouncedSearchTerm: string = "";
+	let debouncedSearchTerm: string = '';
 	let debounceTimer: number;
 	$: {
 		clearTimeout(debounceTimer);
@@ -44,13 +39,11 @@
 	}
 	onDestroy(() => clearTimeout(debounceTimer));
 
-	// Helper om geneste properties veilig op te halen
 	function getProperty(obj: any, path: string): any {
 		try {
-			// Ondersteun directe keys en geneste keys
-			if (path.includes(".")) {
+			if (path.includes('.')) {
 				return path
-					.split(".")
+					.split('.')
 					.reduce((o, k) => (o && o[k] !== undefined && o[k] !== null ? o[k] : null), obj);
 			} else {
 				return obj && obj[path] !== undefined && obj[path] !== null ? obj[path] : null;
@@ -60,7 +53,6 @@
 		}
 	}
 
-	// Bereken gefilterde en gesorteerde items reactief
 	$: activeSortOption =
 		sortOptions.find((opt) => opt.id === currentSortId) ||
 		(sortOptions.length > 0 ? sortOptions[0] : undefined);
@@ -75,9 +67,9 @@
 		filterBestWith,
 		selectedCategories,
 		minPlaytime,
-		maxPlaytime >= MAX_PLAYTIME_DISPLAY ? 99999 : maxPlaytime, // Gebruik hoge waarde als slider op max staat
+		maxPlaytime >= MAX_PLAYTIME_DISPLAY ? 99999 : maxPlaytime,
 		minWeight,
-		maxWeight,
+		maxWeight
 	);
 
 	function computeDisplayedItems(
@@ -90,30 +82,27 @@
 		bestWith: boolean,
 		selCategories: string[],
 		minTime: number,
-		maxTime: number, // Dit is nu de effectieve max tijd (kan 99999 zijn)
+		maxTime: number,
 		minW: number,
-		maxW: number,
+		maxW: number
 	): BoardGame[] {
 		const lowerFilterTerm = filterTerm.toLowerCase().trim();
 
 		let filtered = originalItems.filter((item: BoardGame) => {
-			// 1. Expansie filter
 			if (!showExp && item.is_expansion) {
 				return false;
 			}
 
-			// 2. Tekst filter
 			if (lowerFilterTerm) {
 				const isMatch = fieldsToSearch.some((fieldPath) => {
 					const value = getProperty(item, fieldPath);
 					if (Array.isArray(value)) {
 						return value.some(
-							(v) => typeof v === "string" && v.toLowerCase().includes(lowerFilterTerm),
+							(v) => typeof v === 'string' && v.toLowerCase().includes(lowerFilterTerm)
 						);
-					} else if (typeof value === "string") {
+					} else if (typeof value === 'string') {
 						return value.toLowerCase().includes(lowerFilterTerm);
-					} else if (typeof value === "number") {
-						// Sta toe om op nummers te zoeken (bv. jaar)
+					} else if (typeof value === 'number') {
 						return String(value).includes(lowerFilterTerm);
 					}
 					return false;
@@ -121,114 +110,82 @@
 				if (!isMatch) return false;
 			}
 
-			// 3. Spelers filter
 			if (numPlayers !== null && numPlayers > 0) {
 				const minP = item.minplayers ?? 0;
 				const maxP = item.maxplayers ?? 0;
-				// Spel moet geschikt zijn voor het aantal spelers
-				// Check of min/max bestaan, anders kan het niet matchen
 				if (!minP || !maxP || !(minP <= numPlayers && maxP >= numPlayers)) {
 					return false;
 				}
-				// 3b. 'Best with' filter (alleen als 'Speelbaar met' ook is voldaan)
 				if (bestWith) {
-					if (!item.best_with_players) return false; // Geen 'best with' data
+					if (!item.best_with_players) return false;
 					const best = item.best_with_players;
 					try {
-						if (best.endsWith("+")) {
+						if (best.endsWith('+')) {
 							const bestMin = parseInt(best.slice(0, -1));
 							if (numPlayers < bestMin) return false;
 						} else {
 							const bestExact = parseInt(best);
 							if (numPlayers !== bestExact) return false;
 						}
-					} catch (e) {
-						return false;
-					} // Ongeldige 'best_with_players' string
+					} catch (e) { return false; }
 				}
 			}
 
-			// 4. Categorie filter (matcht als *minstens één* geselecteerde categorie aanwezig is)
 			if (selCategories.length > 0) {
 				const hasAnyCat = selCategories.some((cat) => item.categories?.includes(cat));
 				if (!hasAnyCat) return false;
 			}
 
-			// 5. Speeltijd filter (slider)
 			const gameMinTime = item.minplaytime ?? item.playingtime ?? null;
 			const gameMaxTime = item.maxplaytime ?? item.playingtime ?? null;
-
-			// Alleen filteren als we geldige filtergrenzen hebben EN het spel tijdinfo heeft
 			if ((minTime > 0 || maxTime < 99999) && gameMinTime !== null && gameMaxTime !== null) {
-				// Logica: Overlapt de range [gameMinTime, gameMaxTime] met [minTime, maxTime]?
-				// Het spel past *niet* als het *volledig* buiten de slider valt
 				if (gameMaxTime < minTime || gameMinTime > maxTime) {
 					return false;
 				}
-			} else if (
-				(minTime > 0 || maxTime < 99999) &&
-				(gameMinTime === null || gameMaxTime === null)
-			) {
-				// Als gebruiker filtert op tijd, maar spel geen tijdinfo heeft -> verberg
+			} else if ((minTime > 0 || maxTime < 99999) && (gameMinTime === null || gameMaxTime === null)) {
 				return false;
 			}
 
-			// 6. Gewicht/Complexiteit filter (slider)
 			const weight = item.weight ?? null;
 			if ((minW > 0 || maxW < MAX_WEIGHT) && weight !== null) {
 				if (weight < minW || weight > maxW) {
 					return false;
 				}
 			} else if ((minW > 0 || maxW < MAX_WEIGHT) && weight === null) {
-				// Als gebruiker filtert op gewicht, maar spel geen gewicht heeft -> verberg
 				return false;
 			}
 
-			return true; // Item voldoet aan alle filters
+			return true;
 		});
 
-		// Sorteren
 		if (sortOption) {
 			const { sortKey, order } = sortOption;
-			const sortOrder = order === "asc" ? 1 : -1;
+			const sortOrder = order === 'asc' ? 1 : -1;
 
 			filtered.sort((a: BoardGame, b: BoardGame) => {
 				let valA = getProperty(a, sortKey as string);
 				let valB = getProperty(b, sortKey as string);
 
-				// Bepaal standaard/fallback waarden voor sorteren op null/undefined
-				// Lagere waarden komen eerst bij 'asc', hogere waarden bij 'desc'
-				const nullValAsc =
-					typeof getProperty(a, sortKey as string) === "number" ||
-					typeof getProperty(b, sortKey as string) === "number"
-						? Infinity
-						: "zzzzzzz"; // Hoge waarde voor nummers/strings bij asc
-				const nullValDesc =
-					typeof getProperty(a, sortKey as string) === "number" ||
-					typeof getProperty(b, sortKey as string) === "number"
-						? -Infinity
-						: ""; // Lage waarde voor nummers/strings bij desc
-
-				const fallback = order === "asc" ? nullValAsc : nullValDesc;
+				const nullValAsc = typeof getProperty(a, sortKey as string) === 'number' || typeof getProperty(b, sortKey as string) === 'number' ? Infinity : 'zzzzzzz';
+				const nullValDesc = typeof getProperty(a, sortKey as string) === 'number' || typeof getProperty(b, sortKey as string) === 'number' ? -Infinity : '';
+				const fallback = order === 'asc' ? nullValAsc : nullValDesc;
 
 				valA = valA ?? fallback;
 				valB = valB ?? fallback;
 
 				let comparison = 0;
-				if (typeof valA === "string" && typeof valB === "string") {
+				if (typeof valA === 'string' && typeof valB === 'string') {
 					comparison = valA.localeCompare(valB);
-				} else if (typeof valA === "number" && typeof valB === "number") {
+				} else if (typeof valA === 'number' && typeof valB === 'number') {
 					comparison = valA - valB;
 				} else {
-					// Fallback voor gemixte types (probeer te vergelijken)
 					if (String(valA) < String(valB)) comparison = -1;
 					if (String(valA) > String(valB)) comparison = 1;
 				}
 
-				// Fallback sortering op naam als primaire sortering gelijk is
-				if (comparison === 0 && sortKey !== "name") {
-					const nameA = a.name || "";
-					const nameB = b.name || "";
+				if (comparison === 0 && sortKey !== 'name') {
+					const nameA = a.name || '';
+					const nameB = b.name || '';
 					return nameA.localeCompare(nameB);
 				}
 
@@ -239,7 +196,6 @@
 		return filtered;
 	}
 
-	// --- Event Handlers ---
 	function handleSortClick(id: string) {
 		currentSortId = id;
 	}
@@ -247,35 +203,25 @@
 	function handlePlayerInputChange(event: Event) {
 		const value = (event.target as HTMLInputElement).value;
 		selectedPlayers = value ? parseInt(value, 10) : null;
-		if (selectedPlayers !== null && selectedPlayers < 1) selectedPlayers = 1; // Min 1 speler
-		// Reset 'Best with' als aantal spelers wordt gewist
+		if (selectedPlayers !== null && selectedPlayers < 1) selectedPlayers = 1;
 		if (selectedPlayers === null) {
 			filterBestWith = false;
 		}
 	}
 
 	function handleSliderChange(
-		type: "minTime" | "maxTime" | "minWeight" | "maxWeight",
-		event: Event,
+		type: 'minTime' | 'maxTime' | 'minWeight' | 'maxWeight',
+		event: Event
 	) {
 		const value = parseFloat((event.target as HTMLInputElement).value);
 		switch (type) {
-			case "minTime":
-				minPlaytime = value;
-				break;
-			case "maxTime":
-				maxPlaytime = value;
-				break;
-			case "minWeight":
-				minWeight = value;
-				break;
-			case "maxWeight":
-				maxWeight = value;
-				break;
+			case 'minTime': minPlaytime = value; break;
+			case 'maxTime': maxPlaytime = value; break;
+			case 'minWeight': minWeight = value; break;
+			case 'maxWeight': maxWeight = value; break;
 		}
 	}
 
-	// Zorg dat max slider niet kleiner is dan min slider
 	$: if (maxPlaytime < minPlaytime) maxPlaytime = minPlaytime;
 	$: if (maxWeight < minWeight) maxWeight = minWeight;
 </script>
@@ -342,7 +288,7 @@
 					max={MAX_PLAYTIME_DISPLAY}
 					step="15"
 					value={minPlaytime}
-					on:input={(e) => handleSliderChange("minTime", e)}
+					on:input={(e) => handleSliderChange('minTime', e)}
 					class="w-full accent-blue-600 slider-range focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
 				/>
 			</div>
@@ -357,7 +303,7 @@
 					max={MAX_PLAYTIME_DISPLAY}
 					step="15"
 					value={maxPlaytime}
-					on:input={(e) => handleSliderChange("maxTime", e)}
+					on:input={(e) => handleSliderChange('maxTime', e)}
 					class="w-full accent-blue-600 slider-range focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
 				/>
 			</div>
@@ -376,7 +322,7 @@
 					max={MAX_WEIGHT}
 					step="0.1"
 					value={minWeight}
-					on:input={(e) => handleSliderChange("minWeight", e)}
+					on:input={(e) => handleSliderChange('minWeight', e)}
 					class="w-full accent-red-600 slider-range focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
 				/>
 			</div>
@@ -391,7 +337,7 @@
 					max={MAX_WEIGHT}
 					step="0.1"
 					value={maxWeight}
-					on:input={(e) => handleSliderChange("maxWeight", e)}
+					on:input={(e) => handleSliderChange('maxWeight', e)}
 					class="w-full accent-red-600 slider-range focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
 				/>
 			</div>
@@ -462,28 +408,27 @@
 {/if}
 
 <style>
-	/* Basis styling voor range inputs */
 	.slider-range {
 		-webkit-appearance: none;
 		appearance: none;
 		width: 100%;
-		height: 8px; /* Hoogte van de track */
-		background: #e5e7eb; /* Lichte track kleur */
+		height: 8px;
+		background: #e5e7eb;
 		border-radius: 5px;
 		outline: none;
 		cursor: pointer;
 		transition: background 0.2s ease-in-out;
 	}
 	:global(html.dark) .slider-range {
-		background: #4b5563; /* Donkere track kleur */
+		background: #4b5563;
 	}
 
 	.slider-range::-webkit-slider-thumb {
 		-webkit-appearance: none;
 		appearance: none;
-		width: 16px; /* Grootte van de thumb */
+		width: 16px;
 		height: 16px;
-		background: currentColor; /* Gebruikt accent-* kleur van parent */
+		background: currentColor;
 		border-radius: 50%;
 		cursor: pointer;
 	}
@@ -496,6 +441,4 @@
 		cursor: pointer;
 		border: none;
 	}
-
-	/* Focus state wordt nu via Tailwind classes opgelost */
 </style>
