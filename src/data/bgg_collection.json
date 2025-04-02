@@ -668,6 +668,90 @@
       "best_with_players": null
     },
     {
+      "id": "433231",
+      "name": "Carcassonne: 4 Seasons – The Autumn",
+      "yearpublished": 2024,
+      "image": "https://cf.geekdo-images.com/8GbaE-TOpGRrHN0wbeggnA__original/img/klXAeHBF3hzwhC6FAgSOEZN68gU=/0x0/filters:format(jpeg)/pic8575694.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/8GbaE-TOpGRrHN0wbeggnA__thumb/img/T7_gi3UE9739c3pFVaoDwSofZvo=/fit-in/200x150/filters:strip_icc()/pic8575694.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:36"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 8.78571,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Map Addition",
+        "Pattern Recognition",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "420726",
+      "name": "Carcassonne: 4 Seasons – The Spring",
+      "yearpublished": 2024,
+      "image": "https://cf.geekdo-images.com/iQ0aquZSDLFQ19yopTnNDQ__original/img/lfWUdyU_5AkwBAa1shEmRGXhLnk=/0x0/filters:format(jpeg)/pic8189420.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/iQ0aquZSDLFQ19yopTnNDQ__thumb/img/TJzfhwesaCS874ZRtCrm-w-0aOo=/fit-in/200x150/filters:strip_icc()/pic8189420.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:08"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 6.61765,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Map Addition",
+        "Pattern Recognition",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
       "id": "206940",
       "name": "Carcassonne: Amazonas",
       "yearpublished": 2016,
@@ -746,6 +830,46 @@
       "best_with_players": null
     },
     {
+      "id": "263941",
+      "name": "Carcassonne: Bonusplättchen Spiel 2018",
+      "yearpublished": 2018,
+      "image": "https://cf.geekdo-images.com/Jmdlyj8iaivVnDLUAya8iw__original/img/sa1kUHhTDNnod-lTfVRMO3JqZ7s=/0x0/filters:format(jpeg)/pic4379892.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/Jmdlyj8iaivVnDLUAya8iw__thumb/img/4FAPXRZ_r99zSmix7aGtfrzUwDI=/fit-in/200x150/filters:strip_icc()/pic4379892.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:39"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 2.0,
+      "rating": null,
+      "average_rating": 6.73333,
+      "categories": [
+        "City Building",
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
       "id": "321496",
       "name": "Carcassonne: Bonusplättchen Spiel 2020",
       "yearpublished": 2020,
@@ -785,6 +909,45 @@
       "best_with_players": "2"
     },
     {
+      "id": "349121",
+      "name": "Carcassonne: Bonusplättchen Spiel 2021",
+      "yearpublished": 2021,
+      "image": "https://cf.geekdo-images.com/QwBpZzvxxYL0avESe_nciA__original/img/WFzIZnXGLM8QlPgD0R20SjdF1lE=/0x0/filters:format(jpeg)/pic6450356.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/QwBpZzvxxYL0avESe_nciA__thumb/img/Dgbvnf25xrVy5KV5KnoWjZG1yYw=/fit-in/200x150/filters:strip_icc()/pic6450356.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:54"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.7069,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
       "id": "372334",
       "name": "Carcassonne: Bonusplättchen Spiel 2022",
       "yearpublished": 2022,
@@ -815,6 +978,113 @@
         "Expansion for Base-game",
         "City Building",
         "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "402965",
+      "name": "Carcassonne: Bonusplättchen Spiel 2023",
+      "yearpublished": 2023,
+      "image": "https://cf.geekdo-images.com/DConeOhqsdPwA7gAtuWNdg__original/img/tcKdBNvChg8e1daeCBvSHEZ2iH4=/0x0/filters:format(jpeg)/pic7779629.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/DConeOhqsdPwA7gAtuWNdg__thumb/img/WQAQZbDuZdlMhOznJUMCF-1lKzQ=/fit-in/200x150/filters:strip_icc()/pic7779629.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:02"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.37037,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "430140",
+      "name": "Carcassonne: Bonusplättchen Spiel 2024",
+      "yearpublished": 2024,
+      "image": "https://cf.geekdo-images.com/VHZZyKlIq594PeA44hoH7w__original/img/I46bEsATGRpqv7fWOeybggSym84=/0x0/filters:format(jpeg)/pic8461763.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/VHZZyKlIq594PeA44hoH7w__thumb/img/dOxj4TfO5jOXAdW2sk39Z2RN658=/fit-in/200x150/filters:strip_icc()/pic8461763.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:20"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.9,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "232336",
+      "name": "Carcassonne: CutCassonne",
+      "yearpublished": 2014,
+      "image": "https://cf.geekdo-images.com/Qs1QvrBk3U68d3y8vavcQw__original/img/jc7JslsjHm9bB5viuIn70QPMy5M=/0x0/filters:format(jpeg)/pic3781348.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/Qs1QvrBk3U68d3y8vavcQw__thumb/img/TeBMP1HZNS7rG6XO76e5ETq42k4=/fit-in/200x150/filters:strip_icc()/pic3781348.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:30"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 3,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.25,
+      "categories": [
+        "City Building",
+        "Expansion for Base-game",
+        "Medieval"
       ],
       "mechanics": [
         "Area Majority / Influence",
@@ -863,6 +1133,46 @@
       "best_with_players": "2"
     },
     {
+      "id": "2993",
+      "name": "Carcassonne: Expansion 1 – Inns & Cathedrals",
+      "yearpublished": 2002,
+      "image": "https://cf.geekdo-images.com/g9q--tONTL86x2D4NKiM8g__original/img/r3cKL28WlWl1jNGzetER6B8A5hM=/0x0/filters:format(jpeg)/pic2659943.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/g9q--tONTL86x2D4NKiM8g__thumb/img/opBzVTp4iK4LfozCr3doTYGwTHE=/fit-in/200x150/filters:strip_icc()/pic2659943.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:03:33"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 8,
+      "weight": 1.9265,
+      "rating": null,
+      "average_rating": 7.63889,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
+    },
+    {
       "id": "217006",
       "name": "Carcassonne: Expansion 10 – Under the Big Top",
       "yearpublished": 2017,
@@ -900,6 +1210,48 @@
       ],
       "is_expansion": true,
       "best_with_players": "3"
+    },
+    {
+      "id": "5405",
+      "name": "Carcassonne: Expansion 2 – Traders & Builders",
+      "yearpublished": 2003,
+      "image": "https://cf.geekdo-images.com/BaBb91gSf9Lu7CA0Pa9sOg__original/img/NHZlKCrmmNLzmN8k5X4UAjfRWMI=/0x0/filters:format(jpeg)/pic2659946.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/BaBb91gSf9Lu7CA0Pa9sOg__thumb/img/wKxqmMudEz0HaM7MEDKLbTVa1qE=/fit-in/200x150/filters:strip_icc()/pic2659946.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:03:36"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 60,
+      "minplaytime": 60,
+      "maxplaytime": 60,
+      "minage": 13,
+      "weight": 2.0581,
+      "rating": null,
+      "average_rating": 7.61801,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Kill Steal",
+        "Set Collection",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
     },
     {
       "id": "15158",
@@ -1184,6 +1536,45 @@
       "best_with_players": "2"
     },
     {
+      "id": "130998",
+      "name": "Carcassonne: Little Buildings",
+      "yearpublished": 2012,
+      "image": "https://cf.geekdo-images.com/xLBgLz5b7AEU0bRDH8dm1w__original/img/tcKzUKNjTm0Ub4jB_hYuYm_0Q6k=/0x0/filters:format(jpeg)/pic1443354.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/xLBgLz5b7AEU0bRDH8dm1w__thumb/img/IEnJ_Bx44_BTE-YLqeDDqh-rocw=/fit-in/200x150/filters:strip_icc()/pic1443354.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:04:46"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 8,
+      "weight": 1.8333,
+      "rating": null,
+      "average_rating": 6.36733,
+      "categories": [
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
       "id": "256065",
       "name": "Carcassonne: Safari",
       "yearpublished": 2018,
@@ -1219,6 +1610,197 @@
       ],
       "is_expansion": false,
       "best_with_players": "4"
+    },
+    {
+      "id": "420727",
+      "name": "Carcassonne: Snakes and Ladders",
+      "yearpublished": 2024,
+      "image": "https://cf.geekdo-images.com/oyE5ix7-sIkBu5Pe7sG4FA__original/img/72MSfi9Zt_qxpiOw70HJtlU55_I=/0x0/filters:format(jpeg)/pic8189422.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/oyE5ix7-sIkBu5Pe7sG4FA__thumb/img/Sy7f4bBBBQ7NFUIaHRwfyTnEjOQ=/fit-in/200x150/filters:strip_icc()/pic8189422.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:11"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 7,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 6.28125,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Map Addition",
+        "Pattern Recognition",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "331479",
+      "name": "Carcassonne: Spiel Doch! Expansion",
+      "yearpublished": 2018,
+      "image": "https://cf.geekdo-images.com/OLO7WugnmOXGn8sQfWYr4A__original/img/RkZ8i2Q92gcdY2JNaia5uxAMRUM=/0x0/filters:format(jpeg)/pic5998634.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/OLO7WugnmOXGn8sQfWYr4A__thumb/img/82wa-9xfhmXi9i24mEKP0jvE-VA=/fit-in/200x150/filters:strip_icc()/pic5998634.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:14"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 35,
+      "minplaytime": 35,
+      "maxplaytime": 35,
+      "minage": 8,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.26667,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "186144",
+      "name": "Carcassonne: Starttableau",
+      "yearpublished": 2015,
+      "image": "https://cf.geekdo-images.com/cjviDzHzs6sZUxe5KrKcvQ__original/img/DI1XBw9zcxFdkXkXdyLRJy05Lwc=/0x0/filters:format(jpeg)/pic2833949.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/cjviDzHzs6sZUxe5KrKcvQ__thumb/img/zbbdgQDzRWoay9XYbd8jVp7okgo=/fit-in/200x150/filters:strip_icc()/pic2833949.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:41"
+      },
+      "numplays": 0,
+      "minplayers": 0,
+      "maxplayers": 0,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.65,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "262563",
+      "name": "Carcassonne: The Barber-Surgeons",
+      "yearpublished": 2018,
+      "image": "https://cf.geekdo-images.com/g2IY3EQFq_-Xr0r9tocYAg__original/img/objcDqaZuNUsdT6fAyjG5ANl5Cw=/0x0/filters:format(png)/pic4348023.png",
+      "thumbnail": "https://cf.geekdo-images.com/g2IY3EQFq_-Xr0r9tocYAg__thumb/img/QuJgc1E6wOYsdmdN3Twwh3S1_rQ=/fit-in/200x150/filters:strip_icc()/pic4348023.png",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:08"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 2.3333,
+      "rating": null,
+      "average_rating": 6.61271,
+      "categories": [
+        "City Building",
+        "Expansion for Base-game",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
+      "id": "372858",
+      "name": "Carcassonne: The Bets",
+      "yearpublished": 2022,
+      "image": "https://cf.geekdo-images.com/FXR-RrhEworbmdmuG365bA__original/img/Za6-ikiCOWUEG8--C8uXiPQKJY0=/0x0/filters:format(jpeg)/pic7808290.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/FXR-RrhEworbmdmuG365bA__thumb/img/URmp_BJqOOY6_4e9-VkRuSsyCnI=/fit-in/200x150/filters:strip_icc()/pic7808290.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:50"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 6.7825,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
     },
     {
       "id": "7717",
@@ -1260,6 +1842,82 @@
       "best_with_players": "2"
     },
     {
+      "id": "406740",
+      "name": "Carcassonne: The Drawbridges",
+      "yearpublished": 2023,
+      "image": "https://cf.geekdo-images.com/a61-oE5fDPHNZe3Yy0orJA__original/img/v_01nuLSJzhOcwfKmFN19s-ur8Q=/0x0/filters:format(jpeg)/pic7869094.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/a61-oE5fDPHNZe3Yy0orJA__thumb/img/ODhNfHjNzPw6nIfWWptEuy8nh94=/fit-in/200x150/filters:strip_icc()/pic7869094.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:00"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.49655,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "235057",
+      "name": "Carcassonne: The Markets of Leipzig",
+      "yearpublished": 2017,
+      "image": "https://cf.geekdo-images.com/EQFDnugwFGvemvSQygeDZQ__original/img/xINoyLbzoXoqXgvbLYbY2bP3KV0=/0x0/filters:format(jpeg)/pic3801318.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/EQFDnugwFGvemvSQygeDZQ__thumb/img/oaI0FXDrK_YHlMvTZB1cDLXmx3I=/fit-in/200x150/filters:strip_icc()/pic3801318.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:12"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 6,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 2.0,
+      "rating": null,
+      "average_rating": 7.1224,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
       "id": "104634",
       "name": "Carcassonne: The School",
       "yearpublished": 2011,
@@ -1297,6 +1955,156 @@
         "Tile Placement"
       ],
       "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
+      "id": "291517",
+      "name": "Carcassonne: The Tollkeepers",
+      "yearpublished": 2019,
+      "image": "https://cf.geekdo-images.com/VMdm1GY9WXfrKQBPJBF8AQ__original/img/9I8uHZphoflmhjjk0ZJ11kmvopY=/0x0/filters:format(jpeg)/pic4995704.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/VMdm1GY9WXfrKQBPJBF8AQ__thumb/img/0AdZbMW3tEz-6Tf_ldQ5MMcNLR0=/fit-in/200x150/filters:strip_icc()/pic4995704.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:21"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 8,
+      "weight": 2.0,
+      "rating": null,
+      "average_rating": 6.95686,
+      "categories": [
+        "City Building",
+        "Expansion for Base-game",
+        "Medieval"
+      ],
+      "mechanics": [
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
+      "id": "428459",
+      "name": "Carcassonne: The Wonders of Humanity Set II",
+      "yearpublished": 2024,
+      "image": "https://cf.geekdo-images.com/bNRaXSQOlevd0PFYNPYX1A__original/img/7JAvKfPtvDVYFBzmoLEeBkmmWbI=/0x0/filters:format(jpeg)/pic8437450.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/bNRaXSQOlevd0PFYNPYX1A__thumb/img/RkqsNkFK07Q3emY05iGTjlqGHy0=/fit-in/200x150/filters:strip_icc()/pic8437450.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:06:26"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 0,
+      "minplaytime": 0,
+      "maxplaytime": 0,
+      "minage": 0,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 7.8,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "372336",
+      "name": "Carcassonne: Ukraine Promo Tile",
+      "yearpublished": 2022,
+      "image": "https://cf.geekdo-images.com/RcVWUqkE8WFIJRguYzFmLg__original/img/ETWLrGUkME62mnm7n6xqX04FbTU=/0x0/filters:format(png)/pic7112998.png",
+      "thumbnail": "https://cf.geekdo-images.com/RcVWUqkE8WFIJRguYzFmLg__thumb/img/UKmwBsnbA2RBFdukWBmw6VB54kE=/fit-in/200x150/filters:strip_icc()/pic7112998.png",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:05:30"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 0.0,
+      "rating": null,
+      "average_rating": 8.3481,
+      "categories": [
+        "Expansion for Base-game",
+        "City Building",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": true,
+      "best_with_players": null
+    },
+    {
+      "id": "45748",
+      "name": "Carcassonne: Wheel of Fortune",
+      "yearpublished": 2009,
+      "image": "https://cf.geekdo-images.com/iMohFrlsPRNWb63oXsUplw__original/img/h2T8yfvTcBDC8OyVi6hf2G3eTys=/0x0/filters:format(jpeg)/pic587442.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/iMohFrlsPRNWb63oXsUplw__thumb/img/UkOlzsNaXwdDAQiDsP-IFda3Y1s=/fit-in/200x150/filters:strip_icc()/pic587442.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:04:15"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 5,
+      "playingtime": 30,
+      "minplaytime": 30,
+      "maxplaytime": 30,
+      "minage": 8,
+      "weight": 2.0448,
+      "rating": null,
+      "average_rating": 6.99954,
+      "categories": [
+        "City Building",
+        "Medieval",
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Tile Placement"
+      ],
+      "is_expansion": false,
       "best_with_players": "2"
     },
     {
@@ -1724,6 +2532,49 @@
       "best_with_players": "5"
     },
     {
+      "id": "193738",
+      "name": "Great Western Trail",
+      "yearpublished": 2016,
+      "image": "https://cf.geekdo-images.com/u1l0gH7sb_vnvDvoO_QHqA__original/img/2zv_XMQoPFWk9Dn0oS4JY1IeFzw=/0x0/filters:format(jpeg)/pic4887376.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/u1l0gH7sb_vnvDvoO_QHqA__thumb/img/9lxFidyDb8j6D1vobx4e3UwZ-FI=/fit-in/200x150/filters:strip_icc()/pic4887376.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-02 04:02:13"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 150,
+      "minplaytime": 75,
+      "maxplaytime": 150,
+      "minage": 12,
+      "weight": 3.6986,
+      "rating": null,
+      "average_rating": 8.17047,
+      "categories": [
+        "American West",
+        "Animals",
+        "Economic"
+      ],
+      "mechanics": [
+        "Deck, Bag, and Pool Building",
+        "Hand Management",
+        "Ownership",
+        "Set Collection",
+        "Track Movement",
+        "Variable Set-up"
+      ],
+      "is_expansion": false,
+      "best_with_players": "3"
+    },
+    {
       "id": "366013",
       "name": "Heat: Pedal to the Metal",
       "yearpublished": 2022,
@@ -2044,52 +2895,6 @@
         "Secret Unit Deployment",
         "Team-Based Game",
         "Variable Player Powers"
-      ],
-      "is_expansion": false,
-      "best_with_players": "4"
-    },
-    {
-      "id": "107529",
-      "name": "Kingdom Builder",
-      "yearpublished": 2011,
-      "image": "https://cf.geekdo-images.com/kJOP_BICVX-88sKqFRh9PQ__original/img/2m6YJhA3JbYe1cNhybRtFJrRECw=/0x0/filters:format(jpeg)/pic1152359.jpg",
-      "thumbnail": "https://cf.geekdo-images.com/kJOP_BICVX-88sKqFRh9PQ__thumb/img/KwrWpSRncnCE0cEldldyVQ-0Cdk=/fit-in/200x150/filters:strip_icc()/pic1152359.jpg",
-      "status": {
-        "own": true,
-        "prevowned": false,
-        "fortrade": false,
-        "want": false,
-        "wanttoplay": false,
-        "wanttobuy": false,
-        "wishlist": false,
-        "preordered": false,
-        "lastmodified": "2024-01-23 05:44:17"
-      },
-      "numplays": 18,
-      "minplayers": 2,
-      "maxplayers": 4,
-      "playingtime": 45,
-      "minplaytime": 45,
-      "maxplaytime": 45,
-      "minage": 8,
-      "weight": 2.0654,
-      "rating": null,
-      "average_rating": 6.93711,
-      "categories": [
-        "Medieval",
-        "Territory Building"
-      ],
-      "mechanics": [
-        "Area Majority / Influence",
-        "Chaining",
-        "Enclosure",
-        "Grid Movement",
-        "Hexagon Grid",
-        "Modular Board",
-        "Network and Route Building",
-        "Pattern Building",
-        "Tile Placement",
-        "Variable Set-up"
       ],
       "is_expansion": false,
       "best_with_players": "4"
