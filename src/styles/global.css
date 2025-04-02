@@ -2,6 +2,7 @@
    1) Tailwind & configuratie
 -------------------------------------- */
 @import "tailwindcss";
+@import "nouislider/dist/nouislider.css";
 /* config for tailwindcss-typography plugin */
 @config "../../tailwind.config.ts";
 
