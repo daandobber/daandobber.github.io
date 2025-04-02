@@ -1,4 +1,3 @@
-# fetch_bgg_collection.py
 import os
 import requests
 import xml.etree.ElementTree as ET
@@ -8,22 +7,17 @@ import sys
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# --- Configuratie ---
 BGG_USERNAME = os.environ.get("BGG_USERNAME")
 OUTPUT_DIR = os.path.join("src", "data")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "bgg_collection.json")
 API_BASE_URL = "https://boardgamegeek.com/xmlapi2"
-# --- BELANGRIJK: Details ophalen is NU NODIG voor correcte expansie detectie ---
-FETCH_DETAILS = True # MOET True zijn om expansies betrouwbaar te identificeren
-# ----------------------------------------------------------------------------
+FETCH_DETAILS = True
 REQUEST_TIMEOUT = 60
 RETRY_ATTEMPTS = 5
 RETRY_BACKOFF = 1
 BATCH_SIZE = 10
 SLEEP_BETWEEN_BATCHES = 5
 
-# --- Helper Functies ---
-# (Deze functies blijven hetzelfde als voorheen)
 def requests_retry_session(
     retries=RETRY_ATTEMPTS,
     backoff_factor=RETRY_BACKOFF,
@@ -81,7 +75,6 @@ def get_best_with_players(poll):
             continue
     return best_numplayers if best_votes > 0 else None
 
-# --- Hoofd Logica ---
 def main():
     if not BGG_USERNAME:
         print("Fout: BGG_USERNAME omgevingsvariabele is niet ingesteld!")
@@ -89,8 +82,6 @@ def main():
 
     print(f"--- Start BGG Collectie Fetch voor gebruiker: {BGG_USERNAME} ---")
 
-    # --- Definitieve Aanpak: Simpele /collection call ---
-    # Haal ALLE 'owned' items op, ongeacht subtype in deze call.
     collection_params = {
         "username": BGG_USERNAME,
         "own": "1"
@@ -139,24 +130,20 @@ def main():
          print("  Geen items met status 'owned'=1 gevonden. Controleer gebruikersnaam en BGG-instellingen.")
          processed_games = [] # Lege lijst
     else:
-        # --- Stap 2: Detail ophalen (MOET AAN STAAN: FETCH_DETAILS = True) ---
         game_ids = [item.get('objectid') for item in game_items if item.get('objectid')]
         detailed_games_data = {}
 
         if not FETCH_DETAILS:
              print("!!! WAARSCHUWING: FETCH_DETAILS staat op False.")
              print("!!! Expansie detectie en gedetailleerde stats zullen ONBETROUWBAAR of LEEG zijn.")
-             # Optioneel: hier stoppen of doorgaan met beperkte data
-             # sys.exit(1) # Uncomment om te stoppen als details essentieel zijn
 
         if FETCH_DETAILS and game_ids:
             print(f"Stap 2: Ophalen details voor {len(game_ids)} spellen in batches van {BATCH_SIZE}...")
-            # (Logica voor batch ophalen blijft hetzelfde als in de vorige versie)
             for i in range(0, len(game_ids), BATCH_SIZE):
                 batch_ids = game_ids[i:i+BATCH_SIZE]
                 ids_str = ",".join(batch_ids)
                 details_url = f"{API_BASE_URL}/thing"
-                details_params = {"id": ids_str, "stats": "1"} # Haal stats op bij /thing
+                details_params = {"id": ids_str, "stats": "1"}
                 current_batch_num = i // BATCH_SIZE + 1
                 total_batches = (len(game_ids) + BATCH_SIZE - 1) // BATCH_SIZE
                 print(f"  Batch {current_batch_num}/{total_batches}: Ophalen details via {details_url} (met stats=1)...")
@@ -179,8 +166,6 @@ def main():
                          time.sleep(SLEEP_BETWEEN_BATCHES)
             print("  Details ophalen voltooid.")
 
-
-        # --- Stap 3: Verwerken en combineren ---
         print("Stap 3: Verwerken en combineren van data...")
         processed_games = []
         skipped_invalid_type_count = 0
@@ -192,7 +177,6 @@ def main():
 
             detailed_item = detailed_games_data.get(game_id) # Zoek de bijbehorende detail data
 
-            # --- Definitieve Expansie Detectie ---
             is_expansion = False # Standaard: geen expansie
             item_type = None
             if detailed_item is not None:
@@ -200,19 +184,11 @@ def main():
                  if item_type == 'boardgameexpansion':
                      is_expansion = True
                  elif item_type != 'boardgame':
-                      # Sla items over die geen boardgame of boardgameexpansion zijn volgens /thing
-                      # print(f"  Skipping item {game_id} with type '{item_type}' found in /thing data.")
                       skipped_invalid_type_count += 1
                       continue
             elif FETCH_DETAILS:
-                 # Details ZOUDEN er moeten zijn, maar ontbreken (bv. API error bij ophalen)
-                 # We kunnen hier niet betrouwbaar bepalen of het een expansie is.
-                 # Standaard blijft is_expansion = False. Log dit eventueel.
                  missing_details_count += 1
-                 # print(f"  Waarschuwing: Ontbrekende detail data voor {game_id}. Kan expansie status niet betrouwbaar bepalen.")
-            # -------------------------------------
 
-            # Basis info uit /collection call (kan stats missen)
             game_data = {
                 "id": game_id,
                 "name": get_value(item, 'name', default="Unknown Name"),
@@ -232,13 +208,11 @@ def main():
                  game_data["status"] = { attr: status_node.get(attr) == '1' for attr in status_node.attrib if attr not in ['lastmodified'] }
                  game_data["status"]["lastmodified"] = status_node.get('lastmodified')
 
-            # Haal rating uit /collection stats ALS die er zijn (waren niet opgevraagd in deze versie)
             stats_element_orig = item.find('stats')
             if stats_element_orig:
                 rating_node_orig = stats_element_orig.find('rating')
                 game_data['rating'] = float(rating_node_orig.get('value', 0.0)) if rating_node_orig is not None and rating_node_orig.get('value') != 'N/A' else None
 
-            # Vul/overschrijf met /thing data
             if detailed_item:
                 game_data.update({
                      "name": get_value(detailed_item.find('./name[@type="primary"]'), 'value', default=game_data['name']),
@@ -266,7 +240,6 @@ def main():
             if not game_data["playingtime"] and game_data["minplaytime"] and game_data["maxplaytime"]:
                 game_data["playingtime"] = game_data["maxplaytime"]
 
-            # Opschonen data types
             for key in ["yearpublished", "minplayers", "maxplayers", "playingtime", "minplaytime", "maxplaytime", "minage", "weight", "rating", "average_rating"]:
                  if game_data[key] is not None:
                       try:
@@ -280,8 +253,6 @@ def main():
         if missing_details_count > 0: print(f"  {missing_details_count} items misten detail data (mogelijk foute expansie status).")
         print(f"  Totaal {len(processed_games)} spellen verwerkt en toegevoegd aan JSON.")
 
-
-    # --- Stap 4: Opslaan als JSON ---
     print(f"Stap 4: Opslaan van data naar {OUTPUT_FILE}")
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     try:
