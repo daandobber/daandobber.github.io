@@ -1,65 +1,50 @@
-# .github/workflows/fetch-data.yml (of een andere naam naar wens)
-
-name: Fetch Collection Data Daily # Naam aangepast naar algemener
+name: Fetch Collection Data Daily
 
 on:
   schedule:
-    # Draait elke dag om 05:00 UTC (pas eventueel aan naar wens)
-    # Voorbeeld: '0 7 * * *' voor 07:00 UTC (is 8:00 of 9:00 Nederlandse tijd, afh. van zomer/wintertijd)
-    # Actuele tijd in NL (zomer): 05:00 UTC = 07:00 CEST
     - cron: '0 5 * * *'
-  workflow_dispatch: # Maakt handmatig draaien mogelijk via de Actions tab
+  workflow_dispatch:
 
 jobs:
   fetch-and-update:
-    runs-on: ubuntu-latest # Gebruik een standaard Linux runner
+    runs-on: ubuntu-latest
     permissions:
-      contents: write # Geef toestemming om code te committen/pushen
+      contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Haalt je code op
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x' # Gebruik een recente Python 3 versie
+          python-version: '3.x'
 
       - name: Install Python dependencies
-        # Installeer de benodigde library(s). requests is nodig voor beide.
-        # Als je BGG script andere libs nodig heeft (bv. xmltodict), voeg ze hier toe.
         run: pip install requests
 
-      # --- Stap voor Discogs ---
       - name: Run Python script to fetch Discogs data
         env:
-          # Geef de secrets door als omgevingsvariabelen aan het script
           DISCOGS_TOKEN: ${{ secrets.DISCOGS_TOKEN }}
           DISCOGS_USERNAME: ${{ secrets.DISCOGS_USERNAME }}
-        # Gebruik het pad naar jouw Discogs script
         run: python scripts/Workspace_discogs.py
 
-      # --- NIEUWE Stap voor BoardGameGeek ---
       - name: Run Python script to fetch BGG data
         env:
-          # Geef het BGG secret door
           BGG_USERNAME: ${{ secrets.BGG_USERNAME }}
-        # BELANGRIJK: Pas het pad aan als je fetch_bgg_collection.py ergens anders hebt opgeslagen!
-        # Aanname: het staat in de root van je repository.
         run: python scripts/fetch_bgg_collection.py
 
-      # --- Commit & Push Stap (Aangepast) ---
+      - name: Run Python script to fetch Steam data
+        env:
+          STEAM_API_KEY: ${{ secrets.STEAM_API_KEY }}
+          STEAM_USER_ID: ${{ secrets.STEAM_USER_ID }}
+        run: python scripts/fetch_steam_library.py
+
       - name: Commit and push if data changed
-        # Gebruikt een action die het committen/pushen versimpelt
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # Aangepast commit bericht
-          commit_message: "chore: Update collection data (Discogs & BGG)"
-          # Aangepast file_pattern om BEIDE json bestanden te tracken
-          # Gebruik *.json als ALLEEN deze twee json bestanden in src/data staan.
-          # Anders, lijst ze expliciet op: 'src/data/cd_collection.json src/data/bgg_collection.json'
+          commit_message: "chore: Update collection data (Discogs, BGG & Steam)"
           file_pattern: "src/data/*.json"
-          commit_user_name: "GitHub Actions Bot" # Naam van de committer
-          commit_user_email: "actions@github.com" # E-mail van de committer
-          commit_author: "GitHub Actions Bot <actions@github.com>" # Auteur van de commit
-          # Voeg eventueel branch toe als je niet naar 'main' of 'master' pusht:
-          # branch: jouw-branch-naam
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
+          commit_author: "GitHub Actions Bot <actions@github.com>"
+          # branch: jouw-branch-naam # Optioneel
