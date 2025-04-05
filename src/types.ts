@@ -188,4 +188,24 @@ export interface BlueskyPost {
       type: 'images' | string;
       images?: { thumb: string; fullsize: string; alt: string }[];
     } | null;
+
   }
+
+  export interface SteamGame {
+	id: number;
+	name: string;
+	image?: string | null;
+	thumbnail?: string | null;
+	release_date?: string | null;
+	developers?: string[] | null;
+	publishers?: string[] | null;
+	metacritic_score?: number | null;
+	genres?: string[] | null;
+	categories?: string[] | null;
+	achieved_count: number;
+	total_achievements: number;
+	achievement_percentage: number | null;
+	last_achievement_unlock_time: number;
+	last_achievement_name: string | null;
+	last_achievement_icon: string | null;
+}

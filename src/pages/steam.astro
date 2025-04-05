@@ -1,0 +1,79 @@
+---
+import PageLayout from "@/layouts/Base.astro";
+import FilterSortSteamListWrapper from "@/components/FilterSortSteamListWrapper.svelte";
+import steamLibraryData from "@/data/steam_library.json";
+import type { SteamGame, SortOption, SiteMeta } from "@/types";
+import { parse } from "date-fns";
+
+const games: SteamGame[] = steamLibraryData?.games ?? [];
+
+const searchFields: string[] = ["name", "genres", "categories", "developers", "publishers"];
+
+function parseSteamDate(dateStr: string | null | undefined): Date | null {
+	if (!dateStr) return null;
+	try {
+		let parsedDate = parse(dateStr, "d MMM, yyyy", new Date());
+		if (!isNaN(parsedDate.getTime())) return parsedDate;
+		parsedDate = parse(dateStr, "MMM d, yyyy", new Date());
+		if (!isNaN(parsedDate.getTime())) return parsedDate;
+		parsedDate = parse(dateStr, "yyyy", new Date());
+		if (!isNaN(parsedDate.getTime())) return parsedDate;
+		return null;
+	} catch (e) {
+		return null;
+	}
+}
+
+const sortOptions: SortOption[] = [
+	{ id: "nameAZ", label: "Naam (A-Z)", order: "asc", sortKey: "name" },
+	{ id: "nameZA", label: "Naam (Z-A)", order: "desc", sortKey: "name" },
+	{
+		id: "releaseNewOld",
+		label: "Release (Nieuw-Oud)",
+		order: "desc",
+		sortKey: "release_date_parsed",
+	},
+	{
+		id: "releaseOldNew",
+		label: "Release (Oud-Nieuw)",
+		order: "asc",
+		sortKey: "release_date_parsed",
+	},
+	{
+		id: "metaHighLow",
+		label: "Metacritic (Hoog-Laag)",
+		order: "desc",
+		sortKey: "metacritic_score",
+	},
+	{ id: "metaLowHigh", label: "Metacritic (Laag-Hoog)", order: "asc", sortKey: "metacritic_score" },
+];
+
+const initialSortId: string = "nameAZ";
+
+const processedGames = games.map((game) => ({
+	...game,
+	release_date_parsed: parseSteamDate(game.release_date),
+}));
+
+const allGenres = [...new Set(processedGames.flatMap((game) => game.genres || []))].sort();
+const allCategories = [...new Set(processedGames.flatMap((game) => game.categories || []))].sort();
+
+const meta: SiteMeta = {
+	title: "Mijn Steam Library",
+	description: "Een doorzoekbaar en filterbaar overzicht van mijn Steam library.",
+};
+---
+
+<PageLayout meta={meta}>
+	<h1 class="title mb-6 text-2xl font-bold">Mijn Steam Library</h1>
+
+	<FilterSortSteamListWrapper
+		client:only="svelte"
+		items={processedGames}
+		searchFields={searchFields}
+		sortOptions={sortOptions}
+		initialSortId={initialSortId}
+		availableGenres={allGenres}
+		availableCategories={allCategories}
+	/>
+</PageLayout>
