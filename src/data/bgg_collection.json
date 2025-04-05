@@ -4062,6 +4062,45 @@
       "best_with_players": "2"
     },
     {
+      "id": "396545",
+      "name": "Sea Salt & Paper: Extra Salt",
+      "yearpublished": 2023,
+      "image": "https://cf.geekdo-images.com/9jDNDtPC0s-eATSWly8oEg__original/img/5PL-OXwTjbWiYiDCPdhJa5j_E8Q=/0x0/filters:format(jpeg)/pic7731597.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/9jDNDtPC0s-eATSWly8oEg__thumb/img/qGTssy-U4rf5zTilJPd3nl3c1Nk=/fit-in/200x150/filters:strip_icc()/pic7731597.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-05 02:34:11"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 45,
+      "minplaytime": 30,
+      "maxplaytime": 45,
+      "minage": 8,
+      "weight": 1.3846,
+      "rating": null,
+      "average_rating": 7.77722,
+      "categories": [
+        "Expansion for Base-game"
+      ],
+      "mechanics": [
+        "Hand Management",
+        "Melding and Splaying",
+        "Push Your Luck",
+        "Set Collection"
+      ],
+      "is_expansion": true,
+      "best_with_players": "2"
+    },
+    {
       "id": "329560",
       "name": "Skate: The Card Game",
       "yearpublished": 2021,
@@ -4140,6 +4179,48 @@
       ],
       "is_expansion": false,
       "best_with_players": "5"
+    },
+    {
+      "id": "298231",
+      "name": "Skyrise",
+      "yearpublished": 2024,
+      "image": "https://cf.geekdo-images.com/wQNNMPNOm43VMYPAPpJdEA__original/img/5sEsH50Uqyix2PZRz1apZ9FLnUk=/0x0/filters:format(jpeg)/pic8160197.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/wQNNMPNOm43VMYPAPpJdEA__thumb/img/PArq_lmmLFarfiGUZugKwr_3C8g=/fit-in/200x150/filters:strip_icc()/pic8160197.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-05 02:35:25"
+      },
+      "numplays": 0,
+      "minplayers": 2,
+      "maxplayers": 4,
+      "playingtime": 90,
+      "minplaytime": 30,
+      "maxplaytime": 90,
+      "minage": 14,
+      "weight": 2.2609,
+      "rating": null,
+      "average_rating": 7.75713,
+      "categories": [
+        "Territory Building"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Auction / Bidding",
+        "Constrained Bidding",
+        "End Game Bonuses",
+        "Modular Board",
+        "Set Collection",
+        "Variable Set-up"
+      ],
+      "is_expansion": false,
+      "best_with_players": "4"
     },
     {
       "id": "364073",
@@ -5072,6 +5153,102 @@
       ],
       "is_expansion": false,
       "best_with_players": "2"
+    },
+    {
+      "id": "363369",
+      "name": "Starship Captains",
+      "yearpublished": 2022,
+      "image": "https://cf.geekdo-images.com/7I__jIr66wVLeyZA2s1Whg__original/img/P5i05u_zS2_cN3QDH-ey80K-b3U=/0x0/filters:format(jpeg)/pic6878308.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/7I__jIr66wVLeyZA2s1Whg__thumb/img/7xO4UasL9l6z7aRbDTf65aLTAnE=/fit-in/200x150/filters:strip_icc()/pic6878308.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-05 02:33:50"
+      },
+      "numplays": 0,
+      "minplayers": 1,
+      "maxplayers": 4,
+      "playingtime": 100,
+      "minplaytime": 25,
+      "maxplaytime": 100,
+      "minage": 12,
+      "weight": 2.3636,
+      "rating": null,
+      "average_rating": 7.15761,
+      "categories": [
+        "Science Fiction",
+        "Space Exploration"
+      ],
+      "mechanics": [
+        "End Game Bonuses",
+        "Open Drafting",
+        "Solo / Solitaire Game",
+        "Turn Order: Progressive",
+        "Variable Set-up",
+        "Worker Placement, Different Worker Types"
+      ],
+      "is_expansion": false,
+      "best_with_players": "3"
+    },
+    {
+      "id": "286096",
+      "name": "Tapestry",
+      "yearpublished": 2019,
+      "image": "https://cf.geekdo-images.com/7kqDmkUMGxXHr1wNPA7Gvg__original/img/e6rS0PyrVlPpJjCsWPmCaGg9PXc=/0x0/filters:format(jpeg)/pic4884996.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/7kqDmkUMGxXHr1wNPA7Gvg__thumb/img/1najF3Bh3QI7k2c9sJeTXznbvPU=/fit-in/200x150/filters:strip_icc()/pic4884996.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-05 02:33:10"
+      },
+      "numplays": 38,
+      "minplayers": 1,
+      "maxplayers": 5,
+      "playingtime": 120,
+      "minplaytime": 90,
+      "maxplaytime": 120,
+      "minage": 12,
+      "weight": 2.9514,
+      "rating": null,
+      "average_rating": 7.44061,
+      "categories": [
+        "Civilization"
+      ],
+      "mechanics": [
+        "Area Majority / Influence",
+        "Contracts",
+        "Dice Rolling",
+        "Events",
+        "Grid Coverage",
+        "Hand Management",
+        "Hexagon Grid",
+        "Income",
+        "Map Addition",
+        "Once-Per-Game Abilities",
+        "Open Drafting",
+        "Push Your Luck",
+        "Solo / Solitaire Game",
+        "Square Grid",
+        "Take That",
+        "Tech Trees / Tech Tracks",
+        "Tile Placement",
+        "Variable Player Powers",
+        "Variable Set-up"
+      ],
+      "is_expansion": false,
+      "best_with_players": "3"
     },
     {
       "id": "315708",
