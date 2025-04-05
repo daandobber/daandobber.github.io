@@ -5074,6 +5074,49 @@
       "best_with_players": "2"
     },
     {
+      "id": "315708",
+      "name": "Tapestry: Plannen en Complotten",
+      "yearpublished": 2020,
+      "image": "https://cf.geekdo-images.com/bK6d6GP8kJp8k1jBos3phA__original/img/MF2Uxm1MiSq5PxivEiKllkTs4dQ=/0x0/filters:format(jpeg)/pic5592530.jpg",
+      "thumbnail": "https://cf.geekdo-images.com/bK6d6GP8kJp8k1jBos3phA__thumb/img/bmOfG7z9CwPMNTUiAQlbygjXGps=/fit-in/200x150/filters:strip_icc()/pic5592530.jpg",
+      "status": {
+        "own": true,
+        "prevowned": false,
+        "fortrade": false,
+        "want": false,
+        "wanttoplay": false,
+        "wanttobuy": false,
+        "wishlist": false,
+        "preordered": false,
+        "lastmodified": "2025-04-05 01:54:00"
+      },
+      "numplays": 0,
+      "minplayers": 1,
+      "maxplayers": 5,
+      "playingtime": 120,
+      "minplaytime": 90,
+      "maxplaytime": 120,
+      "minage": 12,
+      "weight": 2.931,
+      "rating": null,
+      "average_rating": 8.112,
+      "categories": [
+        "Expansion for Base-game",
+        "Civilization"
+      ],
+      "mechanics": [
+        "Dice Rolling",
+        "Hand Management",
+        "Hexagon Grid",
+        "Solo / Solitaire Game",
+        "Tech Trees / Tech Tracks",
+        "Tile Placement",
+        "Variable Player Powers"
+      ],
+      "is_expansion": true,
+      "best_with_players": "3"
+    },
+    {
       "id": "118048",
       "name": "Targi",
       "yearpublished": 2012,
