@@ -1,63 +1,44 @@
 ---
-const { collectionData } = Astro.props;
+import PageLayout from "@/layouts/Base.astro";
+import FilterSortListWrapper from "@/components/FilterSortListWrapper.svelte";
+import cdCollectionData from "@/data/cd_collection.json";
+import type { Release, SortOption, SiteMeta } from "@/types";
+
+const releases: Release[] = cdCollectionData?.releases ?? [];
+
+const searchFields: string[] = ["basic_information.title", "basic_information.artists.name"];
+
+const sortOptions: SortOption[] = [
+	{ id: "artistAZ", label: "Artiest (A-Z)", order: "asc", sortKey: "artist" },
+	{ id: "artistZA", label: "Artiest (Z-A)", order: "desc", sortKey: "artist" },
+	{ id: "yearNewOld", label: "Jaar (Nieuw-Oud)", order: "desc", sortKey: "year" },
+	{ id: "yearOldNew", label: "Jaar (Oud-Nieuw)", order: "asc", sortKey: "year" },
+];
+
+const initialSortId: string = "artistAZ";
+
+const years = releases.map((r) => r.basic_information?.year).filter((y) => y && y > 0) as number[];
+const minYear = years.length > 0 ? Math.min(...years) : 1900;
+const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
+const allGenres = [...new Set(releases.flatMap((r) => r.basic_information?.genres || []))].sort();
+
+const meta: SiteMeta = {
+	title: "Mijn CD Collectie",
+	description: "Een doorzoekbaar en sorteerbaar overzicht van mijn CD collectie.",
+};
 ---
-<div id="cd-collection">
-  <div style="margin-bottom: 1rem;">
-    <button id="toggle-covers">Album Covers</button>
-    <button id="toggle-list">Lijstweergave</button>
-    <input type="text" id="search-field" placeholder="Zoeken..." style="margin-left: 1rem;" />
-  </div>
-  <div id="covers-view" style="display: block;">
-    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-      {collectionData.map(item => (
-        <img
-          src={item.basic_information.cover_image}
-          alt={item.basic_information.title}
-          style="width: 150px; height: 150px; object-fit: cover;"
-          data-title={item.basic_information.title}
-        />
-      ))}
-    </div>
-  </div>
-  <div id="list-view" style="display: none;">
-    <ul>
-      {collectionData.map(item => (
-        <li data-title={item.basic_information.title}>{item.basic_information.title}</li>
-      ))}
-    </ul>
-  </div>
-</div>
 
-<script is:inline>
-  const searchField = document.getElementById('search-field');
-  const toggleCovers = document.getElementById('toggle-covers');
-  const toggleList = document.getElementById('toggle-list');
-  const coversView = document.getElementById('covers-view');
-  const listView = document.getElementById('list-view');
+<PageLayout meta={meta}>
+	<h1 class="title mb-6 text-2xl font-bold">Mijn CD Collectie</h1>
 
-  toggleCovers.addEventListener('click', () => {
-    coversView.style.display = 'block';
-    listView.style.display = 'none';
-  });
-
-  toggleList.addEventListener('click', () => {
-    coversView.style.display = 'none';
-    listView.style.display = 'block';
-  });
-
-  searchField.addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-
-    // Filter de album covers
-    coversView.querySelectorAll('img').forEach(img => {
-      const title = img.getAttribute('data-title').toLowerCase();
-      img.style.display = title.includes(searchTerm) ? 'block' : 'none';
-    });
-
-    // Filter de lijstweergave
-    listView.querySelectorAll('li').forEach(li => {
-      const title = li.getAttribute('data-title').toLowerCase();
-      li.style.display = title.includes(searchTerm) ? 'list-item' : 'none';
-    });
-  });
-</script>
+	<FilterSortListWrapper
+		client:only="svelte"
+		items={releases}
+		searchFields={searchFields}
+		sortOptions={sortOptions}
+		initialSortId={initialSortId}
+		sliderMinYear={minYear}
+		sliderMaxYear={maxYear}
+		availableGenres={allGenres}
+	/>
+</PageLayout>

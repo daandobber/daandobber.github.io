@@ -1,13 +1,12 @@
 ---
 import PageLayout from "@/layouts/Base.astro";
-// @ts-ignore: TS-checks voor de slot-types in de wrapper
 import FilterSortListWrapper from "@/components/FilterSortListWrapper.svelte";
 import cdCollectionData from "@/data/cd_collection.json";
 import type { Release, SortOption, SiteMeta } from "@/types";
 
 const releases: Release[] = cdCollectionData?.releases ?? [];
 
-const searchFields: string[] = ["basic_information.title", "basic_information.artists"];
+const searchFields: string[] = ["basic_information.title", "basic_information.artists.name"];
 
 const sortOptions: SortOption[] = [
 	{ id: "artistAZ", label: "Artiest (A-Z)", order: "asc", sortKey: "artist" },
@@ -17,6 +16,11 @@ const sortOptions: SortOption[] = [
 ];
 
 const initialSortId: string = "artistAZ";
+
+const years = releases.map((r) => r.basic_information?.year).filter((y) => y && y > 0) as number[];
+const minYear = years.length > 0 ? Math.min(...years) : 1900;
+const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
+const allGenres = [...new Set(releases.flatMap((r) => r.basic_information?.genres || []))].sort();
 
 const meta: SiteMeta = {
 	title: "Mijn CD Collectie",
@@ -33,5 +37,8 @@ const meta: SiteMeta = {
 		searchFields={searchFields}
 		sortOptions={sortOptions}
 		initialSortId={initialSortId}
+		sliderMinYear={minYear}
+		sliderMaxYear={maxYear}
+		availableGenres={allGenres}
 	/>
 </PageLayout>
