@@ -116,6 +116,60 @@
       "folder_id": 1
     },
     {
+      "id": 16409157,
+      "instance_id": 1992474261,
+      "date_added": "2025-04-11T23:08:35-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 16409157,
+        "master_id": 164034,
+        "master_url": "https://api.discogs.com/masters/164034",
+        "resource_url": "https://api.discogs.com/releases/16409157",
+        "thumb": "https://i.discogs.com/IPrU4D-pDRfqn8bVOPQDtTNXncyuRu7B07ENkrvAMlA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2NDA5/MTU3LTE2MDc1NjAw/ODYtMTg1MS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/rQWOeEArooxBOch0c6SioYHcf538n__yHQ6O_Z9jJgg/rs:fit/g:sm/q:90/h:606/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2NDA5/MTU3LTE2MDc1NjAw/ODYtMTg1MS5qcGVn.jpeg",
+        "title": "Be Not Nobody",
+        "year": 2002,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Vanessa Carlton",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 275641,
+            "resource_url": "https://api.discogs.com/artists/275641"
+          }
+        ],
+        "labels": [
+          {
+            "name": "A&M Records",
+            "catno": "493 307-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 904,
+            "resource_url": "https://api.discogs.com/labels/904"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 9091983,
       "instance_id": 1985624760,
       "date_added": "2025-04-05T00:25:37-07:00",
@@ -956,6 +1010,62 @@
       "folder_id": 1
     },
     {
+      "id": 3359501,
+      "instance_id": 1992475917,
+      "date_added": "2025-04-11T23:12:30-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 3359501,
+        "master_id": 74848,
+        "master_url": "https://api.discogs.com/masters/74848",
+        "resource_url": "https://api.discogs.com/releases/3359501",
+        "thumb": "https://i.discogs.com/Hqq5I_ReKPrVfwvXu-d9aRyW-DBpvzaMSCbBi3g-4aQ/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMzNTk1/MDEtMTMyNzI2NTcz/NS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/kZ3g5WYOOEYIK5E8whXW6dD-kQNUvDrpErwrKQaywL0/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMzNTk1/MDEtMTMyNzI2NTcz/NS5qcGVn.jpeg",
+        "title": "Serenity",
+        "year": 1993,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Culture Beat",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7662,
+            "resource_url": "https://api.discogs.com/artists/7662"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Dance Pool (2)",
+            "catno": "474101 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 255129,
+            "resource_url": "https://api.discogs.com/labels/255129"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "House",
+          "Downtempo",
+          "Euro House"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 22260967,
       "instance_id": 1985623863,
       "date_added": "2025-04-05T00:23:48-07:00",
@@ -1007,6 +1117,86 @@
           "Pop Rock",
           "Classic Rock",
           "Surf"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 2417320,
+      "instance_id": 1992475596,
+      "date_added": "2025-04-11T23:11:50-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 2417320,
+        "master_id": 204920,
+        "master_url": "https://api.discogs.com/masters/204920",
+        "resource_url": "https://api.discogs.com/releases/2417320",
+        "thumb": "https://i.discogs.com/tsbI38fouo6VIh-NCBzOePQ-CToQcjyVbuciCubxcCU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI0MTcz/MjAtMTM2ODkxNDk4/Ny01MjMyLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/MzUMnkfjh5M__tdpKOj9MS4vqsNWcdDKtE8ZdVWfiOU/rs:fit/g:sm/q:90/h:590/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI0MTcz/MjAtMTM2ODkxNDk4/Ny01MjMyLmpwZWc.jpeg",
+        "title": "The Best Of",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Paolo Conte",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 273695,
+            "resource_url": "https://api.discogs.com/artists/273695"
+          }
+        ],
+        "labels": [
+          {
+            "name": "EastWest",
+            "catno": "CD 16861",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 999,
+            "resource_url": "https://api.discogs.com/labels/999"
+          },
+          {
+            "name": "CGD East West",
+            "catno": "CD 16861",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 57391,
+            "resource_url": "https://api.discogs.com/labels/57391"
+          },
+          {
+            "name": "EastWest",
+            "catno": "0630 16861-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 999,
+            "resource_url": "https://api.discogs.com/labels/999"
+          },
+          {
+            "name": "CGD East West",
+            "catno": "0630 16861-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 57391,
+            "resource_url": "https://api.discogs.com/labels/57391"
+          }
+        ],
+        "genres": [
+          "Jazz",
+          "Rock",
+          "Blues"
+        ],
+        "styles": [
+          "Jazz-Rock",
+          "Piano Blues"
         ]
       },
       "folder_id": 1
@@ -1085,6 +1275,68 @@
       "folder_id": 1
     },
     {
+      "id": 448684,
+      "instance_id": 1992473139,
+      "date_added": "2025-04-11T23:05:51-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 448684,
+        "master_id": 46405,
+        "master_url": "https://api.discogs.com/masters/46405",
+        "resource_url": "https://api.discogs.com/releases/448684",
+        "thumb": "https://i.discogs.com/qBVX4DPGv04fzrInbCv6jBihf1xQQkPR_rmeNnUVFSk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ0ODY4/NC0xNjU4NDMxMTEy/LTY0NDIuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/H2h8PzZR9BnYMArVfPJCEmFeMM3EQ_gexR9T7POZFXg/rs:fit/g:sm/q:90/h:528/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ0ODY4/NC0xNjU4NDMxMTEy/LTY0NDIuanBlZw.jpeg",
+        "title": "She's So High / I Know",
+        "year": 1991,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
+          }
+        ],
+        "labels": [
+          {
+            "name": "EMI",
+            "catno": "20 4664 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26126,
+            "resource_url": "https://api.discogs.com/labels/26126"
+          },
+          {
+            "name": "EMI",
+            "catno": "560-20 4664 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26126,
+            "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Indie Rock",
+          "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1222724,
       "instance_id": 1985624694,
       "date_added": "2025-04-05T00:25:28-07:00",
@@ -1144,6 +1396,68 @@
         "styles": [
           "Pop Rock",
           "Parody"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 2837263,
+      "instance_id": 1992473556,
+      "date_added": "2025-04-11T23:06:54-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 2837263,
+        "master_id": 94764,
+        "master_url": "https://api.discogs.com/masters/94764",
+        "resource_url": "https://api.discogs.com/releases/2837263",
+        "thumb": "https://i.discogs.com/zzBDJCbCZxylAv-oxlPa6cgSqMqDN5CTpPRJ7R4AnzE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4Mzcy/NjMtMTM5NjA1NTQw/MS0zNjQ5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/yOrmDG6SBI435IcKFw66XMJ_bItUcPMPfoSUf4c67_4/rs:fit/g:sm/q:90/h:609/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4Mzcy/NjMtMTM5NjA1NTQw/MS0zNjQ5LmpwZWc.jpeg",
+        "title": "To The End",
+        "year": 1994,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
+          }
+        ],
+        "labels": [
+          {
+            "name": "EMI",
+            "catno": "7243 8 81462 2 7",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26126,
+            "resource_url": "https://api.discogs.com/labels/26126"
+          },
+          {
+            "name": "Parlophone",
+            "catno": "7243 8 81462 2 7",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2294,
+            "resource_url": "https://api.discogs.com/labels/2294"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Indie Rock",
+          "Britpop"
         ]
       },
       "folder_id": 1
@@ -1390,6 +1704,204 @@
       "folder_id": 1
     },
     {
+      "id": 1853850,
+      "instance_id": 1992473673,
+      "date_added": "2025-04-11T23:07:03-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1853850,
+        "master_id": 92102,
+        "master_url": "https://api.discogs.com/masters/92102",
+        "resource_url": "https://api.discogs.com/releases/1853850",
+        "thumb": "https://i.discogs.com/LCFJ44Fo2s1sX3N5DRntfJx-N0wTVsmZX19VafFOwWE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4NTM4/NTAtMTI5MzExMjgz/Ny5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/ubSwvpzp6beS483oeDOLE0-4saImWy9-bu4Orby2ceM/rs:fit/g:sm/q:90/h:225/w:225/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4NTM4/NTAtMTI5MzExMjgz/Ny5qcGVn.jpeg",
+        "title": "Modern Life Is Rubbish",
+        "year": 1993,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Food",
+            "catno": "FOOD CD 9",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 6124,
+            "resource_url": "https://api.discogs.com/labels/6124"
+          },
+          {
+            "name": "EMI",
+            "catno": "E2 0777 7 89442 2 5",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26126,
+            "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Britpop",
+          "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 607798,
+      "instance_id": 1992473223,
+      "date_added": "2025-04-11T23:06:01-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 607798,
+        "master_id": 46410,
+        "master_url": "https://api.discogs.com/masters/46410",
+        "resource_url": "https://api.discogs.com/releases/607798",
+        "thumb": "https://i.discogs.com/jRfOHciQIakP8pddswaVES_fn7Nz8Meo4nVHzCMHS4A/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYwNzc5/OC0xNTEwMjEyMjEy/LTQ3OTAuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/MEbuGsXDB5pA4VC3p8EfifN1dmDGm5zdwBoztTCdjcU/rs:fit/g:sm/q:90/h:523/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYwNzc5/OC0xNTEwMjEyMjEy/LTQ3OTAuanBlZw.jpeg",
+        "title": "There's No Other Way",
+        "year": 1991,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Food",
+            "catno": "20 4272 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 6124,
+            "resource_url": "https://api.discogs.com/labels/6124"
+          },
+          {
+            "name": "Food",
+            "catno": "CDFOOD 29",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 6124,
+            "resource_url": "https://api.discogs.com/labels/6124"
+          },
+          {
+            "name": "Parlophone",
+            "catno": "2042722",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2294,
+            "resource_url": "https://api.discogs.com/labels/2294"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 3787137,
+      "instance_id": 1992473508,
+      "date_added": "2025-04-11T23:06:44-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 3787137,
+        "master_id": 94751,
+        "master_url": "https://api.discogs.com/masters/94751",
+        "resource_url": "https://api.discogs.com/releases/3787137",
+        "thumb": "https://i.discogs.com/zhi2-GAFO017bQrj04LJrUbRpvGgPDvdcl8TqGJ7Z5Y/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM3ODcx/MzctMTQ5MzkxODQ4/MS04MTA5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/XA1OEUO8jqFja61VA0AITtompw0mk-QVFsuqtz7xZeM/rs:fit/g:sm/q:90/h:591/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM3ODcx/MzctMTQ5MzkxODQ4/MS04MTA5LmpwZWc.jpeg",
+        "title": "Leisure",
+        "year": 2012,
+        "formats": [
+          {
+            "name": "Vinyl",
+            "qty": "1",
+            "text": "180 Gram",
+            "descriptions": [
+              "LP",
+              "Album",
+              "Reissue",
+              "Remastered"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Food",
+            "catno": "FOODLPX6",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 6124,
+            "resource_url": "https://api.discogs.com/labels/6124"
+          },
+          {
+            "name": "Parlophone",
+            "catno": "5099962483216",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2294,
+            "resource_url": "https://api.discogs.com/labels/2294"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 4750153,
       "instance_id": 1970320688,
       "date_added": "2025-03-20T23:27:18-07:00",
@@ -1439,6 +1951,69 @@
         ],
         "styles": [
           "Rhythm & Blues"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1012693,
+      "instance_id": 1992475206,
+      "date_added": "2025-04-11T23:10:53-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1012693,
+        "master_id": 111851,
+        "master_url": "https://api.discogs.com/masters/111851",
+        "resource_url": "https://api.discogs.com/releases/1012693",
+        "thumb": "https://i.discogs.com/P8ywmxwlwhULMqAxVY7DHlhrV1ml4ZW3ycD1TX2VsV0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMTI2/OTMtMTYxNjk1NTQ4/OC02MDU5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/zIckkOUzxwZIhxc-DCCUjNEuR9f3pPVkPUHyevfo71M/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMTI2/OTMtMTYxNjk1NTQ4/OC02MDU5LmpwZWc.jpeg",
+        "title": "Hoezo?",
+        "year": 1989,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Clouseau",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 169165,
+            "resource_url": "https://api.discogs.com/artists/169165"
+          }
+        ],
+        "labels": [
+          {
+            "name": "HKM",
+            "catno": "655.289-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 161519,
+            "resource_url": "https://api.discogs.com/labels/161519"
+          },
+          {
+            "name": "HKM",
+            "catno": "655.289 - 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 161519,
+            "resource_url": "https://api.discogs.com/labels/161519"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Pop Rock",
+          "Synth-pop"
         ]
       },
       "folder_id": 1
@@ -1495,6 +2070,201 @@
           "Dubstep",
           "UK Garage",
           "Ambient"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 7015760,
+      "instance_id": 1992475278,
+      "date_added": "2025-04-11T23:11:02-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 7015760,
+        "master_id": 51107,
+        "master_url": "https://api.discogs.com/masters/51107",
+        "resource_url": "https://api.discogs.com/releases/7015760",
+        "thumb": "https://i.discogs.com/NQA4c49bReeZ4nNSnXzyMg-QJcUFVt1KLPyjlXCQnuA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwMTU3/NjAtMTY4MTM0MzE5/Mi05NjkzLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/ukDegziLo4Y-wK7m3clgZkqNCNQU59fKs0TnWyM9Okk/rs:fit/g:sm/q:90/h:520/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwMTU3/NjAtMTY4MTM0MzE5/Mi05NjkzLmpwZWc.jpeg",
+        "title": "No Need To Argue",
+        "year": 1994,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Limited Edition"
+            ]
+          },
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "EP"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Cranberries",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 155833,
+            "resource_url": "https://api.discogs.com/artists/155833"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Island Records",
+            "catno": "5240832",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 8377,
+            "resource_url": "https://api.discogs.com/labels/8377"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock",
+          "Pop Rock",
+          "Ballad"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 8870621,
+      "instance_id": 1992475485,
+      "date_added": "2025-04-11T23:11:33-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 8870621,
+        "master_id": 51023,
+        "master_url": "https://api.discogs.com/masters/51023",
+        "resource_url": "https://api.discogs.com/releases/8870621",
+        "thumb": "https://i.discogs.com/6tcjpFwS6cBdfHhp24yUvG1qGK5Veezbr0QbpTaxLeY/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg4NzA2/MjEtMTQ3MDQ5MjIw/Ny02MzgyLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/_tAK93hwiLBNiHrfLj0BMODKekK1MGaGZBhDzZVrBGY/rs:fit/g:sm/q:90/h:537/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg4NzA2/MjEtMTQ3MDQ5MjIw/Ny02MzgyLmpwZWc.jpeg",
+        "title": "Everybody Else Is Doing It, So Why Can't We?",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "text": "Digipak",
+            "descriptions": [
+              "Album",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Cranberries",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 155833,
+            "resource_url": "https://api.discogs.com/artists/155833"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Island Records (2)",
+            "catno": "BR0174",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 136496,
+            "resource_url": "https://api.discogs.com/labels/136496"
+          },
+          {
+            "name": "Island Records (2)",
+            "catno": "BG-R-0344",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 136496,
+            "resource_url": "https://api.discogs.com/labels/136496"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 11597422,
+      "instance_id": 1992475452,
+      "date_added": "2025-04-11T23:11:22-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 11597422,
+        "master_id": 51107,
+        "master_url": "https://api.discogs.com/masters/51107",
+        "resource_url": "https://api.discogs.com/releases/11597422",
+        "thumb": "https://i.discogs.com/G0hA-qnLY71og_VJk3rVQs0zMWc-eurBNCTFqTbklYM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExNTk3/NDIyLTE1MjE2NDg3/MzEtNjI1My5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/kH1pTkvU4tsFlJyV87hHft59pL7PpfPeDt1tiaYTA30/rs:fit/g:sm/q:90/h:583/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExNTk3/NDIyLTE1MjE2NDg3/MzEtNjI1My5qcGVn.jpeg",
+        "title": "No Need To Argue",
+        "year": 1994,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Cranberries",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 155833,
+            "resource_url": "https://api.discogs.com/artists/155833"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Island Records",
+            "catno": "314-524 050-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 8377,
+            "resource_url": "https://api.discogs.com/labels/8377"
+          },
+          {
+            "name": "Island Records",
+            "catno": "524 050-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 8377,
+            "resource_url": "https://api.discogs.com/labels/8377"
+          },
+          {
+            "name": "Island Records",
+            "catno": "CID 8029",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 8377,
+            "resource_url": "https://api.discogs.com/labels/8377"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock"
         ]
       },
       "folder_id": 1
@@ -2057,6 +2827,62 @@
       "folder_id": 1
     },
     {
+      "id": 2535616,
+      "instance_id": 1992474030,
+      "date_added": "2025-04-11T23:08:00-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 2535616,
+        "master_id": 37287,
+        "master_url": "https://api.discogs.com/masters/37287",
+        "resource_url": "https://api.discogs.com/releases/2535616",
+        "thumb": "https://i.discogs.com/uJtfHK-1cztO6iuyqDfoKDS-alX_rMky8hNmUhpfg14/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1MzU2/MTYtMTU3ODc2Mjgw/OS04OTE0LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/MtrbMYEoqtlO2cU7kvoPwFYiKtaNqekPNPhps0h8Qzg/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1MzU2/MTYtMTU3ODc2Mjgw/OS04OTE0LmpwZWc.jpeg",
+        "title": "Telegram",
+        "year": 1996,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Björk",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 1373,
+            "resource_url": "https://api.discogs.com/artists/1373"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Not On Label (Björk)",
+            "catno": "TPLP51CDT",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 135101,
+            "resource_url": "https://api.discogs.com/labels/135101"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Abstract",
+          "IDM",
+          "Electro"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 9523277,
       "instance_id": 1978255428,
       "date_added": "2025-03-28T14:40:16-07:00",
@@ -2118,531 +2944,56 @@
       "folder_id": 1
     },
     {
-      "id": 32367711,
-      "instance_id": 1985625183,
-      "date_added": "2025-04-05T00:26:31-07:00",
+      "id": 472631,
+      "instance_id": 1992474408,
+      "date_added": "2025-04-11T23:09:02-07:00",
       "rating": 0,
       "basic_information": {
-        "id": 32367711,
-        "master_id": 23934,
-        "master_url": "https://api.discogs.com/masters/23934",
-        "resource_url": "https://api.discogs.com/releases/32367711",
-        "thumb": "https://i.discogs.com/kFxc-NV2YcPWJK6ckvAWAhnBiGany-asHWPTUKdbhEw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyMzY3/NzExLTE3MzIyOTM3/NDAtNjE4Ni5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/HD4W2lZmUe9JR9Vf7ra-ddtBoeoUk362ElsrfEpVcgs/rs:fit/g:sm/q:90/h:450/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMyMzY3/NzExLTE3MzIyOTM3/NDAtNjE4Ni5qcGVn.jpeg",
-        "title": "Sgt. Pepper's Lonely Hearts Club Band",
-        "year": 0,
+        "id": 472631,
+        "master_id": 7346,
+        "master_url": "https://api.discogs.com/masters/7346",
+        "resource_url": "https://api.discogs.com/releases/472631",
+        "thumb": "https://i.discogs.com/Cxhep55WFpMKGAtSlEhqqp6VjeMERNwOaYwDOnooPLQ/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3MjYz/MS0xNjM3ODM5MzI5/LTExNzAuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/wse4aNjSoLMbrTEG29IuUEMSS_v6povtPwFxmMkEfF0/rs:fit/g:sm/q:90/h:525/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3MjYz/MS0xNjM3ODM5MzI5/LTExNzAuanBlZw.jpeg",
+        "title": "Enough Is Enough",
+        "year": 1993,
         "formats": [
           {
             "name": "CD",
             "qty": "1",
             "descriptions": [
-              "Album",
-              "Reissue"
+              "Single"
             ]
           }
         ],
         "artists": [
           {
-            "name": "The Beatles",
+            "name": "Chumbawamba",
             "anv": "",
-            "join": "",
+            "join": "&",
             "role": "",
             "tracks": "",
-            "id": 82730,
-            "resource_url": "https://api.discogs.com/artists/82730"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Parlophone",
-            "catno": "C2 0777 7 46442 2 8",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2294,
-            "resource_url": "https://api.discogs.com/labels/2294"
+            "id": 59549,
+            "resource_url": "https://api.discogs.com/artists/59549"
           },
           {
-            "name": "Apple Records",
-            "catno": "C2 0777 7 46442 2 8",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 25693,
-            "resource_url": "https://api.discogs.com/labels/25693"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Pop Rock",
-          "Psychedelic Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 29414398,
-      "instance_id": 1985622456,
-      "date_added": "2025-04-05T00:20:34-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 29414398,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/29414398",
-        "thumb": "https://i.discogs.com/jgHp7ImIbTD2aZ8gblg-zBUslX6qcbAn3_LscAI5Lmw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI5NDE0/Mzk4LTE3MDQ1ODQ5/MDMtMjk4NS5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/QzHIdqAQSDKQsqnoNxzfhgcTLH_V_Zq80LcOWrKGk_g/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI5NDE0/Mzk4LTE3MDQ1ODQ5/MDMtMjk4NS5qcGVn.jpeg",
-        "title": "The Best Of",
-        "year": 0,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation",
-              "Reissue"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Animals",
+            "name": "Credit To The Nation",
             "anv": "",
             "join": "",
             "role": "",
             "tracks": "",
-            "id": 269090,
-            "resource_url": "https://api.discogs.com/artists/269090"
+            "id": 40725,
+            "resource_url": "https://api.discogs.com/artists/40725"
           }
         ],
         "labels": [
           {
-            "name": "Parlophone",
-            "catno": "7243 5 27084 2 0",
+            "name": "One Little Indian",
+            "catno": "79TP7CD",
             "entity_type": "1",
             "entity_type_name": "Label",
-            "id": 2294,
-            "resource_url": "https://api.discogs.com/labels/2294"
-          },
-          {
-            "name": "Parlophone",
-            "catno": "527 0842",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2294,
-            "resource_url": "https://api.discogs.com/labels/2294"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Blues Rock",
-          "Psychedelic Rock",
-          "Mod"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 11922218,
-      "instance_id": 1978252116,
-      "date_added": "2025-03-28T14:36:48-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 11922218,
-        "master_id": 1811330,
-        "master_url": "https://api.discogs.com/masters/1811330",
-        "resource_url": "https://api.discogs.com/releases/11922218",
-        "thumb": "https://i.discogs.com/Gi50QAjNlz-OrkpuJtLZw9iZAjMeg54s3IBiy052yis/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExOTIy/MjE4LTE1MjQ4MDU2/NzctMjI4Mi5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/6-A2y6ICl4BW0OSGp7881XaOQEP66LWfZFywmEnbvG0/rs:fit/g:sm/q:90/h:589/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExOTIy/MjE4LTE1MjQ4MDU2/NzctMjI4Mi5qcGVn.jpeg",
-        "title": "Ska",
-        "year": 2000,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "Pegasus",
-            "catno": "PEG CD 271",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 38097,
-            "resource_url": "https://api.discogs.com/labels/38097"
-          },
-          {
-            "name": "Pegasus",
-            "catno": "GAS 0000271 PEG",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 38097,
-            "resource_url": "https://api.discogs.com/labels/38097"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Ska"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 18235030,
-      "instance_id": 1970321024,
-      "date_added": "2025-03-20T23:28:36-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 18235030,
-        "master_id": 68455,
-        "master_url": "https://api.discogs.com/masters/68455",
-        "resource_url": "https://api.discogs.com/releases/18235030",
-        "thumb": "https://i.discogs.com/Z6-CKYTDCH6GEqRnf-IoMSsoJQQYGBy1TBXeMJsxriU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MjM1/MDMwLTE2MTgwNTY0/OTItMjQwNy5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/cUvkwf0DDFCRWg8AM8lRZ2R2EtH5nPK-rHiDhSlaGsc/rs:fit/g:sm/q:90/h:496/w:500/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MjM1/MDMwLTE2MTgwNTY0/OTItMjQwNy5qcGVn.jpeg",
-        "title": "Tommy",
-        "year": 1996,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album",
-              "Reissue",
-              "Remastered",
-              "Repress"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Who",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 196766,
-            "resource_url": "https://api.discogs.com/artists/196766"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Polydor",
-            "catno": "531 043-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1610,
-            "resource_url": "https://api.discogs.com/labels/1610"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Psychedelic Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 442533,
-      "instance_id": 1979846646,
-      "date_added": "2025-03-30T01:25:17-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 442533,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/442533",
-        "thumb": "https://i.discogs.com/M-l29sJZuhjbGXFGn-LdWBWs517wdModYbn9XY83xxo/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ0MjUz/My0xNDkzOTI0NjYy/LTU4NDYuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/mWNazXVkMPLMFwxYudNAOS95XOs2OZS2SWibGzw1q08/rs:fit/g:sm/q:90/h:597/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ0MjUz/My0xNDkzOTI0NjYy/LTU4NDYuanBlZw.jpeg",
-        "title": "The Best Tracks From The Best Albums Of 1999",
-        "year": 1999,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "Q Magazine",
-            "catno": "QMAGDEC 99",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 10445,
-            "resource_url": "https://api.discogs.com/labels/10445"
-          }
-        ],
-        "genres": [
-          "Electronic",
-          "Jazz",
-          "Rock"
-        ],
-        "styles": [
-          "Pop Rock",
-          "Indie Rock",
-          "House",
-          "Big Beat",
-          "Big Band",
-          "Downtempo",
-          "Britpop"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 651103,
-      "instance_id": 1985623599,
-      "date_added": "2025-04-05T00:23:15-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 651103,
-        "master_id": 96568,
-        "master_url": "https://api.discogs.com/masters/96568",
-        "resource_url": "https://api.discogs.com/releases/651103",
-        "thumb": "https://i.discogs.com/Iq82fBxmjKS9AeVTqzbTzpcatENEq7gHyi72mOIbd8U/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTY1MTEw/My0xNjMwNjkxOTA5/LTk2MzEuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/JlPSrBLAtrpXwK1-5UoNBHx_XrPxEEUNDsiMiBbKPc8/rs:fit/g:sm/q:90/h:580/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTY1MTEw/My0xNjMwNjkxOTA5/LTk2MzEuanBlZw.jpeg",
-        "title": "Whenever You Need Somebody",
-        "year": 1987,
-        "formats": [
-          {
-            "name": "Vinyl",
-            "qty": "1",
-            "descriptions": [
-              "LP",
-              "Album",
-              "Stereo"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Rick Astley",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 72872,
-            "resource_url": "https://api.discogs.com/artists/72872"
-          }
-        ],
-        "labels": [
-          {
-            "name": "RCA",
-            "catno": "PL71529",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 895,
-            "resource_url": "https://api.discogs.com/labels/895"
-          },
-          {
-            "name": "RCA",
-            "catno": "PL 71529",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 895,
-            "resource_url": "https://api.discogs.com/labels/895"
-          },
-          {
-            "name": "RCA",
-            "catno": "PL 71529-8",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 895,
-            "resource_url": "https://api.discogs.com/labels/895"
-          }
-        ],
-        "genres": [
-          "Electronic",
-          "Pop"
-        ],
-        "styles": [
-          "Synth-pop",
-          "Ballad"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 5820683,
-      "instance_id": 1970321072,
-      "date_added": "2025-03-20T23:28:44-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 5820683,
-        "master_id": 719038,
-        "master_url": "https://api.discogs.com/masters/719038",
-        "resource_url": "https://api.discogs.com/releases/5820683",
-        "thumb": "https://i.discogs.com/han4-rhMOmbXOTkXCR33VY6cIT4npQK0MNkGqB_O_vc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU4MjA2/ODMtMTQ3NjgwMTgy/NC02OTU2LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/-Qll7WScS6yGLFCmGrl9VQcp_X9OE4ZnebjQkfFshHQ/rs:fit/g:sm/q:90/h:539/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU4MjA2/ODMtMTQ3NjgwMTgy/NC02OTU2LmpwZWc.jpeg",
-        "title": "Eight Classic Albums",
-        "year": 2013,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "4",
-            "descriptions": [
-              "Compilation",
-              "Remastered"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Hank Williams",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 256313,
-            "resource_url": "https://api.discogs.com/artists/256313"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Real Gone",
-            "catno": "RGMCD037",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 419015,
-            "resource_url": "https://api.discogs.com/labels/419015"
-          }
-        ],
-        "genres": [
-          "Folk, World, & Country"
-        ],
-        "styles": [
-          "Country"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 12315166,
-      "instance_id": 1979845071,
-      "date_added": "2025-03-30T01:22:34-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 12315166,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/12315166",
-        "thumb": "https://i.discogs.com/Pd-1QcHEHs264k067xin_Zmqt-oPzOIQNDt3jsx3svg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMzE1/MTY2LTE1MzI3NzY0/OTQtNjU4Ni5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/9k4sn2KdrfNip_ClaOSaoJnQoDGMYp2t1Ve_b8_Suxw/rs:fit/g:sm/q:90/h:500/w:500/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMzE1/MTY2LTE1MzI3NzY0/OTQtNjU4Ni5qcGVn.jpeg",
-        "title": "Magnolia: Music From The Motion Picture",
-        "year": 1999,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1"
-          }
-        ],
-        "artists": [
-          {
-            "name": "Aimee Mann",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 11068,
-            "resource_url": "https://api.discogs.com/artists/11068"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Reprise Records",
-            "catno": "9362-47638-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 157,
-            "resource_url": "https://api.discogs.com/labels/157"
-          }
-        ],
-        "genres": [
-          "Rock",
-          "Stage & Screen"
-        ],
-        "styles": [
-          "Soundtrack"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 516182,
-      "instance_id": 1985624943,
-      "date_added": "2025-04-05T00:26:00-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 516182,
-        "master_id": 171326,
-        "master_url": "https://api.discogs.com/masters/171326",
-        "resource_url": "https://api.discogs.com/releases/516182",
-        "thumb": "https://i.discogs.com/PWphXcpGb806tcr6QaqgBWRI6kF6JKk6nOaQIvDuzhs/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUxNjE4/Mi0xNjc5MjI2Mjc4/LTE4NzEuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/_fUpbSE4GWlLlYXKKgHTFveYPGYQ4y-dsnxb08O0XMc/rs:fit/g:sm/q:90/h:552/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUxNjE4/Mi0xNjc5MjI2Mjc4/LTE4NzEuanBlZw.jpeg",
-        "title": "Give Blood",
-        "year": 2005,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "text": "Gatefold Cardboard Sleeve",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Brakes",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 337848,
-            "resource_url": "https://api.discogs.com/artists/337848"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Rough Trade",
-            "catno": "RTRADCD228",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 51167,
-            "resource_url": "https://api.discogs.com/labels/51167"
+            "id": 311,
+            "resource_url": "https://api.discogs.com/labels/311"
           }
         ],
         "genres": [
@@ -2655,364 +3006,60 @@
       "folder_id": 1
     },
     {
-      "id": 1941889,
-      "instance_id": 1970321396,
-      "date_added": "2025-03-20T23:29:50-07:00",
+      "id": 30521647,
+      "instance_id": 1992473868,
+      "date_added": "2025-04-11T23:07:35-07:00",
       "rating": 0,
       "basic_information": {
-        "id": 1941889,
-        "master_id": 114327,
-        "master_url": "https://api.discogs.com/masters/114327",
-        "resource_url": "https://api.discogs.com/releases/1941889",
-        "thumb": "https://i.discogs.com/49RPxZNxUWlSML9bVEDKPqBJGTPhuSHS_Tkfx1GJ6Y0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5NDE4/ODktMTI1NDQ4ODg2/My5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/Oh1Ili9uj7AHbXJR1gFVE26Bp3L4TqYllVoAg0d5slY/rs:fit/g:sm/q:90/h:489/w:488/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5NDE4/ODktMTI1NDQ4ODg2/My5qcGVn.jpeg",
-        "title": "Welenga (Universal Consciousness)",
-        "year": 1996,
+        "id": 30521647,
+        "master_id": 46414,
+        "master_url": "https://api.discogs.com/masters/46414",
+        "resource_url": "https://api.discogs.com/releases/30521647",
+        "thumb": "https://i.discogs.com/OlbrIYllHvGwkBDZSfXoDDQ9BFJLxEBO4NnBR_wj8J0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwNTIx/NjQ3LTE3MTQyMzU4/ODgtNTg1Ni5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/Zk1g_R9-foyAPGOw0mZRvC4iHKUSQQIr0VpFrUPCbEA/rs:fit/g:sm/q:90/h:604/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwNTIx/NjQ3LTE3MTQyMzU4/ODgtNTg1Ni5qcGVn.jpeg",
+        "title": "Think Tank",
+        "year": 2014,
         "formats": [
           {
             "name": "CD",
             "qty": "1",
+            "text": "Warner Music Group Version",
             "descriptions": [
-              "Album"
+              "Album",
+              "Reissue",
+              "Stereo"
             ]
           }
         ],
         "artists": [
           {
-            "name": "Wes",
+            "name": "Blur",
             "anv": "",
             "join": "",
             "role": "",
             "tracks": "",
-            "id": 68127,
-            "resource_url": "https://api.discogs.com/artists/68127"
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "labels": [
           {
-            "name": "Saint George",
-            "catno": "SAN 485146-2",
+            "name": "Parlophone",
+            "catno": "07243-582997-2-4",
             "entity_type": "1",
             "entity_type_name": "Label",
-            "id": 9714,
-            "resource_url": "https://api.discogs.com/labels/9714"
+            "id": 2294,
+            "resource_url": "https://api.discogs.com/labels/2294"
           }
         ],
         "genres": [
           "Electronic",
-          "Pop",
-          "Folk, World, & Country"
-        ],
-        "styles": [
-          "Tribal House",
-          "Ambient"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 21802648,
-      "instance_id": 1979846118,
-      "date_added": "2025-03-30T01:24:25-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 21802648,
-        "master_id": 1508315,
-        "master_url": "https://api.discogs.com/masters/1508315",
-        "resource_url": "https://api.discogs.com/releases/21802648",
-        "thumb": "https://i.discogs.com/T3OuJx3tUUk5xXkixaMNTdNEwDYgURnxctQkPIKgBEA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxODAy/NjQ4LTE2NDI2MDQ4/NzMtNDczNy5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/28zyc-Gb4PyqCztBVfo-UJcZhqpxnN3FhXeVRUWJOvc/rs:fit/g:sm/q:90/h:300/w:300/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxODAy/NjQ4LTE2NDI2MDQ4/NzMtNDczNy5qcGVn.jpeg",
-        "title": "Music From The Lord Of The Rings Trilogy",
-        "year": 2004,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "2",
-            "text": "Dolby Surround",
-            "descriptions": [
-              "HDCD",
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The City Of Prague Philharmonic",
-            "anv": "The City Of Prague Philharmonic Orchestra",
-            "join": ",",
-            "role": "",
-            "tracks": "",
-            "id": 189913,
-            "resource_url": "https://api.discogs.com/artists/189913"
-          },
-          {
-            "name": "Crouch End Festival Chorus",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 386995,
-            "resource_url": "https://api.discogs.com/artists/386995"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Silva Screen",
-            "catno": "FILMCDX 372",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 3217,
-            "resource_url": "https://api.discogs.com/labels/3217"
-          }
-        ],
-        "genres": [
-          "Stage & Screen"
-        ],
-        "styles": [
-          "Score"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 9139717,
-      "instance_id": 1979845929,
-      "date_added": "2025-03-30T01:24:05-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 9139717,
-        "master_id": 946641,
-        "master_url": "https://api.discogs.com/masters/946641",
-        "resource_url": "https://api.discogs.com/releases/9139717",
-        "thumb": "https://i.discogs.com/sbQrs3S75McWrsyXe1fqfTME-QAHL9Fyedw9Ues4dBM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkxMzk3/MTctMTQ3NTQ1NzQ1/Mi01ODAxLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/XugXvQsHnW2Tckw_oudpvltvvtosGa19vLOsWEXNklY/rs:fit/g:sm/q:90/h:300/w:300/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTkxMzk3/MTctMTQ3NTQ1NzQ1/Mi01ODAxLmpwZWc.jpeg",
-        "title": "Natural Stress Relief - Solitudes Music For Your Healh",
-        "year": 1998,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Dan Gibson",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 430876,
-            "resource_url": "https://api.discogs.com/artists/430876"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Solitudes",
-            "catno": "12157",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 55392,
-            "resource_url": "https://api.discogs.com/labels/55392"
-          }
-        ],
-        "genres": [
-          "Non-Music"
-        ],
-        "styles": [
-          "Health-Fitness",
-          "Therapy"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 459326,
-      "instance_id": 1978253943,
-      "date_added": "2025-03-28T14:38:44-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 459326,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/459326",
-        "thumb": "https://i.discogs.com/-qJccRCmzl3eNl2RvrxKbO7rQiSyL64XFSclpZJvlig/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ1OTMy/Ni0xMzM4NTcwMDgy/LTIwMTYuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/QNbiqm6gMnRIfyiJ4syTB-kP26UvJM7D6IA_HBXxk_c/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ1OTMy/Ni0xMzM4NTcwMDgy/LTIwMTYuanBlZw.jpeg",
-        "title": "I Wanna Be A One Day Fly",
-        "year": 2001,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Single"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "One Day Fly",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 318345,
-            "resource_url": "https://api.discogs.com/artists/318345"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Sony Music Local",
-            "catno": "SML 671287 1",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 40559,
-            "resource_url": "https://api.discogs.com/labels/40559"
-          },
-          {
-            "name": "Sony Music Local",
-            "catno": "6712871000",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 40559,
-            "resource_url": "https://api.discogs.com/labels/40559"
-          }
-        ],
-        "genres": [
           "Rock"
         ],
         "styles": [
-          "Pop Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 525512,
-      "instance_id": 1978254942,
-      "date_added": "2025-03-28T14:39:48-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 525512,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/525512",
-        "thumb": "https://i.discogs.com/2MBHIM_7cgwx2SSE4wn1XSJoIBjVsN3N6rFftivVPds/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUyNTUx/Mi0xMTI4MTI3NzY1/LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/PQJkXdR4qemUkOAhsCX-oDrUYFKIkxlU3NDWkYd3dLM/rs:fit/g:sm/q:90/h:508/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUyNTUx/Mi0xMTI4MTI3NzY1/LmpwZWc.jpeg",
-        "title": "Back To The 80's Pop & Wave (De Hits Uit De Jaren '80)",
-        "year": 2001,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "3",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "Sony Music Media",
-            "catno": "501266 2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 65249,
-            "resource_url": "https://api.discogs.com/labels/65249"
-          }
-        ],
-        "genres": [
-          "Electronic",
-          "Hip Hop",
-          "Rock",
-          "Funk / Soul",
-          "Pop",
-          "Stage & Screen"
-        ],
-        "styles": [
           "Alternative Rock",
-          "Ambient",
-          "Dance-pop",
-          "Disco",
-          "Downtempo",
-          "Europop",
-          "Glam",
-          "Hi NRG",
-          "Indie Rock",
-          "Mod",
-          "New Wave",
-          "Pop Rap",
-          "Pop Rock",
-          "Post-Punk",
-          "Ska",
-          "Soul",
-          "Soundtrack",
-          "Synth-pop"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 1845663,
-      "instance_id": 1979846400,
-      "date_added": "2025-03-30T01:24:49-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 1845663,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/1845663",
-        "thumb": "https://i.discogs.com/FJBb3PKOAYvdbDUBKzHsTrcJUHh29iIJ_dawgMCsWfM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4NDU2/NjMtMTM0OTU1Njk0/MS02NjY3LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/zOKhCBzaWH1eJS29moSywcQX9V6Hy2qF_xDfUPn6iEE/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4NDU2/NjMtMTM0OTU1Njk0/MS02NjY3LmpwZWc.jpeg",
-        "title": "Jij Bent De Zon",
-        "year": 2000,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Single"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Jop",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 553997,
-            "resource_url": "https://api.discogs.com/artists/553997"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Sony Music MM",
-            "catno": "TTS 11983",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 60729,
-            "resource_url": "https://api.discogs.com/labels/60729"
-          }
-        ],
-        "genres": [
-          "Pop"
-        ],
-        "styles": [
-          "Europop"
+          "Art Rock",
+          "Leftfield"
         ]
       },
       "folder_id": 1
