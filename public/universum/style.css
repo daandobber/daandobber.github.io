@@ -1,0 +1,706 @@
+:root {
+    --bg-gradient-stop-1: #0a1020;
+    --bg-gradient-stop-2: #1a2a4a;
+    --gate-node-color: rgba(180, 160, 220, 0.6);
+    --gate-node-border: rgba(210, 190, 255, 0.8);
+    --probability-gate-node-color: rgba(160, 220, 220, 0.6);
+    --probability-gate-node-border: rgba(190, 255, 255, 0.8);
+    --pitch-node-color: rgba(220, 180, 160, 0.6);
+    --pitch-node-border: rgba(255, 210, 190, 0.8);
+    --nebula-color: rgba(180, 220, 255, 0.5); /* Renamed from wormhole */
+    --nebula-border: rgba(210, 230, 255, 0.8); /* Renamed from wormhole */
+    --start-node-color: rgba(255, 255, 200, 0.9); /* Pulsar 'Start' color */
+    --start-node-border: rgba(255, 255, 230, 1); /* Pulsar 'Start' border */
+    --start-node-disabled-color: rgba(160, 160, 120, 0.5);
+    --start-node-disabled-border: rgba(180, 180, 140, 0.7);
+    --snowball-start-color: rgba(255, 180, 255, 0.9); /* (Supernova - Currently unused) */
+    --snowball-start-border: rgba(255, 220, 255, 1); /* (Supernova - Currently unused) */
+    --snowball-start-disabled-color: rgba(160, 120, 160, 0.5);
+    --snowball-start-disabled-border: rgba(180, 140, 180, 0.7);
+    --speed-node-color: rgba(160, 230, 160, 0.7);
+    --speed-node-border: rgba(200, 255, 200, 0.9);
+    --connection-color: rgba(100, 130, 180, 0.4);
+    --pulse-color: rgba(255, 255, 255, 1); /* Base color for pulses */
+    --pulse-logic-color: rgba(255, 200, 150, 1); /* Not currently used, but available */
+    --pulse-visual-color: var(--pulse-color); /* Actual color used for drawing pulses */
+    --particle-color: rgba(200, 220, 255, 0.8);
+    --wind-particle-color: rgba(150, 180, 220, 0.1);
+    --panel-bg: rgba(20, 30, 55, 0.9);
+    --button-bg: #304070;
+    --button-hover: #405088;
+    --button-active: #6075b0;
+    --text-color: #ddeeff;
+    --selection-rect-color: rgba(150, 200, 255, 0.3);
+    --grid-color: rgba(100, 130, 180, 0.15);
+    --constellation-highlight: rgba(255, 255, 150, 0.15);
+    --beat-indicator-color: rgba(180, 210, 255, 0.5);
+    --button-disabled-bg: #2a355a;
+    --button-disabled-color: #7788aa;
+    --toolbar-width: 52px;
+    --side-toolbar-width: 180px;
+}
+
+body.theme-minor-pentatonic {
+    --bg-gradient-stop-1: #201030;
+    --bg-gradient-stop-2: #402050;
+    --gate-node-color: rgba(160, 160, 220, 0.6);
+    --gate-node-border: rgba(190, 190, 255, 0.8);
+    --probability-gate-node-color: rgba(180, 160, 200, 0.6);
+    --probability-gate-node-border: rgba(210, 190, 230, 0.8);
+    --pitch-node-color: rgba(220, 160, 200, 0.6);
+    --pitch-node-border: rgba(255, 190, 230, 0.8);
+    --nebula-color: rgba(200, 180, 230, 0.5);
+    --nebula-border: rgba(220, 200, 250, 0.8);
+    --start-node-color: rgba(255, 200, 255, 0.9);
+    --start-node-border: rgba(255, 230, 255, 1);
+    --start-node-disabled-color: rgba(160, 120, 160, 0.5);
+    --start-node-disabled-border: rgba(180, 150, 180, 0.7);
+    --snowball-start-color: rgba(200, 255, 255, 0.9);
+    --snowball-start-border: rgba(230, 255, 255, 1);
+    --snowball-start-disabled-color: rgba(120, 160, 160, 0.5);
+    --snowball-start-disabled-border: rgba(150, 180, 180, 0.7);
+    --speed-node-color: rgba(230, 160, 230, 0.7);
+    --speed-node-border: rgba(255, 200, 255, 0.9);
+    --connection-color: rgba(150, 110, 180, 0.4);
+    --pulse-color: rgba(255, 240, 255, 1);
+    --pulse-logic-color: rgba(255, 180, 255, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(230, 200, 255, 0.8);
+    --wind-particle-color: rgba(190, 160, 220, 0.1);
+    --panel-bg: rgba(40, 25, 60, 0.9);
+    --button-bg: #503070;
+    --button-hover: #684088;
+    --button-active: #8860b0;
+    --selection-rect-color: rgba(200, 150, 255, 0.3);
+    --grid-color: rgba(150, 110, 180, 0.15);
+    --constellation-highlight: rgba(255, 200, 255, 0.15);
+    --beat-indicator-color: rgba(224, 199, 255, 0.5);
+    --button-disabled-bg: #3a254a;
+    --button-disabled-color: #aa88aa;
+}
+
+body.theme-major {
+    --bg-gradient-stop-1: #102525;
+    --bg-gradient-stop-2: #154040;
+    --gate-node-color: rgba(160, 220, 180, 0.6);
+    --gate-node-border: rgba(190, 255, 210, 0.8);
+     --probability-gate-node-color: rgba(160, 200, 220, 0.6);
+    --probability-gate-node-border: rgba(190, 230, 255, 0.8);
+    --pitch-node-color: rgba(160, 180, 220, 0.6);
+    --pitch-node-border: rgba(190, 210, 255, 0.8);
+    --nebula-color: rgba(180, 230, 210, 0.5);
+    --nebula-border: rgba(200, 250, 230, 0.8);
+    --start-node-color: rgba(200, 255, 220, 0.9);
+    --start-node-border: rgba(230, 255, 240, 1);
+    --start-node-disabled-color: rgba(120, 160, 130, 0.5);
+    --start-node-disabled-border: rgba(150, 180, 160, 0.7);
+    --snowball-start-color: rgba(255, 255, 180, 0.9);
+    --snowball-start-border: rgba(255, 255, 220, 1);
+    --snowball-start-disabled-color: rgba(160, 160, 110, 0.5);
+    --snowball-start-disabled-border: rgba(180, 180, 140, 0.7);
+    --speed-node-color: rgba(160, 230, 210, 0.7);
+    --speed-node-border: rgba(200, 255, 230, 0.9);
+    --connection-color: rgba(100, 180, 150, 0.4);
+    --pulse-color: rgba(230, 255, 255, 1);
+    --pulse-logic-color: rgba(180, 255, 200, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(180, 255, 230, 0.8);
+    --wind-particle-color: rgba(150, 220, 190, 0.1);
+    --panel-bg: rgba(20, 55, 50, 0.9);
+    --button-bg: #307060;
+    --button-hover: #408870;
+    --button-active: #60b090;
+    --selection-rect-color: rgba(150, 255, 200, 0.3);
+    --grid-color: rgba(100, 180, 150, 0.15);
+    --constellation-highlight: rgba(200, 255, 220, 0.15);
+    --beat-indicator-color: rgba(180, 255, 230, 0.5);
+    --button-disabled-bg: #255a50;
+    --button-disabled-color: #77aa99;
+}
+
+body.theme-minor {
+    --bg-gradient-stop-1: #301a1a;
+    --bg-gradient-stop-2: #502a2a;
+    --gate-node-color: rgba(220, 160, 160, 0.6);
+    --gate-node-border: rgba(255, 190, 190, 0.8);
+     --probability-gate-node-color: rgba(220, 180, 160, 0.6);
+    --probability-gate-node-border: rgba(255, 210, 190, 0.8);
+    --pitch-node-color: rgba(220, 200, 160, 0.6);
+    --pitch-node-border: rgba(255, 230, 190, 0.8);
+    --nebula-color: rgba(230, 190, 180, 0.5);
+    --nebula-border: rgba(250, 210, 200, 0.8);
+    --start-node-color: rgba(255, 210, 180, 0.9);
+    --start-node-border: rgba(255, 230, 210, 1);
+    --start-node-disabled-color: rgba(160, 130, 110, 0.5);
+    --start-node-disabled-border: rgba(180, 150, 130, 0.7);
+    --snowball-start-color: rgba(200, 220, 255, 0.9);
+    --snowball-start-border: rgba(230, 240, 255, 1);
+    --snowball-start-disabled-color: rgba(120, 140, 160, 0.5);
+    --snowball-start-disabled-border: rgba(150, 160, 180, 0.7);
+    --speed-node-color: rgba(230, 190, 160, 0.7);
+    --speed-node-border: rgba(255, 220, 200, 0.9);
+    --connection-color: rgba(180, 130, 110, 0.4);
+    --pulse-color: rgba(255, 245, 230, 1);
+    --pulse-logic-color: rgba(255, 180, 180, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(255, 220, 200, 0.8);
+    --wind-particle-color: rgba(220, 180, 160, 0.1);
+    --panel-bg: rgba(60, 35, 30, 0.9);
+    --button-bg: #704040;
+    --button-hover: #885050;
+    --button-active: #b07070;
+    --selection-rect-color: rgba(255, 180, 150, 0.3);
+    --grid-color: rgba(180, 130, 110, 0.15);
+    --constellation-highlight: rgba(255, 210, 180, 0.15);
+    --beat-indicator-color: rgba(255, 220, 200, 0.5);
+    --button-disabled-bg: #5a3530;
+    --button-disabled-color: #aa8877;
+}
+
+body.theme-chromatic {
+    --bg-gradient-stop-1: #101015;
+    --bg-gradient-stop-2: #282830;
+    --gate-node-color: rgba(180, 180, 180, 0.6);
+    --gate-node-border: rgba(210, 210, 210, 0.8);
+     --probability-gate-node-color: rgba(190, 190, 190, 0.6);
+    --probability-gate-node-border: rgba(220, 220, 220, 0.8);
+    --pitch-node-color: rgba(200, 200, 200, 0.6);
+    --pitch-node-border: rgba(230, 230, 230, 0.8);
+    --nebula-color: rgba(210, 210, 220, 0.5);
+    --nebula-border: rgba(230, 230, 240, 0.8);
+    --start-node-color: rgba(255, 255, 255, 0.9);
+    --start-node-border: rgba(230, 230, 230, 1);
+    --start-node-disabled-color: rgba(160, 160, 160, 0.5);
+    --start-node-disabled-border: rgba(180, 180, 180, 0.7);
+    --snowball-start-color: rgba(200, 200, 255, 0.9);
+    --snowball-start-border: rgba(230, 230, 255, 1);
+    --snowball-start-disabled-color: rgba(130, 130, 160, 0.5);
+    --snowball-start-disabled-border: rgba(150, 150, 180, 0.7);
+    --speed-node-color: rgba(200, 200, 200, 0.7);
+    --speed-node-border: rgba(230, 230, 230, 0.9);
+    --connection-color: rgba(150, 150, 160, 0.4);
+    --pulse-color: rgba(255, 255, 255, 1);
+    --pulse-logic-color: rgba(200, 200, 255, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(220, 220, 230, 0.8);
+    --wind-particle-color: rgba(180, 180, 190, 0.1);
+    --panel-bg: rgba(50, 50, 60, 0.9);
+    --button-bg: #555;
+    --button-hover: #666;
+    --button-active: #888;
+    --selection-rect-color: rgba(200, 200, 200, 0.3);
+    --grid-color: rgba(150, 150, 160, 0.15);
+    --constellation-highlight: rgba(220, 220, 220, 0.15);
+    --beat-indicator-color: rgba(200, 200, 200, 0.5);
+    --button-disabled-bg: #444;
+    --button-disabled-color: #999;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    transition: background 0.8s ease;
+}
+
+#mainCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    background: linear-gradient(135deg, var(--bg-gradient-stop-1), var(--bg-gradient-stop-2));
+    touch-action: none;
+}
+
+#startMessage, #loadingIndicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    font-size: 1.2em;
+    pointer-events: none;
+    z-index: 10;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+
+#loadingIndicator {
+    padding: 15px;
+    font-size: 1em;
+    z-index: 11;
+}
+
+#toolbar {
+    position: fixed;
+    left: 10px;
+    top: 10px;
+    z-index: 10;
+    background-color: var(--panel-bg);
+    border-radius: 5px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    width: var(--toolbar-width);
+    box-sizing: border-box;
+}
+
+#toolbar-add-elements, #toolbar-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#toolbar button {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 8px;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 18px;
+    width: 100%;
+    min-height: 40px;
+    box-sizing: border-box;
+    line-height: 1;
+}
+
+#toolbar button:hover {
+    background-color: var(--button-hover);
+}
+
+#toolbar button.active {
+    background-color: var(--button-active);
+    border-color: var(--text-color);
+    color: white;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+}
+
+.toolbar-divider {
+    border: none;
+    height: 1px;
+    background-color: var(--button-bg);
+    margin: 3px 0;
+}
+
+.panel {
+    position: fixed;
+    top: 10px;
+    background-color: var(--panel-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    color: var(--text-color);
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0.3s;
+    height: calc(100vh - 30px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--button-active) var(--button-bg);
+    transform: translateX(-110%);
+    opacity: 0;
+    visibility: hidden;
+}
+.panel:not(.hidden) {
+     transform: translateX(0);
+     opacity: 1;
+     pointer-events: auto;
+     visibility: visible;
+     transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0s;
+}
+
+.panel::-webkit-scrollbar { width: 6px; }
+.panel::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
+.panel::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
+
+#hamburgerMenuPanel {
+    left: calc(var(--toolbar-width) + 20px);
+    z-index: 9;
+    min-width: 220px;
+}
+#hamburgerMenuPanel.hidden {
+     transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
+}
+
+#sideToolbar {
+    left: calc(var(--toolbar-width) + 20px);
+    width: var(--side-toolbar-width);
+    z-index: 8;
+}
+
+.panel h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-bottom: 1px solid var(--button-bg);
+    padding-bottom: 8px;
+}
+
+#sideToolbarContent .type-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.panel .type-button,
+.panel .waveform-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 8px 10px;
+    margin-bottom: 0;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.95em;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.panel .type-button .type-icon {
+    font-size: 1.2em;
+    min-width: 1.2em;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.panel .type-button:hover,
+.panel .waveform-button:hover {
+    background-color: var(--button-hover);
+}
+
+.panel .type-button.selected,
+.panel .waveform-button.selected {
+    background-color: var(--button-active);
+    border-color: var(--text-color);
+    color: white;
+}
+
+.panel .type-button.disabled,
+.panel .waveform-button.disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-color);
+    cursor: not-allowed;
+    border-color: var(--button-bg);
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+#sideToolbar label {
+    font-size: 0.9em;
+    margin: 10px 0 3px 0;
+    display: block;
+    opacity: 0.9;
+}
+
+#sideToolbar select {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 6px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+#sideToolbar select:focus {
+    outline: 1px solid var(--button-active);
+    border-color: var(--button-active);
+}
+
+
+#hamburgerMenuPanel p { margin: 10px 0 5px 0; font-size: 0.9em; font-weight: bold; opacity: 0.9; color: var(--text-color); }
+#hamburgerMenuPanel p:first-of-type { margin-top: 0; }
+#hamburgerMenuPanel small { display: block; font-size: 0.8em; opacity: 0.7; margin-bottom: 8px; margin-top: 5px; line-height: 1.3; color: var(--button-disabled-color); }
+#hamburgerMenuPanel label { font-size: 0.9em; margin-bottom: 3px; margin-top: 10px; display: block; opacity: 0.9; }
+#hamburgerMenuPanel select, #hamburgerMenuPanel input[type="range"], #hamburgerMenuPanel input[type="checkbox"], #hamburgerMenuPanel input[type="number"] { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-hover); padding: 6px; border-radius: 3px; margin-bottom: 10px; width: 100%; box-sizing: border-box; font-size: 0.9em; transition: background-color 0.2s ease, border-color 0.2s ease; vertical-align: middle; }
+#hamburgerMenuPanel input[type="checkbox"] { width: auto; margin-right: 5px; }
+#hamburgerMenuPanel input[type="range"] { padding: 0; height: 18px; cursor: pointer; vertical-align: middle; }
+#hamburgerMenuPanel input[type=number]::-webkit-inner-spin-button, #hamburgerMenuPanel input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#hamburgerMenuPanel input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+#hamburgerMenuPanel input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--button-hover); border-radius: 2px; }
+#hamburgerMenuPanel input[type=range]::-moz-range-track { height: 4px; background: var(--button-hover); border-radius: 2px; }
+#hamburgerMenuPanel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; margin-top: -5px; cursor: pointer; }
+#hamburgerMenuPanel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; border: none; cursor: pointer; }
+#hamburgerMenuPanel select:focus, #hamburgerMenuPanel input[type="range"]:focus, #hamburgerMenuPanel input[type="number"]:focus { outline: 1px solid var(--button-active); border-color: var(--button-active); }
+#hamburgerMenuPanel hr { border: none; border-top: 1px solid var(--button-bg); margin: 12px 0; opacity: 0.5; }
+#groupControls.hidden { display: none; }
+#groupControls label[for="groupFluctuateAmount"], #groupControls #groupFluctuateAmount { margin-left: 20px; width: calc(100% - 20px); }
+
+#gridControls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    background-color: var(--panel-bg);
+    border-radius: 5px;
+    padding: 5px;
+    color: var(--text-color);
+    box-shadow: -2px 2px 10px rgba(0,0,0,0.3);
+    font-size: 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#gridControls button {
+    background: var(--button-bg);
+    color: var(--text-color);
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    width: auto;
+    text-align: left;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+    margin: 2px 0;
+    font-size: 0.85em;
+}
+
+#gridControls button:hover {
+    background: var(--button-hover);
+}
+
+#gridControls button.active {
+    background: var(--button-active);
+    color: white;
+}
+
+#gridOptions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: 100%;
+    margin-top: 3px;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+#gridOptions:not(.hidden) {
+    max-height: 100px;
+    opacity: 1;
+    visibility: visible;
+}
+
+
+#gridOptions label {
+    font-size: 0.8em;
+    margin: 3px 5px 0 0;
+    opacity: 0.9;
+    align-self: center;
+}
+
+#gridOptions input[type="range"] {
+    background-color: var(--button-bg);
+    border: 1px solid var(--button-hover);
+    border-radius: 3px;
+    margin-bottom: 3px;
+    width: 100px;
+    box-sizing: border-box;
+    height: 16px;
+    cursor: pointer;
+    padding: 0;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#gridOptions input[type=range]::-webkit-slider-runnable-track {
+    height: 3px;
+    background: var(--button-hover);
+    border-radius: 1px;
+}
+
+#gridOptions input[type=range]::-moz-range-track {
+    height: 3px;
+    background: var(--button-hover);
+    border-radius: 1px;
+}
+
+#gridOptions input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--text-color);
+    border-radius: 50%;
+    margin-top: -4.5px;
+    cursor: pointer;
+}
+
+#gridOptions input[type=range]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--text-color);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+}
+
+#gridOptions > div {
+    display: flex;
+    align-items: center;
+}
+
+#transportControls {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    background-color: var(--panel-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 30px;
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+#transportControls button {
+    background: var(--button-bg);
+    color: var(--text-color);
+    border: none;
+    padding: 8px 15px;
+    cursor: pointer;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+#transportControls button:hover {
+    background-color: var(--button-hover);
+}
+
+#transportControls button:active {
+    transform: scale(0.95);
+}
+
+#transportControls button.active {
+    background-color: var(--button-active);
+    color: white;
+}
+
+#transportControls button#restartPulsarsBtn.hidden {
+    display: none;
+}
+
+#transportControls #bpmControls {
+    display: flex;
+    align-items: center;
+    margin-left: 5px;
+}
+
+#transportControls #bpmControls.hidden {
+    display: none;
+}
+
+#transportControls #bpmControls label {
+    margin: 0 5px 0 0;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+#transportControls #bpmControls input[type="number"] {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 5px;
+    border-radius: 3px;
+    width: 55px;
+    text-align: right;
+    font-size: 0.9em;
+    -moz-appearance: textfield;
+     appearance: textfield;
+}
+
+#transportControls input[type=number]::-webkit-inner-spin-button,
+#transportControls input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#transportControls select#scaleSelect {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 6px 8px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    cursor: pointer;
+    margin: 0 5px;
+    height: 33px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ddeeff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 8px top 50%;
+    background-size: .65em auto;
+    padding-right: 25px;
+}
+#transportControls select#scaleSelect:hover {
+    background-color: var(--button-hover);
+}
+
+
+#beatIndicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background-color: var(--beat-indicator-color);
+    opacity: 0;
+    transition: opacity 0.05s ease-out;
+    pointer-events: none;
+    z-index: 1;
+}
+
+#beatIndicator.active {
+    opacity: 1;
+    transition: opacity 0.01s ease-in;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}

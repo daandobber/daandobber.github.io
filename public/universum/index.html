@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Music Constellations V15.7 - Note Pre-Selection</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-major-pentatonic">
+    <canvas id="mainCanvas"></canvas>
+
+    <div id="toolbar">
+        <div id="toolbar-add-elements">
+            <button id="addSoundStarBtn" title="Add Sound Star (S)">★</button>
+            <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
+            <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
+            <button id="addGateBtn" title="Add Gate">🚦</button>
+            <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
+             <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
+             <button id="addSpeedBtn" title="Add Warp">⏩</button>
+        </div>
+         <hr class="toolbar-divider">
+        <div id="toolbar-tools">
+            <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
+            <button id="connectBtn" title="Connect Tool (C)">🔗</button>
+            <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
+            <button id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↩️</button>
+            <button id="redoBtn" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+        </div>
+         <hr class="toolbar-divider">
+        <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
+    </div>
+
+    <div id="hamburgerMenuPanel" class="panel slide-panel hidden">
+         <div id="groupControls" class="hidden">
+             <p><strong>Constellation Controls:</strong> (<span id="groupNodeCount">0</span> nodes)</p>
+             <label for="groupVolumeSlider">Group Volume:</label>
+             <input type="range" id="groupVolumeSlider" min="0" max="1.5" step="0.01" value="1.0" title="Adjust volume for the selected constellation">
+             <label for="groupFluctuateToggle">Volume Fluctuation:</label>
+             <input type="checkbox" id="groupFluctuateToggle" title="Enable/Disable slow volume fluctuation">
+             <label for="groupFluctuateAmount">Fluctuation Amount:</label>
+             <input type="range" id="groupFluctuateAmount" min="0" max="0.3" step="0.01" value="0.08" title="Adjust intensity of volume fluctuation (Requires Fluctuation Enabled)">
+             <hr>
+        </div>
+        <p><strong>Global Settings:</strong></p>
+        <small>(Scale is now in Transport Controls)</small>
+    </div>
+
+    <div id="sideToolbar" class="panel slide-panel hidden">
+        <h3 id="sideToolbarTitle">Elements</h3>
+        <div id="sideToolbarContent">
+            </div>
+    </div>
+
+    <div id="gridControls">
+        <button id="gridToggleBtn" title="Toggle Grid Visibility (G)">Grid: OFF</button>
+        <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button>
+        <div id="gridOptions" class="hidden">
+             <button id="gridTypeBtn" title="Switch Grid Type">Type: Lines</button>
+             <button id="gridSnapBtn" title="Toggle Snap to Grid">Snap: OFF</button>
+             <div>
+                 <label for="gridSizeSlider">Size:</label>
+                 <input type="range" id="gridSizeSlider" min="10" max="150" step="5" value="50" title="Adjust Grid Spacing">
+             </div>
+        </div>
+    </div>
+
+    <div id="transportControls">
+        <button id="playPauseBtn">Play ▶</button>
+        <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+        <div id="bpmControls" class="hidden">
+             <label for="globalBpmInput">BPM:</label>
+             <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
+        </div>
+         <select id="scaleSelect" title="Change musical scale and theme"> </select>
+        <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+    </div>
+
+    <div id="beatIndicator"></div>
+    <div id="startMessage">Klik of tik om de sterren te wekken</div>
+    <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
+    <script src="app.js"></script>
+</body>
+</html>
