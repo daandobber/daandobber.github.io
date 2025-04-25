@@ -231,6 +231,65 @@
       "folder_id": 1
     },
     {
+      "id": 374951,
+      "instance_id": 2006789679,
+      "date_added": "2025-04-24T00:36:28-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 374951,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/374951",
+        "thumb": "https://i.discogs.com/NvEzYa565GXeC9DVwcFL_bvqCykO88D3TfnIAE_CchY/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM3NDk1/MS0xMzU2Mjc4ODM3/LTQ0MjcuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/tLVol1Zvh3LqbH4Gl6PhZPlyjK4U42XnrYPY92LATXM/rs:fit/g:sm/q:90/h:507/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM3NDk1/MS0xMzU2Mjc4ODM3/LTQ0MjcuanBlZw.jpeg",
+        "title": "Alles",
+        "year": 1999,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "2",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Doe Maar",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 260283,
+            "resource_url": "https://api.discogs.com/artists/260283"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Arcade",
+            "catno": "0110750",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1614,
+            "resource_url": "https://api.discogs.com/labels/1614"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Reggae",
+          "Pop"
+        ],
+        "styles": [
+          "Reggae",
+          "Dub",
+          "Pop Rock",
+          "Ska",
+          "Reggae-Pop"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1488540,
       "instance_id": 1985624865,
       "date_added": "2025-04-05T00:25:52-07:00",
@@ -721,6 +780,61 @@
       "folder_id": 1
     },
     {
+      "id": 1230504,
+      "instance_id": 2006789622,
+      "date_added": "2025-04-24T00:36:18-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1230504,
+        "master_id": 86973,
+        "master_url": "https://api.discogs.com/masters/86973",
+        "resource_url": "https://api.discogs.com/releases/1230504",
+        "thumb": "https://i.discogs.com/rib2syPhPKww0KhqGfFa4JU-BR0x6s6yXTd6O5lgaUM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMzA1/MDQtMTUyNTUyNjMy/OC04NzYwLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/qq7kRsq-bmTIChtiitzL2fNN-oIM5Oq8glILKEuNNvc/rs:fit/g:sm/q:90/h:590/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMzA1/MDQtMTUyNTUyNjMy/OC04NzYwLmpwZWc.jpeg",
+        "title": "Walk Away Collector's Edition (The Best Of 1977-1980)",
+        "year": 1980,
+        "formats": [
+          {
+            "name": "Vinyl",
+            "qty": "1",
+            "text": "18",
+            "descriptions": [
+              "LP",
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Donna Summer",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 6270,
+            "resource_url": "https://api.discogs.com/artists/6270"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Casablanca",
+            "catno": "NBLP 7244",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26938,
+            "resource_url": "https://api.discogs.com/labels/26938"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Disco"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1080332,
       "instance_id": 1979845371,
       "date_added": "2025-03-30T01:23:03-07:00",
@@ -1061,6 +1175,180 @@
           "House",
           "Downtempo",
           "Euro House"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 675029,
+      "instance_id": 2006789466,
+      "date_added": "2025-04-24T00:36:00-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 675029,
+        "master_id": 830787,
+        "master_url": "https://api.discogs.com/masters/830787",
+        "resource_url": "https://api.discogs.com/releases/675029",
+        "thumb": "https://i.discogs.com/QuWJ7-mEA6F7w_WBpbSePFsZucffxEKWoBPt8oSLs5g/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTY3NTAy/OS0xMTg0MDEwNTcz/LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/fNzibjMbwNWud_zmSHhSwKZhfLBfbFUrVFDjKjr6AIw/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTY3NTAy/OS0xMTg0MDEwNTcz/LmpwZWc.jpeg",
+        "title": "Discover",
+        "year": 2001,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          },
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "CD-ROM"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Di-Rect",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 367300,
+            "resource_url": "https://api.discogs.com/artists/367300"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Dino Music",
+            "catno": "5373530",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1608,
+            "resource_url": "https://api.discogs.com/labels/1608"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Rock & Roll",
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 2889754,
+      "instance_id": 2006789325,
+      "date_added": "2025-04-24T00:35:44-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 2889754,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/2889754",
+        "thumb": "https://i.discogs.com/AjH2bTlUe0WvuuRSKul7zxuPVSjsJmTwX2Fpb89iUR8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4ODk3/NTQtMTMwNTg3MDM2/MC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/pMJvyJTDi9UnXKA-RjPw5xvM8_zdrLEQfC7An34dkJ0/rs:fit/g:sm/q:90/h:378/w:491/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4ODk3/NTQtMTMwNTg3MDM2/MC5qcGVn.jpeg",
+        "title": "Name Of The Game",
+        "year": 2003,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Single",
+              "Enhanced"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Di-Rect",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 367300,
+            "resource_url": "https://api.discogs.com/artists/367300"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Dino Music",
+            "catno": "7243 5531352 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1608,
+            "resource_url": "https://api.discogs.com/labels/1608"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": [
+          "Punk",
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 1937432,
+      "instance_id": 2006789790,
+      "date_added": "2025-04-24T00:36:41-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1937432,
+        "master_id": 183487,
+        "master_url": "https://api.discogs.com/masters/183487",
+        "resource_url": "https://api.discogs.com/releases/1937432",
+        "thumb": "https://i.discogs.com/Zdt6ghu9I1kZWgDR6qiAmlKsktvL_lzIZDfCf9x3RgU/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5Mzc0/MzItMTUzNjA2NDE4/Ni02MDM0LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/WtNPb4a-_Mm4eLnLDv0XDAp2gI1OUIkgMJgRhEKxtpY/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE5Mzc0/MzItMTUzNjA2NDE4/Ni02MDM0LmpwZWc.jpeg",
+        "title": "Tongue N'Cheek",
+        "year": 2009,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Dizzee Rascal",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 78659,
+            "resource_url": "https://api.discogs.com/artists/78659"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Dirtee Stank Recordings",
+            "catno": "STANK007CD",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 89215,
+            "resource_url": "https://api.discogs.com/labels/89215"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Hip Hop"
+        ],
+        "styles": [
+          "Trance",
+          "UK Garage",
+          "Grime",
+          "Electro"
         ]
       },
       "folder_id": 1
@@ -1956,6 +2244,59 @@
       "folder_id": 1
     },
     {
+      "id": 12091601,
+      "instance_id": 2006789844,
+      "date_added": "2025-04-24T00:36:49-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 12091601,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/12091601",
+        "thumb": "https://i.discogs.com/VXEaFEJPciTGjX1ZDtF9afFFQFWUxFFoQUbD2cwNQbg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMDkx/NjAxLTE1MzExNjUy/ODUtNzg3NC5wbmc.jpeg",
+        "cover_image": "https://i.discogs.com/jrBlMCD1cTBVsHX-rc4UeDe1mtU3qbqmXyYB-9HW1Rw/rs:fit/g:sm/q:90/h:599/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMDkx/NjAxLTE1MzExNjUy/ODUtNzg3NC5wbmc.jpeg",
+        "title": "The Dubliners",
+        "year": 1998,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Dubliners",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 274143,
+            "resource_url": "https://api.discogs.com/artists/274143"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Green Velvet",
+            "catno": "GV 98012",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 722302,
+            "resource_url": "https://api.discogs.com/labels/722302"
+          }
+        ],
+        "genres": [
+          "Folk, World, & Country"
+        ],
+        "styles": [
+          "Celtic"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1012693,
       "instance_id": 1992475206,
       "date_added": "2025-04-11T23:10:53-07:00",
@@ -2392,6 +2733,59 @@
       "folder_id": 1
     },
     {
+      "id": 7255595,
+      "instance_id": 2006790051,
+      "date_added": "2025-04-24T00:37:23-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 7255595,
+        "master_id": 160184,
+        "master_url": "https://api.discogs.com/masters/160184",
+        "resource_url": "https://api.discogs.com/releases/7255595",
+        "thumb": "https://i.discogs.com/XMc4MJQV6G9NAKMZwhackN0IDnwYbGpyhmeszrlFNeE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyNTU1/OTUtMTQzNzMwMTY3/OC03MjUyLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/neCgI8rN-DUQX64jqfljsmdqVIvS3XhXTavpbG1h3C8/rs:fit/g:sm/q:90/h:500/w:501/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyNTU1/OTUtMTQzNzMwMTY3/OC03MjUyLmpwZWc.jpeg",
+        "title": "20 Greatest Hits Vol 2",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Dubliners",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 274143,
+            "resource_url": "https://api.discogs.com/artists/274143"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Magic Music",
+            "catno": "31007",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 37808,
+            "resource_url": "https://api.discogs.com/labels/37808"
+          }
+        ],
+        "genres": [
+          "Folk, World, & Country"
+        ],
+        "styles": [
+          "Folk"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 505215,
       "instance_id": 1979844501,
       "date_added": "2025-03-30T01:21:23-07:00",
@@ -2646,420 +3040,6 @@
           "Ballad",
           "Soundtrack",
           "African"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 6320036,
-      "instance_id": 1979844954,
-      "date_added": "2025-03-30T01:22:19-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 6320036,
-        "master_id": 83982,
-        "master_url": "https://api.discogs.com/masters/83982",
-        "resource_url": "https://api.discogs.com/releases/6320036",
-        "thumb": "https://i.discogs.com/Kg2V_KChfPGwR4g5g3QEcN9EAodBA51_CLPZIghaMHw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYzMjAw/MzYtMTQxNjM4OTQ0/MS00OTk5LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/orRW4uTt05wISK6o-FZBw-QipfcFzut4Ors0tP2-Blw/rs:fit/g:sm/q:90/h:562/w:564/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYzMjAw/MzYtMTQxNjM4OTQ0/MS00OTk5LmpwZWc.jpeg",
-        "title": "O Brother, Where Art Thou? (Music From The Motion Picture)",
-        "year": 2000,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album",
-              "Unofficial Release"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "Mercury (2)",
-            "catno": "170 069-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 154631,
-            "resource_url": "https://api.discogs.com/labels/154631"
-          }
-        ],
-        "genres": [
-          "Folk, World, & Country",
-          "Stage & Screen"
-        ],
-        "styles": [
-          "Soundtrack",
-          "Country",
-          "Bluegrass"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 106443,
-      "instance_id": 1985621844,
-      "date_added": "2025-04-05T00:19:09-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 106443,
-        "master_id": 129586,
-        "master_url": "https://api.discogs.com/masters/129586",
-        "resource_url": "https://api.discogs.com/releases/106443",
-        "thumb": "https://i.discogs.com/YPSaCVUm5yLlKuNKrul6nJ9PK5pf84kIWBQijbYQv_Y/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwNjQ0/My0xMTYyMTUxMTEz/LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/qpRwgA_52pDGho3IIIUq7nR-E_Ob96_PVBAmJjdCDaE/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwNjQ0/My0xMTYyMTUxMTEz/LmpwZWc.jpeg",
-        "title": "Happy Nation (U.S. Version)",
-        "year": 1993,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Ace Of Base",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 37231,
-            "resource_url": "https://api.discogs.com/artists/37231"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Metronome",
-            "catno": "521 472-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 5870,
-            "resource_url": "https://api.discogs.com/labels/5870"
-          },
-          {
-            "name": "Barclay",
-            "catno": "521 472-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 3304,
-            "resource_url": "https://api.discogs.com/labels/3304"
-          }
-        ],
-        "genres": [
-          "Electronic",
-          "Pop"
-        ],
-        "styles": [
-          "Europop",
-          "Eurodance",
-          "Euro House",
-          "Synth-pop"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 860719,
-      "instance_id": 1978254513,
-      "date_added": "2025-03-28T14:39:20-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 860719,
-        "master_id": 1336357,
-        "master_url": "https://api.discogs.com/masters/1336357",
-        "resource_url": "https://api.discogs.com/releases/860719",
-        "thumb": "https://i.discogs.com/_BBsLlDBdR1FOJioQUYhEwB6kojP6-QJg3ldtok3kjA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg2MDcx/OS0xNDY1NzQxMzQ5/LTMxMzAuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/HhK3-PWF-eKvGUAOIGsJeB0GRaJKg8zaBab_Mev31kM/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg2MDcx/OS0xNDY1NzQxMzQ5/LTMxMzAuanBlZw.jpeg",
-        "title": "Disco 2006",
-        "year": 2006,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Mixed"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Erol Alkan",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 117051,
-            "resource_url": "https://api.discogs.com/artists/117051"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Mixmag",
-            "catno": "MIXMAG 01/07",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 268,
-            "resource_url": "https://api.discogs.com/labels/268"
-          }
-        ],
-        "genres": [
-          "Electronic"
-        ],
-        "styles": [
-          "Tech House",
-          "Electro"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 2535616,
-      "instance_id": 1992474030,
-      "date_added": "2025-04-11T23:08:00-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 2535616,
-        "master_id": 37287,
-        "master_url": "https://api.discogs.com/masters/37287",
-        "resource_url": "https://api.discogs.com/releases/2535616",
-        "thumb": "https://i.discogs.com/uJtfHK-1cztO6iuyqDfoKDS-alX_rMky8hNmUhpfg14/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1MzU2/MTYtMTU3ODc2Mjgw/OS04OTE0LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/MtrbMYEoqtlO2cU7kvoPwFYiKtaNqekPNPhps0h8Qzg/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1MzU2/MTYtMTU3ODc2Mjgw/OS04OTE0LmpwZWc.jpeg",
-        "title": "Telegram",
-        "year": 1996,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation",
-              "Unofficial Release"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Björk",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 1373,
-            "resource_url": "https://api.discogs.com/artists/1373"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Not On Label (Björk)",
-            "catno": "TPLP51CDT",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 135101,
-            "resource_url": "https://api.discogs.com/labels/135101"
-          }
-        ],
-        "genres": [
-          "Electronic"
-        ],
-        "styles": [
-          "Abstract",
-          "IDM",
-          "Electro"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 9523277,
-      "instance_id": 1978255428,
-      "date_added": "2025-03-28T14:40:16-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 9523277,
-        "master_id": 1117794,
-        "master_url": "https://api.discogs.com/masters/1117794",
-        "resource_url": "https://api.discogs.com/releases/9523277",
-        "thumb": "https://i.discogs.com/lJdTfA3Pm5w5QCPZoUei3A9uHnDI5n083wLl86_ageM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk1MjMy/NzctMTU4NDM4MDQz/Mi05MjAyLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/PBBnb2SFn4qluPhB8qLuUs2xD9Tu3qYQYuA0l-c6GKE/rs:fit/g:sm/q:90/h:500/w:500/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk1MjMy/NzctMTU4NDM4MDQz/Mi05MjAyLmpwZWc.jpeg",
-        "title": "Best Chillout",
-        "year": 2005,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Silverfox (5)",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 4633518,
-            "resource_url": "https://api.discogs.com/artists/4633518"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Not On Label",
-            "catno": "APWCD6538e",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1818,
-            "resource_url": "https://api.discogs.com/labels/1818"
-          },
-          {
-            "name": "Not On Label",
-            "catno": "09355",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1818,
-            "resource_url": "https://api.discogs.com/labels/1818"
-          }
-        ],
-        "genres": [
-          "Electronic"
-        ],
-        "styles": [
-          "Ambient"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 472631,
-      "instance_id": 1992474408,
-      "date_added": "2025-04-11T23:09:02-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 472631,
-        "master_id": 7346,
-        "master_url": "https://api.discogs.com/masters/7346",
-        "resource_url": "https://api.discogs.com/releases/472631",
-        "thumb": "https://i.discogs.com/Cxhep55WFpMKGAtSlEhqqp6VjeMERNwOaYwDOnooPLQ/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3MjYz/MS0xNjM3ODM5MzI5/LTExNzAuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/wse4aNjSoLMbrTEG29IuUEMSS_v6povtPwFxmMkEfF0/rs:fit/g:sm/q:90/h:525/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3MjYz/MS0xNjM3ODM5MzI5/LTExNzAuanBlZw.jpeg",
-        "title": "Enough Is Enough",
-        "year": 1993,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Single"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Chumbawamba",
-            "anv": "",
-            "join": "&",
-            "role": "",
-            "tracks": "",
-            "id": 59549,
-            "resource_url": "https://api.discogs.com/artists/59549"
-          },
-          {
-            "name": "Credit To The Nation",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 40725,
-            "resource_url": "https://api.discogs.com/artists/40725"
-          }
-        ],
-        "labels": [
-          {
-            "name": "One Little Indian",
-            "catno": "79TP7CD",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 311,
-            "resource_url": "https://api.discogs.com/labels/311"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Indie Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 30521647,
-      "instance_id": 1992473868,
-      "date_added": "2025-04-11T23:07:35-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 30521647,
-        "master_id": 46414,
-        "master_url": "https://api.discogs.com/masters/46414",
-        "resource_url": "https://api.discogs.com/releases/30521647",
-        "thumb": "https://i.discogs.com/OlbrIYllHvGwkBDZSfXoDDQ9BFJLxEBO4NnBR_wj8J0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwNTIx/NjQ3LTE3MTQyMzU4/ODgtNTg1Ni5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/Zk1g_R9-foyAPGOw0mZRvC4iHKUSQQIr0VpFrUPCbEA/rs:fit/g:sm/q:90/h:604/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTMwNTIx/NjQ3LTE3MTQyMzU4/ODgtNTg1Ni5qcGVn.jpeg",
-        "title": "Think Tank",
-        "year": 2014,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "text": "Warner Music Group Version",
-            "descriptions": [
-              "Album",
-              "Reissue",
-              "Stereo"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Parlophone",
-            "catno": "07243-582997-2-4",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2294,
-            "resource_url": "https://api.discogs.com/labels/2294"
-          }
-        ],
-        "genres": [
-          "Electronic",
-          "Rock"
-        ],
-        "styles": [
-          "Alternative Rock",
-          "Art Rock",
-          "Leftfield"
         ]
       },
       "folder_id": 1
