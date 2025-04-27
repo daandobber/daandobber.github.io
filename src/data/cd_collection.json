@@ -352,6 +352,84 @@
       "folder_id": 1
     },
     {
+      "id": 1135113,
+      "instance_id": 2009215248,
+      "date_added": "2025-04-26T08:36:30-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 1135113,
+        "master_id": 1465620,
+        "master_url": "https://api.discogs.com/masters/1465620",
+        "resource_url": "https://api.discogs.com/releases/1135113",
+        "thumb": "https://i.discogs.com/q_DR4zNRHyJ8ZKkwx2bRC5P87GxXzwUJvwTSM6qLptk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMzUx/MTMtMTE5NDg5MTM5/My5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/eDMI0MyTYhG84hIbsw5sQtR5mlbkCuEDwhkwwVwEf9Y/rs:fit/g:sm/q:90/h:292/w:300/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMzUx/MTMtMTE5NDg5MTM5/My5qcGVn.jpeg",
+        "title": "Chillout Experience",
+        "year": 2000,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "2",
+            "descriptions": [
+              "Compilation"
+            ]
+          },
+          {
+            "name": "DVD",
+            "qty": "1",
+            "text": "Multi-Region",
+            "descriptions": [
+              "DVD-Video",
+              "Multichannel",
+              "Partially Mixed"
+            ]
+          },
+          {
+            "name": "Box Set",
+            "qty": "1"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": ""
+          }
+        ],
+        "labels": [
+          {
+            "name": "Beechwood Music",
+            "catno": "TMLCD001",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1680,
+            "resource_url": "https://api.discogs.com/labels/1680"
+          },
+          {
+            "name": "Total Music",
+            "catno": "TMLCD001",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 74318,
+            "resource_url": "https://api.discogs.com/labels/74318"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Tribal House",
+          "Downtempo",
+          "Drum n Bass",
+          "Trance"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 782750,
       "instance_id": 1978253733,
       "date_added": "2025-03-28T14:38:32-07:00",
@@ -712,6 +790,61 @@
       "folder_id": 1
     },
     {
+      "id": 10058421,
+      "instance_id": 2009216628,
+      "date_added": "2025-04-26T08:37:37-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 10058421,
+        "master_id": 13344,
+        "master_url": "https://api.discogs.com/masters/13344",
+        "resource_url": "https://api.discogs.com/releases/10058421",
+        "thumb": "https://i.discogs.com/tyZ0TsRkTIUVKEBPZE18-G2NB10PYk6FnCpysLYFm2o/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMDU4/NDIxLTE0OTA4OTE1/MjMtMTYwMi5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/W4xQ0p_QDYZ4LqBGcVtHqkc387BNdYhpWrS6AYayZRg/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMDU4/NDIxLTE0OTA4OTE1/MjMtMTYwMi5qcGVn.jpeg",
+        "title": "Pablo Honey",
+        "year": 1997,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Radiohead",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 3840,
+            "resource_url": "https://api.discogs.com/artists/3840"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Capitol Records (2)",
+            "catno": "CDP 0777 7 81409 2 4",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 147244,
+            "resource_url": "https://api.discogs.com/labels/147244"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 3950974,
       "instance_id": 1985624040,
       "date_added": "2025-04-05T00:24:09-07:00",
@@ -952,6 +1085,64 @@
       "folder_id": 1
     },
     {
+      "id": 14418886,
+      "instance_id": 2009215842,
+      "date_added": "2025-04-26T08:36:58-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 14418886,
+        "master_id": 19382,
+        "master_url": "https://api.discogs.com/masters/19382",
+        "resource_url": "https://api.discogs.com/releases/14418886",
+        "thumb": "https://i.discogs.com/MBHbv8tmeY73W_5n9ec1YBp75lrvE7Q_SHg_z7WtVWA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NDE4/ODg2LTE1NzQyOTI3/MDItODc0Ni5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/OtASH1WVqGmzhl0d23k9pdAtZcjojv7irJm8L_JtxIg/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NDE4/ODg2LTE1NzQyOTI3/MDItODc0Ni5qcGVn.jpeg",
+        "title": "London Calling",
+        "year": 2019,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "2",
+            "text": "Special Sleeve",
+            "descriptions": [
+              "Album",
+              "Limited Edition",
+              "Reissue",
+              "Remastered",
+              "Special Edition"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Clash",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 29890,
+            "resource_url": "https://api.discogs.com/artists/29890"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "19075978672",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Punk"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1568018,
       "instance_id": 1979844828,
       "date_added": "2025-03-30T01:22:04-07:00",
@@ -1124,6 +1315,61 @@
       "folder_id": 1
     },
     {
+      "id": 7284642,
+      "instance_id": 2009217315,
+      "date_added": "2025-04-26T08:38:11-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 7284642,
+        "master_id": 20683,
+        "master_url": "https://api.discogs.com/masters/20683",
+        "resource_url": "https://api.discogs.com/releases/7284642",
+        "thumb": "https://i.discogs.com/xmdMkPx7kElNW452c-Z-ER3mg5niXCVw7hU0yX5V01o/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyODQ2/NDItMTcwNzgzMTgy/MS05NjAwLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/j9Dr2_SDAE1D01-hzHHh34QnjyVZvlPdXTY-4kE5BkY/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyODQ2/NDItMTcwNzgzMTgy/MS05NjAwLmpwZWc.jpeg",
+        "title": "The Division Bell",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Pink Floyd",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 45467,
+            "resource_url": "https://api.discogs.com/artists/45467"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Columbia (2)",
+            "catno": "DIDP 081417",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 149411,
+            "resource_url": "https://api.discogs.com/labels/149411"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Prog Rock",
+          "Arena Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 3359501,
       "instance_id": 1992475917,
       "date_added": "2025-04-11T23:12:30-07:00",
@@ -1176,6 +1422,58 @@
           "Downtempo",
           "Euro House"
         ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 4080242,
+      "instance_id": 2009215626,
+      "date_added": "2025-04-26T08:36:48-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 4080242,
+        "master_id": 878809,
+        "master_url": "https://api.discogs.com/masters/878809",
+        "resource_url": "https://api.discogs.com/releases/4080242",
+        "thumb": "https://i.discogs.com/El0UO7L9J8340xIPDKJUxvGeEvIAo0h1kStUgvIr2tM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQwODAy/NDItMTcxMDc2NzA1/Ni05ODMxLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/HzFcaCZLmjfL4_2c43bdCcfhHjrYAOy4-w37ZMLWVPQ/rs:fit/g:sm/q:90/h:595/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQwODAy/NDItMTcxMDc2NzA1/Ni05ODMxLmpwZWc.jpeg",
+        "title": "Classic Small Faces",
+        "year": 1999,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Small Faces",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 152682,
+            "resource_url": "https://api.discogs.com/artists/152682"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Deram",
+            "catno": "844 942-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 31676,
+            "resource_url": "https://api.discogs.com/labels/31676"
+          }
+        ],
+        "genres": [
+          "Rock",
+          "Pop"
+        ],
+        "styles": []
       },
       "folder_id": 1
     },
@@ -1485,6 +1783,70 @@
         "styles": [
           "Jazz-Rock",
           "Piano Blues"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 6868296,
+      "instance_id": 2009217609,
+      "date_added": "2025-04-26T08:38:24-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 6868296,
+        "master_id": 379205,
+        "master_url": "https://api.discogs.com/masters/379205",
+        "resource_url": "https://api.discogs.com/releases/6868296",
+        "thumb": "https://i.discogs.com/ulgCGgfx7iaTo-P1opmqyTWtdKHGstbxpNFjwCEexLk/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTY4Njgy/OTYtMTQyODM0MjU3/Ni04Njk5LnBuZw.jpeg",
+        "cover_image": "https://i.discogs.com/m-_tmvXL2NASPQ7tc56aCq3Ia60ccKK7joYZJTCym1c/rs:fit/g:sm/q:90/h:529/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTY4Njgy/OTYtMTQyODM0MjU3/Ni04Njk5LnBuZw.jpeg",
+        "title": "Audio, Video, Disco.",
+        "year": 2011,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "Justice (3)",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 52758,
+            "resource_url": "https://api.discogs.com/artists/52758"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Ed Banger Records",
+            "catno": "2564-66438-8",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 19066,
+            "resource_url": "https://api.discogs.com/labels/19066"
+          },
+          {
+            "name": "Because Music",
+            "catno": "2564-66438-8",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 54379,
+            "resource_url": "https://api.discogs.com/labels/54379"
+          }
+        ],
+        "genres": [
+          "Electronic",
+          "Rock"
+        ],
+        "styles": [
+          "House",
+          "Electro",
+          "Electro House"
         ]
       },
       "folder_id": 1
@@ -1992,6 +2354,63 @@
       "folder_id": 1
     },
     {
+      "id": 14621761,
+      "instance_id": 2009217882,
+      "date_added": "2025-04-26T08:38:38-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 14621761,
+        "master_id": 20161,
+        "master_url": "https://api.discogs.com/masters/20161",
+        "resource_url": "https://api.discogs.com/releases/14621761",
+        "thumb": "https://i.discogs.com/8BOcIEbvoM3QiIEdlUlVa5SYxyr0fSCaRjdKgfCM-jE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NjIx/NzYxLTE2MDAyMzA2/NDktNTc5MC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/eeum6NrGxNv1a8LMYDkGpXLgSAfbds4vwx88shHfWvM/rs:fit/g:sm/q:90/h:596/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0NjIx/NzYxLTE2MDAyMzA2/NDktNTc5MC5qcGVn.jpeg",
+        "title": "Boys Don't Cry",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "text": "AI",
+            "descriptions": [
+              "Album",
+              "Reissue",
+              "Unofficial Release"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Cure",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 28972,
+            "resource_url": "https://api.discogs.com/artists/28972"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Fiction Records (2)",
+            "catno": "04228150112",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 79766,
+            "resource_url": "https://api.discogs.com/labels/79766"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "New Wave",
+          "Post-Punk"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1853850,
       "instance_id": 1992473673,
       "date_added": "2025-04-11T23:07:03-07:00",
@@ -2297,6 +2716,67 @@
       "folder_id": 1
     },
     {
+      "id": 5986653,
+      "instance_id": 2009217129,
+      "date_added": "2025-04-26T08:37:59-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 5986653,
+        "master_id": 102104,
+        "master_url": "https://api.discogs.com/masters/102104",
+        "resource_url": "https://api.discogs.com/releases/5986653",
+        "thumb": "https://i.discogs.com/3gl3MvJRhp-5halO_ltctMw-Ff-_FHQuKwDMgN8UJwQ/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU5ODY2/NTMtMTQwODEzMjA2/My0xNTkyLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/DOZ96PbD36xCRKW59CM27Iv87x3iwk3N0v9spsxr2tU/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU5ODY2/NTMtMTQwODEzMjA2/My0xNTkyLmpwZWc.jpeg",
+        "title": "Good Stuff",
+        "year": 1992,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "artists": [
+          {
+            "name": "The B-52's",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 242415,
+            "resource_url": "https://api.discogs.com/artists/242415"
+          }
+        ],
+        "labels": [
+          {
+            "name": "Hed-Arzi",
+            "catno": "9 26943-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 55856,
+            "resource_url": "https://api.discogs.com/labels/55856"
+          },
+          {
+            "name": "Reprise Records",
+            "catno": "9 26943-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 157,
+            "resource_url": "https://api.discogs.com/labels/157"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Pop Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1012693,
       "instance_id": 1992475206,
       "date_added": "2025-04-11T23:10:53-07:00",
@@ -2537,509 +3017,6 @@
         ],
         "styles": [
           "Alternative Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 11597422,
-      "instance_id": 1992475452,
-      "date_added": "2025-04-11T23:11:22-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 11597422,
-        "master_id": 51107,
-        "master_url": "https://api.discogs.com/masters/51107",
-        "resource_url": "https://api.discogs.com/releases/11597422",
-        "thumb": "https://i.discogs.com/G0hA-qnLY71og_VJk3rVQs0zMWc-eurBNCTFqTbklYM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExNTk3/NDIyLTE1MjE2NDg3/MzEtNjI1My5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/kH1pTkvU4tsFlJyV87hHft59pL7PpfPeDt1tiaYTA30/rs:fit/g:sm/q:90/h:583/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExNTk3/NDIyLTE1MjE2NDg3/MzEtNjI1My5qcGVn.jpeg",
-        "title": "No Need To Argue",
-        "year": 1994,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Cranberries",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 155833,
-            "resource_url": "https://api.discogs.com/artists/155833"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Island Records",
-            "catno": "314-524 050-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 8377,
-            "resource_url": "https://api.discogs.com/labels/8377"
-          },
-          {
-            "name": "Island Records",
-            "catno": "524 050-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 8377,
-            "resource_url": "https://api.discogs.com/labels/8377"
-          },
-          {
-            "name": "Island Records",
-            "catno": "CID 8029",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 8377,
-            "resource_url": "https://api.discogs.com/labels/8377"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Alternative Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 704539,
-      "instance_id": 1969869110,
-      "date_added": "2025-03-20T11:34:06-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 704539,
-        "master_id": 392536,
-        "master_url": "https://api.discogs.com/masters/392536",
-        "resource_url": "https://api.discogs.com/releases/704539",
-        "thumb": "https://i.discogs.com/EFic4i-viHoSe5BmXVdmBwloam3PH7LEMbVf5mijBZ8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwNDUz/OS0xNTU5MTc1MDA0/LTcxNTEuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/Ra7eKU86gLDhyY3dllwAFTzFr6z5MP0wWcIU538JwX8/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwNDUz/OS0xNTU5MTc1MDA0/LTcxNTEuanBlZw.jpeg",
-        "title": "Bulletproof",
-        "year": 2001,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album",
-              "Enhanced"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "K-Otic",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 99126,
-            "resource_url": "https://api.discogs.com/artists/99126"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Jive",
-            "catno": "9241182",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2186,
-            "resource_url": "https://api.discogs.com/labels/2186"
-          },
-          {
-            "name": "Zomba",
-            "catno": "9241182",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 25066,
-            "resource_url": "https://api.discogs.com/labels/25066"
-          }
-        ],
-        "genres": [
-          "Rock",
-          "Pop"
-        ],
-        "styles": [
-          "Europop",
-          "Pop Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 1300439,
-      "instance_id": 1978253220,
-      "date_added": "2025-03-28T14:37:56-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 1300439,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/1300439",
-        "thumb": "https://i.discogs.com/JZbu0c6cNLQ8uFPLPyUREMpyJOmzOFb05xILxmojaDo/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzMDA0/MzktMTIyMzA3Mjc5/My5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/mDj6Uyb9rA1aJANcdXBVZoYE2dmv4jfnm50S8bUV-Ms/rs:fit/g:sm/q:90/h:592/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzMDA0/MzktMTIyMzA3Mjc5/My5qcGVn.jpeg",
-        "title": "London Calling - De Officiële Soundtrack!",
-        "year": 2008,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Promo",
-              "Sampler"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "London Calling",
-            "catno": "LCR001",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 118687,
-            "resource_url": "https://api.discogs.com/labels/118687"
-          }
-        ],
-        "genres": [
-          "Rock",
-          "Pop"
-        ],
-        "styles": [
-          "Alternative Rock",
-          "Indie Rock",
-          "Punk",
-          "Garage Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 7255595,
-      "instance_id": 2006790051,
-      "date_added": "2025-04-24T00:37:23-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 7255595,
-        "master_id": 160184,
-        "master_url": "https://api.discogs.com/masters/160184",
-        "resource_url": "https://api.discogs.com/releases/7255595",
-        "thumb": "https://i.discogs.com/XMc4MJQV6G9NAKMZwhackN0IDnwYbGpyhmeszrlFNeE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyNTU1/OTUtMTQzNzMwMTY3/OC03MjUyLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/neCgI8rN-DUQX64jqfljsmdqVIvS3XhXTavpbG1h3C8/rs:fit/g:sm/q:90/h:500/w:501/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyNTU1/OTUtMTQzNzMwMTY3/OC03MjUyLmpwZWc.jpeg",
-        "title": "20 Greatest Hits Vol 2",
-        "year": 0,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Dubliners",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 274143,
-            "resource_url": "https://api.discogs.com/artists/274143"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Magic Music",
-            "catno": "31007",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 37808,
-            "resource_url": "https://api.discogs.com/labels/37808"
-          }
-        ],
-        "genres": [
-          "Folk, World, & Country"
-        ],
-        "styles": [
-          "Folk"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 505215,
-      "instance_id": 1979844501,
-      "date_added": "2025-03-30T01:21:23-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 505215,
-        "master_id": 101755,
-        "master_url": "https://api.discogs.com/masters/101755",
-        "resource_url": "https://api.discogs.com/releases/505215",
-        "thumb": "https://i.discogs.com/BQn7nkZy08CsWfu5O5BCr3qbHlGfx10Talz90fwijt8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUwNTIx/NS0xNTE0NTA1MDgw/LTkzMTguanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/OS2WR4nio9IVRZpKQ6hFmjuq6cmTm0Z10cpjkSp9Qa8/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUwNTIx/NS0xNTE0NTA1MDgw/LTkzMTguanBlZw.jpeg",
-        "title": "Jackie Brown (Music From The Miramax Motion Picture)",
-        "year": 1997,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album",
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "Maverick",
-            "catno": "9362-46841-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1685,
-            "resource_url": "https://api.discogs.com/labels/1685"
-          },
-          {
-            "name": "Warner Bros. Records",
-            "catno": "9362-46841-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1000,
-            "resource_url": "https://api.discogs.com/labels/1000"
-          },
-          {
-            "name": "A Band Apart",
-            "catno": "9362-46841-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 90818,
-            "resource_url": "https://api.discogs.com/labels/90818"
-          }
-        ],
-        "genres": [
-          "Hip Hop",
-          "Rock",
-          "Funk / Soul",
-          "Non-Music",
-          "Stage & Screen"
-        ],
-        "styles": [
-          "Rhythm & Blues",
-          "Disco",
-          "Funk",
-          "Soul",
-          "Country Rock",
-          "Dialogue",
-          "Soundtrack"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 15355508,
-      "instance_id": 1979844048,
-      "date_added": "2025-03-30T01:20:31-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 15355508,
-        "master_id": 79753,
-        "master_url": "https://api.discogs.com/masters/79753",
-        "resource_url": "https://api.discogs.com/releases/15355508",
-        "thumb": "https://i.discogs.com/F3nHvJXugebc77y2JaUnsuaPCiOjkrJQjLlc2Ovq7os/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MzU1/NTA4LTE1OTAyMzI1/MDItNjIzMC5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/LsVgq_Ls3FWLn2iaOKJ7HHNiowXBMAFuO4_8RNxzELs/rs:fit/g:sm/q:90/h:516/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MzU1/NTA4LTE1OTAyMzI1/MDItNjIzMC5qcGVn.jpeg",
-        "title": "Jesus Christ Superstar",
-        "year": 1995,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "2",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Andrew Lloyd Webber And Tim Rice",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 1677801,
-            "resource_url": "https://api.discogs.com/artists/1677801"
-          }
-        ],
-        "labels": [
-          {
-            "name": "MCA Records",
-            "catno": "810 501-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 878,
-            "resource_url": "https://api.discogs.com/labels/878"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Classic Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 11030460,
-      "instance_id": 1979847168,
-      "date_added": "2025-03-30T01:26:14-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 11030460,
-        "master_id": 96906,
-        "master_url": "https://api.discogs.com/masters/96906",
-        "resource_url": "https://api.discogs.com/releases/11030460",
-        "thumb": "https://i.discogs.com/GvcQ_g7-9dsDtBiyZ4vmqZS3JWWAgesf61Q3TFWOPuE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMDMw/NDYwLTE1MDg1NzY3/OTMtNTE5OS5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/VXyWoaq0SuTiujydSayygQwwTaGdpYdevLvoR_B13GE/rs:fit/g:sm/q:90/h:594/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMDMw/NDYwLTE1MDg1NzY3/OTMtNTE5OS5qcGVn.jpeg",
-        "title": "Reservoir Dogs (Original Motion Picture Soundtrack)",
-        "year": 1992,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "MCA Records",
-            "catno": "MCAD-10541",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 878,
-            "resource_url": "https://api.discogs.com/labels/878"
-          },
-          {
-            "name": "MCA Records",
-            "catno": "MCAD 10541",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 878,
-            "resource_url": "https://api.discogs.com/labels/878"
-          }
-        ],
-        "genres": [
-          "Rock",
-          "Non-Music",
-          "Stage & Screen"
-        ],
-        "styles": [
-          "Soundtrack",
-          "Speech",
-          "Soft Rock",
-          "Pop Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 25621876,
-      "instance_id": 1979845992,
-      "date_added": "2025-03-30T01:24:12-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 25621876,
-        "master_id": 41794,
-        "master_url": "https://api.discogs.com/masters/41794",
-        "resource_url": "https://api.discogs.com/releases/25621876",
-        "thumb": "https://i.discogs.com/ecXR6sXCOWt-mPjI1Gw9eZ9etD6m9xqasxOf-UhtUds/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1NjIx/ODc2LTE2NzI0ODIw/NjQtNjU2My5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/mvb1ZqtLsiEj1qWIgHdGo8VWdy7kLuvkZvjwEyE3wtU/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI1NjIx/ODc2LTE2NzI0ODIw/NjQtNjU2My5qcGVn.jpeg",
-        "title": "The Lion King (Original Motion Picture Soundtrack)",
-        "year": 0,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "text": "PMDC UK",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
-        "labels": [
-          {
-            "name": "Mercury",
-            "catno": "522 690-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 39357,
-            "resource_url": "https://api.discogs.com/labels/39357"
-          }
-        ],
-        "genres": [
-          "Pop",
-          "Folk, World, & Country",
-          "Stage & Screen"
-        ],
-        "styles": [
-          "Modern Classical",
-          "Vocal",
-          "Ballad",
-          "Soundtrack",
-          "African"
         ]
       },
       "folder_id": 1
