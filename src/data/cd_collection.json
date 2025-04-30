@@ -23,17 +23,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Abel (2)",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 336438,
-            "resource_url": "https://api.discogs.com/artists/336438"
-          }
-        ],
         "labels": [
           {
             "name": "[PIAS] Recordings",
@@ -50,6 +39,17 @@
             "entity_type_name": "Label",
             "id": 61218,
             "resource_url": "https://api.discogs.com/labels/61218"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Abel (2)",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 336438,
+            "resource_url": "https://api.discogs.com/artists/336438"
           }
         ],
         "genres": [
@@ -85,6 +85,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "14th Floor Records",
+            "catno": "5051442 3337 2 5",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 20418,
+            "resource_url": "https://api.discogs.com/labels/20418"
+          }
+        ],
         "artists": [
           {
             "name": "The Wombats",
@@ -96,21 +106,65 @@
             "resource_url": "https://api.discogs.com/artists/793943"
           }
         ],
-        "labels": [
-          {
-            "name": "14th Floor Records",
-            "catno": "5051442 3337 2 5",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 20418,
-            "resource_url": "https://api.discogs.com/labels/20418"
-          }
-        ],
         "genres": [
           "Rock"
         ],
         "styles": [
           "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 7401936,
+      "instance_id": 2012196546,
+      "date_added": "2025-04-29T05:51:06-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 7401936,
+        "master_id": 324007,
+        "master_url": "https://api.discogs.com/masters/324007",
+        "resource_url": "https://api.discogs.com/releases/7401936",
+        "thumb": "https://i.discogs.com/KwNBhlBVtCoFkkVDlUUIcmrk59EGQ_0-2CVbAWr0XmI/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc0MDE5/MzYtMTQ4OTUzMzMx/My0zMTU5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/_ucP8HjmVAOLEkkaJnzuXSpBGTjcUIivDiKMa3kh6xI/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc0MDE5/MzYtMTQ4OTUzMzMx/My0zMTU5LmpwZWc.jpeg",
+        "title": "Computers And Blues",
+        "year": 2011,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "679",
+            "catno": "2-751020",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 44616,
+            "resource_url": "https://api.discogs.com/labels/44616"
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Streets",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 17502,
+            "resource_url": "https://api.discogs.com/artists/17502"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "UK Garage",
+          "Hip Hop"
         ]
       },
       "folder_id": 1
@@ -126,7 +180,7 @@
         "master_url": "https://api.discogs.com/masters/164034",
         "resource_url": "https://api.discogs.com/releases/16409157",
         "thumb": "https://i.discogs.com/IPrU4D-pDRfqn8bVOPQDtTNXncyuRu7B07ENkrvAMlA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2NDA5/MTU3LTE2MDc1NjAw/ODYtMTg1MS5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/rQWOeEArooxBOch0c6SioYHcf538n__yHQ6O_Z9jJgg/rs:fit/g:sm/q:90/h:606/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2NDA5/MTU3LTE2MDc1NjAw/ODYtMTg1MS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/tZF6Wl6_Psn8m9UmZ6-asOtRnYmVsdroLmLjXJQa12g/rs:fit/g:sm/q:90/h:600/w:593/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2NDA5/MTU3LTE2MDc1NjAw/ODYtMTg1MS5qcGVn.jpeg",
         "title": "Be Not Nobody",
         "year": 2002,
         "formats": [
@@ -138,6 +192,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "A&M Records",
+            "catno": "493 307-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 904,
+            "resource_url": "https://api.discogs.com/labels/904"
+          }
+        ],
         "artists": [
           {
             "name": "Vanessa Carlton",
@@ -147,16 +211,6 @@
             "tracks": "",
             "id": 275641,
             "resource_url": "https://api.discogs.com/artists/275641"
-          }
-        ],
-        "labels": [
-          {
-            "name": "A&M Records",
-            "catno": "493 307-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 904,
-            "resource_url": "https://api.discogs.com/labels/904"
           }
         ],
         "genres": [
@@ -192,17 +246,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Black (2)",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 149245,
-            "resource_url": "https://api.discogs.com/artists/149245"
-          }
-        ],
         "labels": [
           {
             "name": "A&M Records",
@@ -219,6 +262,17 @@
             "entity_type_name": "Label",
             "id": 904,
             "resource_url": "https://api.discogs.com/labels/904"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Black (2)",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 149245,
+            "resource_url": "https://api.discogs.com/artists/149245"
           }
         ],
         "genres": [
@@ -253,6 +307,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Arcade",
+            "catno": "0110750",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1614,
+            "resource_url": "https://api.discogs.com/labels/1614"
+          }
+        ],
         "artists": [
           {
             "name": "Doe Maar",
@@ -262,16 +326,6 @@
             "tracks": "",
             "id": 260283,
             "resource_url": "https://api.discogs.com/artists/260283"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Arcade",
-            "catno": "0110750",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1614,
-            "resource_url": "https://api.discogs.com/labels/1614"
           }
         ],
         "genres": [
@@ -300,7 +354,7 @@
         "master_url": "https://api.discogs.com/masters/747468",
         "resource_url": "https://api.discogs.com/releases/1488540",
         "thumb": "https://i.discogs.com/49FjLKIsAuYFEYgMw63TezutpM1wviDYJ1pihAWphA8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0ODg1/NDAtMTYyMDQ4MjU2/OC00OTc4LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/Jf4fWZzljr-_TEwzNmePXCXcwY2GnffxflSZDOvq_Ds/rs:fit/g:sm/q:90/h:603/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0ODg1/NDAtMTYyMDQ4MjU2/OC00OTc4LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/G5__MhC0DW1tq4j9GCq-gw71zjaGX_-tEvvxkr4EEVk/rs:fit/g:sm/q:90/h:600/w:596/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE0ODg1/NDAtMTYyMDQ4MjU2/OC00OTc4LmpwZWc.jpeg",
         "title": "Ma Baker",
         "year": 1989,
         "formats": [
@@ -310,17 +364,6 @@
             "descriptions": [
               "Compilation"
             ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Boney M.",
-            "anv": "Boney M",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 235979,
-            "resource_url": "https://api.discogs.com/artists/235979"
           }
         ],
         "labels": [
@@ -339,6 +382,17 @@
             "entity_type_name": "Label",
             "id": 30995,
             "resource_url": "https://api.discogs.com/labels/30995"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Boney M.",
+            "anv": "Boney M",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 235979,
+            "resource_url": "https://api.discogs.com/artists/235979"
           }
         ],
         "genres": [
@@ -385,18 +439,8 @@
           },
           {
             "name": "Box Set",
-            "qty": "1"
-          }
-        ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
+            "qty": "1",
+            "descriptions": []
           }
         ],
         "labels": [
@@ -415,6 +459,17 @@
             "entity_type_name": "Label",
             "id": 74318,
             "resource_url": "https://api.discogs.com/labels/74318"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -452,17 +507,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "BMG",
@@ -471,6 +515,17 @@
             "entity_type_name": "Label",
             "id": 1003,
             "resource_url": "https://api.discogs.com/labels/1003"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -520,17 +575,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "BMG Nederland BV",
@@ -539,6 +583,17 @@
             "entity_type_name": "Label",
             "id": 248879,
             "resource_url": "https://api.discogs.com/labels/248879"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -579,6 +634,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Border Community",
+            "catno": "50BCCD",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 15646,
+            "resource_url": "https://api.discogs.com/labels/15646"
+          }
+        ],
         "artists": [
           {
             "name": "James Holden",
@@ -597,16 +662,6 @@
             "tracks": "",
             "id": 6099814,
             "resource_url": "https://api.discogs.com/artists/6099814"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Border Community",
-            "catno": "50BCCD",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 15646,
-            "resource_url": "https://api.discogs.com/labels/15646"
           }
         ],
         "genres": [
@@ -647,6 +702,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Byte Records",
+            "catno": "BYTE 106-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2371,
+            "resource_url": "https://api.discogs.com/labels/2371"
+          }
+        ],
         "artists": [
           {
             "name": "2 Unlimited",
@@ -656,16 +721,6 @@
             "tracks": "",
             "id": 4057,
             "resource_url": "https://api.discogs.com/artists/4057"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Byte Records",
-            "catno": "BYTE 106-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2371,
-            "resource_url": "https://api.discogs.com/labels/2371"
           }
         ],
         "genres": [
@@ -700,17 +755,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "Capital Recordings",
@@ -719,6 +763,17 @@
             "entity_type_name": "Label",
             "id": 13773,
             "resource_url": "https://api.discogs.com/labels/13773"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -743,7 +798,7 @@
         "master_url": "https://api.discogs.com/masters/14468",
         "resource_url": "https://api.discogs.com/releases/16045613",
         "thumb": "https://i.discogs.com/enPQY0J8iZ8v4kEt1F4Ge_bnetZdKkJe4a_mes7TIj8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2MDQ1/NjEzLTE2MDI0NTQy/NjAtODQzNS5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/_zUEbASPChu8v19zQnyeG0Va1N0FV_iH--qdBvwccDw/rs:fit/g:sm/q:90/h:800/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2MDQ1/NjEzLTE2MDI0NTQy/NjAtODQzNS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/UqQDdSh6q3-6EYwOjwVQcL7BVJ9STCI9JFcYBghSj9M/rs:fit/g:sm/q:90/h:600/w:450/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE2MDQ1/NjEzLTE2MDI0NTQy/NjAtODQzNS5qcGVn.jpeg",
         "title": "Music From Big Pink",
         "year": 2000,
         "formats": [
@@ -757,6 +812,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Capitol Records",
+            "catno": "72435-25390-2-4",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 654,
+            "resource_url": "https://api.discogs.com/labels/654"
+          }
+        ],
         "artists": [
           {
             "name": "The Band",
@@ -766,16 +831,6 @@
             "tracks": "",
             "id": 254199,
             "resource_url": "https://api.discogs.com/artists/254199"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Capitol Records",
-            "catno": "72435-25390-2-4",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 654,
-            "resource_url": "https://api.discogs.com/labels/654"
           }
         ],
         "genres": [
@@ -814,6 +869,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Capitol Records (2)",
+            "catno": "CDP 0777 7 81409 2 4",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 147244,
+            "resource_url": "https://api.discogs.com/labels/147244"
+          }
+        ],
         "artists": [
           {
             "name": "Radiohead",
@@ -823,16 +888,6 @@
             "tracks": "",
             "id": 3840,
             "resource_url": "https://api.discogs.com/artists/3840"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Capitol Records (2)",
-            "catno": "CDP 0777 7 81409 2 4",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 147244,
-            "resource_url": "https://api.discogs.com/labels/147244"
           }
         ],
         "genres": [
@@ -871,17 +926,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Beastie Boys",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 10783,
-            "resource_url": "https://api.discogs.com/artists/10783"
-          }
-        ],
         "labels": [
           {
             "name": "Capitol Records",
@@ -898,6 +942,17 @@
             "entity_type_name": "Label",
             "id": 2236,
             "resource_url": "https://api.discogs.com/labels/2236"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Beastie Boys",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 10783,
+            "resource_url": "https://api.discogs.com/artists/10783"
           }
         ],
         "genres": [
@@ -937,6 +992,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Casablanca",
+            "catno": "NBLP 7244",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26938,
+            "resource_url": "https://api.discogs.com/labels/26938"
+          }
+        ],
         "artists": [
           {
             "name": "Donna Summer",
@@ -946,16 +1011,6 @@
             "tracks": "",
             "id": 6270,
             "resource_url": "https://api.discogs.com/artists/6270"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Casablanca",
-            "catno": "NBLP 7244",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 26938,
-            "resource_url": "https://api.discogs.com/labels/26938"
           }
         ],
         "genres": [
@@ -990,17 +1045,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "CBS",
@@ -1017,6 +1061,17 @@
             "entity_type_name": "Label",
             "id": 3072,
             "resource_url": "https://api.discogs.com/labels/3072"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -1039,7 +1094,7 @@
         "master_url": "https://api.discogs.com/masters/169537",
         "resource_url": "https://api.discogs.com/releases/15110832",
         "thumb": "https://i.discogs.com/HN_EZdOV51UGvs6vkRDfLuxNlOLxvePFpo301ec1kl0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MTEw/ODMyLTE1ODY4MDIz/NTctNjUwNy5qcGVn.jpeg",
-        "cover_image": "https://i.discogs.com/fjVR3PM71Lby7lckOUWbJWNA8NctBGsWFfSKVBmEEo8/rs:fit/g:sm/q:90/h:603/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MTEw/ODMyLTE1ODY4MDIz/NTctNjUwNy5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/fKvgwH_1ROFiIJHrPqgulhIBbbypBkO9yMuNzDFyosI/rs:fit/g:sm/q:90/h:600/w:596/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE1MTEw/ODMyLTE1ODY4MDIz/NTctNjUwNy5qcGVn.jpeg",
         "title": "I've Been Expecting You",
         "year": 2002,
         "formats": [
@@ -1052,6 +1107,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Chrysalis",
+            "catno": "7243 5 40004 2 3",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 3198,
+            "resource_url": "https://api.discogs.com/labels/3198"
+          }
+        ],
         "artists": [
           {
             "name": "Robbie Williams",
@@ -1061,16 +1126,6 @@
             "tracks": "",
             "id": 17212,
             "resource_url": "https://api.discogs.com/artists/17212"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Chrysalis",
-            "catno": "7243 5 40004 2 3",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 3198,
-            "resource_url": "https://api.discogs.com/labels/3198"
           }
         ],
         "genres": [
@@ -1112,6 +1167,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "19075978672",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
         "artists": [
           {
             "name": "The Clash",
@@ -1121,16 +1186,6 @@
             "tracks": "",
             "id": 29890,
             "resource_url": "https://api.discogs.com/artists/29890"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Columbia",
-            "catno": "19075978672",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1866,
-            "resource_url": "https://api.discogs.com/labels/1866"
           }
         ],
         "genres": [
@@ -1165,17 +1220,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "Columbia",
@@ -1184,6 +1228,17 @@
             "entity_type_name": "Label",
             "id": 1866,
             "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -1228,6 +1283,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "CDX 32356",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
         "artists": [
           {
             "name": "Jeff Wayne",
@@ -1237,16 +1302,6 @@
             "tracks": "",
             "id": 24818,
             "resource_url": "https://api.discogs.com/artists/24818"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Columbia",
-            "catno": "CDX 32356",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1866,
-            "resource_url": "https://api.discogs.com/labels/1866"
           }
         ],
         "genres": [
@@ -1282,6 +1337,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Columbia",
+            "catno": "SMP 3049.1",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1866,
+            "resource_url": "https://api.discogs.com/labels/1866"
+          }
+        ],
         "artists": [
           {
             "name": "Paul Young",
@@ -1291,16 +1356,6 @@
             "tracks": "",
             "id": 63617,
             "resource_url": "https://api.discogs.com/artists/63617"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Columbia",
-            "catno": "SMP 3049.1",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1866,
-            "resource_url": "https://api.discogs.com/labels/1866"
           }
         ],
         "genres": [
@@ -1325,7 +1380,7 @@
         "master_url": "https://api.discogs.com/masters/20683",
         "resource_url": "https://api.discogs.com/releases/7284642",
         "thumb": "https://i.discogs.com/xmdMkPx7kElNW452c-Z-ER3mg5niXCVw7hU0yX5V01o/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyODQ2/NDItMTcwNzgzMTgy/MS05NjAwLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/j9Dr2_SDAE1D01-hzHHh34QnjyVZvlPdXTY-4kE5BkY/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyODQ2/NDItMTcwNzgzMTgy/MS05NjAwLmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/fAiQsdEaWEr8vNrO2aSm3PO1_4npRgVj-8B31v8qteM/rs:fit/g:sm/q:90/h:600/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcyODQ2/NDItMTcwNzgzMTgy/MS05NjAwLmpwZWc.jpeg",
         "title": "The Division Bell",
         "year": 0,
         "formats": [
@@ -1338,6 +1393,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Columbia (2)",
+            "catno": "DIDP 081417",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 149411,
+            "resource_url": "https://api.discogs.com/labels/149411"
+          }
+        ],
         "artists": [
           {
             "name": "Pink Floyd",
@@ -1347,16 +1412,6 @@
             "tracks": "",
             "id": 45467,
             "resource_url": "https://api.discogs.com/artists/45467"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Columbia (2)",
-            "catno": "DIDP 081417",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 149411,
-            "resource_url": "https://api.discogs.com/labels/149411"
           }
         ],
         "genres": [
@@ -1393,6 +1448,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Dance Pool (2)",
+            "catno": "474101 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 255129,
+            "resource_url": "https://api.discogs.com/labels/255129"
+          }
+        ],
         "artists": [
           {
             "name": "Culture Beat",
@@ -1402,16 +1467,6 @@
             "tracks": "",
             "id": 7662,
             "resource_url": "https://api.discogs.com/artists/7662"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Dance Pool (2)",
-            "catno": "474101 2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 255129,
-            "resource_url": "https://api.discogs.com/labels/255129"
           }
         ],
         "genres": [
@@ -1448,6 +1503,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Deram",
+            "catno": "844 942-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 31676,
+            "resource_url": "https://api.discogs.com/labels/31676"
+          }
+        ],
         "artists": [
           {
             "name": "Small Faces",
@@ -1459,21 +1524,90 @@
             "resource_url": "https://api.discogs.com/artists/152682"
           }
         ],
-        "labels": [
-          {
-            "name": "Deram",
-            "catno": "844 942-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 31676,
-            "resource_url": "https://api.discogs.com/labels/31676"
-          }
-        ],
         "genres": [
           "Rock",
           "Pop"
         ],
         "styles": []
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 10437056,
+      "instance_id": 2012197071,
+      "date_added": "2025-04-29T05:51:59-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 10437056,
+        "master_id": 54832,
+        "master_url": "https://api.discogs.com/masters/54832",
+        "resource_url": "https://api.discogs.com/releases/10437056",
+        "thumb": "https://i.discogs.com/aP-1b39iCizCJrSLuQSeDG3tyJWKwj0o-ToAkUPAqo0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwNDM3/MDU2LTE0OTc0MTE2/MjYtNTY4MC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/jsEC9OohZwDV-HOSl-LIharhVFQa0O7LsWVB8Shx6ho/rs:fit/g:sm/q:90/h:536/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwNDM3/MDU2LTE0OTc0MTE2/MjYtNTY4MC5qcGVn.jpeg",
+        "title": "LCD Soundsystem",
+        "year": 2005,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Copy Protected"
+            ]
+          },
+          {
+            "name": "CD",
+            "qty": "1",
+            "text": "Digipak",
+            "descriptions": [
+              "Compilation",
+              "Copy Protected"
+            ]
+          },
+          {
+            "name": "All Media",
+            "qty": "1",
+            "text": "Digipak",
+            "descriptions": []
+          }
+        ],
+        "labels": [
+          {
+            "name": "DFA",
+            "catno": "724356343924",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 6486,
+            "resource_url": "https://api.discogs.com/labels/6486"
+          },
+          {
+            "name": "EMI",
+            "catno": "724356343924",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26126,
+            "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "artists": [
+          {
+            "name": "LCD Soundsystem",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 38948,
+            "resource_url": "https://api.discogs.com/artists/38948"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Leftfield",
+          "Techno",
+          "Electro"
+        ]
       },
       "folder_id": 1
     },
@@ -1507,6 +1641,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Dino Music",
+            "catno": "5373530",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1608,
+            "resource_url": "https://api.discogs.com/labels/1608"
+          }
+        ],
         "artists": [
           {
             "name": "Di-Rect",
@@ -1516,16 +1660,6 @@
             "tracks": "",
             "id": 367300,
             "resource_url": "https://api.discogs.com/artists/367300"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Dino Music",
-            "catno": "5373530",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1608,
-            "resource_url": "https://api.discogs.com/labels/1608"
           }
         ],
         "genres": [
@@ -1562,6 +1696,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Dino Music",
+            "catno": "7243 5531352 2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 1608,
+            "resource_url": "https://api.discogs.com/labels/1608"
+          }
+        ],
         "artists": [
           {
             "name": "Di-Rect",
@@ -1571,16 +1715,6 @@
             "tracks": "",
             "id": 367300,
             "resource_url": "https://api.discogs.com/artists/367300"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Dino Music",
-            "catno": "7243 5531352 2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 1608,
-            "resource_url": "https://api.discogs.com/labels/1608"
           }
         ],
         "genres": [
@@ -1617,6 +1751,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Dirtee Stank Recordings",
+            "catno": "STANK007CD",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 89215,
+            "resource_url": "https://api.discogs.com/labels/89215"
+          }
+        ],
         "artists": [
           {
             "name": "Dizzee Rascal",
@@ -1626,16 +1770,6 @@
             "tracks": "",
             "id": 78659,
             "resource_url": "https://api.discogs.com/artists/78659"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Dirtee Stank Recordings",
-            "catno": "STANK007CD",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 89215,
-            "resource_url": "https://api.discogs.com/labels/89215"
           }
         ],
         "genres": [
@@ -1674,6 +1808,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Disky",
+            "catno": "LS 863072",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 3231,
+            "resource_url": "https://api.discogs.com/labels/3231"
+          }
+        ],
         "artists": [
           {
             "name": "The Beach Boys",
@@ -1683,16 +1827,6 @@
             "tracks": "",
             "id": 70829,
             "resource_url": "https://api.discogs.com/artists/70829"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Disky",
-            "catno": "LS 863072",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 3231,
-            "resource_url": "https://api.discogs.com/labels/3231"
           }
         ],
         "genres": [
@@ -1730,17 +1864,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Paolo Conte",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 273695,
-            "resource_url": "https://api.discogs.com/artists/273695"
-          }
-        ],
         "labels": [
           {
             "name": "EastWest",
@@ -1773,6 +1896,17 @@
             "entity_type_name": "Label",
             "id": 57391,
             "resource_url": "https://api.discogs.com/labels/57391"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Paolo Conte",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 273695,
+            "resource_url": "https://api.discogs.com/artists/273695"
           }
         ],
         "genres": [
@@ -1810,17 +1944,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Justice (3)",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 52758,
-            "resource_url": "https://api.discogs.com/artists/52758"
-          }
-        ],
         "labels": [
           {
             "name": "Ed Banger Records",
@@ -1837,6 +1960,17 @@
             "entity_type_name": "Label",
             "id": 54379,
             "resource_url": "https://api.discogs.com/labels/54379"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Justice (3)",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 52758,
+            "resource_url": "https://api.discogs.com/artists/52758"
           }
         ],
         "genres": [
@@ -1875,17 +2009,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "EMI Premier",
@@ -1902,6 +2025,17 @@
             "entity_type_name": "Label",
             "id": 76974,
             "resource_url": "https://api.discogs.com/labels/76974"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -1947,17 +2081,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
         "labels": [
           {
             "name": "EMI",
@@ -1974,6 +2097,17 @@
             "entity_type_name": "Label",
             "id": 26126,
             "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "genres": [
@@ -2011,17 +2145,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Bonzo Dog Doo-Dah Band",
-            "anv": "Bonzo Dog Band",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 325097,
-            "resource_url": "https://api.discogs.com/artists/325097"
-          }
-        ],
         "labels": [
           {
             "name": "EMI",
@@ -2038,6 +2161,17 @@
             "entity_type_name": "Label",
             "id": 26126,
             "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Bonzo Dog Doo-Dah Band",
+            "anv": "Bonzo Dog Band",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 325097,
+            "resource_url": "https://api.discogs.com/artists/325097"
           }
         ],
         "genres": [
@@ -2061,7 +2195,7 @@
         "master_url": "https://api.discogs.com/masters/94764",
         "resource_url": "https://api.discogs.com/releases/2837263",
         "thumb": "https://i.discogs.com/zzBDJCbCZxylAv-oxlPa6cgSqMqDN5CTpPRJ7R4AnzE/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4Mzcy/NjMtMTM5NjA1NTQw/MS0zNjQ5LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/yOrmDG6SBI435IcKFw66XMJ_bItUcPMPfoSUf4c67_4/rs:fit/g:sm/q:90/h:609/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4Mzcy/NjMtMTM5NjA1NTQw/MS0zNjQ5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/1qN_nbdB1oL3DXtOBJvaW6pcD7mwek69_iF7JMVfc90/rs:fit/g:sm/q:90/h:600/w:591/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTI4Mzcy/NjMtMTM5NjA1NTQw/MS0zNjQ5LmpwZWc.jpeg",
         "title": "To The End",
         "year": 1994,
         "formats": [
@@ -2071,17 +2205,6 @@
             "descriptions": [
               "Single"
             ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "labels": [
@@ -2100,6 +2223,17 @@
             "entity_type_name": "Label",
             "id": 2294,
             "resource_url": "https://api.discogs.com/labels/2294"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "genres": [
@@ -2135,6 +2269,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Ensign",
+            "catno": "0946 3 21991 2 6",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 106343,
+            "resource_url": "https://api.discogs.com/labels/106343"
+          }
+        ],
         "artists": [
           {
             "name": "World Party",
@@ -2144,16 +2288,6 @@
             "tracks": "",
             "id": 38211,
             "resource_url": "https://api.discogs.com/artists/38211"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Ensign",
-            "catno": "0946 3 21991 2 6",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 106343,
-            "resource_url": "https://api.discogs.com/labels/106343"
           }
         ],
         "genres": [
@@ -2195,17 +2329,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Various",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 194,
-            "resource_url": ""
-          }
-        ],
         "labels": [
           {
             "name": "EVA",
@@ -2214,6 +2337,17 @@
             "entity_type_name": "Label",
             "id": 2637,
             "resource_url": "https://api.discogs.com/labels/2637"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Various",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 194,
+            "resource_url": "https://api.discogs.com/artists/194"
           }
         ],
         "genres": [
@@ -2251,17 +2385,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Nancy Sinatra",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 135246,
-            "resource_url": "https://api.discogs.com/artists/135246"
-          }
-        ],
         "labels": [
           {
             "name": "Falcon Neue Medien",
@@ -2278,6 +2401,17 @@
             "entity_type_name": "Label",
             "id": 36681,
             "resource_url": "https://api.discogs.com/labels/36681"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Nancy Sinatra",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 135246,
+            "resource_url": "https://api.discogs.com/artists/135246"
           }
         ],
         "genres": [
@@ -2318,6 +2452,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "FatCat Records",
+            "catno": "FAT-SP11",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 264,
+            "resource_url": "https://api.discogs.com/labels/264"
+          }
+        ],
         "artists": [
           {
             "name": "Animal Collective",
@@ -2327,16 +2471,6 @@
             "tracks": "",
             "id": 207958,
             "resource_url": "https://api.discogs.com/artists/207958"
-          }
-        ],
-        "labels": [
-          {
-            "name": "FatCat Records",
-            "catno": "FAT-SP11",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 264,
-            "resource_url": "https://api.discogs.com/labels/264"
           }
         ],
         "genres": [
@@ -2379,6 +2513,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Fiction Records (2)",
+            "catno": "04228150112",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 79766,
+            "resource_url": "https://api.discogs.com/labels/79766"
+          }
+        ],
         "artists": [
           {
             "name": "The Cure",
@@ -2388,16 +2532,6 @@
             "tracks": "",
             "id": 28972,
             "resource_url": "https://api.discogs.com/artists/28972"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Fiction Records (2)",
-            "catno": "04228150112",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 79766,
-            "resource_url": "https://api.discogs.com/labels/79766"
           }
         ],
         "genres": [
@@ -2433,17 +2567,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
         "labels": [
           {
             "name": "Food",
@@ -2460,6 +2583,17 @@
             "entity_type_name": "Label",
             "id": 26126,
             "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "genres": [
@@ -2496,17 +2630,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
         "labels": [
           {
             "name": "Food",
@@ -2531,6 +2654,17 @@
             "entity_type_name": "Label",
             "id": 2294,
             "resource_url": "https://api.discogs.com/labels/2294"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "genres": [
@@ -2569,17 +2703,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
         "labels": [
           {
             "name": "Food",
@@ -2596,6 +2719,17 @@
             "entity_type_name": "Label",
             "id": 2294,
             "resource_url": "https://api.discogs.com/labels/2294"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Blur",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 7551,
+            "resource_url": "https://api.discogs.com/artists/7551"
           }
         ],
         "genres": [
@@ -2631,6 +2765,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Gold",
+            "catno": "GOLD 050",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 60909,
+            "resource_url": "https://api.discogs.com/labels/60909"
+          }
+        ],
         "artists": [
           {
             "name": "The Yardbirds",
@@ -2640,16 +2784,6 @@
             "tracks": "",
             "id": 262455,
             "resource_url": "https://api.discogs.com/artists/262455"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Gold",
-            "catno": "GOLD 050",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 60909,
-            "resource_url": "https://api.discogs.com/labels/60909"
           }
         ],
         "genres": [
@@ -2685,6 +2819,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Green Velvet",
+            "catno": "GV 98012",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 722302,
+            "resource_url": "https://api.discogs.com/labels/722302"
+          }
+        ],
         "artists": [
           {
             "name": "The Dubliners",
@@ -2694,16 +2838,6 @@
             "tracks": "",
             "id": 274143,
             "resource_url": "https://api.discogs.com/artists/274143"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Green Velvet",
-            "catno": "GV 98012",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 722302,
-            "resource_url": "https://api.discogs.com/labels/722302"
           }
         ],
         "genres": [
@@ -2738,17 +2872,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "The B-52's",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 242415,
-            "resource_url": "https://api.discogs.com/artists/242415"
-          }
-        ],
         "labels": [
           {
             "name": "Hed-Arzi",
@@ -2765,6 +2888,17 @@
             "entity_type_name": "Label",
             "id": 157,
             "resource_url": "https://api.discogs.com/labels/157"
+          }
+        ],
+        "artists": [
+          {
+            "name": "The B-52's",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 242415,
+            "resource_url": "https://api.discogs.com/artists/242415"
           }
         ],
         "genres": [
@@ -2799,17 +2933,6 @@
             ]
           }
         ],
-        "artists": [
-          {
-            "name": "Clouseau",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 169165,
-            "resource_url": "https://api.discogs.com/artists/169165"
-          }
-        ],
         "labels": [
           {
             "name": "HKM",
@@ -2826,6 +2949,17 @@
             "entity_type_name": "Label",
             "id": 161519,
             "resource_url": "https://api.discogs.com/labels/161519"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Clouseau",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 169165,
+            "resource_url": "https://api.discogs.com/artists/169165"
           }
         ],
         "genres": [
@@ -2862,6 +2996,16 @@
             ]
           }
         ],
+        "labels": [
+          {
+            "name": "Hyperdub",
+            "catno": "HDBCD001",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 25386,
+            "resource_url": "https://api.discogs.com/labels/25386"
+          }
+        ],
         "artists": [
           {
             "name": "Burial",
@@ -2873,16 +3017,6 @@
             "resource_url": "https://api.discogs.com/artists/306157"
           }
         ],
-        "labels": [
-          {
-            "name": "Hyperdub",
-            "catno": "HDBCD001",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 25386,
-            "resource_url": "https://api.discogs.com/labels/25386"
-          }
-        ],
         "genres": [
           "Electronic"
         ],
@@ -2891,132 +3025,6 @@
           "Dubstep",
           "UK Garage",
           "Ambient"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 7015760,
-      "instance_id": 1992475278,
-      "date_added": "2025-04-11T23:11:02-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 7015760,
-        "master_id": 51107,
-        "master_url": "https://api.discogs.com/masters/51107",
-        "resource_url": "https://api.discogs.com/releases/7015760",
-        "thumb": "https://i.discogs.com/NQA4c49bReeZ4nNSnXzyMg-QJcUFVt1KLPyjlXCQnuA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwMTU3/NjAtMTY4MTM0MzE5/Mi05NjkzLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/ukDegziLo4Y-wK7m3clgZkqNCNQU59fKs0TnWyM9Okk/rs:fit/g:sm/q:90/h:520/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTcwMTU3/NjAtMTY4MTM0MzE5/Mi05NjkzLmpwZWc.jpeg",
-        "title": "No Need To Argue",
-        "year": 1994,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album",
-              "Limited Edition"
-            ]
-          },
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "EP"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Cranberries",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 155833,
-            "resource_url": "https://api.discogs.com/artists/155833"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Island Records",
-            "catno": "5240832",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 8377,
-            "resource_url": "https://api.discogs.com/labels/8377"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Alternative Rock",
-          "Pop Rock",
-          "Ballad"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 8870621,
-      "instance_id": 1992475485,
-      "date_added": "2025-04-11T23:11:33-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 8870621,
-        "master_id": 51023,
-        "master_url": "https://api.discogs.com/masters/51023",
-        "resource_url": "https://api.discogs.com/releases/8870621",
-        "thumb": "https://i.discogs.com/6tcjpFwS6cBdfHhp24yUvG1qGK5Veezbr0QbpTaxLeY/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg4NzA2/MjEtMTQ3MDQ5MjIw/Ny02MzgyLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/_tAK93hwiLBNiHrfLj0BMODKekK1MGaGZBhDzZVrBGY/rs:fit/g:sm/q:90/h:537/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTg4NzA2/MjEtMTQ3MDQ5MjIw/Ny02MzgyLmpwZWc.jpeg",
-        "title": "Everybody Else Is Doing It, So Why Can't We?",
-        "year": 0,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "text": "Digipak",
-            "descriptions": [
-              "Album",
-              "Unofficial Release"
-            ]
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Cranberries",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 155833,
-            "resource_url": "https://api.discogs.com/artists/155833"
-          }
-        ],
-        "labels": [
-          {
-            "name": "Island Records (2)",
-            "catno": "BR0174",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 136496,
-            "resource_url": "https://api.discogs.com/labels/136496"
-          },
-          {
-            "name": "Island Records (2)",
-            "catno": "BG-R-0344",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 136496,
-            "resource_url": "https://api.discogs.com/labels/136496"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Alternative Rock"
         ]
       },
       "folder_id": 1
