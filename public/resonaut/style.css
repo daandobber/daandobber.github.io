@@ -1,0 +1,1145 @@
+:root {
+    --bg-gradient-stop-1: #0a1020;
+    --bg-gradient-stop-2: #1a2a4a;
+    --gate-node-color: rgba(180, 160, 220, 0.6);
+    --gate-node-border: rgba(210, 190, 255, 0.8);
+    --probability-gate-node-color: rgba(160, 220, 220, 0.6);
+    --probability-gate-node-border: rgba(190, 255, 255, 0.8);
+    --pitch-node-color: rgba(220, 180, 160, 0.6);
+    --pitch-node-border: rgba(255, 210, 190, 0.8);
+    --relay-node-color: rgba(180, 180, 180, 0.5); /* Nieuw */
+    --relay-node-border: rgba(210, 210, 210, 0.7); /* Nieuw */
+    --reflector-node-color: rgba(150, 180, 200, 0.6); /* Nieuw */
+    --reflector-node-border: rgba(180, 210, 230, 0.8); /* Nieuw */
+    --switch-node-color: rgba(200, 150, 180, 0.6); /* Nieuw */
+    --switch-node-border: rgba(230, 180, 210, 0.8); /* Nieuw */
+    --nebula-color: rgba(180, 220, 255, 0.5);
+    --nebula-border: rgba(210, 230, 255, 0.8);
+    --start-node-color: rgba(255, 255, 200, 0.9);
+    --start-node-border: rgba(255, 255, 230, 1);
+    --start-node-disabled-color: rgba(160, 160, 120, 0.5);
+    --start-node-disabled-border: rgba(180, 180, 140, 0.7);
+    --pulsar-standard-color: var(--start-node-color);
+    --pulsar-standard-border: var(--start-node-border);
+    --pulsar-random-volume-color: rgba(255, 220, 180, 0.9);
+    --pulsar-random-volume-border: rgba(255, 230, 200, 1);
+    --pulsar-random-particles-color: rgba(200, 255, 200, 0.9);
+    --pulsar-random-particles-border: rgba(220, 255, 220, 1);
+    --pulsar-triggerable-color: rgba(200, 200, 255, 0.9);
+    --pulsar-triggerable-border: rgba(220, 220, 255, 1);
+    --drum-kick-color: rgba(255, 160, 160, 0.8);
+    --drum-kick-border: rgba(255, 190, 190, 1);
+    --drum-snare-color: rgba(160, 255, 160, 0.8);
+    --drum-snare-border: rgba(190, 255, 190, 1);
+    --drum-hihat-color: rgba(255, 255, 160, 0.8);
+    --drum-hihat-border: rgba(255, 255, 190, 1);
+    --drum-clap-color: rgba(160, 220, 255, 0.8);
+    --drum-clap-border: rgba(190, 230, 255, 1);
+    --drum-tom1-color: rgba(255, 180, 140, 0.8);
+    --drum-tom1-border: rgba(255, 200, 170, 1);
+    --drum-tom2-color: rgba(255, 200, 140, 0.8);
+    --drum-tom2-border: rgba(255, 220, 170, 1);
+    --drum-cowbell-color: rgba(200, 160, 255, 0.8);
+    --drum-cowbell-border: rgba(220, 190, 255, 1);
+    --connection-color: rgba(100, 130, 180, 0.4);
+    --string-violin-connection-color: rgba(200, 220, 180, 0.6);
+    --string-violin-pulse-color: rgba(220, 240, 200, 1);
+    --string-glide-connection-color: rgba(255, 200, 100, 0.6);
+    --string-glide-pulse-color: rgba(255, 220, 120, 1);
+    --pulse-color: rgba(255, 255, 255, 1);
+    --pulse-logic-color: rgba(255, 200, 150, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(200, 220, 255, 0.8);
+    --wind-particle-color: rgba(150, 180, 220, 0.1);
+    --panel-bg: rgba(20, 30, 55, 0.9);
+    --button-bg: #304070;
+    --button-hover: #405088;
+    --button-active: #6075b0;
+    --text-color: #ddeeff;
+    --selection-rect-color: rgba(150, 200, 255, 0.3);
+    --grid-color: rgba(100, 130, 180, 0.15);
+    --constellation-highlight: rgba(255, 255, 150, 0.15);
+    --beat-indicator-color: rgba(180, 210, 255, 0.5);
+    --button-disabled-bg: #2a355a;
+    --button-disabled-color: #7788aa;
+    --toolbar-width: 52px;
+    --side-toolbar-width: 200px;
+    --hamburger-panel-width: 240px;
+    --bottom-panel-height: 200px;
+}
+
+body.theme-minor-pentatonic {
+    --bg-gradient-stop-1: #201030;
+    --bg-gradient-stop-2: #402050;
+    --gate-node-color: rgba(160, 160, 220, 0.6);
+    --gate-node-border: rgba(190, 190, 255, 0.8);
+    --probability-gate-node-color: rgba(180, 160, 200, 0.6);
+    --probability-gate-node-border: rgba(210, 190, 230, 0.8);
+    --pitch-node-color: rgba(220, 160, 200, 0.6);
+    --pitch-node-border: rgba(255, 190, 230, 0.8);
+    --relay-node-color: rgba(180, 170, 190, 0.5);
+    --relay-node-border: rgba(210, 200, 220, 0.7);
+    --reflector-node-color: rgba(170, 150, 200, 0.6);
+    --reflector-node-border: rgba(200, 180, 230, 0.8);
+    --switch-node-color: rgba(200, 150, 200, 0.6);
+    --switch-node-border: rgba(230, 180, 230, 0.8);
+    --nebula-color: rgba(200, 180, 230, 0.5);
+    --nebula-border: rgba(220, 200, 250, 0.8);
+    --start-node-color: rgba(255, 200, 255, 0.9);
+    --start-node-border: rgba(255, 230, 255, 1);
+    --start-node-disabled-color: rgba(160, 120, 160, 0.5);
+    --start-node-disabled-border: rgba(180, 150, 180, 0.7);
+    --pulsar-standard-color: var(--start-node-color);
+    --pulsar-standard-border: var(--start-node-border);
+    --pulsar-random-volume-color: rgba(255, 200, 220, 0.9);
+    --pulsar-random-volume-border: rgba(255, 220, 230, 1);
+    --pulsar-random-particles-color: rgba(220, 200, 255, 0.9);
+    --pulsar-random-particles-border: rgba(230, 220, 255, 1);
+    --pulsar-triggerable-color: rgba(255, 200, 200, 0.9);
+    --pulsar-triggerable-border: rgba(255, 220, 220, 1);
+    --drum-kick-color: rgba(255, 160, 200, 0.8);
+    --drum-kick-border: rgba(255, 190, 220, 1);
+    --drum-snare-color: rgba(160, 255, 200, 0.8);
+    --drum-snare-border: rgba(190, 255, 220, 1);
+    --drum-hihat-color: rgba(200, 200, 255, 0.8);
+    --drum-hihat-border: rgba(220, 220, 255, 1);
+    --drum-clap-color: rgba(160, 200, 255, 0.8);
+    --drum-clap-border: rgba(190, 220, 255, 1);
+    --drum-tom1-color: rgba(255, 160, 160, 0.8);
+    --drum-tom1-border: rgba(255, 190, 190, 1);
+    --drum-tom2-color: rgba(255, 180, 160, 0.8);
+    --drum-tom2-border: rgba(255, 200, 190, 1);
+    --drum-cowbell-color: rgba(180, 160, 255, 0.8);
+    --drum-cowbell-border: rgba(200, 180, 255, 1);
+    --connection-color: rgba(150, 110, 180, 0.4);
+    --string-violin-connection-color: rgba(220, 180, 200, 0.6);
+    --string-violin-pulse-color: rgba(240, 200, 220, 1);
+    --pulse-color: rgba(255, 240, 255, 1);
+    --pulse-logic-color: rgba(255, 180, 255, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(230, 200, 255, 0.8);
+    --wind-particle-color: rgba(190, 160, 220, 0.1);
+    --panel-bg: rgba(40, 25, 60, 0.9);
+    --button-bg: #503070;
+    --button-hover: #684088;
+    --button-active: #8860b0;
+    --selection-rect-color: rgba(200, 150, 255, 0.3);
+    --grid-color: rgba(150, 110, 180, 0.15);
+    --constellation-highlight: rgba(255, 200, 255, 0.15);
+    --beat-indicator-color: rgba(224, 199, 255, 0.5);
+    --button-disabled-bg: #3a254a;
+    --button-disabled-color: #aa88aa;
+}
+
+body.theme-major {
+    --bg-gradient-stop-1: #102525;
+    --bg-gradient-stop-2: #154040;
+    --gate-node-color: rgba(160, 220, 180, 0.6);
+    --gate-node-border: rgba(190, 255, 210, 0.8);
+    --probability-gate-node-color: rgba(160, 200, 220, 0.6);
+    --probability-gate-node-border: rgba(190, 230, 255, 0.8);
+    --pitch-node-color: rgba(160, 180, 220, 0.6);
+    --pitch-node-border: rgba(190, 210, 255, 0.8);
+    --relay-node-color: rgba(170, 190, 180, 0.5);
+    --relay-node-border: rgba(200, 220, 210, 0.7);
+    --reflector-node-color: rgba(150, 200, 180, 0.6);
+    --reflector-node-border: rgba(180, 230, 210, 0.8);
+    --switch-node-color: rgba(150, 180, 200, 0.6);
+    --switch-node-border: rgba(180, 210, 230, 0.8);
+    --nebula-color: rgba(180, 230, 210, 0.5);
+    --nebula-border: rgba(200, 250, 230, 0.8);
+    --start-node-color: rgba(200, 255, 220, 0.9);
+    --start-node-border: rgba(230, 255, 240, 1);
+    --start-node-disabled-color: rgba(120, 160, 130, 0.5);
+    --start-node-disabled-border: rgba(150, 180, 160, 0.7);
+    --pulsar-standard-color: var(--start-node-color);
+    --pulsar-standard-border: var(--start-node-border);
+    --pulsar-random-volume-color: rgba(180, 255, 200, 0.9);
+    --pulsar-random-volume-border: rgba(200, 255, 220, 1);
+    --pulsar-random-particles-color: rgba(200, 220, 255, 0.9);
+    --pulsar-random-particles-border: rgba(220, 230, 255, 1);
+    --pulsar-triggerable-color: rgba(255, 220, 200, 0.9);
+    --pulsar-triggerable-border: rgba(255, 230, 220, 1);
+    --drum-kick-color: rgba(180, 255, 180, 0.8);
+    --drum-kick-border: rgba(200, 255, 200, 1);
+    --drum-snare-color: rgba(180, 220, 255, 0.8);
+    --drum-snare-border: rgba(200, 230, 255, 1);
+    --drum-hihat-color: rgba(255, 200, 180, 0.8);
+    --drum-hihat-border: rgba(255, 220, 200, 1);
+    --drum-clap-color: rgba(160, 255, 220, 0.8);
+    --drum-clap-border: rgba(190, 255, 230, 1);
+    --drum-tom1-color: rgba(140, 220, 180, 0.8);
+    --drum-tom1-border: rgba(170, 240, 200, 1);
+    --drum-tom2-color: rgba(140, 200, 180, 0.8);
+    --drum-tom2-border: rgba(170, 220, 200, 1);
+    --drum-cowbell-color: rgba(160, 255, 160, 0.8);
+    --drum-cowbell-border: rgba(190, 255, 190, 1);
+    --connection-color: rgba(100, 180, 150, 0.4);
+    --string-violin-connection-color: rgba(180, 230, 180, 0.6);
+    --string-violin-pulse-color: rgba(200, 250, 200, 1);
+    --pulse-color: rgba(230, 255, 255, 1);
+    --pulse-logic-color: rgba(180, 255, 200, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(180, 255, 230, 0.8);
+    --wind-particle-color: rgba(150, 220, 190, 0.1);
+    --panel-bg: rgba(20, 55, 50, 0.9);
+    --button-bg: #307060;
+    --button-hover: #408870;
+    --button-active: #60b090;
+    --selection-rect-color: rgba(150, 255, 200, 0.3);
+    --grid-color: rgba(100, 180, 150, 0.15);
+    --constellation-highlight: rgba(200, 255, 220, 0.15);
+    --beat-indicator-color: rgba(180, 255, 230, 0.5);
+    --button-disabled-bg: #255a50;
+    --button-disabled-color: #77aa99;
+}
+
+body.theme-minor {
+    --bg-gradient-stop-1: #301a1a;
+    --bg-gradient-stop-2: #502a2a;
+    --gate-node-color: rgba(220, 160, 160, 0.6);
+    --gate-node-border: rgba(255, 190, 190, 0.8);
+    --probability-gate-node-color: rgba(220, 180, 160, 0.6);
+    --probability-gate-node-border: rgba(255, 210, 190, 0.8);
+    --pitch-node-color: rgba(220, 200, 160, 0.6);
+    --pitch-node-border: rgba(255, 230, 190, 0.8);
+    --relay-node-color: rgba(190, 170, 170, 0.5);
+    --relay-node-border: rgba(220, 200, 200, 0.7);
+    --reflector-node-color: rgba(200, 170, 150, 0.6);
+    --reflector-node-border: rgba(230, 200, 180, 0.8);
+    --switch-node-color: rgba(200, 170, 170, 0.6);
+    --switch-node-border: rgba(230, 200, 200, 0.8);
+    --nebula-color: rgba(230, 190, 180, 0.5);
+    --nebula-border: rgba(250, 210, 200, 0.8);
+    --start-node-color: rgba(255, 210, 180, 0.9);
+    --start-node-border: rgba(255, 230, 210, 1);
+    --start-node-disabled-color: rgba(160, 130, 110, 0.5);
+    --start-node-disabled-border: rgba(180, 150, 130, 0.7);
+    --pulsar-standard-color: var(--start-node-color);
+    --pulsar-standard-border: var(--start-node-border);
+    --pulsar-random-volume-color: rgba(255, 180, 180, 0.9);
+    --pulsar-random-volume-border: rgba(255, 200, 200, 1);
+    --pulsar-random-particles-color: rgba(255, 220, 180, 0.9);
+    --pulsar-random-particles-border: rgba(255, 230, 200, 1);
+    --pulsar-triggerable-color: rgba(220, 180, 255, 0.9);
+    --pulsar-triggerable-border: rgba(230, 200, 255, 1);
+    --drum-kick-color: rgba(255, 180, 160, 0.8);
+    --drum-kick-border: rgba(255, 200, 180, 1);
+    --drum-snare-color: rgba(255, 220, 160, 0.8);
+    --drum-snare-border: rgba(255, 230, 180, 1);
+    --drum-hihat-color: rgba(200, 255, 160, 0.8);
+    --drum-hihat-border: rgba(220, 255, 180, 1);
+    --drum-clap-color: rgba(255, 160, 180, 0.8);
+    --drum-clap-border: rgba(255, 190, 200, 1);
+    --drum-tom1-color: rgba(220, 180, 140, 0.8);
+    --drum-tom1-border: rgba(240, 200, 170, 1);
+    --drum-tom2-color: rgba(220, 160, 140, 0.8);
+    --drum-tom2-border: rgba(240, 180, 170, 1);
+    --drum-cowbell-color: rgba(255, 220, 100, 0.8);
+    --drum-cowbell-border: rgba(255, 230, 130, 1);
+    --connection-color: rgba(180, 130, 110, 0.4);
+    --string-violin-connection-color: rgba(230, 180, 160, 0.6);
+    --string-violin-pulse-color: rgba(250, 200, 180, 1);
+    --pulse-color: rgba(255, 245, 230, 1);
+    --pulse-logic-color: rgba(255, 180, 180, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(255, 220, 200, 0.8);
+    --wind-particle-color: rgba(220, 180, 160, 0.1);
+    --panel-bg: rgba(60, 35, 30, 0.9);
+    --button-bg: #704040;
+    --button-hover: #885050;
+    --button-active: #b07070;
+    --selection-rect-color: rgba(255, 180, 150, 0.3);
+    --grid-color: rgba(180, 130, 110, 0.15);
+    --constellation-highlight: rgba(255, 210, 180, 0.15);
+    --beat-indicator-color: rgba(255, 220, 200, 0.5);
+    --button-disabled-bg: #5a3530;
+    --button-disabled-color: #aa8877;
+}
+
+body.theme-chromatic {
+    --bg-gradient-stop-1: #101015;
+    --bg-gradient-stop-2: #282830;
+    --gate-node-color: rgba(180, 180, 180, 0.6);
+    --gate-node-border: rgba(210, 210, 210, 0.8);
+    --probability-gate-node-color: rgba(190, 190, 190, 0.6);
+    --probability-gate-node-border: rgba(220, 220, 220, 0.8);
+    --pitch-node-color: rgba(200, 200, 200, 0.6);
+    --pitch-node-border: rgba(230, 230, 230, 0.8);
+    --relay-node-color: rgba(160, 160, 160, 0.5);
+    --relay-node-border: rgba(190, 190, 190, 0.7);
+    --reflector-node-color: rgba(170, 170, 180, 0.6);
+    --reflector-node-border: rgba(200, 200, 210, 0.8);
+    --switch-node-color: rgba(180, 170, 190, 0.6);
+    --switch-node-border: rgba(210, 200, 220, 0.8);
+    --nebula-color: rgba(210, 210, 220, 0.5);
+    --nebula-border: rgba(230, 230, 240, 0.8);
+    --start-node-color: rgba(255, 255, 255, 0.9);
+    --start-node-border: rgba(230, 230, 230, 1);
+    --start-node-disabled-color: rgba(160, 160, 160, 0.5);
+    --start-node-disabled-border: rgba(180, 180, 180, 0.7);
+    --pulsar-standard-color: var(--start-node-color);
+    --pulsar-standard-border: var(--start-node-border);
+    --pulsar-random-volume-color: rgba(230, 230, 230, 0.9);
+    --pulsar-random-volume-border: rgba(240, 240, 240, 1);
+    --pulsar-random-particles-color: rgba(210, 210, 210, 0.9);
+    --pulsar-random-particles-border: rgba(225, 225, 225, 1);
+    --pulsar-triggerable-color: rgba(190, 190, 190, 0.9);
+    --pulsar-triggerable-border: rgba(215, 215, 215, 1);
+    --drum-kick-color: rgba(200, 200, 200, 0.8);
+    --drum-kick-border: rgba(220, 220, 220, 1);
+    --drum-snare-color: rgba(180, 180, 180, 0.8);
+    --drum-snare-border: rgba(200, 200, 200, 1);
+    --drum-hihat-color: rgba(220, 220, 220, 0.8);
+    --drum-hihat-border: rgba(240, 240, 240, 1);
+    --drum-clap-color: rgba(170, 170, 170, 0.8);
+    --drum-clap-border: rgba(190, 190, 190, 1);
+    --drum-tom1-color: rgba(190, 190, 190, 0.8);
+    --drum-tom1-border: rgba(210, 210, 210, 1);
+    --drum-tom2-color: rgba(180, 180, 180, 0.8);
+    --drum-tom2-border: rgba(200, 200, 200, 1);
+    --drum-cowbell-color: rgba(210, 210, 210, 0.8);
+    --drum-cowbell-border: rgba(230, 230, 230, 1);
+    --connection-color: rgba(150, 150, 160, 0.4);
+    --string-violin-connection-color: rgba(200, 200, 200, 0.6);
+    --string-violin-pulse-color: rgba(220, 220, 220, 1);
+    --pulse-color: rgba(255, 255, 255, 1);
+    --pulse-logic-color: rgba(200, 200, 255, 1);
+    --pulse-visual-color: var(--pulse-color);
+    --particle-color: rgba(220, 220, 230, 0.8);
+    --wind-particle-color: rgba(180, 180, 190, 0.1);
+    --panel-bg: rgba(50, 50, 60, 0.9);
+    --button-bg: #555;
+    --button-hover: #666;
+    --button-active: #888;
+    --selection-rect-color: rgba(200, 200, 200, 0.3);
+    --grid-color: rgba(150, 150, 160, 0.15);
+    --constellation-highlight: rgba(220, 220, 220, 0.15);
+    --beat-indicator-color: rgba(200, 200, 200, 0.5);
+    --button-disabled-bg: #444;
+    --button-disabled-color: #999;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    transition: background 0.8s ease;
+}
+
+#mainCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+    background: linear-gradient(135deg, var(--bg-gradient-stop-1), var(--bg-gradient-stop-2));
+    touch-action: none;
+}
+
+#startMessage, #loadingIndicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px 30px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    font-size: 1.2em;
+    pointer-events: none;
+    z-index: 10;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+}
+
+#loadingIndicator {
+    padding: 15px;
+    font-size: 1em;
+    z-index: 11;
+}
+
+#toolbar {
+    position: fixed;
+    left: 10px;
+    top: 10px;
+    z-index: 10;
+    background-color: var(--panel-bg);
+    border-radius: 5px;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    width: var(--toolbar-width);
+    box-sizing: border-box;
+}
+
+#toolbar-add-elements, #toolbar-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+#toolbar button {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 8px;
+    cursor: pointer;
+    text-align: center;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 18px;
+    width: 100%;
+    min-height: 40px;
+    box-sizing: border-box;
+    line-height: 1;
+}
+
+#toolbar button:hover {
+    background-color: var(--button-hover);
+}
+
+#toolbar button.active {
+    background-color: var(--button-active);
+    border-color: var(--text-color);
+    color: white;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+}
+
+.toolbar-divider {
+    border: none;
+    height: 1px;
+    background-color: var(--button-bg);
+    margin: 3px 0;
+}
+
+.panel {
+    position: fixed;
+    top: 10px;
+    background-color: var(--panel-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    color: var(--text-color);
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0.3s;
+    height: calc(100vh - 30px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--button-active) var(--button-bg);
+    transform: translateX(-110%);
+    opacity: 0;
+    visibility: hidden;
+    z-index: 8;
+}
+.panel:not(.hidden) {
+     transform: translateX(0);
+     opacity: 1;
+     pointer-events: auto;
+     visibility: visible;
+     transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0s;
+}
+
+.panel::-webkit-scrollbar { width: 6px; }
+.panel::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
+.panel::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
+
+#hamburgerMenuPanel {
+    left: calc(var(--toolbar-width) + 20px);
+    width: var(--hamburger-panel-width);
+    z-index: 9;
+}
+#hamburgerMenuPanel.hidden {
+     transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
+}
+
+#sideToolbar {
+    left: calc(var(--toolbar-width) + 20px);
+    width: var(--side-toolbar-width);
+    z-index: 8;
+}
+#sideToolbar.hidden {
+    transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
+}
+
+.panel h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-bottom: 1px solid var(--button-bg);
+    padding-bottom: 8px;
+}
+
+#sideToolbarContent .type-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.panel .type-button,
+.panel .waveform-button,
+.panel .drum-element-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 8px 10px;
+    margin-bottom: 0;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.9em;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.panel .type-button .type-icon,
+.panel .drum-element-button .type-icon {
+    font-size: 1.1em;
+    min-width: 1.2em;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.panel .type-button:hover,
+.panel .waveform-button:hover,
+.panel .drum-element-button:hover {
+    background-color: var(--button-hover);
+}
+
+.panel .type-button.selected,
+.panel .waveform-button.selected,
+.panel .drum-element-button.selected {
+    background-color: var(--button-active);
+    border-color: var(--text-color);
+    color: white;
+}
+
+.panel .type-button.disabled,
+.panel .waveform-button.disabled,
+.panel .drum-element-button.disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-color);
+    cursor: not-allowed;
+    border-color: var(--button-bg);
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.panel-section {
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--button-bg);
+    padding-bottom: 10px;
+}
+.panel-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.panel label {
+    font-size: 0.9em;
+    margin: 10px 0 3px 0;
+    display: block;
+    opacity: 0.9;
+}
+
+.panel input[type="range"],
+.panel input[type="text"],
+.panel input[type="color"],
+.panel select,
+.panel input[type="number"] {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 6px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.panel input[type="number"] {
+    -moz-appearance: textfield;
+}
+.panel input[type=number]::-webkit-inner-spin-button,
+.panel input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.panel input[type="checkbox"] {
+     width: auto;
+     margin-right: 5px;
+     vertical-align: middle;
+     cursor: pointer;
+}
+
+.panel input[type="color"] {
+    padding: 2px;
+    height: 30px;
+}
+
+.panel input[type="range"] { padding: 0; height: 18px; }
+.panel input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--button-hover); border-radius: 2px; }
+.panel input[type=range]::-moz-range-track { height: 4px; background: var(--button-hover); border-radius: 2px; }
+.panel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; margin-top: -5px; cursor: pointer; }
+.panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; border: none; cursor: pointer; }
+.panel select:focus, .panel input[type="range"]:focus, .panel input[type="number"]:focus, .panel input[type="text"]:focus, .panel input[type="color"]:focus { outline: 1px solid var(--button-active); border-color: var(--button-active); }
+.panel hr { border: none; border-top: 1px solid var(--button-bg); margin: 12px 0; opacity: 0.5; }
+.panel p { margin: 10px 0 5px 0; font-size: 0.9em; font-weight: bold; opacity: 0.9; color: var(--text-color); }
+.panel p:first-of-type { margin-top: 0; }
+.panel small { display: block; font-size: 0.8em; opacity: 0.7; margin-bottom: 8px; margin-top: 5px; line-height: 1.3; color: var(--button-disabled-color); }
+.panel button {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    font-size: 0.9em;
+    margin-top: 5px;
+    margin-right: 5px;
+    display: inline-block;
+}
+.panel button:hover { background-color: var(--button-hover); }
+.panel button:active { background-color: var(--button-active); }
+
+.panel .edit-drum-sound {
+    margin-left: 15px;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    border-left: 2px solid var(--button-bg);
+}
+.panel .edit-drum-sound strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 1em;
+}
+
+
+#groupControls.hidden { display: none; }
+#groupControls label[for="groupFluctuateAmount"], #groupControls #groupFluctuateAmount { margin-left: 20px; width: calc(100% - 20px); }
+
+#gridControls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    background-color: var(--panel-bg);
+    border-radius: 5px;
+    padding: 5px;
+    color: var(--text-color);
+    box-shadow: -2px 2px 10px rgba(0,0,0,0.3);
+    font-size: 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#gridControls button {
+    background: var(--button-bg);
+    color: var(--text-color);
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    width: auto;
+    text-align: left;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+    margin: 2px 0;
+    font-size: 0.85em;
+}
+
+#gridControls button:hover {
+    background: var(--button-hover);
+}
+
+#gridControls button.active {
+    background: var(--button-active);
+    color: white;
+}
+
+#gridOptions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: 100%;
+    margin-top: 3px;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+#gridOptions:not(.hidden) {
+    max-height: 100px;
+    opacity: 1;
+    visibility: visible;
+}
+
+
+#gridOptions label {
+    font-size: 0.8em;
+    margin: 3px 5px 0 0;
+    opacity: 0.9;
+    align-self: center;
+}
+
+#gridOptions > div {
+    display: flex;
+    align-items: center;
+}
+
+#transportControls button {
+    background: var(--button-bg);
+    color: var(--text-color);
+    border: none;
+    padding: 8px 15px;
+    cursor: pointer;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    align-self: center;
+}
+
+#transportControls button:hover {
+    background-color: var(--button-hover);
+}
+
+#transportControls button:active {
+    transform: scale(0.95);
+}
+
+#transportControls button.active {
+    background-color: var(--button-active);
+    color: white;
+}
+
+#transportControls button#restartPulsarsBtn.hidden {
+    display: none;
+}
+
+#transportControls #bpmControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 5px;
+}
+
+#transportControls #bpmControls.hidden {
+    display: none;
+}
+
+#transportControls #bpmControls label {
+    margin: 0;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+#transportControls #bpmControls input[type="number"] {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 5px;
+    border-radius: 3px;
+    width: 55px;
+    text-align: right;
+    font-size: 0.9em;
+    -moz-appearance: textfield;
+     appearance: textfield;
+}
+
+#transportControls input[type=number]::-webkit-inner-spin-button,
+#transportControls input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.transport-divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--button-bg);
+    margin: 0 5px;
+}
+
+#beatIndicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background-color: var(--beat-indicator-color);
+    opacity: 0;
+    transition: opacity 0.05s ease-out;
+    pointer-events: none;
+    z-index: 1;
+}
+
+#beatIndicator.active {
+    opacity: 1;
+    transition: opacity 0.01s ease-in;
+}
+
+.bottom-panel {
+    position: fixed; /* Vast t.o.v. het scherm */
+    bottom: calc(var(--bottom-panel-height) * -1 - 30px); /* Start verborgen onderaan */
+    left: 50%; /* Startpunt in het midden */
+    transform: translateX(-50%); /* Schuif terug naar het midden */
+    width: 80%;
+    max-width: 600px;
+    height: var(--bottom-panel-height);
+    background-color: var(--panel-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 7;
+    transition: bottom 0.3s ease-out;
+    color: var(--text-color);
+    overflow-y: auto;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--button-active) var(--button-bg);
+}
+
+.bottom-panel:not(.hidden) {
+    bottom: 0;
+}
+
+.bottom-panel h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-bottom: 1px solid var(--button-bg);
+    padding-bottom: 8px;
+}
+
+.bottom-panel .panel-section {
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--button-bg);
+}
+.bottom-panel .panel-section:last-child {
+    border-bottom: none;
+}
+
+
+.bottom-panel label {
+    font-size: 0.9em;
+    margin: 5px 0 2px 0;
+    display: inline-block;
+    width: auto;
+    margin-right: 10px;
+    vertical-align: middle;
+    opacity: 0.9;
+}
+
+.bottom-panel input[type="range"] {
+    width: calc(100% - 120px); /* Adjust based on label/value width */
+    display: inline-block;
+    vertical-align: middle;
+    margin-bottom: 5px;
+}
+.bottom-panel select {
+     width: auto;
+     display: inline-block;
+     vertical-align: middle;
+     margin-bottom: 5px;
+     margin-right: 15px;
+     min-width: 80px;
+}
+
+
+.bottom-panel span { /* Value display next to sliders */
+    display: inline-block;
+    width: 40px;
+    text-align: right;
+    font-size: 0.85em;
+    opacity: 0.8;
+    vertical-align: middle;
+    margin-left: 5px;
+}
+
+.piano-roll-visual {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+}
+
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* --- Mixer Panel Styles --- */
+#mixerPanel {
+    /* Mogelijk meer hoogte nodig voor verticale sliders */
+    --bottom-panel-height: 280px; /* Verhoog indien nodig */
+    display: flex;
+    flex-direction: column;
+}
+
+.mixer-controls {
+    flex-grow: 1; /* Zorgt dat deze container de rest van de ruimte vult */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Voorkom dubbele scrollbars */
+}
+
+.mixer-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0 10px 0;
+    flex-shrink: 0; /* Voorkom krimpen */
+}
+
+.mixer-options label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+.mixer-options input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+#mixerGroupCount {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+
+#mixerChannelsContainer {
+    display: flex;
+    gap: 15px; /* Ruimte tussen kanalen */
+    overflow-x: auto; /* Horizontaal scrollen als er veel kanalen zijn */
+    overflow-y: hidden;
+    padding-bottom: 10px; /* Ruimte voor scrollbar */
+    flex-grow: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--button-active) var(--button-bg);
+}
+
+#mixerChannelsContainer::-webkit-scrollbar { height: 6px; }
+#mixerChannelsContainer::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
+#mixerChannelsContainer::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
+
+.mixer-channel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 60px; /* Minimale breedte per kanaal */
+    padding: 5px;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+
+.mixer-channel.vertical label { /* Label bovenaan */
+    font-size: 0.75em;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    opacity: 0.9;
+}
+
+.mixer-channel.vertical input[type="range"] {
+    /* --- Vertical Slider Styling --- */
+    writing-mode: bt-lr; /* Bottom to top */
+    -webkit-appearance: slider-vertical; /* WebKit */
+    appearance: slider-vertical; /* Standaard (minder ondersteund) */
+    width: 8px; /* Breedte van de slider track */
+    height: 100px; /* Hoogte van de slider */
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    flex-grow: 1; /* Laat slider groeien indien mogelijk */
+    background: var(--button-bg); /* Achtergrond track */
+    border: 1px solid var(--button-hover);
+    border-radius: 4px;
+}
+
+/* Styling voor de thumb (het bolletje) */
+.mixer-channel.vertical input[type=range]::-webkit-slider-thumb {
+     -webkit-appearance: none;
+     appearance: none;
+     width: 16px; /* Breedte thumb */
+     height: 16px; /* Hoogte thumb */
+     background: var(--text-color);
+     border-radius: 50%;
+     cursor: pointer;
+     margin-top: -4px; /* Centreren tov track */
+}
+
+.mixer-channel.vertical input[type=range]::-moz-range-thumb {
+     width: 16px;
+     height: 16px;
+     background: var(--text-color);
+     border-radius: 50%;
+     border: none;
+     cursor: pointer;
+}
+
+
+.mixer-channel.vertical span { /* Waarde onderaan */
+    font-size: 0.75em;
+    margin-top: 5px;
+    opacity: 0.8;
+    min-height: 1.2em; /* Zorg dat het niet springt */
+}
+
+/* Master controls bovenaan kunnen horizontaal blijven of ook verticaal */
+.master-controls {
+    display: flex;
+    gap: 20px; /* Ruimte tussen master controls */
+    padding-bottom: 10px;
+    justify-content: center; /* Centreren */
+    flex-wrap: wrap; /* Zorg dat ze onder elkaar gaan op smalle schermen */
+}
+.master-controls .mixer-channel.vertical {
+     min-width: 50px; /* Iets smaller voor master */
+}
+
+hr.mixer-divider {
+     border: none;
+     border-top: 1px solid var(--button-bg);
+     margin: 10px 0;
+     opacity: 0.5;
+}
+
+/* Override algemene panel styles indien nodig */
+.bottom-panel label { width: auto; }
+.bottom-panel input[type="range"] { width: auto; }
+.bottom-panel span { width: auto; }
+
+.close-button {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+.close-button:hover {
+    opacity: 1;
+}
+
+
+#transportControls {
+    position: absolute; /* Blijft binnen de body */
+    bottom: 10px; /* Afstand vanaf de onderkant */
+    left: 50%; /* Startpunt in het midden */
+    transform: translateX(-50%); /* Schuif terug naar het midden */
+    z-index: 6;
+    background-color: var(--panel-bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center; /* BELANGRIJK: Houd deze voor de algemene lijn */
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    flex-wrap: wrap;
+    max-width: 90%;
+}
+
+#transportScaleControls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 3px 5px; /* Eventueel verticale padding hier aanpassen (bv. 6px) als het nog niet perfect is */
+    border-radius: 4px;
+    margin-left: auto;
+}
+
+#transportScaleControls select {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 4px 6px; /* Kleiner */
+    border-radius: 3px;
+    font-size: 0.8em; /* Kleiner font */
+    height: 30px; /* Vaste hoogte */
+    cursor: pointer;
+    min-width: 80px; /* Minimale breedte */
+}
+
+#transportScaleControls #pianoRollCanvas {
+    border: 1px solid var(--button-bg);
+    height: 45px; /* Moet overeenkomen met HTML attribuut */
+    width: 300px; /* Moet overeenkomen met HTML attribuut */
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+/* Optioneel: Stijlen voor transpose slider als je die houdt */
+#transportTransposeControl {
+     display: flex;
+     align-items: center;
+     gap: 5px;
+}
+#transportTransposeControl input[type="range"] {
+     width: 80px; /* Smaller slider */
+     height: 15px;
+     cursor: pointer;
+}
+ #transportTransposeControl span {
+     font-size: 0.8em;
+     min-width: 25px;
+     text-align: right;
+ }
+
+/* Visually hidden class (indien nog niet aanwezig) */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Music Constellations V17.2 - Utility Nodes</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-major-pentatonic"> <canvas id="mainCanvas"></canvas>
+
+    <div id="toolbar">
+        <div id="toolbar-add-elements">
+            <button id="addSoundStarBtn" title="Add Sound Star (S)">★</button>
+            <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
+            <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
+            <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
+            <button id="addGateBtn" title="Add Gate">🚦</button>
+            <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
+            <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
+            <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
+            <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
+            <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
+        </div>
+        <hr class="toolbar-divider">
+        <div id="toolbar-tools">
+            <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
+            <button id="connectBtn" title="Connect Tool (C)">🔗</button>
+            <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
+            <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
+            <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
+            <button id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↩️</button>
+            <button id="redoBtn" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+        </div>
+        <hr class="toolbar-divider">
+        <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
+    </div>
+
+    <div id="hamburgerMenuPanel" class="panel slide-panel hidden">
+         <div id="groupControls" class="hidden">
+             <p><strong>Constellation Controls:</strong> (<span id="groupNodeCount">0</span> nodes)</p>
+             <label for="groupVolumeSlider">Group Volume:</label>
+             <input type="range" id="groupVolumeSlider" min="0" max="1.5" step="0.01" value="1.0" title="Adjust volume for the selected constellation">
+             <label for="groupFluctuateToggle">Volume Fluctuation:</label>
+             <input type="checkbox" id="groupFluctuateToggle" title="Enable/Disable slow volume fluctuation">
+             <label for="groupFluctuateAmount">Fluctuation Amount:</label>
+             <input type="range" id="groupFluctuateAmount" min="0" max="0.3" step="0.01" value="0.08" title="Adjust intensity of volume fluctuation (Requires Fluctuation Enabled)">
+             <hr>
+        </div>
+        <p><strong>Global Settings:</strong></p>
+        <div id="editPanelContent">
+            </div>
+         <hr>
+         <p><strong>MIDI Settings:</strong></p>
+         <label for="midiInSelect">MIDI Input (Transpose):</label>
+         <select id="midiInSelect" title="Select MIDI Input Device for Transposition"><option value="">None</option></select>
+         <label for="midiOutSelect">MIDI Output:</label>
+         <select id="midiOutSelect" title="Select MIDI Output Device"><option value="">None</option></select>
+         <small>Configure MIDI Out per element in its settings.</small>
+         <hr>
+         <p><strong>Save/Load:</strong></p>
+         <button id="saveStateBtn">Save Constellation</button>
+         <input type="file" id="loadStateInput" accept=".json" style="display: none;">
+         <button id="loadStateBtn">Load Constellation</button>
+         <small>Saves/Loads the current state locally.</small>
+    </div>
+
+    <div id="sideToolbar" class="panel slide-panel hidden">
+        <h3 id="sideToolbarTitle">Elements</h3>
+        <div id="sideToolbarContent">
+            </div>
+    </div>
+
+    <div id="gridControls">
+        <button id="gridToggleBtn" title="Toggle Grid Visibility (G)">Grid: OFF</button>
+        <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button>
+        <div id="gridOptions" class="hidden">
+             <button id="gridTypeBtn" title="Switch Grid Type">Type: Lines</button>
+             <button id="gridSnapBtn" title="Toggle Snap to Grid">Snap: OFF</button>
+             <small>(Grid spacing automatic when Sync ON)</small>
+        </div>
+    </div>
+
+    <div id="transportControls">
+        <button id="playPauseBtn">Play ▶</button>
+        <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+        <div id="bpmControls" class="hidden">
+             <label for="globalBpmInput">BPM:</label>
+             <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
+        </div>
+        <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+         <div class="transport-divider"></div>
+        <button id="mixerBtn" title="Open Mixer">🎚️</button>
+
+        <div class="transport-divider"></div>
+        <div id="transportScaleControls">
+             <label for="scaleSelectTransport" class="visually-hidden">Scale:</label>
+             <select id="scaleSelectTransport" title="Change musical scale and theme"></select>
+             <canvas id="pianoRollCanvas" width="300" height="45" title="Click to set Root Note"></canvas> </div>
+        </div> <div id="mixerPanel" class="bottom-panel hidden">
+        <h3>Mixer</h3>
+        <div class="panel-section master-controls">
+            <div class="mixer-channel vertical">
+                 <label for="masterVolumeSlider">Master</label>
+                 <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume" orient="vertical">
+                 <span id="masterVolumeValue">0.80</span>
+            </div>
+             <div class="mixer-channel vertical">
+                 <label for="delaySendSlider">Delay Send</label>
+                 <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount" orient="vertical">
+                 <span id="delaySendValue">0.30</span>
+             </div>
+             <div class="mixer-channel vertical">
+                 <label for="delayTimeSlider">Delay Time</label>
+                 <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)" orient="vertical">
+                 <span id="delayTimeValue">0.25s</span>
+             </div>
+             <div class="mixer-channel vertical">
+                 <label for="delayFeedbackSlider">Delay Fdbk</label>
+                 <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount" orient="vertical">
+                 <span id="delayFeedbackValue">0.40</span>
+             </div>
+        </div>
+        <hr class="mixer-divider">
+        <div class="mixer-controls">
+             <div class="mixer-options">
+                 <label>
+                     <input type="checkbox" id="showSingleNodeGroupsToggle" checked> Show Single Nodes
+                 </label>
+                 <span id="mixerGroupCount">Groups: 0</span>
+             </div>
+             <div id="mixerChannelsContainer">
+                 </div>
+        </div>
+    </div>
+
+    <div id="beatIndicator"></div>
+    <div id="startMessage">Klik of tik om de sterren te wekken</div>
+    <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
