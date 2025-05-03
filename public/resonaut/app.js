@@ -2,7 +2,7 @@ const canvas = document.getElementById("mainCanvas")
 const ctx = canvas.getContext("2d")
 const startMessage = document.getElementById("startMessage")
 const loadingIndicator = document.getElementById("loadingIndicator")
-const scaleSelectTransport = document.getElementById("scaleSelectTransport")
+const scaleSelectPianoRoll = document.getElementById("scaleSelectPianoRoll")
 const groupControlsDiv = document.getElementById("groupControls")
 const groupVolumeSlider = document.getElementById("groupVolumeSlider")
 const groupFluctuateToggle = document.getElementById("groupFluctuateToggle")
@@ -25,7 +25,9 @@ const saveStateBtn = document.getElementById("saveStateBtn")
 const loadStateBtn = document.getElementById("loadStateBtn")
 const loadStateInput = document.getElementById("loadStateInput")
 const mixerBtn = document.getElementById("mixerBtn")
+const pianoRollBtn = document.getElementById("pianoRollBtn")
 const mixerPanel = document.getElementById("mixerPanel")
+const pianoRollPanel = document.getElementById("pianoRollPanel")
 const masterVolumeSlider = document.getElementById("masterVolumeSlider")
 const masterVolumeValue = document.getElementById("masterVolumeValue")
 const delaySendSlider = document.getElementById("delaySendSlider")
@@ -50,6 +52,9 @@ const addSwitchBtn = document.getElementById("addSwitchBtn")
 const editBtn = document.getElementById("editBtn")
 const connectBtn = document.getElementById("connectBtn")
 const connectStringBtn = document.getElementById("connectStringBtn")
+const glideToolButton = document.getElementById("glide-tool-button")
+const GLIDE_LINE_COLOR = 'rgba(255, 180, 255, 0.8)'; // Roze-achtige kleur voor glide lijn
+const GLIDE_LINE_WIDTH = 2.5; // Lijn dikte
 const deleteBtn = document.getElementById("deleteBtn")
 const undoBtn = document.getElementById("undoBtn")
 const redoBtn = document.getElementById("redoBtn")
@@ -62,6 +67,7 @@ const sideToolbarContent = document.getElementById("sideToolbarContent")
 
 let audioContext
 let masterGain
+let groupVolumeGain = null;
 let reverbNode
 let reverbWetGain
 let delayNode
@@ -70,8 +76,6 @@ let masterDelaySendGain
 let isReverbReady = false
 let isDelayReady = false
 const REVERB_IR_URL = "reverb.wav"
-let pianoRollCanvas = null; // Declareren als globale variabele, initieel null
-let pianoRollCtx = null;    // Declareren als globale variabele, initieel null
 
 const MARIMBA_SAMPLE_URL = "marimba_c3.wav"
 const MARIMBA_BASE_FREQ = 130.81
@@ -105,6 +109,9 @@ let isAudioReady = false
 let currentGlobalPulseId = 0
 let previousFrameTime = 0
 let bgAngle = Math.random() * Math.PI * 2
+let pianoRollCanvas = null;
+let pianoRollCtx = null;
+let pianoRollHexagons = []; 
 
 const NODE_RADIUS_BASE = 12
 const MIN_NODE_SIZE = 0.6
@@ -634,7 +641,7 @@ async function setupAudio() {
     updateLoadingIndicator()
     isAudioReady = true
     resetSideToolbars()
-    changeScale(scaleSelectTransport.value)
+    changeScale(scaleSelectPianoRoll.value)
     updateSyncUI()
     updateGroupControlsUI()
     updateInfoToggleUI()
@@ -1111,606 +1118,293 @@ function createAudioNodesForConnection(connection) {
     return null
   }
 }
+// Voeg startFrequency en glideDuration toe als optionele parameters
+// Geen startFrequency of glideDuration parameters meer
 function triggerNodeEffect(node, pulseData = {}) {
-  if (!isAudioReady || !node) return
-  const now = audioContext.currentTime
-  const params = node.audioParams
-  const intensity = pulseData.intensity ?? 1.0
-  if (node.type === "sound") {
-    if (!node.audioNodes?.gainNode) return
-    node.isTriggered = true
-    node.animationState = 1
-    const { gainNode, lowPassFilter, modulatorGain } = node.audioNodes
-    if (!gainNode || !lowPassFilter) {
-      node.isTriggered = false
-      node.animationState = 0
-      return
+    if (!isAudioReady || !node) return;
+    const now = audioContext.currentTime;
+    const params = node.audioParams;
+    const intensity = pulseData.intensity ?? 1.0;
+
+    if (node.type === 'sound') {
+        if (!node.audioNodes?.gainNode) return;
+        node.isTriggered = true;
+        node.animationState = 1;
+        const { gainNode, lowPassFilter, oscillator, modulatorGain } = node.audioNodes;
+        if (!gainNode || !lowPassFilter) {
+            node.isTriggered = false; node.animationState = 0; return;
+        }
+
+        const baseVolume = 0.6;
+        const targetVolume = baseVolume * intensity;
+        const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume));
+        let releaseTime = 0.3 + (node.size * 0.2);
+
+        try {
+            // Volume envelope
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(clampedVolume, now + 0.015);
+            if (params.waveform === 'fmBell') releaseTime = 0.8 + (node.size * 0.4);
+            else if (params.waveform === 'fmXylo') releaseTime = 0.5 + (node.size * 0.2);
+            else if (params.waveform && params.waveform.startsWith('sampler_')) { releaseTime = 0.6 + (node.size * 0.3); }
+            gainNode.gain.setTargetAtTime(0, now + 0.015, releaseTime / 4);
+            const soundEndTime = now + 0.015 + releaseTime * 1.1;
+
+            // Pitch / Sample Playback (zonder glide logica hier)
+            if (params.waveform && params.waveform.startsWith('sampler_')) {
+                let bufferToPlay = null; let baseFreq = 1;
+                switch (params.waveform) { /* Bepaal buffer */ case 'sampler_marimba': bufferToPlay = marimbaBuffer; baseFreq = MARIMBA_BASE_FREQ; break; case 'sampler_piano': bufferToPlay = pianoBuffer; baseFreq = PIANO_BASE_FREQ; break; case 'sampler_flute': bufferToPlay = fluteBuffer; baseFreq = FLUTE_BASE_FREQ; break; }
+                if (bufferToPlay) {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = bufferToPlay;
+                    const targetFreq = params.pitch;
+                    let targetRate = 1;
+                    if (!isNaN(targetFreq) && targetFreq > 0) { targetRate = Math.max(0.1, Math.min(4, targetFreq / baseFreq)); }
+                    source.playbackRate.setValueAtTime(targetRate, now); // Zet rate direct
+                    source.connect(lowPassFilter);
+                    source.start(now);
+                    source.onended = () => { /* onended */ };
+                } else { /* error */ gainNode.gain.cancelScheduledValues(now); gainNode.gain.setValueAtTime(0, now); node.isTriggered = false; node.animationState = 0; return; }
+            } else if (oscillator) {
+                const targetFreq = params.pitch;
+                // Zet frequentie direct (met kleine smoothing)
+                oscillator.frequency.cancelScheduledValues(now);
+                oscillator.frequency.setTargetAtTime(targetFreq, now, 0.005);
+                // FM logic
+                if ((params.waveform === 'fmBell' || params.waveform === 'fmXylo') && modulatorGain) { /* FM logic */ const modDepth = params.pitch * ((params.waveform === 'fmBell') ? 4 : 10) * params.fmModDepthScale; modulatorGain.gain.cancelScheduledValues(now); modulatorGain.gain.setValueAtTime(0, now); modulatorGain.gain.linearRampToValueAtTime(modDepth * 1.8, now + 0.01); modulatorGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15); }
+                // Timeout
+                setTimeout(() => { const stillNode = findNodeById(node.id); if (stillNode) stillNode.isTriggered = false; }, (soundEndTime - now) * 1000);
+            }
+        } catch (e) { node.isTriggered = false; node.animationState = 0; console.error("Error in triggerNodeEffect (sound):", e); }
+        // Particles
+        const particleCount = Math.round(5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0));
+        createParticles(node.x, node.y, particleCount);
+
+    } else if (isDrumType(node.type)) {
+        // Drum Logic (zonder glide parameters)
+        if (!node.audioNodes?.mainGain) return;
+        node.isTriggered = true; node.animationState = 1;
+        const soundParams = node.audioParams; const mainGain = node.audioNodes.mainGain;
+        const finalVol = soundParams.volume * intensity;
+        const targetFreq = soundParams.baseFreq; // Gebruik alleen target freq
+
+        try {
+            if (node.type === 'drum_kick') {
+                const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
+                const kickStartFreq = targetFreq * 2.5; // Standaard start
+                osc.frequency.setValueAtTime(kickStartFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.05);
+                gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay);
+                osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + soundParams.decay + 0.05);
+              } else if (node.type === "drum_snare") {
+                const noiseDur = soundParams.noiseDecay ?? 0.15
+                const bodyDecay = soundParams.decay ?? 0.2
+                const noise = audioContext.createBufferSource()
+                const noiseBuffer = audioContext.createBuffer(
+                  1,
+                  audioContext.sampleRate * noiseDur,
+                  audioContext.sampleRate
+                )
+                const output = noiseBuffer.getChannelData(0)
+                for (let i = 0; i < output.length; i++) {
+                  output[i] = Math.random() * 2 - 1
+                }
+                noise.buffer = noiseBuffer
+                const noiseFilter = audioContext.createBiquadFilter()
+                noiseFilter.type = "highpass"
+                noiseFilter.frequency.value = 1500
+                const noiseGain = audioContext.createGain()
+                noiseGain.gain.setValueAtTime(finalVol * 0.8, now)
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur)
+                noise.connect(noiseFilter)
+                noiseFilter.connect(noiseGain)
+                noiseGain.connect(mainGain)
+                noise.start(now)
+                noise.stop(now + noiseDur + 0.01)
+                const osc = audioContext.createOscillator()
+                const gain = audioContext.createGain()
+                osc.type = "triangle"
+                osc.frequency.setValueAtTime(soundParams.baseFreq, now)
+                gain.gain.setValueAtTime(finalVol * 0.7, now)
+                gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay)
+                osc.connect(gain)
+                gain.connect(mainGain)
+                osc.start(now)
+                osc.stop(now + bodyDecay + 0.01)
+            } else if (node.type === 'drum_hihat') {
+                 const decay = soundParams.decay ?? 0.05; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = soundParams.baseFreq; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(finalVol, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.01);
+            } else if (node.type === 'drum_clap') {
+                 const decay = soundParams.noiseDecay ?? 0.1; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay * 1.5, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = soundParams.baseFreq ?? 1500; noiseFilter.Q.value = 1.5; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(0, now); noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002); noiseGain.gain.setValueAtTime(finalVol, now + 0.002); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.05);
+            } else if (node.type === 'drum_tom1' || node.type === 'drum_tom2') {
+                const decay = soundParams.decay ?? (node.type === 'drum_tom1' ? 0.4 : 0.5);
+                const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
+                osc.type = 'sine';
+                const tomStartFreq = targetFreq * 1.8; // Standaard start
+                osc.frequency.setValueAtTime(tomStartFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08);
+                gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+                osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + decay + 0.01);
+            } else if (node.type === 'drum_cowbell') {
+                 const decay = soundParams.decay ?? 0.3; const osc1 = audioContext.createOscillator(); const osc2 = audioContext.createOscillator(); const gain = audioContext.createGain(); osc1.type = 'square'; osc2.type = 'square'; osc1.frequency.value = soundParams.baseFreq; osc2.frequency.value = soundParams.baseFreq * 1.5; gain.gain.setValueAtTime(finalVol * 0.6, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay); osc1.connect(gain); osc2.connect(gain); gain.connect(mainGain); osc1.start(now); osc1.stop(now + decay); osc2.start(now); osc2.stop(now + decay);
+            }
+        } catch(e) { node.isTriggered = false; node.animationState = 0; console.error(`Error in triggerNodeEffect (${node.type}):`, e); }
+        // Reset trigger state
+        setTimeout(() => { const stillNode = findNodeById(node.id); if (stillNode) stillNode.isTriggered = false; }, 150);
+        // Particles
+        createParticles(node.x, node.y, 3);
     }
-    const baseVolume = 0.6
-    const targetVolume = baseVolume * intensity
-    const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume))
-    let releaseTime = 0.3 + node.size * 0.2
-    try {
-      gainNode.gain.cancelScheduledValues(now)
-      gainNode.gain.setValueAtTime(0, now)
-      gainNode.gain.linearRampToValueAtTime(clampedVolume, now + 0.015)
-      if (params.waveform === "fmBell") releaseTime = 0.8 + node.size * 0.4
-      else if (params.waveform === "fmXylo") releaseTime = 0.5 + node.size * 0.2
-      else if (params.waveform && params.waveform.startsWith("sampler_")) {
-        releaseTime = 0.6 + node.size * 0.3
-      }
-      gainNode.gain.setTargetAtTime(0, now + 0.015, releaseTime / 4)
-      const soundEndTime = now + 0.015 + releaseTime * 1.1
-      if (params.waveform && params.waveform.startsWith("sampler_")) {
-        let bufferToPlay = null
-        let baseFreq = 1
-        switch (params.waveform) {
-          case "sampler_marimba":
-            bufferToPlay = marimbaBuffer
-            baseFreq = MARIMBA_BASE_FREQ
-            break
-          case "sampler_piano":
-            bufferToPlay = pianoBuffer
-            baseFreq = PIANO_BASE_FREQ
-            break
-          case "sampler_flute":
-            bufferToPlay = fluteBuffer
-            baseFreq = FLUTE_BASE_FREQ
-            break
-        }
-        if (bufferToPlay) {
-          const source = audioContext.createBufferSource()
-          source.buffer = bufferToPlay
-          const desiredFreq = params.pitch
-          if (isNaN(desiredFreq) || desiredFreq <= 0) {
-            source.playbackRate.value = 1
-          } else {
-            source.playbackRate.value = Math.max(
-              0.1,
-              Math.min(4, desiredFreq / baseFreq)
-            )
-          }
-          source.connect(lowPassFilter)
-          source.start(now)
-          source.onended = () => {
-            const stillNode = findNodeById(node.id)
-            if (stillNode) stillNode.isTriggered = false
-          }
-        } else {
-          gainNode.gain.cancelScheduledValues(now)
-          gainNode.gain.setValueAtTime(0, now)
-          node.isTriggered = false
-          node.animationState = 0
-          return
-        }
-      } else {
-        if (
-          (params.waveform === "fmBell" || params.waveform === "fmXylo") &&
-          modulatorGain
-        ) {
-          const modDepth =
-            params.pitch *
-            (params.waveform === "fmBell" ? 4 : 10) *
-            params.fmModDepthScale
-          modulatorGain.gain.cancelScheduledValues(now)
-          modulatorGain.gain.setValueAtTime(0, now)
-          modulatorGain.gain.linearRampToValueAtTime(modDepth * 1.8, now + 0.01)
-          modulatorGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
-        }
-        setTimeout(() => {
-          const stillNode = findNodeById(node.id)
-          if (stillNode) stillNode.isTriggered = false
-        }, (soundEndTime - now) * 1000)
-      }
-    } catch (e) {
-      node.isTriggered = false
-      node.animationState = 0
+}
+// Voeg 'incomingConnection' toe als parameter
+function propagateTrigger(targetNode, incomingDelay, pulseId, sourceNodeId = -1, hopsRemaining = Infinity, incomingPulse = { type: 'trigger', data: {} }, incomingConnection = null) {
+    // Voorkom directe reflectie en oneindige loops
+    if (!targetNode || targetNode.id === sourceNodeId) {
+        return;
     }
-    const particleCount = Math.round(
-      5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0)
-    )
-    createParticles(node.x, node.y, particleCount)
-  } else if (isDrumType(node.type)) {
-    if (!node.audioNodes?.mainGain) return
-    node.isTriggered = true
-    node.animationState = 1
-    const soundParams = node.audioParams
-    const mainGain = node.audioNodes.mainGain
-    const finalVol = soundParams.volume * intensity
-    try {
-      if (node.type === "drum_kick") {
-        const osc = audioContext.createOscillator()
-        const gain = audioContext.createGain()
-        osc.frequency.setValueAtTime(soundParams.baseFreq * 2.5, now)
-        osc.frequency.exponentialRampToValueAtTime(
-          soundParams.baseFreq,
-          now + 0.05
-        )
-        gain.gain.setValueAtTime(finalVol, now)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay)
-        osc.connect(gain)
-        gain.connect(mainGain)
-        osc.start(now)
-        osc.stop(now + soundParams.decay + 0.05)
-      } else if (node.type === "drum_snare") {
-        const noiseDur = soundParams.noiseDecay ?? 0.15
-        const bodyDecay = soundParams.decay ?? 0.2
-        const noise = audioContext.createBufferSource()
-        const noiseBuffer = audioContext.createBuffer(
-          1,
-          audioContext.sampleRate * noiseDur,
-          audioContext.sampleRate
-        )
-        const output = noiseBuffer.getChannelData(0)
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1
+    // Voorkom dat een node getriggered wordt door dezelfde puls via verschillende paden tegelijk
+    if (targetNode.lastTriggerPulseId === pulseId) {
+        if (targetNode.type !== 'reflector' || sourceNodeId === -1) {
+             return;
         }
-        noise.buffer = noiseBuffer
-        const noiseFilter = audioContext.createBiquadFilter()
-        noiseFilter.type = "highpass"
-        noiseFilter.frequency.value = 1500
-        const noiseGain = audioContext.createGain()
-        noiseGain.gain.setValueAtTime(finalVol * 0.8, now)
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur)
-        noise.connect(noiseFilter)
-        noiseFilter.connect(noiseGain)
-        noiseGain.connect(mainGain)
-        noise.start(now)
-        noise.stop(now + noiseDur + 0.01)
-        const osc = audioContext.createOscillator()
-        const gain = audioContext.createGain()
-        osc.type = "triangle"
-        osc.frequency.setValueAtTime(soundParams.baseFreq, now)
-        gain.gain.setValueAtTime(finalVol * 0.7, now)
-        gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay)
-        osc.connect(gain)
-        gain.connect(mainGain)
-        osc.start(now)
-        osc.stop(now + bodyDecay + 0.01)
-      } else if (node.type === "drum_hihat") {
-        const decay = soundParams.decay ?? 0.05
-        const noise = audioContext.createBufferSource()
-        const noiseBuffer = audioContext.createBuffer(
-          1,
-          audioContext.sampleRate * decay,
-          audioContext.sampleRate
-        )
-        const output = noiseBuffer.getChannelData(0)
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1
-        }
-        noise.buffer = noiseBuffer
-        const noiseFilter = audioContext.createBiquadFilter()
-        noiseFilter.type = "highpass"
-        noiseFilter.frequency.value = soundParams.baseFreq
-        const noiseGain = audioContext.createGain()
-        noiseGain.gain.setValueAtTime(finalVol, now)
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay)
-        noise.connect(noiseFilter)
-        noiseFilter.connect(noiseGain)
-        noiseGain.connect(mainGain)
-        noise.start(now)
-        noise.stop(now + decay + 0.01)
-      } else if (node.type === "drum_clap") {
-        const decay = soundParams.noiseDecay ?? 0.1
-        const noise = audioContext.createBufferSource()
-        const noiseBuffer = audioContext.createBuffer(
-          1,
-          audioContext.sampleRate * decay * 1.5,
-          audioContext.sampleRate
-        )
-        const output = noiseBuffer.getChannelData(0)
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1
-        }
-        noise.buffer = noiseBuffer
-        const noiseFilter = audioContext.createBiquadFilter()
-        noiseFilter.type = "bandpass"
-        noiseFilter.frequency.value = soundParams.baseFreq ?? 1500
-        noiseFilter.Q.value = 1.5
-        const noiseGain = audioContext.createGain()
-        noiseGain.gain.setValueAtTime(0, now)
-        noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002)
-        noiseGain.gain.setValueAtTime(finalVol, now + 0.002)
-        noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01)
-        noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01)
-        noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015)
-        noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015)
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay)
-        noise.connect(noiseFilter)
-        noiseFilter.connect(noiseGain)
-        noiseGain.connect(mainGain)
-        noise.start(now)
-        noise.stop(now + decay + 0.05)
-      } else if (node.type === "drum_tom1" || node.type === "drum_tom2") {
-        const decay = soundParams.decay ?? 0.4
-        const osc = audioContext.createOscillator()
-        const gain = audioContext.createGain()
-        osc.type = "sine"
-        osc.frequency.setValueAtTime(soundParams.baseFreq * 1.8, now)
-        osc.frequency.exponentialRampToValueAtTime(
-          soundParams.baseFreq,
-          now + 0.08
-        )
-        gain.gain.setValueAtTime(finalVol, now)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + decay)
-        osc.connect(gain)
-        gain.connect(mainGain)
-        osc.start(now)
-        osc.stop(now + decay + 0.01)
-      } else if (node.type === "drum_cowbell") {
-        const decay = soundParams.decay ?? 0.3
-        const osc1 = audioContext.createOscillator()
-        const osc2 = audioContext.createOscillator()
-        const gain = audioContext.createGain()
-        osc1.type = "square"
-        osc2.type = "square"
-        osc1.frequency.value = soundParams.baseFreq
-        osc2.frequency.value = soundParams.baseFreq * 1.5
-        gain.gain.setValueAtTime(finalVol * 0.6, now)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + decay)
-        osc1.connect(gain)
-        osc2.connect(gain)
-        gain.connect(mainGain)
-        osc1.start(now)
-        osc1.stop(now + decay)
-        osc2.start(now)
-        osc2.stop(now + decay)
-      }
-    } catch (e) {}
+    }
+     // Stop propagatie als hops op zijn
+     if (hopsRemaining <= 0 && hopsRemaining !== Infinity) {
+         return;
+     }
+     // Nebulas kunnen niet getriggered worden of propageren
+     if (targetNode.type === 'nebula') {
+         return;
+     }
+
+    const sourceNode = findNodeById(sourceNodeId); // Haal sourceNode hier op
+    targetNode.lastTriggerPulseId = pulseId; // Markeer als getriggered door deze puls ID
+    const actualTriggerDelay = incomingDelay; // Gebruik de berekende delay
+
+    // Gebruik setTimeout om de vertraging te implementeren
     setTimeout(() => {
-      const stillNode = findNodeById(node.id)
-      if (stillNode) stillNode.isTriggered = false
-    }, 150)
-    createParticles(node.x, node.y, 3)
-  }
+        // Her-check of de node nog bestaat op het moment van triggeren
+        const currentNode = findNodeById(targetNode.id);
+        if (!currentNode) return;
+
+        let canPropagate = true;
+        let triggerAudioEffect = false; // Default: GEEN audio effect bij aankomst
+        let triggerVisualEffect = true; // Default: laat node oplichten
+        let stateChangedForUndo = false;
+        let pulseDataForNext = { ...incomingPulse.data }; // Kopieer puls data voor volgende hops
+        let isGlideArrival = false; // Flag om te weten of het een glide was
+
+        // Check of de puls via een glide connection kwam
+        if (incomingConnection && incomingConnection.type === 'glide' && sourceNode && sourceNode.audioParams && (currentNode.type === 'sound' || isDrumType(currentNode.type))) {
+            isGlideArrival = true;
+            // Het *glijdende* geluid wordt gestart in createVisualPulse.
+            // We willen hier dat de *doelnode* OOK triggert.
+            triggerAudioEffect = true;
+            canPropagate = true; // Laat de puls verder gaan
+            triggerVisualEffect = false; // Node hoeft niet extra te knipperen door glide (geluid is genoeg)
+            console.log(`Glide pulse arriving at ${currentNode.id}. Target node WILL trigger.`);
+        }
+
+        // Bepaal of audio getriggerd moet worden voor NIET-glide arrivals
+        if (!isGlideArrival) {
+             if (currentNode.type === 'sound' || isDrumType(currentNode.type)) {
+                 triggerAudioEffect = true;
+             }
+             // Voeg hier checks toe als utility nodes geluid moeten maken
+        }
+
+
+        // Logica voor andere node types (blijft grotendeels hetzelfde)
+        if (isPulsarType(currentNode.type)) {
+            // ... (pulsar logic zoals voorheen) ...
+             if (currentNode.type === 'pulsar_triggerable') { if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) { currentNode.isEnabled = !currentNode.isEnabled; if (currentNode.isEnabled) { currentNode.lastTriggerTime = -1; currentNode.nextSyncTriggerTime = 0; currentNode.nextGridTriggerTime = 0; const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000; currentNode.nextRandomTriggerTime = nowTime + (Math.random() * 2 / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC); } stateChangedForUndo = true; currentNode.animationState = 1; triggerAudioEffect = false; canPropagate = false; triggerVisualEffect = false; } else { canPropagate = false; triggerVisualEffect = false; } } else { triggerAudioEffect = false; canPropagate = true; currentNode.animationState = 1; pulseDataForNext = { ...incomingPulse.data }; pulseDataForNext.color = currentNode.color ?? null; if (sourceNode && sourceNode.type === 'pulsar_random_volume') { pulseDataForNext.intensity = incomingPulse.data.intensity; } else { pulseDataForNext.intensity = currentNode.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY; } pulseDataForNext.particleMultiplier = incomingPulse.data.particleMultiplier ?? 1.0; triggerVisualEffect = false; }
+        } else if (currentNode.type === 'gate') {
+            // ... (gate logic zoals voorheen) ...
+             triggerAudioEffect = false; const counterBefore = currentNode.gateCounter || 0; currentNode.gateCounter = counterBefore + 1; const modeIndex = currentNode.gateModeIndex || 0; const mode = GATE_MODES[modeIndex]; canPropagate = false; switch (mode) { case '1/2': if (currentNode.gateCounter % 2 === 0) canPropagate = true; break; case '1/3': if (currentNode.gateCounter % 3 === 0) canPropagate = true; break; case '1/4': if (currentNode.gateCounter % 4 === 0) canPropagate = true; break; case '2/3': if (currentNode.gateCounter % 3 !== 0) canPropagate = true; break; case '3/4': if (currentNode.gateCounter % 4 !== 0) canPropagate = true; break; case 'RAND': const randomCheck = Math.random() < GATE_RANDOM_THRESHOLD; currentNode.lastRandomGateResult = randomCheck; if (randomCheck) canPropagate = true; break; } currentNode.animationState = 1; triggerVisualEffect = false;
+        } else if (currentNode.type === 'probabilityGate') {
+            // ... (probability gate logic zoals voorheen) ...
+            triggerAudioEffect = false; canPropagate = false; if (Math.random() < (currentNode.audioParams.probability ?? DEFAULT_PROBABILITY)) { canPropagate = true; } currentNode.animationState = 1; triggerVisualEffect = false;
+        } else if (currentNode.type === 'pitchShift') {
+            // ... (pitch shift logic zoals voorheen) ...
+            triggerAudioEffect = false; canPropagate = true; currentNode.animationState = 1; triggerVisualEffect = false; const shiftIndex = currentNode.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX; let shiftAmount = PITCH_SHIFT_AMOUNTS[shiftIndex]; if (currentNode.pitchShiftAlternating) { shiftAmount *= (currentNode.pitchShiftDirection || 1); currentNode.pitchShiftDirection = (currentNode.pitchShiftDirection || 1) * -1; stateChangedForUndo = true; } let pitchActuallyChanged = false; currentNode.connections.forEach(neighborId => { if (neighborId === sourceNodeId) return; const neighborNode = findNodeById(neighborId); if (neighborNode && (neighborNode.type === 'sound' || neighborNode.type === 'nebula')) { const oldIndex = neighborNode.audioParams.scaleIndex; neighborNode.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount)); neighborNode.audioParams.pitch = getFrequency(currentScale, neighborNode.audioParams.scaleIndex); updateNodeAudioParams(neighborNode); if (oldIndex !== neighborNode.audioParams.scaleIndex) { pitchActuallyChanged = true; neighborNode.animationState = 0.7; setTimeout(() => { const checkNode = findNodeById(neighborId); if (checkNode && !checkNode.isTriggered) checkNode.animationState = 0; }, 150); } } const neighborConn = connections.find(c => c.type === 'string_violin' && ((c.nodeAId === currentNode.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === currentNode.id))); if (neighborConn) { const oldIndex = neighborConn.audioParams.scaleIndex; neighborConn.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount)); neighborConn.audioParams.pitch = getFrequency(currentScale, neighborConn.audioParams.scaleIndex); updateConnectionAudioParams(neighborConn); if (oldIndex !== neighborConn.audioParams.scaleIndex) { pitchActuallyChanged = true; neighborConn.animationState = 0.7; setTimeout(() => { const checkConn = findConnectionById(neighborConn.id); if (checkConn) checkConn.animationState = 0; }, 150); } } }); if (pitchActuallyChanged) { stateChangedForUndo = true; }
+        } else if (currentNode.type === 'relay') {
+            // ... (relay logic zoals voorheen) ...
+            triggerAudioEffect = false; canPropagate = true; currentNode.animationState = 1; triggerVisualEffect = false;
+        } else if (currentNode.type === 'reflector') {
+            // ... (reflector logic zoals voorheen) ...
+             triggerAudioEffect = false; canPropagate = false; triggerVisualEffect = true; currentNode.animationState = 1; if (sourceNode && incomingConnection) { const baseTravelTime = incomingConnection.length * DELAY_FACTOR; const outgoingTravelTime = baseTravelTime; const pulseColor = pulseDataForNext.color; createVisualPulse(incomingConnection.id, outgoingTravelTime, currentNode.id, hopsRemaining - 1, 'trigger', pulseColor, pulseDataForNext.intensity); propagateTrigger(sourceNode, outgoingTravelTime, pulseId, currentNode.id, hopsRemaining - 1, { type: 'trigger', data: pulseDataForNext }, null); }
+        } else if (currentNode.type === 'switch') {
+            // ... (switch logic zoals voorheen) ...
+             triggerAudioEffect = false; canPropagate = false; triggerVisualEffect = true; currentNode.animationState = 1; if (incomingConnection) { if (currentNode.primaryInputConnectionId === null || currentNode.primaryInputConnectionId === undefined) { currentNode.primaryInputConnectionId = incomingConnection.id; stateChangedForUndo = true; } if (incomingConnection.id === currentNode.primaryInputConnectionId) { canPropagate = true; } else { canPropagate = false; triggerVisualEffect = false; } } else { canPropagate = false; }
+        } else if (currentNode.type === 'sound' || isDrumType(currentNode.type)) {
+            // Audio effect wordt al bepaald bovenaan
+            canPropagate = true; // Sound/drum nodes propageren altijd
+            triggerVisualEffect = false; // Geluid zelf is de feedback
+            if (isDrumType(currentNode.type)) pulseDataForNext = { ...pulseDataForNext };
+        } else {
+            // Onbekend type
+            canPropagate = false;
+            triggerVisualEffect = false;
+        }
+
+        // Roep triggerNodeEffect aan als nodig (nu ZONDER glide parameters)
+        if (triggerAudioEffect && (currentNode.type === 'sound' || isDrumType(currentNode.type))) {
+            triggerNodeEffect(currentNode, pulseDataForNext); // Roep aan ZONDER startFrequency en glideDuration
+        }
+
+        // Visuele feedback (oplichten) voor utility nodes
+        if (triggerVisualEffect) {
+             setTimeout(() => {
+                 const nodeCheck = findNodeById(currentNode.id);
+                 if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0;
+             }, 150);
+         }
+
+        // Reset animatie state voor utility nodes
+        if (!isPulsarType(currentNode.type) && currentNode.type !== 'sound' && !isDrumType(currentNode.type) && currentNode.type !== 'relay' && currentNode.type !== 'reflector' && currentNode.type !== 'switch' && currentNode.animationState > 0) {
+            setTimeout(() => {
+                const nodeCheck = findNodeById(currentNode.id);
+                if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0;
+            }, 150);
+        }
+        // Reset animatie state voor pulsars
+        if (isPulsarType(currentNode.type) && currentNode.animationState > 0) {
+            setTimeout(() => {
+                const nodeCheck = findNodeById(currentNode.id);
+                if (nodeCheck) nodeCheck.animationState = 0;
+            }, 150);
+        }
+
+        // Sla state op als nodig
+        if (stateChangedForUndo) {
+            populateEditPanel();
+            saveState();
+        }
+
+        // Propagate verder indien toegestaan
+        if (canPropagate) {
+            const nextHops = (hopsRemaining === Infinity) ? Infinity : hopsRemaining - 1;
+            if (nextHops > 0 || nextHops === Infinity) {
+                currentNode.connections.forEach(neighborId => {
+                    if (neighborId === sourceNodeId) return;
+                    const neighborNode = findNodeById(neighborId);
+                    const connection = connections.find(c => (c.nodeAId === currentNode.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === currentNode.id));
+
+                    if (neighborNode && neighborNode.type !== 'nebula' && connection && neighborNode.lastTriggerPulseId !== pulseId) {
+                        const baseTravelTime = connection.length * DELAY_FACTOR;
+                        const outgoingTravelTime = baseTravelTime;
+                        const pulseColor = pulseDataForNext.color;
+                        // Geef source en target ID mee aan createVisualPulse
+                        createVisualPulse(connection.id, outgoingTravelTime, currentNode.id, nextHops, 'trigger', pulseColor, pulseDataForNext.intensity);
+                        // Stuur logische trigger door, geef UITGAANDE connection mee
+                        propagateTrigger(neighborNode, outgoingTravelTime, pulseId, currentNode.id, nextHops, { type: 'trigger', data: pulseDataForNext }, connection);
+                    }
+                });
+            }
+        }
+    }, actualTriggerDelay * 1000);
 }
 
-function propagateTrigger(
-  targetNode,
-  incomingDelay,
-  pulseId,
-  sourceNodeId = -1,
-  hopsRemaining = Infinity,
-  incomingPulse = { type: "trigger", data: {} }
-) {
-  if (
-    !targetNode ||
-    targetNode.type === "nebula" ||
-    targetNode.lastTriggerPulseId === pulseId ||
-    hopsRemaining <= 0
-  ) {
-    return
-  }
-  const sourceNode = findNodeById(sourceNodeId)
-  if (targetNode.id === sourceNodeId) {
-    return
-  }
-  targetNode.lastTriggerPulseId = pulseId
-  const actualTriggerDelay = incomingDelay
 
-  setTimeout(() => {
-    const currentNode = findNodeById(targetNode.id)
-    if (!currentNode) return
-
-    let canPropagate = true
-    let triggerAudioEffect = false
-    let triggerVisualEffect = true
-    let stateChangedForUndo = false
-    let pulseDataForNext = { ...incomingPulse.data }
-    const incomingConnection = connections.find(
-      (c) =>
-        (c.nodeAId === sourceNodeId && c.nodeBId === currentNode.id) ||
-        (c.nodeAId === currentNode.id && c.nodeBId === sourceNodeId)
-    )
-
-    if (isPulsarType(currentNode.type)) {
-      if (currentNode.type === "pulsar_triggerable") {
-        if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) {
-          currentNode.isEnabled = !currentNode.isEnabled
-          if (currentNode.isEnabled) {
-            currentNode.lastTriggerTime = -1
-            currentNode.nextSyncTriggerTime = 0
-            currentNode.nextGridTriggerTime = 0
-            const nowTime = audioContext
-              ? audioContext.currentTime
-              : performance.now() / 1000
-            currentNode.nextRandomTriggerTime =
-              nowTime +
-              (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC
-          }
-          stateChangedForUndo = true
-          currentNode.animationState = 1
-          triggerAudioEffect = false
-          canPropagate = false
-          triggerVisualEffect = false
-        } else {
-          canPropagate = false
-          triggerVisualEffect = false
-        }
-      } else {
-        triggerAudioEffect = false
-        canPropagate = true
-        currentNode.animationState = 1
-        pulseDataForNext = { ...incomingPulse.data }
-        pulseDataForNext.color = currentNode.color ?? null
-        if (sourceNode && sourceNode.type === "pulsar_random_volume") {
-          pulseDataForNext.intensity = incomingPulse.data.intensity
-        } else {
-          pulseDataForNext.intensity =
-            currentNode.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY
-        }
-        pulseDataForNext.particleMultiplier =
-          incomingPulse.data.particleMultiplier ?? 1.0
-        triggerVisualEffect = false
-      }
-    } else if (currentNode.type === "gate") {
-      triggerAudioEffect = false
-      const counterBefore = currentNode.gateCounter || 0
-      currentNode.gateCounter = counterBefore + 1
-      const modeIndex = currentNode.gateModeIndex || 0
-      const mode = GATE_MODES[modeIndex]
-      canPropagate = false
-      switch (mode) {
-        case "1/2":
-          if (currentNode.gateCounter % 2 === 0) canPropagate = true
-          break
-        case "1/3":
-          if (currentNode.gateCounter % 3 === 0) canPropagate = true
-          break
-        case "1/4":
-          if (currentNode.gateCounter % 4 === 0) canPropagate = true
-          break
-        case "2/3":
-          if (currentNode.gateCounter % 3 !== 0) canPropagate = true
-          break
-        case "3/4":
-          if (currentNode.gateCounter % 4 !== 0) canPropagate = true
-          break
-        case "RAND":
-          const randomCheck = Math.random() < GATE_RANDOM_THRESHOLD
-          currentNode.lastRandomGateResult = randomCheck
-          if (randomCheck) canPropagate = true
-          break
-      }
-      currentNode.animationState = 1
-      triggerVisualEffect = false
-    } else if (currentNode.type === "probabilityGate") {
-      triggerAudioEffect = false
-      canPropagate = false
-      if (
-        Math.random() <
-        (currentNode.audioParams.probability ?? DEFAULT_PROBABILITY)
-      ) {
-        canPropagate = true
-      }
-      currentNode.animationState = 1
-      triggerVisualEffect = false
-    } else if (currentNode.type === "pitchShift") {
-      triggerAudioEffect = false
-      canPropagate = true
-      currentNode.animationState = 1
-      triggerVisualEffect = false
-      const shiftIndex =
-        currentNode.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX
-      let shiftAmount = PITCH_SHIFT_AMOUNTS[shiftIndex]
-      if (currentNode.pitchShiftAlternating) {
-        shiftAmount *= currentNode.pitchShiftDirection || 1
-        currentNode.pitchShiftDirection =
-          (currentNode.pitchShiftDirection || 1) * -1
-        stateChangedForUndo = true
-      }
-      let pitchActuallyChanged = false
-
-      currentNode.connections.forEach((neighborId) => {
-        if (neighborId === sourceNodeId) return
-        const neighborNode = findNodeById(neighborId)
-        if (
-          neighborNode &&
-          (neighborNode.type === "sound" || neighborNode.type === "nebula")
-        ) {
-          const oldIndex = neighborNode.audioParams.scaleIndex
-          neighborNode.audioParams.scaleIndex = Math.max(
-            MIN_SCALE_INDEX,
-            Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount)
-          )
-          neighborNode.audioParams.pitch = getFrequency(
-            currentScale,
-            neighborNode.audioParams.scaleIndex
-          )
-          updateNodeAudioParams(neighborNode)
-          if (oldIndex !== neighborNode.audioParams.scaleIndex) {
-            pitchActuallyChanged = true
-            neighborNode.animationState = 0.7
-            setTimeout(() => {
-              const checkNode = findNodeById(neighborId)
-              if (checkNode && !checkNode.isTriggered)
-                checkNode.animationState = 0
-            }, 150)
-          }
-        }
-        const neighborConn = connections.find(
-          (c) =>
-            c.type === "string_violin" &&
-            ((c.nodeAId === currentNode.id && c.nodeBId === neighborId) ||
-              (c.nodeAId === neighborId && c.nodeBId === currentNode.id))
-        )
-        if (neighborConn) {
-          const oldIndex = neighborConn.audioParams.scaleIndex
-          neighborConn.audioParams.scaleIndex = Math.max(
-            MIN_SCALE_INDEX,
-            Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount)
-          )
-          neighborConn.audioParams.pitch = getFrequency(
-            currentScale,
-            neighborConn.audioParams.scaleIndex
-          )
-          updateConnectionAudioParams(neighborConn)
-          if (oldIndex !== neighborConn.audioParams.scaleIndex) {
-            pitchActuallyChanged = true
-            neighborConn.animationState = 0.7
-            setTimeout(() => {
-              const checkConn = findConnectionById(neighborConn.id)
-              if (checkConn) checkConn.animationState = 0
-            }, 150)
-          }
-        }
-      })
-
-      if (pitchActuallyChanged) {
-        stateChangedForUndo = true
-      }
-    } else if (currentNode.type === "relay") {
-      triggerAudioEffect = false
-      canPropagate = true
-      currentNode.animationState = 1
-      triggerVisualEffect = false
-    } else if (currentNode.type === "reflector") {
-      triggerAudioEffect = false
-      canPropagate = false
-      triggerVisualEffect = true
-      currentNode.animationState = 1
-      if (sourceNode && incomingConnection) {
-        const baseTravelTime = incomingConnection.length * DELAY_FACTOR
-        const outgoingTravelTime = baseTravelTime
-        const pulseColor = pulseDataForNext.color
-        createVisualPulse(
-          incomingConnection.id,
-          outgoingTravelTime,
-          currentNode.id,
-          hopsRemaining - 1,
-          "trigger",
-          pulseColor,
-          pulseDataForNext.intensity
-        )
-        propagateTrigger(
-          sourceNode,
-          outgoingTravelTime,
-          pulseId,
-          currentNode.id,
-          hopsRemaining - 1,
-          { type: "trigger", data: pulseDataForNext }
-        )
-      }
-    } else if (currentNode.type === "switch") {
-      triggerAudioEffect = false
-      canPropagate = false
-      triggerVisualEffect = true
-      currentNode.animationState = 1
-      if (incomingConnection) {
-        if (
-          currentNode.primaryInputConnectionId === null ||
-          currentNode.primaryInputConnectionId === undefined
-        ) {
-          currentNode.primaryInputConnectionId = incomingConnection.id
-          stateChangedForUndo = true
-        }
-        if (incomingConnection.id === currentNode.primaryInputConnectionId) {
-          canPropagate = true
-        } else {
-          canPropagate = false
-          triggerVisualEffect = false
-        }
-      } else {
-        canPropagate = false // No incoming connection found? Stop.
-      }
-    } else if (currentNode.type === "sound") {
-      triggerAudioEffect = true
-      canPropagate = true
-      triggerVisualEffect = false
-    } else if (isDrumType(currentNode.type)) {
-      triggerAudioEffect = true
-      canPropagate = true
-      triggerVisualEffect = false
-      pulseDataForNext = { ...pulseDataForNext }
-    } else {
-      canPropagate = false
-      triggerVisualEffect = false
-    }
-
-    if (
-      triggerAudioEffect &&
-      (currentNode.type === "sound" || isDrumType(currentNode.type))
-    ) {
-      triggerNodeEffect(currentNode, pulseDataForNext)
-    }
-
-    if (triggerVisualEffect) {
-      setTimeout(() => {
-        const nodeCheck = findNodeById(currentNode.id)
-        if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0
-      }, 150)
-    }
-
-    if (
-      !isPulsarType(currentNode.type) &&
-      currentNode.type !== "sound" &&
-      !isDrumType(currentNode.type) &&
-      currentNode.type !== "relay" &&
-      currentNode.type !== "reflector" &&
-      currentNode.type !== "switch" &&
-      currentNode.animationState > 0
-    ) {
-      setTimeout(() => {
-        const nodeCheck = findNodeById(currentNode.id)
-        if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0
-      }, 150)
-    }
-    if (isPulsarType(currentNode.type) && currentNode.animationState > 0) {
-      setTimeout(() => {
-        const nodeCheck = findNodeById(currentNode.id)
-        if (nodeCheck) nodeCheck.animationState = 0
-      }, 150)
-    }
-
-    if (stateChangedForUndo) {
-      populateEditPanel()
-      saveState()
-    }
-
-    if (canPropagate) {
-      const nextHops = hopsRemaining === Infinity ? Infinity : hopsRemaining - 1
-      if (nextHops > 0 || nextHops === Infinity) {
-        currentNode.connections.forEach((neighborId) => {
-          if (neighborId === sourceNodeId) return
-          const neighborNode = findNodeById(neighborId)
-          const connection = connections.find(
-            (c) =>
-              (c.nodeAId === currentNode.id && c.nodeBId === neighborId) ||
-              (c.nodeAId === neighborId && c.nodeBId === currentNode.id)
-          )
-          if (
-            neighborNode &&
-            neighborNode.type !== "nebula" &&
-            connection &&
-            neighborNode.lastTriggerPulseId !== pulseId
-          ) {
-            const baseTravelTime = connection.length * DELAY_FACTOR
-            const outgoingTravelTime = baseTravelTime
-            const pulseColor = pulseDataForNext.color
-            createVisualPulse(
-              connection.id,
-              outgoingTravelTime,
-              currentNode.id,
-              nextHops,
-              "trigger",
-              pulseColor,
-              pulseDataForNext.intensity
-            )
-            propagateTrigger(
-              neighborNode,
-              outgoingTravelTime,
-              pulseId,
-              currentNode.id,
-              nextHops,
-              { type: "trigger", data: pulseDataForNext }
-            )
-          }
-        })
-      }
-    }
-  }, actualTriggerDelay * 1000)
-}
 
 function createParticles(x, y, count) {
   const baseColor =
@@ -1806,35 +1500,193 @@ function updateAndDrawParticles(deltaTime, now) {
     } catch (e) {}
   })
 }
-function createVisualPulse(
-  connId,
-  dur,
-  startId,
-  hopsLeft = Infinity,
-  pulseType = "trigger",
-  pulseColor = null,
-  intensity = 1.0
-) {
-  if (!isAudioReady || dur <= 0) return
-  const p = {
-    id: pulseIdCounter++,
-    connectionId: connId,
-    startTime: audioContext.currentTime,
-    duration: dur,
-    startNodeId: startId,
-    hopsLeft: hopsLeft,
-    type: pulseType,
-    color: pulseColor,
-    intensity: intensity
-  }
-  const connection = findConnectionById(connId)
-  if (connection && connection.type === "string_violin") {
-    p.audioStartTime = audioContext.currentTime
-    p.audioEndTime = audioContext.currentTime + dur
-    startStringSound(connection, p.intensity)
-  }
-  activePulses.push(p)
+// --- BIJGEWERKTE createVisualPulse functie ---
+// Start nu ook het glijdende geluid voor 'glide' connecties
+function createVisualPulse(connId, dur, startNodeId, hopsLeft = Infinity, pulseType = 'trigger', pulseColor = null, intensity = 1.0) {
+    if (!isAudioReady || dur <= 0) return;
+
+    const connection = findConnectionById(connId);
+    if (!connection) return;
+
+    // Bepaal de doelnode ID
+    const targetNodeId = (connection.nodeAId === startNodeId) ? connection.nodeBId : connection.nodeAId;
+
+    // Maak de visuele puls zoals voorheen
+    const visualPulse = {
+        id: pulseIdCounter++,
+        connectionId: connId,
+        startTime: audioContext.currentTime,
+        duration: dur,
+        startNodeId: startNodeId, // Behoud startNodeId voor tekenen
+        hopsLeft: hopsLeft,
+        type: pulseType,
+        color: pulseColor,
+        intensity: intensity
+    };
+    activePulses.push(visualPulse);
+
+    // --- NIEUW: Start glijdend geluid als het een 'glide' connectie is ---
+    if (connection.type === 'glide') {
+        const sourceNode = findNodeById(startNodeId);
+        const targetNode = findNodeById(targetNodeId);
+
+        // Check of beide nodes bestaan en audio kunnen maken/hebben
+        if (sourceNode && targetNode &&
+            (sourceNode.type === 'sound' || isDrumType(sourceNode.type)) &&
+            (targetNode.type === 'sound' || isDrumType(targetNode.type)) &&
+            sourceNode.audioParams && targetNode.audioParams)
+        {
+            try {
+                const sourceFreq = getFrequencyForStar(sourceNode); // Freq van bron
+                const targetFreq = getFrequencyForStar(targetNode); // Freq van doel
+                const glideDuration = dur; // Duur = reistijd
+
+                if (!isNaN(sourceFreq) && !isNaN(targetFreq) && sourceFreq > 0 && targetFreq > 0) {
+                    console.log(`Starting traveling glide sound: ${sourceFreq.toFixed(1)}Hz -> ${targetFreq.toFixed(1)}Hz over ${glideDuration.toFixed(3)}s`);
+                    startTravelingGlideSound(sourceNode, targetFreq, glideDuration, intensity);
+                } else {
+                    console.warn(`Could not start traveling glide: Invalid frequencies (Source: ${sourceFreq}, Target: ${targetFreq})`);
+                }
+            } catch (e) {
+                console.error("Error starting traveling glide sound:", e);
+            }
+        } else {
+             console.warn("Could not start traveling glide: Source or target node invalid or missing audioParams.");
+        }
+    }
+    // --- EINDE NIEUW ---
+
+    // Start string geluid als het een string connectie is (bestaande logica)
+    if (connection.type === 'string_violin') {
+        visualPulse.audioStartTime = audioContext.currentTime;
+        visualPulse.audioEndTime = audioContext.currentTime + dur; // Gebruik puls duur
+        startStringSound(connection, visualPulse.intensity);
+    }
 }
+
+// --- BIJGEWERKTE Hulpfunctie: Start het glijdende geluid (met Debugging) ---
+function startTravelingGlideSound(sourceNode, targetFrequency, duration, intensity) {
+    if (!audioContext || !sourceNode || !sourceNode.audioParams) {
+        console.error("startTravelingGlideSound: Missing context, sourceNode, or audioParams.");
+        return;
+    }
+
+    const now = audioContext.currentTime;
+    const sourceParams = sourceNode.audioParams;
+    const sourceFreq = sourceParams.pitch; // Gebruik de huidige pitch van de source node
+
+    // --- DEBUG LOGS ---
+    console.log(`startTravelingGlideSound called:`);
+    console.log(`  Source Node ID: ${sourceNode.id}, Type: ${sourceNode.type}`);
+    console.log(`  Source Frequency (from audioParams.pitch): ${sourceFreq}`);
+    console.log(`  Target Frequency (passed): ${targetFrequency}`);
+    console.log(`  Duration (passed): ${duration}`);
+    console.log(`  Intensity (passed): ${intensity}`);
+    // --- EINDE DEBUG LOGS ---
+
+    // Check of frequenties geldig zijn VOORDAT we audio nodes maken
+    if (isNaN(sourceFreq) || sourceFreq <= 0 || isNaN(targetFrequency) || targetFrequency <= 0) {
+        console.error(`startTravelingGlideSound: Invalid frequencies detected before creating nodes. Source: ${sourceFreq}, Target: ${targetFrequency}`);
+        return;
+    }
+
+
+    // Maak tijdelijke gain node voor dit specifieke geluid
+    const glideGain = audioContext.createGain();
+    const baseVolume = 0.5; // Basis volume voor glide (kan aangepast)
+    const targetVolume = baseVolume * intensity;
+    const clampedVolume = Math.max(0.01, Math.min(0.8, targetVolume)); // Iets zachter dan node trigger?
+
+    // Volume envelope: snelle attack, sustain, release aan het einde
+    try {
+        glideGain.gain.setValueAtTime(0, now);
+        glideGain.gain.linearRampToValueAtTime(clampedVolume, now + 0.01);
+        // Houd volume vast tijdens glide, plan release net voor einde
+        glideGain.gain.setValueAtTime(clampedVolume, now + duration * 0.9);
+        glideGain.gain.linearRampToValueAtTime(0.001, now + duration);
+    } catch (e) {
+         console.error("Error setting glideGain envelope:", e);
+         return; // Stop als envelope faalt
+    }
+
+    glideGain.connect(masterGain); // Verbind met master output
+
+    // Bepaal of we oscillator of sampler moeten gebruiken (gebaseerd op source node)
+    if (sourceParams.waveform && sourceParams.waveform.startsWith('sampler_')) {
+        // --- Sampler Glide ---
+        let bufferToPlay = null; let baseFreq = 1;
+        switch (sourceParams.waveform) {
+            case 'sampler_marimba': bufferToPlay = marimbaBuffer; baseFreq = MARIMBA_BASE_FREQ; break;
+            case 'sampler_piano': bufferToPlay = pianoBuffer; baseFreq = PIANO_BASE_FREQ; break;
+            case 'sampler_flute': bufferToPlay = fluteBuffer; baseFreq = FLUTE_BASE_FREQ; break;
+        }
+        if (bufferToPlay && baseFreq > 0) {
+            try {
+                const source = audioContext.createBufferSource();
+                source.buffer = bufferToPlay;
+
+                const startRate = Math.max(0.1, Math.min(4, sourceFreq / baseFreq));
+                const endRate = Math.max(0.1, Math.min(4, targetFrequency / baseFreq));
+
+                // --- DEBUG LOGS ---
+                console.log(`  Sampler Rates: Start=${startRate.toFixed(3)}, End=${endRate.toFixed(3)} (BaseFreq=${baseFreq})`);
+                // --- EINDE DEBUG LOGS ---
+
+                source.playbackRate.setValueAtTime(startRate, now);
+                source.playbackRate.linearRampToValueAtTime(endRate, now + duration);
+
+                source.connect(glideGain);
+                source.start(now);
+                // Stop de source iets na de glide/envelope klaar is
+                source.stop(now + duration + 0.1);
+                // Ruim gain node op na gebruik (optioneel, maar netjes)
+                setTimeout(() => {
+                    try { glideGain.disconnect(); } catch(e){}
+                }, (duration + 0.2) * 1000);
+            } catch (e) {
+                 console.error("Error creating/scheduling sampler glide:", e);
+                 try { glideGain.disconnect(); } catch(e){} // Ruim gain op bij fout
+            }
+
+        } else {
+             console.warn(`Sampler buffer not found or invalid baseFreq for traveling glide sound (Waveform: ${sourceParams.waveform}, BaseFreq: ${baseFreq}).`);
+             try { glideGain.disconnect(); } catch(e){} // Ruim gain op bij fout
+        }
+
+    } else {
+        // --- Oscillator Glide ---
+        try {
+            const glideOsc = audioContext.createOscillator();
+            // Gebruik waveform van source node, fallback naar sine
+            const waveform = (sourceParams.waveform === 'fmBell' || sourceParams.waveform === 'fmXylo') ? 'sine' : (sourceParams.waveform || 'sine');
+            glideOsc.type = waveform;
+
+            // --- DEBUG LOGS ---
+            console.log(`  Oscillator Freqs: Start=${sourceFreq.toFixed(3)}, End=${targetFrequency.toFixed(3)}`);
+            console.log(`  Oscillator Type: ${waveform}`);
+            // --- EINDE DEBUG LOGS ---
+
+            glideOsc.frequency.setValueAtTime(sourceFreq, now); // Start frequentie
+            glideOsc.frequency.linearRampToValueAtTime(targetFrequency, now + duration); // Glide
+
+            glideOsc.connect(glideGain);
+            glideOsc.start(now);
+            // Stop oscillator iets na de glide/envelope klaar is
+            glideOsc.stop(now + duration + 0.1);
+             // Ruim gain node op na gebruik
+             setTimeout(() => {
+                 try { glideGain.disconnect(); } catch(e){}
+             }, (duration + 0.2) * 1000);
+
+             // Optioneel: FM toevoegen als source FM was? (Maakt het complexer)
+        } catch (e) {
+             console.error("Error creating/scheduling oscillator glide:", e);
+             try { glideGain.disconnect(); } catch(e){} // Ruim gain op bij fout
+        }
+    }
+}
+
+
 function updateAndDrawPulses(now) {
   const defaultPulseColor =
     getComputedStyle(document.documentElement)
@@ -2174,75 +2026,65 @@ function removeNode(nodeToRemove) {
     saveState()
   }
 }
-function connectNodes(nodeA, nodeB, type = "standard") {
-  if (
-    !nodeA ||
-    !nodeB ||
-    nodeA === nodeB ||
-    nodeA.type === "nebula" ||
-    nodeB.type === "nebula"
-  )
-    return
-  const exists = connections.some(
-    (c) =>
-      (c.nodeAId === nodeA.id && c.nodeBId === nodeB.id) ||
-      (c.nodeAId === nodeB.id && c.nodeBId === nodeA.id)
-  )
-  if (exists) return
-  nodeA.connections.add(nodeB.id)
-  nodeB.connections.add(nodeA.id)
-  const dx = nodeB.x - nodeA.x
-  const dy = nodeB.y - nodeA.y
-  const len = Math.sqrt(dx * dx + dy * dy) || 1
-  const offsetScale = Math.min(len * 0.4, 60)
-  const ctrlOffsetX =
-    (-dy / len) * (Math.random() * offsetScale - offsetScale / 2)
-  const ctrlOffsetY =
-    (dx / len) * (Math.random() * offsetScale - offsetScale / 2)
-  const newConnection = {
-    id: connectionIdCounter++,
-    nodeAId: nodeA.id,
-    nodeBId: nodeB.id,
-    length: len,
-    controlPointOffsetX: ctrlOffsetX,
-    controlPointOffsetY: ctrlOffsetY,
-    type: type,
-    isSelected: false,
-    audioParams: {},
-    audioNodes: null,
-    animationState: 0
-  }
-  if (type === "string_violin") {
-    let initialScaleIndex = 0
-    if (noteIndexToAdd !== -1) {
-      initialScaleIndex = noteIndexToAdd
-    } else {
-      initialScaleIndex = Math.floor(
-        Math.random() * currentScale.notes.length * 2
-      )
+function connectNodes(nodeA, nodeB, type = 'standard') { // Accepteert nu type parameter
+    if (!nodeA || !nodeB || nodeA === nodeB || nodeA.type === 'nebula' || nodeB.type === 'nebula') return;
+    const exists = connections.some(c => (c.nodeAId === nodeA.id && c.nodeBId === nodeB.id) || (c.nodeAId === nodeB.id && c.nodeBId === nodeA.id));
+    if (exists) return;
+
+    nodeA.connections.add(nodeB.id);
+    nodeB.connections.add(nodeA.id);
+    const dx = nodeB.x - nodeA.x;
+    const dy = nodeB.y - nodeA.y;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const offsetScale = Math.min(len * 0.4, 60);
+    // Maak de curve minder random voor voorspelbaarheid
+    const anglePerp = Math.atan2(dx, -dy); // Loodrechte hoek
+    const ctrlOffsetMagnitude = Math.min(len * 0.15, 30); // Vaste(re) curve magnitude
+    const ctrlOffsetX = Math.cos(anglePerp) * ctrlOffsetMagnitude;
+    const ctrlOffsetY = Math.sin(anglePerp) * ctrlOffsetMagnitude;
+    // const ctrlOffsetX = (-dy / len) * (Math.random() * offsetScale - offsetScale / 2); // Oude random curve
+    // const ctrlOffsetY = (dx / len) * (Math.random() * offsetScale - offsetScale / 2); // Oude random curve
+
+
+    const newConnection = {
+        id: connectionIdCounter++,
+        nodeAId: nodeA.id,
+        nodeBId: nodeB.id,
+        length: len,
+        controlPointOffsetX: ctrlOffsetX,
+        controlPointOffsetY: ctrlOffsetY,
+        type: type, // Sla het type op ('standard', 'string_violin', of 'glide')
+        isSelected: false,
+        audioParams: {},
+        audioNodes: null,
+        animationState: 0,
+    };
+
+    // Audio setup alleen voor string_violin (glide audio gebeurt bij pulse)
+    if (type === 'string_violin') {
+        let initialScaleIndex = 0;
+        if (noteIndexToAdd !== -1 && noteIndexToAdd >= MIN_SCALE_INDEX && noteIndexToAdd <= MAX_SCALE_INDEX) {
+             initialScaleIndex = noteIndexToAdd;
+        } else {
+             initialScaleIndex = Math.floor(Math.random() * currentScale.notes.length * 2); // Default random
+        }
+        initialScaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, initialScaleIndex));
+        let initialPitch = getFrequency(currentScale, initialScaleIndex);
+        if (isNaN(initialPitch)) { // Fallback als frequentie niet berekend kan worden
+            initialScaleIndex = 0;
+            initialPitch = getFrequency(currentScale, 0);
+        }
+        newConnection.audioParams = { ...STRING_VIOLIN_DEFAULTS, scaleIndex: initialScaleIndex, pitch: initialPitch };
+        newConnection.audioNodes = createAudioNodesForConnection(newConnection);
+        if (newConnection.audioNodes) {
+            updateConnectionAudioParams(newConnection);
+        }
     }
-    initialScaleIndex = Math.max(
-      MIN_SCALE_INDEX,
-      Math.min(MAX_SCALE_INDEX, initialScaleIndex)
-    )
-    let initialPitch = getFrequency(currentScale, initialScaleIndex)
-    if (isNaN(initialPitch)) {
-      initialScaleIndex = 0
-      initialPitch = getFrequency(currentScale, 0)
-    }
-    newConnection.audioParams = {
-      ...STRING_VIOLIN_DEFAULTS,
-      scaleIndex: initialScaleIndex,
-      pitch: initialPitch
-    }
-    newConnection.audioNodes = createAudioNodesForConnection(newConnection)
-    if (newConnection.audioNodes) {
-      updateConnectionAudioParams(newConnection)
-    }
-  }
-  connections.push(newConnection)
-  updateConstellationGroup()
-  saveState()
+    // Voor 'glide' en 'standard' is er geen directe audio setup bij creatie
+
+    connections.push(newConnection);
+    updateConstellationGroup(); // Update groep info (kan relevant zijn voor UI)
+    saveState(); // Sla de nieuwe verbinding op
 }
 function removeConnection(connToRemove, updateGroup = true) {
   if (!connToRemove) return
@@ -2311,68 +2153,90 @@ function findConstellation(startNodeId) {
   }
   return constellationNodes
 }
+// --- BIJGEWERKTE updateConstellationGroup functie ---
 function updateConstellationGroup() {
-  if (!isAudioReady) return
-  const previousConstellationGroup = new Set(currentConstellationGroup)
-  currentConstellationGroup.clear()
-  nodes.forEach((n) => (n.isInConstellation = false))
-  const selectedNodeIds = new Set(
-    [...selectedElements].filter((el) => el.type === "node").map((el) => el.id)
-  )
-  if (selectedNodeIds.size > 0 && currentTool === "edit") {
-    const firstSelectedId = selectedNodeIds.values().next().value
-    const firstSelectedNode = findNodeById(firstSelectedId)
-    if (
-      firstSelectedNode &&
-      CONSTELLATION_NODE_TYPES.includes(firstSelectedNode.type)
-    ) {
-      const potentialConstellation = findConstellation(firstSelectedId)
-      let allSelectedInConstellation = true
-      selectedNodeIds.forEach((id) => {
-        const selectedNode = findNodeById(id)
-        if (!selectedNode || !potentialConstellation.has(id)) {
-          allSelectedInConstellation = false
+    if (!isAudioReady) return; // Voeg check toe voor zekerheid
+
+    const previousConstellationGroup = new Set(currentConstellationGroup);
+    currentConstellationGroup.clear();
+    nodes.forEach(n => n.isInConstellation = false);
+
+    const selectedNodeIds = new Set([...selectedElements].filter(el => el.type === 'node').map(el => el.id));
+
+    if (selectedNodeIds.size > 0 && currentTool === 'edit') {
+        const firstSelectedId = selectedNodeIds.values().next().value;
+        const firstSelectedNode = findNodeById(firstSelectedId);
+
+        // Check of de eerst geselecteerde node geschikt is voor een constellation
+        if (firstSelectedNode && CONSTELLATION_NODE_TYPES.includes(firstSelectedNode.type)) {
+            const potentialConstellation = findConstellation(firstSelectedId);
+            let allSelectedInConstellation = true;
+
+            // Check of ALLE geselecteerde nodes in de gevonden constellation zitten
+            selectedNodeIds.forEach(id => {
+                const selectedNode = findNodeById(id);
+                if (!selectedNode || !potentialConstellation.has(id)) {
+                    allSelectedInConstellation = false;
+                }
+            });
+
+            // Als alles klopt, zet de huidige constellation groep
+            if (allSelectedInConstellation && potentialConstellation.size > 0) {
+                potentialConstellation.forEach(id => {
+                    const node = findNodeById(id);
+                    if (node) node.isInConstellation = true;
+                });
+                currentConstellationGroup = potentialConstellation;
+            }
         }
-      })
-      if (allSelectedInConstellation && potentialConstellation.size > 0) {
-        potentialConstellation.forEach((id) => {
-          const node = findNodeById(id)
-          if (node) node.isInConstellation = true
-        })
-        currentConstellationGroup = potentialConstellation
-      }
     }
-  }
-  const nodesToRouteToGroup = new Set()
-  const nodesToRouteToMaster = new Set()
-  previousConstellationGroup.forEach((id) => {
-    if (!currentConstellationGroup.has(id)) nodesToRouteToMaster.add(id)
-  })
-  currentConstellationGroup.forEach((id) => {
-    if (!previousConstellationGroup.has(id)) nodesToRouteToGroup.add(id)
-  })
-  if (currentConstellationGroup.size > 0 && !groupVolumeGain) {
-    groupVolumeGain = audioContext.createGain()
-    groupVolumeGain.gain.setValueAtTime(
-      parseFloat(groupVolumeSlider.value),
-      audioContext.currentTime
-    )
-    groupVolumeGain.connect(masterGain)
-  }
-  nodesToRouteToMaster.forEach((id) =>
-    rerouteAudioForNode(findNodeById(id), masterGain)
-  )
-  nodesToRouteToGroup.forEach((id) =>
-    rerouteAudioForNode(findNodeById(id), groupVolumeGain)
-  )
-  if (currentConstellationGroup.size === 0 && groupVolumeGain) {
-    try {
-      groupVolumeGain.disconnect()
-    } catch (e) {}
-    groupVolumeGain = null
-  }
-  updateGroupControlsUI()
-  updateFluctuatingNodesLFO()
+
+    // Bepaal welke nodes van/naar de groep geroute moeten worden
+    const nodesToRouteToGroup = new Set();
+    const nodesToRouteToMaster = new Set();
+
+    previousConstellationGroup.forEach(id => {
+        if (!currentConstellationGroup.has(id)) nodesToRouteToMaster.add(id);
+    });
+    currentConstellationGroup.forEach(id => {
+        if (!previousConstellationGroup.has(id)) nodesToRouteToGroup.add(id);
+    });
+
+    // Maak of verwijder de group gain node indien nodig
+    if (currentConstellationGroup.size > 0 && !groupVolumeGain) {
+        // Maak de group gain node ALLEEN als deze nog niet bestaat
+        groupVolumeGain = audioContext.createGain();
+        groupVolumeGain.gain.setValueAtTime(parseFloat(groupVolumeSlider.value), audioContext.currentTime);
+        groupVolumeGain.connect(masterGain);
+        console.log("Group Volume Gain Node Created.");
+    } else if (currentConstellationGroup.size === 0 && groupVolumeGain) {
+        // Verwijder de group gain node als de groep leeg is
+        try {
+            groupVolumeGain.disconnect();
+            console.log("Group Volume Gain Node Disconnected.");
+        } catch(e){
+            console.warn("Error disconnecting group volume gain:", e);
+        }
+        groupVolumeGain = null; // Zet naar null
+    }
+
+    // Route de audio van de nodes opnieuw
+    // BELANGRIJK: Doe dit alleen als groupVolumeGain bestaat voor group routing
+    nodesToRouteToMaster.forEach(id => rerouteAudioForNode(findNodeById(id), masterGain));
+    nodesToRouteToGroup.forEach(id => {
+        // Alleen rerouten naar groep als groupVolumeGain bestaat
+        if (groupVolumeGain) {
+            rerouteAudioForNode(findNodeById(id), groupVolumeGain);
+        } else {
+             // Fallback: route naar master als group gain niet bestaat (zou niet moeten gebeuren nu)
+             console.warn(`Node ${id} should route to group, but groupVolumeGain is null. Routing to master.`);
+             rerouteAudioForNode(findNodeById(id), masterGain);
+        }
+    });
+
+
+    updateGroupControlsUI(); // Update de UI voor group controls
+    updateFluctuatingNodesLFO(); // Update LFO voor fluctuatie
 }
 function rerouteAudioForNode(node, destinationNode) {
   if (
@@ -2516,47 +2380,58 @@ function drawGrid() {
 }
 
 function drawConnection(conn) {
-  const nA = findNodeById(conn.nodeAId)
-  const nB = findNodeById(conn.nodeBId)
-  if (!nA || !nB) return
-  const mX = (nA.x + nB.x) / 2
-  const mY = (nA.y + nB.y) / 2
-  const cX = mX + conn.controlPointOffsetX
-  const cY = mY + conn.controlPointOffsetY
-  const isSelected = isElementSelected("connection", conn.id)
-  let clr
-  let thickness
-  let dash = []
-  if (conn.type === "string_violin") {
-    clr =
-      getComputedStyle(document.documentElement)
-        .getPropertyValue("--string-violin-connection-color")
-        .trim() || "#ffccaa"
-    thickness = (1.5 + 2.0 * (1 - Math.min(1, conn.length / 500))) / viewScale
-    dash = [5 / viewScale, 3 / viewScale]
-  } else {
-    clr =
-      getComputedStyle(document.documentElement)
-        .getPropertyValue("--connection-color")
-        .trim() || "#8AC"
-    thickness = (1.0 + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale
-  }
-  ctx.strokeStyle = isSelected ? "rgba(255, 255, 0, 0.9)" : clr
-  ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? 2 / viewScale : 0)
-  ctx.setLineDash(dash)
-  ctx.beginPath()
-  ctx.moveTo(nA.x, nA.y)
-  ctx.quadraticCurveTo(cX, cY, nB.x, nB.y)
-  ctx.stroke()
-  ctx.setLineDash([])
-  if (conn.animationState > 0) {
-    conn.animationState -= 0.1
-    conn.animationState = Math.max(0, conn.animationState)
-    ctx.shadowColor = clr
-    ctx.shadowBlur = (conn.animationState * 15) / viewScale
-    ctx.stroke()
-    ctx.shadowBlur = 0
-  }
+    const nA = findNodeById(conn.nodeAId);
+    const nB = findNodeById(conn.nodeBId);
+    if (!nA || !nB || !ctx) return; // Voeg ctx check toe
+
+    const mX = (nA.x + nB.x) / 2;
+    const mY = (nA.y + nB.y) / 2;
+    const cX = mX + conn.controlPointOffsetX;
+    const cY = mY + conn.controlPointOffsetY;
+    const isSelected = isElementSelected('connection', conn.id);
+    let clr;
+    let thickness;
+    let dash = [];
+
+    // Bepaal stijl op basis van connectie type
+    if (conn.type === 'string_violin') {
+        clr = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa';
+        thickness = (1.5 + 2.0 * (1 - Math.min(1, conn.length / 500))) / viewScale;
+        dash = [5 / viewScale, 3 / viewScale];
+    } else if (conn.type === 'glide') {
+        clr = GLIDE_LINE_COLOR; // Gebruik de roze-achtige kleur (gedefinieerd bovenaan)
+        thickness = (GLIDE_LINE_WIDTH + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale; // Gebruik glide dikte
+        dash = [8 / viewScale, 4 / viewScale]; // Ander stippelpatroon
+    } else { // Standaard connectie
+        clr = getComputedStyle(document.documentElement).getPropertyValue('--connection-color').trim() || '#8AC';
+        thickness = (1.0 + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale;
+        // dash = []; // Geen stippels voor standaard
+    }
+
+    // Bewaar huidige context staat
+    ctx.save();
+
+    ctx.strokeStyle = isSelected ? 'rgba(255, 255, 0, 0.9)' : clr;
+    ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? (2 / viewScale) : 0);
+    ctx.setLineDash(dash); // Pas stippellijn toe
+
+    ctx.beginPath();
+    ctx.moveTo(nA.x, nA.y);
+    ctx.quadraticCurveTo(cX, cY, nB.x, nB.y);
+    ctx.stroke();
+
+    // Animatie voor string (kan blijven) - of misschien ook voor glide?
+    if (conn.animationState > 0) {
+        conn.animationState -= 0.1;
+        conn.animationState = Math.max(0, conn.animationState);
+        ctx.shadowColor = clr;
+        ctx.shadowBlur = conn.animationState * 15 / viewScale;
+        ctx.stroke(); // Teken nogmaals met schaduw
+        ctx.shadowBlur = 0; // Reset schaduw
+    }
+
+    // Herstel context staat (inclusief line dash)
+    ctx.restore();
 }
 function drawStarShape(ctx, x, y, points, outerR, innerR) {
   ctx.beginPath()
@@ -2609,113 +2484,6 @@ function drawSatelliteShape(ctx, x, y, r, arms = 1) {
     ctx.closePath()
     ctx.fill()
     ctx.stroke()
-  }
-}
-
-function drawPianoRoll() {
-  if (
-    !pianoRollCtx ||
-    !pianoRollCanvas /* || pianoRollPanel.classList.contains('hidden') */
-  ) {
-    // Panel check is niet meer nodig straks
-    // console.log("Skipping drawPianoRoll: context missing or panel hidden");
-    return
-  }
-
-  const canvasWidth = pianoRollCanvas.width
-  const canvasHeight = pianoRollCanvas.height
-  pianoRollCtx.clearRect(0, 0, canvasWidth, canvasHeight)
-  pianoRollHexagons = [] // Reset
-
-  const scaleNotes = currentScale.notes
-  const rootNoteModulo = currentRootNote % 12
-
-  // --- Hexagon parameters (blijven grotendeels hetzelfde) ---
-  const numNotesToDraw = 12 // Expliciet 1 octaaf (C t/m B)
-  const numHexColumnsApprox = 12 // Aantal hexagons per rij
-  const horizontalMargin = 10 // Iets minder marge voor toolbar
-  const verticalMargin = 5
-  const availableWidth = canvasWidth - 2 * horizontalMargin
-
-  let hexRadius = availableWidth / (numHexColumnsApprox * 1.5)
-  hexRadius = Math.max(8, Math.min(18, hexRadius)) // Max grootte voor toolbar
-  const hexWidth = 2 * hexRadius
-  const hexHeight = Math.sqrt(3) * hexRadius
-  const verticalSpacing = hexHeight * 0.9 // Nog dichter op elkaar
-  const horizontalSpacing = (hexWidth * 3) / 4
-  let startX = horizontalMargin + hexRadius
-  let startY = verticalMargin + hexHeight / 2
-
-  let hexCol = 0
-  let hexRow = 0 // Altijd maar 1 rij nu?
-  const maxCols = Math.floor(
-    (canvasWidth - horizontalMargin - hexRadius) / horizontalSpacing
-  )
-
-  // --- AANGEPASTE LOOP ---
-  for (let i = 0; i < numNotesToDraw; i++) {
-    // Loop 12 keer voor C t/m B
-    const noteInOctave = i // Dit IS nu de chromatische noot (0-11)
-
-    const posX = startX + hexCol * horizontalSpacing
-    // Altijd rij 0 voor een enkele horizontale balk
-    const posY = startY + (hexCol % 2 !== 0 ? verticalSpacing / 2 : 0) // Zigzag blijft
-
-    // Check of het past (vooral horizontaal nu belangrijk)
-    if (posX + hexRadius > canvasWidth - horizontalMargin / 2) {
-      console.log(`Hex ${noteNames[noteInOctave]} past niet meer.`)
-      break // Stop als het niet meer past
-    }
-
-    const noteRelativeToRoot = (noteInOctave - rootNoteModulo + 12) % 12
-    const isScaleNote = scaleNotes.includes(noteRelativeToRoot)
-    const isRootNote = noteInOctave === rootNoteModulo
-
-    // Kleur bepalen (zelfde logica)
-    let fillStyle = "rgba(50, 60, 90, 0.6)"
-    if (isScaleNote) fillStyle = "rgba(150, 180, 220, 0.6)"
-    if (isRootNote) fillStyle = "rgba(255, 255, 150, 0.7)"
-
-    pianoRollCtx.fillStyle = fillStyle
-    pianoRollCtx.strokeStyle = "rgba(255, 255, 255, 0.2)"
-    pianoRollCtx.lineWidth = 1
-
-    // Teken hexagon (zelfde logica)
-    pianoRollCtx.beginPath()
-    for (let side = 0; side < 6; side++) {
-      pianoRollCtx.lineTo(
-        posX + hexRadius * Math.cos((side * 2 * Math.PI) / 6 + Math.PI / 6),
-        posY + hexRadius * Math.sin((side * 2 * Math.PI) / 6 + Math.PI / 6)
-      )
-    }
-    pianoRollCtx.closePath()
-    pianoRollCtx.fill()
-    pianoRollCtx.stroke()
-
-    // Tekst (nootnaam)
-    pianoRollCtx.fillStyle = "#ddeeff"
-    pianoRollCtx.font = `bold ${Math.max(
-      7,
-      Math.min(10, hexRadius * 0.7)
-    )}px sans-serif`
-    pianoRollCtx.textAlign = "center"
-    pianoRollCtx.textBaseline = "middle"
-    pianoRollCtx.fillText(noteNames[noteInOctave], posX, posY)
-
-    // Sla hexagon data op
-    pianoRollHexagons.push({
-      x: posX,
-      y: posY,
-      radius: hexRadius,
-      semitone: noteInOctave // Sla de chromatische waarde (0-11) op
-    })
-
-    // Volgende positie (alleen kolom nu)
-    hexCol++
-    // if (hexCol >= maxCols) { // Rij wisselen is niet meer nodig voor 1 octaaf
-    //     hexCol = 0;
-    //     hexRow++;
-    // }
   }
 }
 
@@ -3285,27 +3053,39 @@ function drawNode(node) {
 }
 
 function drawTemporaryConnection() {
-  if (isConnecting && connectingNode) {
-    ctx.beginPath()
-    ctx.moveTo(connectingNode.x, connectingNode.y)
-    ctx.lineTo(mousePos.x, mousePos.y)
-    ctx.strokeStyle =
-      connectionTypeToAdd === "string_violin"
-        ? getComputedStyle(document.documentElement)
-            .getPropertyValue("--string-violin-connection-color")
-            .trim() || "#ffccaa"
-        : "rgba(255, 255, 255, 0.5)"
-    ctx.lineWidth =
-      connectionTypeToAdd === "string_violin" ? 2 / viewScale : 1 / viewScale
-    ctx.setLineDash(
-      connectionTypeToAdd === "string_violin"
-        ? [5 / viewScale, 3 / viewScale]
-        : [5 / viewScale, 5 / viewScale]
-    )
-    ctx.stroke()
-    ctx.setLineDash([])
-  }
+    // Alleen tekenen als we daadwerkelijk een connectie aan het slepen zijn
+    if (isConnecting && connectingNode) {
+        ctx.beginPath();
+        ctx.moveTo(connectingNode.x, connectingNode.y); // Van start node
+        ctx.lineTo(mousePos.x, mousePos.y); // Naar huidige muispositie
+
+        // Kies stijl op basis van connectionTypeToAdd (bepaald in handleMouseDown)
+        let strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Default (voor standaard connect)
+        let lineWidth = 1 / viewScale;
+        let lineDash = [5 / viewScale, 5 / viewScale];
+
+        if (connectionTypeToAdd === 'string_violin') {
+            strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa';
+            lineWidth = 2 / viewScale;
+            lineDash = [5 / viewScale, 3 / viewScale];
+        } else if (connectionTypeToAdd === 'glide') {
+            // Gebruik de constanten die we eerder hebben gedefinieerd
+            strokeStyle = GLIDE_LINE_COLOR;
+            lineWidth = GLIDE_LINE_WIDTH / viewScale;
+            lineDash = [8 / viewScale, 4 / viewScale]; // Specifiek patroon voor glide
+        }
+
+        // Bewaar context staat (belangrijk!)
+        ctx.save();
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = Math.max(0.5, lineWidth); // Zorg voor minimale dikte
+        ctx.setLineDash(lineDash);
+        ctx.stroke();
+        // Herstel context staat (reset lineDash etc.)
+        ctx.restore();
+    }
 }
+
 function drawSelectionRect() {
   if (isSelecting && selectionRect.active) {
     const x = Math.min(selectionRect.startX, selectionRect.endX)
@@ -3365,7 +3145,7 @@ function draw() {
   connections.forEach(drawConnection)
   nodes.forEach((node) => drawNode(node))
   updateAndDrawPulses(now)
-  if (currentTool === "connect" || currentTool === "connect_string") {
+  if (currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide') {
     drawTemporaryConnection()
   }
   drawSelectionRect()
@@ -3641,213 +3421,117 @@ function handlePulsarTriggerToggle(node) {
 }
 
 function handleMouseDown(event) {
-  if (!isPlaying && event.target === canvas) {
-    togglePlayPause()
-    return
-  }
-  if (!isAudioReady) return
-  // --- CORRECTIE: pianoRollPanel check verwijderd ---
-  const targetIsPanelControl =
-    hamburgerMenuPanel.contains(event.target) ||
-    sideToolbar.contains(event.target) ||
-    gridControlsDiv.contains(event.target) ||
-    transportControlsDiv.contains(event.target) ||
-    mixerPanel.contains(event.target);
-  // --- Einde Correctie ---
+    if (!isPlaying && event.target === canvas) { togglePlayPause(); return; }
+    if (!isAudioReady) return;
+    const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target) || pianoRollPanel.contains(event.target);
+    if (targetIsPanelControl) { return; }
 
-  if (targetIsPanelControl) {
-    return
-  }
+    updateMousePos(event);
+    nodeClickedAtMouseDown = findNodeAt(mousePos.x, mousePos.y);
+    connectionClickedAtMouseDown = !nodeClickedAtMouseDown ? findConnectionNear(mousePos.x, mousePos.y) : null;
+    let elementClickedAtMouseDown = null;
+    if (nodeClickedAtMouseDown) elementClickedAtMouseDown = { type: 'node', id: nodeClickedAtMouseDown.id };
+    else if (connectionClickedAtMouseDown) elementClickedAtMouseDown = { type: 'connection', id: connectionClickedAtMouseDown.id };
 
-  updateMousePos(event)
-  nodeClickedAtMouseDown = findNodeAt(mousePos.x, mousePos.y)
-  connectionClickedAtMouseDown = !nodeClickedAtMouseDown
-    ? findConnectionNear(mousePos.x, mousePos.y)
-    : null
-  let elementClickedAtMouseDown = null
-  if (nodeClickedAtMouseDown)
-    elementClickedAtMouseDown = { type: "node", id: nodeClickedAtMouseDown.id }
-  else if (connectionClickedAtMouseDown)
-    elementClickedAtMouseDown = {
-      type: "connection",
-      id: connectionClickedAtMouseDown.id
-    }
+    nodeWasSelectedAtMouseDown = nodeClickedAtMouseDown ? isElementSelected('node', nodeClickedAtMouseDown.id) : false; // Keep track of node selection specifically for drag logic
 
-  nodeWasSelectedAtMouseDown = nodeClickedAtMouseDown
-    ? isElementSelected("node", nodeClickedAtMouseDown.id)
-    : false // Keep track of node selection specifically for drag logic
+    mouseDownPos = { ...mousePos };
+    isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false; didDrag = false; selectionRect.active = false;
 
-  mouseDownPos = { ...mousePos }
-  isDragging = false
-  isConnecting = false
-  isResizing = false
-  isSelecting = false
-  isPanning = false
-  didDrag = false
-  selectionRect.active = false
+    if (event.button === 1 || (isSpacebarDown && event.button === 0)) { isPanning = true; panStart = { ...screenMousePos }; canvas.style.cursor = 'grabbing'; nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null; elementClickedAtMouseDown = null; return; }
 
-  if (event.button === 1 || (isSpacebarDown && event.button === 0)) {
-    isPanning = true
-    panStart = { ...screenMousePos }
-    canvas.style.cursor = "grabbing"
-    nodeClickedAtMouseDown = null
-    connectionClickedAtMouseDown = null
-    elementClickedAtMouseDown = null
-    return
-  }
+    if (elementClickedAtMouseDown) {
+        const element = elementClickedAtMouseDown;
+        const node = element.type === 'node' ? nodeClickedAtMouseDown : null;
+        const connection = element.type === 'connection' ? connectionClickedAtMouseDown : null;
 
-  if (elementClickedAtMouseDown) {
-    const element = elementClickedAtMouseDown
-    const node = element.type === "node" ? nodeClickedAtMouseDown : null
-    const connection =
-      element.type === "connection" ? connectionClickedAtMouseDown : null
-
-    if (event.shiftKey && currentTool === "edit" && node) {
-      isResizing = true
-      resizeStartSize = node.size
-      resizeStartY = screenMousePos.y
-      canvas.style.cursor = "ns-resize"
-    } else if (event.shiftKey && currentTool !== "edit") {
-      if (isElementSelected(element.type, element.id)) {
-        selectedElements = new Set(
-          [...selectedElements].filter(
-            (el) => !(el.type === element.type && el.id === element.id)
-          )
-        )
-      } else {
-        selectedElements.add(element)
-      }
-      if (currentTool === "edit") updateConstellationGroup()
-      updateGroupControlsUI()
-      populateEditPanel()
-      nodeClickedAtMouseDown = null // Prevent triggering single click actions
-      connectionClickedAtMouseDown = null
-    } else if (
-      event.altKey &&
-      currentTool === "edit" &&
-      node &&
-      (node.type === "sound" ||
-        node.type === "nebula" ||
-        node.type === "pitchShift")
-    ) {
-      /* Handled in MouseUp */
-    } else if (
-      event.altKey &&
-      currentTool === "edit" &&
-      connection &&
-      connection.type === "string_violin"
-    ) {
-      /* Handled in MouseUp */
-    } else {
-      if (currentTool === "connect" || currentTool === "connect_string") {
-        if (node && !["nebula"].includes(node.type)) {
-          isConnecting = true
-          connectingNode = node
-          connectionTypeToAdd =
-            currentTool === "connect_string" ? "string_violin" : "standard"
-          canvas.style.cursor = "grabbing"
-        }
-      } else if (currentTool === "delete") {
-        if (node) removeNode(node)
-        else if (connection) removeConnection(connection)
-        nodeClickedAtMouseDown = null
-        connectionClickedAtMouseDown = null
-      } else if (currentTool === "edit") {
-        let selectionChanged = false
-        if (!isElementSelected(element.type, element.id)) {
-          if (!event.shiftKey) selectedElements.clear() // Clear only if shift is not pressed
-          selectedElements.add(element)
-          selectionChanged = true
-        } else if (event.shiftKey) {
-          // If already selected and shift is pressed, deselect
-          selectedElements = new Set(
-            [...selectedElements].filter(
-              (el) => !(el.type === element.type && el.id === element.id)
-            )
-          )
-          selectionChanged = true
-        }
-
-        if (node) {
-          // Only allow dragging nodes for now
-          isDragging = true
-          dragStartPos = { ...mousePos }
-          nodeDragOffsets.clear()
-          selectedElements.forEach((el) => {
-            if (el.type === "node") {
-              const n = findNodeById(el.id)
-              if (n)
-                nodeDragOffsets.set(el.id, {
-                  x: n.x - mousePos.x,
-                  y: n.y - mousePos.y
-                })
+        if (event.shiftKey && currentTool === 'edit' && node) { isResizing = true; resizeStartSize = node.size; resizeStartY = screenMousePos.y; canvas.style.cursor = 'ns-resize'; }
+        else if (event.shiftKey && currentTool !== 'edit') {
+            if (isElementSelected(element.type, element.id)) {
+                selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
+            } else {
+                selectedElements.add(element);
             }
-          })
-          canvas.style.cursor = "move"
+            if (currentTool === 'edit') updateConstellationGroup();
+            updateGroupControlsUI();
+            populateEditPanel();
+            nodeClickedAtMouseDown = null; // Prevent triggering single click actions
+            connectionClickedAtMouseDown = null;
         }
+        else if (event.altKey && currentTool === 'edit' && node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) { /* Handled in MouseUp */ }
+        else if (event.altKey && currentTool === 'edit' && connection && connection.type === 'string_violin') { /* Handled in MouseUp */ }
+        else {
+            // Check voor ALLE connect tools
+            if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide') {
+                if (node && !['nebula'].includes(node.type)) { // Kan niet starten vanaf nebula
+                    isConnecting = true;
+                    connectingNode = node;
+                    // Bepaal type op basis van currentTool
+                    if (currentTool === 'connect_string') {
+                        connectionTypeToAdd = 'string_violin';
+                    } else if (currentTool === 'connect_glide') {
+                        connectionTypeToAdd = 'glide'; // Nieuw type
+                    } else {
+                        connectionTypeToAdd = 'standard';
+                    }
+                    canvas.style.cursor = 'grabbing';
+                    console.log(`Start connection type: ${connectionTypeToAdd}`);
+                }
+            }
+            else if (currentTool === 'delete') { if (node) removeNode(node); else if (connection) removeConnection(connection); nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null; }
+            else if (currentTool === 'edit') {
+                let selectionChanged = false;
+                if (!isElementSelected(element.type, element.id)) {
+                    if (!event.shiftKey) selectedElements.clear(); // Clear only if shift is not pressed
+                    selectedElements.add(element);
+                    selectionChanged = true;
+                 } else if (event.shiftKey) { // If already selected and shift is pressed, deselect
+                    selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
+                    selectionChanged = true;
+                 }
 
-        if (selectionChanged) {
-          updateConstellationGroup()
-          populateEditPanel()
-        }
-      }
-    }
-  } else {
-    // Clicked on empty space
-    if (currentTool === "edit") {
-      isSelecting = true
-      selectionRect = {
-        startX: mousePos.x,
-        startY: mousePos.y,
-        endX: mousePos.x,
-        endY: mousePos.y,
-        active: false
-      }
-      if (!event.shiftKey) {
-        if (selectedElements.size > 0) {
-          selectedElements.clear()
-          updateConstellationGroup()
-          populateEditPanel()
-        }
-      }
-    } else if (currentTool === "add" && nodeTypeToAdd !== null) {
-      const requiresSubmenu = ["sound", "nebula", null].includes(nodeTypeToAdd)
-      const specificTypeSelected = waveformToAdd !== null
-      const directAddTypes = [
-        "gate",
-        "probabilityGate",
-        "pitchShift",
-        "relay",
-        "reflector",
-        "switch"
-      ]
-      const canAddNode =
-        directAddTypes.includes(nodeTypeToAdd) ||
-        (requiresSubmenu && specificTypeSelected) ||
-        (nodeTypeToAdd && !requiresSubmenu)
+                if (node) { // Only allow dragging nodes for now
+                    isDragging = true;
+                    dragStartPos = { ...mousePos };
+                    nodeDragOffsets.clear();
+                    selectedElements.forEach(el => {
+                         if (el.type === 'node') {
+                             const n = findNodeById(el.id);
+                             if (n) nodeDragOffsets.set(el.id, { x: n.x - mousePos.x, y: n.y - mousePos.y });
+                         }
+                    });
+                    canvas.style.cursor = 'move';
+                }
 
-      if (canAddNode) {
-        const newNode = addNode(
-          mousePos.x,
-          mousePos.y,
-          nodeTypeToAdd,
-          waveformToAdd
-        )
-        if (newNode) {
-          if (directAddTypes.includes(nodeTypeToAdd)) {
-            setActiveTool("edit")
-          }
+                if (selectionChanged) {
+                    updateConstellationGroup();
+                    populateEditPanel();
+                 }
+            }
         }
-      }
-    } else if (!["connect", "connect_string", "delete"].includes(currentTool)) {
-      if (selectedElements.size > 0 && !event.shiftKey) {
-        selectedElements.clear()
-        updateGroupControlsUI()
-        populateEditPanel()
-      }
+    } else { // Clicked on empty space
+        if (currentTool === 'edit') {
+            isSelecting = true; selectionRect = { startX: mousePos.x, startY: mousePos.y, endX: mousePos.x, endY: mousePos.y, active: false };
+            if (!event.shiftKey) { if (selectedElements.size > 0) { selectedElements.clear(); updateConstellationGroup(); populateEditPanel(); } }
+        } else if (currentTool === 'add' && nodeTypeToAdd !== null) {
+            const requiresSubmenu = ['sound', 'nebula', null].includes(nodeTypeToAdd);
+            const specificTypeSelected = waveformToAdd !== null;
+            const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch'];
+            const canAddNode = directAddTypes.includes(nodeTypeToAdd) || (requiresSubmenu && specificTypeSelected) || (nodeTypeToAdd && !requiresSubmenu);
+
+             if (canAddNode) {
+                const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
+                if (newNode) {
+                    if (directAddTypes.includes(nodeTypeToAdd)) {
+                        setActiveTool('edit');
+                    }
+                }
+            }
+        } else if (!['connect', 'connect_string', 'connect_glide', 'delete'].includes(currentTool) ) { // Check ook connect_glide
+             if (selectedElements.size > 0 && !event.shiftKey) { selectedElements.clear(); updateGroupControlsUI(); populateEditPanel(); }
+        }
     }
-  }
-  hideBottomPanels()
+    hideBottomPanels();
 }
 function handleMouseMove(event) {
   if (!isAudioReady) return
@@ -3960,238 +3644,175 @@ function handleMouseMove(event) {
   }
 }
 function handleMouseUp(event) {
-  if (!isAudioReady) return
-  // --- CORRECTIE: pianoRollPanel check verwijderd ---
-  const targetIsPanelControl =
-    hamburgerMenuPanel.contains(event.target) ||
-    sideToolbar.contains(event.target) ||
-    gridControlsDiv.contains(event.target) ||
-    transportControlsDiv.contains(event.target) ||
-    mixerPanel.contains(event.target);
-  // --- Einde Correctie ---
+    if (!isAudioReady) return;
+    const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target) || pianoRollPanel.contains(event.target);
+    if (targetIsPanelControl) {
+        // Reset states als de muis omhoog gaat boven een paneel
+        isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false;
+        selectionRect.active = false; connectingNode = null; nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null;
+        canvas.style.cursor = 'crosshair'; // Reset cursor
+        return;
+    }
 
-  if (targetIsPanelControl) {
-    isDragging = false
-    isConnecting = false
-    isResizing = false
-    isSelecting = false
-    isPanning = false
-    selectionRect.active = false
-    connectingNode = null
-    nodeClickedAtMouseDown = null
-    connectionClickedAtMouseDown = null
-    canvas.style.cursor = "crosshair"
-    return
-  }
-  updateMousePos(event)
-  const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y)
-  const connectionUnderCursor = !nodeUnderCursor
-    ? findConnectionNear(mousePos.x, mousePos.y)
-    : null
-  let elementUnderCursor = null
-  if (nodeUnderCursor)
-    elementUnderCursor = { type: "node", id: nodeUnderCursor.id }
-  else if (connectionUnderCursor)
-    elementUnderCursor = { type: "connection", id: connectionUnderCursor.id }
-  const wasResizing = isResizing
-  const wasConnecting = isConnecting
-  const wasDragging = isDragging
-  const wasSelecting = isSelecting
-  const wasPanning = isPanning
-  const nodeClickedStart = nodeClickedAtMouseDown
-  const connectionClickedStart = connectionClickedAtMouseDown
-  const elementClickedStart = nodeClickedStart
-    ? { type: "node", id: nodeClickedStart.id }
-    : connectionClickedStart
-    ? { type: "connection", id: connectionClickedStart.id }
-    : null
-  const wasSelectedAtStart = nodeWasSelectedAtMouseDown
-  let stateWasChanged = false
-  isResizing = false
-  isConnecting = false
-  isDragging = false
-  isSelecting = false
-  isPanning = false
-  selectionRect.active = false
-  canvas.style.cursor = "crosshair"
-  if (wasConnecting) {
-    if (
-      connectingNode &&
-      nodeUnderCursor &&
-      nodeUnderCursor !== connectingNode &&
-      !["nebula"].includes(nodeUnderCursor.type)
-    ) {
-      connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd)
-      stateWasChanged = true
-    }
-    connectingNode = null
-  } else if (wasPanning) {
-    // No action needed on mouse up after panning
-  } else if (wasResizing && nodeClickedStart) {
-    stateWasChanged = true
-    populateEditPanel()
-  } else if (wasSelecting && didDrag) {
-    const x1 = Math.min(selectionRect.startX, selectionRect.endX)
-    const y1 = Math.min(selectionRect.startY, selectionRect.endY)
-    const x2 = Math.max(selectionRect.startX, selectionRect.endX)
-    const y2 = Math.max(selectionRect.startY, selectionRect.endY)
-    let newlySelected = false
-    nodes.forEach((n) => {
-      if (n.x >= x1 && n.x <= x2 && n.y >= y1 && n.y <= y2) {
-        const el = { type: "node", id: n.id }
-        if (!isElementSelected(el.type, el.id)) {
-          selectedElements.add(el)
-          newlySelected = true
+    updateMousePos(event);
+    const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y);
+    const connectionUnderCursor = !nodeUnderCursor ? findConnectionNear(mousePos.x, mousePos.y) : null;
+    let elementUnderCursor = null;
+    if (nodeUnderCursor) elementUnderCursor = { type: 'node', id: nodeUnderCursor.id };
+    else if (connectionUnderCursor) elementUnderCursor = { type: 'connection', id: connectionUnderCursor.id };
+
+    // Bewaar de staat van de acties *voordat* we ze resetten
+    const wasResizing = isResizing;
+    const wasConnecting = isConnecting;
+    const wasDragging = isDragging;
+    const wasSelecting = isSelecting;
+    const wasPanning = isPanning;
+    const nodeClickedStart = nodeClickedAtMouseDown;
+    const connectionClickedStart = connectionClickedAtMouseDown;
+    const elementClickedStart = nodeClickedStart ? { type: 'node', id: nodeClickedStart.id } : (connectionClickedStart ? { type: 'connection', id: connectionClickedStart.id } : null);
+    const wasSelectedAtStart = nodeWasSelectedAtMouseDown; // Gebruik deze voor drag logic
+    let stateWasChanged = false;
+
+    // Reset alle actie-states
+    isResizing = false; isConnecting = false; isDragging = false; isSelecting = false; isPanning = false;
+    selectionRect.active = false;
+    canvas.style.cursor = 'crosshair'; // Reset cursor
+
+    // Handel de voltooide actie af
+    if (wasConnecting) {
+        if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula'].includes(nodeUnderCursor.type)) {
+            // Gebruik connectionTypeToAdd die in mousedown is bepaald
+            connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
+            stateWasChanged = true;
+            console.log(`Connection type ${connectionTypeToAdd} created.`);
         }
-      }
-    })
-    connections.forEach((c) => {
-      const nA = findNodeById(c.nodeAId)
-      const nB = findNodeById(c.nodeBId)
-      if (nA && nB) {
-        const midX = (nA.x + nB.x) / 2 + c.controlPointOffsetX
-        const midY = (nA.y + nB.y) / 2 + c.controlPointOffsetY
-        const curveMidX = lerp(
-          lerp(nA.x, midX, 0.5),
-          lerp(midX, nB.x, 0.5),
-          0.5
-        )
-        const curveMidY = lerp(
-          lerp(nA.y, midY, 0.5),
-          lerp(midY, nB.y, 0.5),
-          0.5
-        )
-        if (
-          curveMidX >= x1 &&
-          curveMidX <= x2 &&
-          curveMidY >= y1 &&
-          curveMidY <= y2
-        ) {
-          const el = { type: "connection", id: c.id }
-          if (!isElementSelected(el.type, el.id)) {
-            selectedElements.add(el)
-            newlySelected = true
-          }
-        }
-      }
-    })
-    if (newlySelected) {
-      if (currentTool === "edit") updateConstellationGroup()
-      updateGroupControlsUI()
-      populateEditPanel()
-    }
-  } else if (currentTool === "edit") {
-    if (
-      elementClickedStart &&
-      elementUnderCursor &&
-      elementClickedStart.type === elementUnderCursor.type &&
-      elementClickedStart.id === elementUnderCursor.id &&
-      !didDrag &&
-      !event.shiftKey
-    ) {
-      // Single click on an element without dragging or shift key
-      const targetElement = elementClickedStart
-      if (event.altKey) {
-        // Alt-click actions
-        if (
-          targetElement.type === "node" &&
-          (nodeClickedStart.type === "sound" ||
-            nodeClickedStart.type === "nebula" ||
-            nodeClickedStart.type === "pitchShift")
-        ) {
-          handlePitchCycleDown(targetElement)
-          stateWasChanged = true
-        } else if (
-          targetElement.type === "connection" &&
-          connectionClickedStart.type === "string_violin"
-        ) {
-          handlePitchCycleDown(targetElement)
-          stateWasChanged = true
-        }
-      } else if (!event.altKey) {
-        // Regular click actions
-        if (targetElement.type === "node") {
-          if (nodeClickedStart.isStartNode) {
-            if (
-              nodeClickedStart.type !== "pulsar_triggerable" &&
-              nodeClickedStart.type !== "pulsar_random_particles"
-            ) {
-              if (isGlobalSyncEnabled) {
-                handleSubdivisionCycle(nodeClickedStart)
-              } else {
-                handleTapTempo(nodeClickedStart)
-              }
-              stateWasChanged = true
+        connectingNode = null; // Reset altijd na connect poging
+    } else if (wasPanning) {
+        // Geen specifieke actie nodig bij einde pannen
+    } else if (wasResizing && nodeClickedStart) {
+        stateWasChanged = true; // State is al veranderd tijdens mousemove
+        populateEditPanel(); // Update paneel met nieuwe size
+    } else if (wasSelecting && didDrag) { // Selectie rechthoek getrokken
+        const x1 = Math.min(selectionRect.startX, selectionRect.endX);
+        const y1 = Math.min(selectionRect.startY, selectionRect.endY);
+        const x2 = Math.max(selectionRect.startX, selectionRect.endX);
+        const y2 = Math.max(selectionRect.startY, selectionRect.endY);
+        let newlySelected = false;
+        // Selecteer nodes binnen de rechthoek
+        nodes.forEach(n => {
+            if (n.x >= x1 && n.x <= x2 && n.y >= y1 && n.y <= y2) {
+                const el = { type: 'node', id: n.id };
+                if (!isElementSelected(el.type, el.id)) {
+                    selectedElements.add(el);
+                    newlySelected = true;
+                }
             }
-          } else if (
-            nodeClickedStart.type === "sound" ||
-            nodeClickedStart.type === "nebula"
-          ) {
-            handlePitchCycle(targetElement)
-            stateWasChanged = true
-          } else if (nodeClickedStart.type === "gate") {
-            handleGateCycle(nodeClickedStart)
-            stateWasChanged = true
-          } else if (nodeClickedStart.type === "probabilityGate") {
-            handleProbabilityCycle(nodeClickedStart)
-            stateWasChanged = true
-          } else if (nodeClickedStart.type === "pitchShift") {
-            handlePitchShiftCycle(nodeClickedStart)
-            stateWasChanged = true
-          } else if (isDrumType(nodeClickedStart.type)) {
-            triggerNodeEffect(nodeClickedStart)
-            stateWasChanged = false // Triggering effect doesn't change state for undo
-          }
-        } else if (
-          targetElement.type === "connection" &&
-          connectionClickedStart.type === "string_violin"
-        ) {
-          handlePitchCycle(targetElement)
-          stateWasChanged = true
+        });
+        // Selecteer connecties waarvan het midden binnen de rechthoek valt
+        connections.forEach(c => {
+            const nA = findNodeById(c.nodeAId);
+            const nB = findNodeById(c.nodeBId);
+            if (nA && nB) {
+                const midX = (nA.x + nB.x) / 2 + c.controlPointOffsetX;
+                const midY = (nA.y + nB.y) / 2 + c.controlPointOffsetY;
+                const curveMidX = lerp(lerp(nA.x, midX, 0.5), lerp(midX, nB.x, 0.5), 0.5);
+                const curveMidY = lerp(lerp(nA.y, midY, 0.5), lerp(midY, nB.y, 0.5), 0.5);
+                if (curveMidX >= x1 && curveMidX <= x2 && curveMidY >= y1 && curveMidY <= y2) {
+                    const el = { type: 'connection', id: c.id };
+                    if (!isElementSelected(el.type, el.id)) {
+                        selectedElements.add(el);
+                        newlySelected = true;
+                    }
+                }
+            }
+        });
+        if (newlySelected) {
+            if (currentTool === 'edit') updateConstellationGroup();
+            updateGroupControlsUI();
+            populateEditPanel();
         }
-      }
-    } else if (wasDragging && nodeClickedStart) {
-      // Finished dragging selected nodes
-      stateWasChanged = true
+    } else if (currentTool === 'edit') { // Geen drag, geen selectie rechthoek, wel in edit mode
+        if (elementClickedStart && elementUnderCursor && elementClickedStart.type === elementUnderCursor.type && elementClickedStart.id === elementUnderCursor.id && !didDrag) {
+             // Klik op hetzelfde element zonder te slepen
+             const targetElement = elementClickedStart;
+             if (event.altKey) { // Alt-klik
+                 if (targetElement.type === 'node' && (nodeClickedStart.type === 'sound' || nodeClickedStart.type === 'nebula' || nodeClickedStart.type === 'pitchShift')) {
+                     handlePitchCycleDown(targetElement); stateWasChanged = true;
+                 } else if (targetElement.type === 'connection' && connectionClickedStart.type === 'string_violin') {
+                     handlePitchCycleDown(targetElement); stateWasChanged = true;
+                 }
+             } else if (!event.shiftKey) { // Normale klik (geen shift)
+                 // Voer actie uit op basis van node type
+                 if (targetElement.type === 'node') {
+                     if (nodeClickedStart.isStartNode) {
+                         if (nodeClickedStart.type !== 'pulsar_triggerable' && nodeClickedStart.type !== 'pulsar_random_particles') {
+                             if (isGlobalSyncEnabled) { handleSubdivisionCycle(nodeClickedStart); }
+                             else { handleTapTempo(nodeClickedStart); }
+                             stateWasChanged = true;
+                         }
+                     } else if (nodeClickedStart.type === 'sound' || nodeClickedStart.type === 'nebula') {
+                         handlePitchCycle(targetElement); stateWasChanged = true;
+                     } else if (nodeClickedStart.type === 'gate') {
+                         handleGateCycle(nodeClickedStart); stateWasChanged = true;
+                     } else if (nodeClickedStart.type === 'probabilityGate') {
+                         handleProbabilityCycle(nodeClickedStart); stateWasChanged = true;
+                     } else if (nodeClickedStart.type === 'pitchShift') {
+                         handlePitchShiftCycle(nodeClickedStart); stateWasChanged = true;
+                     } else if (isDrumType(nodeClickedStart.type)) {
+                         triggerNodeEffect(nodeClickedStart); stateWasChanged = false; // Triggeren is geen state change voor undo
+                     }
+                 } else if (targetElement.type === 'connection' && connectionClickedStart.type === 'string_violin') {
+                     handlePitchCycle(targetElement); stateWasChanged = true;
+                 }
+                 // Selecteer alleen het aangeklikte element (als het nog niet geselecteerd was of als er meerdere waren)
+                 if (!wasSelectedAtStart || selectedElements.size > 1) {
+                     selectedElements.clear();
+                     selectedElements.add(targetElement);
+                     updateConstellationGroup();
+                     populateEditPanel();
+                 }
+             } // Shift-klik doet niets extra's op mouseUp (selectie gebeurde al op mouseDown)
+        } else if (wasDragging && nodeClickedStart) { // Dragging was voltooid
+             stateWasChanged = true; // Positie is veranderd
+        } else if (!elementClickedStart && !didDrag && !event.shiftKey) { // Klik op lege ruimte
+             if (selectedElements.size > 0) {
+                 selectedElements.clear();
+                 updateConstellationGroup();
+                 populateEditPanel();
+             }
+        }
+    } else if (currentTool === 'delete') { // Delete tool
+        if (elementClickedStart && !didDrag) { // Klik op element om te verwijderen
+            if (elementClickedStart.type === 'node') removeNode(nodeClickedStart);
+            else if (elementClickedStart.type === 'connection') removeConnection(connectionClickedStart);
+            stateWasChanged = true;
+        } else if (!elementClickedStart && selectedElements.size > 0 && !didDrag) { // Klik naast selectie om te verwijderen? (Misschien niet gewenst)
+            // // Optioneel: Verwijder selectie bij klik naast
+            // const elementsToRemove = [...selectedElements];
+            // selectedElements.clear();
+            // elementsToRemove.forEach(el => {
+            //     if (el.type === 'node') removeNode(findNodeById(el.id));
+            //     else if (el.type === 'connection') removeConnection(findConnectionById(el.id));
+            // });
+            // populateEditPanel();
+            // stateWasChanged = true;
+        }
     }
-    // If it wasn't a single click on the same element,
-    // the selection logic was handled in mouseDown/mouseMove (shift/drag select)
-    // No state change needed here solely for selection in this case.
-  } else if (currentTool === "delete") {
-    if (elementClickedStart && !didDrag) {
-      // Clicked on an element to delete
-      if (elementClickedStart.type === "node") removeNode(nodeClickedStart)
-      else if (elementClickedStart.type === "connection")
-        removeConnection(connectionClickedStart)
-      stateWasChanged = true
-    } else if (!elementClickedStart && selectedElements.size > 0 && !didDrag) {
-      // Clicked on empty space while elements were selected in delete mode
-      // (This might be unexpected behavior, maybe clear selection instead?)
-      const firstElement = selectedElements.values().next().value
-      if (firstElement.type === "node")
-        removeNode(findNodeById(firstElement.id))
-      else if (firstElement.type === "connection")
-        removeConnection(findConnectionById(firstElement.id))
-      selectedElements.clear()
-      updateGroupControlsUI()
-      populateEditPanel()
-      stateWasChanged = true
+
+    // Reset states die mogelijk niet gereset zijn
+    didDrag = false;
+    nodeClickedAtMouseDown = null;
+    connectionClickedAtMouseDown = null;
+    nodeWasSelectedAtMouseDown = false; // Reset deze ook
+    nodeDragOffsets.clear();
+    panStart = { x: 0, y: 0 };
+    connectionTypeToAdd = 'standard'; // Reset naar default
+
+    // Update UI en sla state op indien nodig
+    updateGroupControlsUI(); // Update altijd na mouse up
+    if (stateWasChanged && !isPerformingUndoRedo) {
+        saveState();
     }
-  }
-
-  // Save state if any meaningful changes occurred
-  if (stateWasChanged && !isPerformingUndoRedo) {
-    saveState()
-  }
-
-  // Reset states
-  didDrag = false
-  nodeClickedAtMouseDown = null
-  connectionClickedAtMouseDown = null
-  nodeWasSelectedAtStart = false // Reset this tracking variable
-  nodeDragOffsets.clear()
-  panStart = { x: 0, y: 0 } // Reset pan start position
-  updateGroupControlsUI() // Update UI based on final selection state
 }
 function handleWheel(event) {
   event.preventDefault()
@@ -4569,190 +4190,187 @@ function resetSideToolbars() {
   removeNoteSelector()
   editPanelContent.innerHTML = ""
 }
+// Zorg dat deze constante bovenaan je app.js is gedefinieerd:
+// const glideToolButton = document.getElementById('glide-tool-button');
+
 function setActiveTool(toolName) {
-  if (currentTool === "add" && toolName !== "add") {
-    nodeTypeToAdd = null
-    waveformToAdd = null
-    noteIndexToAdd = -1
-    resetSideToolbars()
-    const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button")
-    addButtons.forEach((btn) => btn.classList.remove("active"))
+    // Reset 'add' state als we VAN 'add' NAAR een ANDERE tool gaan
+    if (currentTool === "add" && toolName !== "add") {
+      nodeTypeToAdd = null;
+      waveformToAdd = null;
+      noteIndexToAdd = -1;
+      resetSideToolbars();
+      const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
+      addButtons.forEach((btn) => btn.classList.remove("active"));
+    }
+  
+    // Reset 'add' state ook als we VAN 'add' NAAR 'connect_glide' gaan
+    if (currentTool === 'add' && toolName === 'connect_glide') {
+      nodeTypeToAdd = null;
+      waveformToAdd = null;
+      noteIndexToAdd = -1;
+      resetSideToolbars();
+      const addButtons = toolbar.querySelectorAll('#toolbar-add-elements button');
+      addButtons.forEach(btn => btn.classList.remove('active'));
+    }
+  
+    currentTool = toolName;
+    connectingNode = null;
+    isConnecting = false; // Reset algemene connect state
+    connectionTypeToAdd = 'standard'; // Default
+  
+    // Beheer active class voor ALLE tool knoppen
+    editBtn.classList.toggle("active", toolName === "edit");
+    connectBtn.classList.toggle("active", toolName === "connect");
+    connectStringBtn.classList.toggle("active", toolName === "connect_string");
+    if (glideToolButton) { // Check of de knop bestaat
+      // Gebruik 'connect_glide' als tool naam voor de check
+      glideToolButton.classList.toggle('active', toolName === 'connect_glide');
+    }
+    deleteBtn.classList.toggle("active", toolName === "delete");
+  
+    // Deactiveer 'add' knoppen als we niet in 'add' mode zijn
+    if (toolName !== "add") {
+      const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
+      addButtons.forEach((btn) => btn.classList.remove("active"));
+      resetSideToolbars(); // Zorg dat side toolbar sluit als we tool wisselen
+    } else {
+      // Code voor als 'add' geselecteerd wordt (blijft hetzelfde)
+      hamburgerMenuPanel.classList.add("hidden");
+      hamburgerBtn.classList.remove("active");
+      editPanelContent.innerHTML = "";
+      // Je zou hier logica kunnen toevoegen om de side toolbar te openen
+      // afhankelijk van de laatst gekozen 'add' knop, indien nodig.
+    }
+  
+    // Reset andere states (blijft hetzelfde)
+    isResizing = false;
+    isSelecting = false;
+    selectionRect.active = false;
+    isPanning = false;
+    updateGroupControlsUI();
+    updateRestartPulsarsButtonVisibility();
+    hideBottomPanels();
+    if (toolName === "edit") populateEditPanel();
   }
-  currentTool = toolName
-  connectingNode = null
-  isConnecting = false
-  connectionTypeToAdd = "standard"
-  editBtn.classList.toggle("active", toolName === "edit")
-  connectBtn.classList.toggle("active", toolName === "connect")
-  connectStringBtn.classList.toggle("active", toolName === "connect_string")
-  deleteBtn.classList.toggle("active", toolName === "delete")
-  if (toolName !== "add") {
-    const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button")
-    addButtons.forEach((btn) => btn.classList.remove("active"))
-    resetSideToolbars()
-  } else {
+  
+  // --- Functies die ongewijzigd blijven ---
+  
+  function populateSideToolbar(contentType, title) {
+    sideToolbarContent.innerHTML = ""
+    noteSelectElement = null
+    noteSelectContainer = null
+    const groupDiv = document.createElement("div")
+    groupDiv.classList.add("type-group")
+    if (contentType === "waveforms") {
+      const isNebula = nodeTypeToAdd === "nebula"
+      sideToolbarTitle.textContent =
+        title || (isNebula ? "Nebula Sounds" : "Sounds")
+      waveformTypes.forEach((wf) => {
+        const button = document.createElement("button")
+        button.classList.add("waveform-button")
+        button.dataset.waveform = wf.type
+        button.innerHTML = `<span class="type-icon">${wf.icon}</span>${wf.label}`
+        button.disabled =
+          (isNebula && wf.type.startsWith("sampler_")) || wf.loadFailed
+        if (isNebula && wf.type.startsWith("sampler_")) {
+          button.title = "Samplers not available for Nebulas"
+        } else if (wf.loadFailed) {
+          button.title = `${wf.label} sample failed to load`
+          button.classList.add("disabled")
+        }
+        if (waveformToAdd === wf.type) button.classList.add("selected")
+        button.addEventListener("click", () =>
+          handleWaveformSelect(button, wf.type)
+        )
+        groupDiv.appendChild(button)
+      })
+      sideToolbarContent.appendChild(groupDiv)
+      createNoteSelector(sideToolbarContent)
+    } else if (contentType === "pulsarTypes") {
+      sideToolbarTitle.textContent = title || "Pulsars"
+      pulsarTypes.forEach((pt) => {
+        const button = document.createElement("button")
+        button.classList.add("type-button")
+        button.dataset.type = pt.type
+        button.innerHTML = `<span class="type-icon">${pt.icon}</span>${pt.label}`
+        if (nodeTypeToAdd === pt.type) button.classList.add("selected")
+        button.addEventListener("click", () =>
+          handleElementTypeSelect(button, pt.type)
+        )
+        groupDiv.appendChild(button)
+      })
+      sideToolbarContent.appendChild(groupDiv)
+    } else if (contentType === "drumElements") {
+      sideToolbarTitle.textContent = title || "Drum Elements"
+      drumElementTypes.forEach((dt) => {
+        const button = document.createElement("button")
+        button.classList.add("drum-element-button")
+        button.dataset.type = dt.type
+        button.innerHTML = `<span class="type-icon">${dt.icon}</span>${dt.label}`
+        if (nodeTypeToAdd === dt.type) button.classList.add("selected")
+        button.addEventListener("click", () =>
+          handleElementTypeSelect(button, dt.type)
+        )
+        groupDiv.appendChild(button)
+      })
+      sideToolbarContent.appendChild(groupDiv)
+    }
+    sideToolbar.classList.remove("hidden")
     hamburgerMenuPanel.classList.add("hidden")
     hamburgerBtn.classList.remove("active")
-    editPanelContent.innerHTML = ""
   }
-  isResizing = false
-  isSelecting = false
-  selectionRect.active = false
-  isPanning = false
-  updateGroupControlsUI()
-  updateRestartPulsarsButtonVisibility()
-  hideBottomPanels()
-  if (toolName === "edit") populateEditPanel()
-}
-
-function populateSideToolbar(contentType, title) {
-  sideToolbarContent.innerHTML = ""
-  noteSelectElement = null
-  noteSelectContainer = null
-  const groupDiv = document.createElement("div")
-  groupDiv.classList.add("type-group")
-  if (contentType === "waveforms") {
-    const isNebula = nodeTypeToAdd === "nebula"
-    sideToolbarTitle.textContent =
-      title || (isNebula ? "Nebula Sounds" : "Sounds")
-    waveformTypes.forEach((wf) => {
-      const button = document.createElement("button")
-      button.classList.add("waveform-button")
-      button.dataset.waveform = wf.type
-      button.innerHTML = `<span class="type-icon">${wf.icon}</span>${wf.label}`
-      button.disabled =
-        (isNebula && wf.type.startsWith("sampler_")) || wf.loadFailed
-      if (isNebula && wf.type.startsWith("sampler_")) {
-        button.title = "Samplers not available for Nebulas"
-      } else if (wf.loadFailed) {
-        button.title = `${wf.label} sample failed to load`
-        button.classList.add("disabled")
-      }
-      if (waveformToAdd === wf.type) button.classList.add("selected")
-      button.addEventListener("click", () =>
-        handleWaveformSelect(button, wf.type)
-      )
-      groupDiv.appendChild(button)
-    })
-    sideToolbarContent.appendChild(groupDiv)
-    createNoteSelector(sideToolbarContent)
-  } else if (contentType === "pulsarTypes") {
-    sideToolbarTitle.textContent = title || "Pulsars"
-    pulsarTypes.forEach((pt) => {
-      const button = document.createElement("button")
-      button.classList.add("type-button")
-      button.dataset.type = pt.type
-      button.innerHTML = `<span class="type-icon">${pt.icon}</span>${pt.label}`
-      if (nodeTypeToAdd === pt.type) button.classList.add("selected")
-      button.addEventListener("click", () =>
-        handleElementTypeSelect(button, pt.type)
-      )
-      groupDiv.appendChild(button)
-    })
-    sideToolbarContent.appendChild(groupDiv)
-  } else if (contentType === "drumElements") {
-    sideToolbarTitle.textContent = title || "Drum Elements"
-    drumElementTypes.forEach((dt) => {
-      const button = document.createElement("button")
-      button.classList.add("drum-element-button")
-      button.dataset.type = dt.type
-      button.innerHTML = `<span class="type-icon">${dt.icon}</span>${dt.label}`
-      if (nodeTypeToAdd === dt.type) button.classList.add("selected")
-      button.addEventListener("click", () =>
-        handleElementTypeSelect(button, dt.type)
-      )
-      groupDiv.appendChild(button)
-    })
-    sideToolbarContent.appendChild(groupDiv)
+  function handleElementTypeSelect(button, elementType) {
+    nodeTypeToAdd = elementType
+    waveformToAdd = elementType
+    noteIndexToAdd = -1
+    const currentTypeButtons = sideToolbarContent.querySelectorAll(
+      ".type-button, .drum-element-button"
+    )
+    currentTypeButtons.forEach((btn) => btn.classList.remove("selected"))
+    if (button) button.classList.add("selected")
+    removeNoteSelector()
   }
-  sideToolbar.classList.remove("hidden")
-  hamburgerMenuPanel.classList.add("hidden")
-  hamburgerBtn.classList.remove("active")
-}
-function handleElementTypeSelect(button, elementType) {
-  nodeTypeToAdd = elementType
-  waveformToAdd = elementType
-  noteIndexToAdd = -1
-  const currentTypeButtons = sideToolbarContent.querySelectorAll(
-    ".type-button, .drum-element-button"
-  )
-  currentTypeButtons.forEach((btn) => btn.classList.remove("selected"))
-  if (button) button.classList.add("selected")
-  removeNoteSelector()
-}
-function handleWaveformSelect(button, waveformType) {
-  if (nodeTypeToAdd !== "sound" && nodeTypeToAdd !== "nebula") return
-  waveformToAdd = waveformType
-  const currentWaveButtons = sideToolbarContent.querySelectorAll(
-    ".waveform-button"
-  )
-  currentWaveButtons.forEach((btn) => btn.classList.remove("selected"))
-  button.classList.add("selected")
-  if (!noteSelectContainer) createNoteSelector(sideToolbarContent)
-}
+  function handleWaveformSelect(button, waveformType) {
+    if (nodeTypeToAdd !== "sound" && nodeTypeToAdd !== "nebula") return
+    waveformToAdd = waveformType
+    const currentWaveButtons = sideToolbarContent.querySelectorAll(
+      ".waveform-button"
+    )
+    currentWaveButtons.forEach((btn) => btn.classList.remove("selected"))
+    button.classList.add("selected")
+    if (!noteSelectContainer) createNoteSelector(sideToolbarContent)
+  }
+   
 
 function updateScaleAndTransposeUI() {
-  if (scaleSelectTransport) scaleSelectTransport.value = currentScaleKey;
- }
-
-/**
- * Wijzigt de globale toonladder en update alle afhankelijke elementen.
- * @param {string} scaleKey - De key van de nieuwe toonladder (bijv. 'major_pentatonic').
- * @param {boolean} [skipNodeUpdate=false] - Indien true, worden de pitches van bestaande nodes/connecties niet bijgewerkt (bv. bij laden state).
- */
+  if (scaleSelectPianoRoll) scaleSelectPianoRoll.value = currentScaleKey;
+}
 function changeScale(scaleKey, skipNodeUpdate = false) {
-  // 1. Valideer of de toonladder bestaat
-  if (!scales[scaleKey]) {
-    console.warn(`Ongeldige toonladder key: ${scaleKey}`)
-    return
-  }
-
-  // 2. Update globale variabelen voor toonladder
+  if (!scales[scaleKey]) return
   currentScaleKey = scaleKey
   currentScale = scales[scaleKey]
-
-  // 3. Update het CSS thema op de body
-  document.body.className = currentScale.theme // Behoud het wisselen van thema
-
-  // 4. Update de waarde van de dropdown in de transportbalk
-  if (scaleSelectTransport) {
-    // Check of het element bestaat
-    scaleSelectTransport.value = scaleKey
-  } else {
-    // Dit zou niet moeten gebeuren als de HTML correct is
-    console.warn(
-      "Element #scaleSelectTransport niet gevonden tijdens changeScale"
-    )
-  }
-
-  // 5. Update de pitch van nodes en connecties (tenzij overgeslagen)
+  document.body.className = currentScale.theme
+  scaleSelectPianoRoll.value = scaleKey
   if (!skipNodeUpdate) {
     nodes.forEach((node) => {
-      // Alleen nodes die een toonhoogte hebben gebaseerd op de toonladder
       if (node.type === "sound" || node.type === "nebula") {
-        // Zorg dat scaleIndex geldig is (extra check)
         node.audioParams.scaleIndex = Math.max(
           MIN_SCALE_INDEX,
           Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0)
         )
-        // Herbereken de pitch met de NIEUWE currentScale
         node.audioParams.pitch = getFrequency(
           currentScale,
           node.audioParams.scaleIndex
         )
-        // Fallback voor het geval de berekening NaN oplevert
         if (isNaN(node.audioParams.pitch)) {
-          console.warn(`Pitch NaN voor node ${node.id}, index gereset.`)
           node.audioParams.scaleIndex = 0
           node.audioParams.pitch = getFrequency(currentScale, 0)
         }
-        updateNodeAudioParams(node) // Pas de wijziging toe op de Web Audio API node
+        updateNodeAudioParams(node)
       }
-      // Andere node types (pulsar, drum, utility) worden hier niet beïnvloed
     })
-
     connections.forEach((conn) => {
-      // Alleen connecties die een toonhoogte hebben
       if (conn.type === "string_violin") {
         conn.audioParams.scaleIndex = Math.max(
           MIN_SCALE_INDEX,
@@ -4762,28 +4380,24 @@ function changeScale(scaleKey, skipNodeUpdate = false) {
           currentScale,
           conn.audioParams.scaleIndex
         )
-        // Fallback
         if (isNaN(conn.audioParams.pitch)) {
-          console.warn(`Pitch NaN voor connectie ${conn.id}, index gereset.`)
           conn.audioParams.scaleIndex = 0
           conn.audioParams.pitch = getFrequency(currentScale, 0)
         }
-        updateConnectionAudioParams(conn) // Pas wijziging toe
+        updateConnectionAudioParams(conn)
       }
     })
   }
-
-  // 6. Herteken de piano roll om de highlights van de nieuwe toonladder te tonen
-  drawPianoRoll()
-
-  // 7. Update het edit panel (rechter hamburger menu) als het open is,
-  //    omdat de getoonde nootnamen/indices kunnen veranderen.
-  populateEditPanel() // Deze functie moet controleren of het panel zichtbaar is
-
-  // 8. Sla de staat op als de nodes daadwerkelijk zijn bijgewerkt
-  if (!skipNodeUpdate) {
-    saveState()
+  if (
+    !sideToolbar.classList.contains("hidden") &&
+    (nodeTypeToAdd === "sound" || nodeTypeToAdd === "nebula")
+  ) {
+    noteIndexToAdd = -1
+    createNoteSelector(sideToolbarContent)
   }
+  drawPianoRoll();
+  populateEditPanel()
+  if (!skipNodeUpdate) saveState()
 }
 function updateSyncUI() {
   globalSyncToggleBtn.textContent = `Sync: ${
@@ -4837,7 +4451,9 @@ function updateMixerUI() {
 }
 function hideBottomPanels() {
   mixerPanel.classList.add("hidden")
+  pianoRollPanel.classList.add("hidden")
   mixerBtn.classList.remove("active")
+  pianoRollBtn.classList.remove("active")
 }
 
 function togglePlayPause() {
@@ -4926,10 +4542,9 @@ hamburgerBtn.addEventListener("click", () => {
     hamburgerBtn.classList.remove("active")
   }
 })
-scaleSelectTransport.addEventListener("change", (e) =>
+scaleSelectPianoRoll.addEventListener("change", (e) =>
   changeScale(e.target.value)
 )
-
 groupVolumeSlider.addEventListener("input", (e) => {
   const newVol = parseFloat(e.target.value)
   if (groupVolumeGain) {
@@ -5099,6 +4714,26 @@ mixerBtn.addEventListener("click", () => {
     mixerPanel.classList.remove("hidden")
     mixerBtn.classList.add("active")
     updateMixerUI()
+  }
+})
+pianoRollBtn.addEventListener("click", () => {
+  const isOpen = !pianoRollPanel.classList.contains("hidden")
+  resetSideToolbars()
+  hideBottomPanels()
+  if (!isOpen) {
+    pianoRollPanel.classList.remove("hidden")
+    pianoRollBtn.classList.add("active")
+    updateScaleAndTransposeUI()
+    // Zorg dat canvas dimensies correct zijn en teken opnieuw
+    if (pianoRollCanvas && pianoRollCtx) {
+      try {
+           pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+           pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+           drawPianoRoll(); // <-- Zorg dat deze aanroep er staat
+      } catch(e) {
+           console.warn("Kon pianoRollCanvas niet tekenen bij openen paneel:", e);
+      }
+ }
   }
 })
 masterVolumeSlider.addEventListener("input", (e) => {
@@ -5907,6 +5542,196 @@ function populateEditPanel() {
   sideToolbar.classList.add("hidden")
 }
 
+// --- Functies voor Piano Roll ---
+
+function drawPianoRoll() {
+  if (!pianoRollCtx || !pianoRollCanvas || pianoRollPanel.classList.contains('hidden')) {
+       // Sla tekenen over als context mist of paneel verborgen is
+      return;
+  }
+
+  const canvasWidth = pianoRollCanvas.width;
+  const canvasHeight = pianoRollCanvas.height;
+  pianoRollCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+  pianoRollHexagons = []; // Reset hexagon data voor hertekenen
+
+  const scaleNotes = currentScale.notes;
+  const rootNoteModulo = currentRootNote % 12;
+
+  // Hexagon parameters (aangepast voor horizontale balk)
+  const numNotesToDraw = 12; // 1 octaaf (C t/m B)
+  const horizontalMargin = 10;
+  const verticalMargin = 5;
+  const availableWidth = canvasWidth - 2 * horizontalMargin;
+
+  // Dynamische grootte, maar met limieten voor leesbaarheid
+  let hexRadius = availableWidth / (numNotesToDraw * 1.5 + 0.5); // Geschatte breedte nodig per hex
+  hexRadius = Math.max(8, Math.min(16, hexRadius)); // Min 8px, Max 16px radius
+
+  const hexWidth = 2 * hexRadius;
+  const hexHeight = Math.sqrt(3) * hexRadius;
+  const verticalSpacing = hexHeight; // Geen overlap nodig voor enkele rij
+  const horizontalSpacing = hexWidth * 3 / 4;
+  let startX = horizontalMargin + hexRadius;
+  // Zorg dat het verticaal gecentreerd is in de beschikbare hoogte
+  let startY = Math.max(verticalMargin + hexHeight / 2, canvasHeight / 2);
+
+
+  let hexCol = 0;
+  const maxCols = Math.floor((canvasWidth - 2 * horizontalMargin + horizontalSpacing / 4) / horizontalSpacing);
+
+  for (let i = 0; i < numNotesToDraw; i++) {
+      if (hexCol >= maxCols) break; // Stop als het niet meer past
+
+      const noteInOctave = i; // Chromatische noot 0-11
+      const posX = startX + hexCol * horizontalSpacing;
+      // const posY = startY; // Allemaal op dezelfde Y-as nu
+       // Houd zigzag voor iets betere scheiding indien dicht op elkaar
+       const posY = startY + (hexCol % 2 !== 0 ? hexRadius * 0.1 : -hexRadius * 0.1);
+
+
+      const noteRelativeToRoot = (noteInOctave - rootNoteModulo + 12) % 12;
+      const isScaleNote = scaleNotes.includes(noteRelativeToRoot);
+      const isRootNote = noteInOctave === rootNoteModulo;
+
+      // Kleur bepalen
+      let fillStyle = "rgba(50, 60, 90, 0.6)"; // Niet in toonladder
+       let strokeStyle = "rgba(100, 120, 150, 0.4)";
+      if (isScaleNote) {
+           fillStyle = "rgba(150, 180, 220, 0.6)"; // Wel in toonladder
+           strokeStyle = "rgba(180, 210, 240, 0.6)";
+      }
+      if (isRootNote) {
+           fillStyle = "rgba(255, 255, 150, 0.7)"; // Grondtoon
+           strokeStyle = "rgba(255, 255, 180, 0.8)";
+      }
+
+
+      pianoRollCtx.fillStyle = fillStyle;
+      pianoRollCtx.strokeStyle = strokeStyle;
+      pianoRollCtx.lineWidth = 1;
+
+      // Teken hexagon
+      pianoRollCtx.beginPath();
+      for (let side = 0; side < 6; side++) {
+          pianoRollCtx.lineTo(
+              posX + hexRadius * Math.cos(side * Math.PI / 3), // Aangepaste hoek voor platte bovenkant
+              posY + hexRadius * Math.sin(side * Math.PI / 3)
+          );
+      }
+      pianoRollCtx.closePath();
+      pianoRollCtx.fill();
+      pianoRollCtx.stroke();
+
+      // Tekst (nootnaam)
+      pianoRollCtx.fillStyle = "#ddeeff";
+      pianoRollCtx.font = `bold ${Math.max(7, Math.min(10, hexRadius * 0.7))}px sans-serif`;
+      pianoRollCtx.textAlign = "center";
+      pianoRollCtx.textBaseline = "middle";
+      // Kleine verticale offset voor betere centrering in hexagon
+      pianoRollCtx.fillText(noteNames[noteInOctave], posX, posY + 1);
+
+      // Sla hexagon data op voor klikdetectie
+      pianoRollHexagons.push({
+          x: posX,
+          y: posY,
+          radius: hexRadius,
+          semitone: noteInOctave // Sla de chromatische waarde (0-11) op
+      });
+
+      hexCol++;
+  }
+}
+
+function handlePianoRollClick(event) {
+  if (!pianoRollCanvas || !pianoRollHexagons || pianoRollHexagons.length === 0) return;
+
+  const rect = pianoRollCanvas.getBoundingClientRect();
+  const scaleX = pianoRollCanvas.width / rect.width; // Verhouding voor canvas interne vs display grootte
+  const scaleY = pianoRollCanvas.height / rect.height;
+  const canvasX = (event.clientX - rect.left) * scaleX;
+  const canvasY = (event.clientY - rect.top) * scaleY;
+
+  let clickedSemitone = -1;
+
+  // Zoek dichtstbijzijnde hexagon centrum (robuster dan radius check)
+  let minDistSq = Infinity;
+  for (const hex of pianoRollHexagons) {
+      const dx = canvasX - hex.x;
+      const dy = canvasY - hex.y;
+      const distSq = dx * dx + dy * dy;
+      // Klik moet binnen de hexagon zijn (ruwweg < radius^2)
+      if (distSq < hex.radius * hex.radius && distSq < minDistSq) {
+           minDistSq = distSq;
+           clickedSemitone = hex.semitone;
+      }
+  }
+
+
+  if (clickedSemitone !== -1) {
+       console.log(`Piano Roll Click: Detected semitone <span class="math-inline">\{noteNames\[clickedSemitone\]\} \(</span>{clickedSemitone})`);
+      setRootNote(clickedSemitone);
+  } else {
+       console.log("Piano Roll Click: Click outside any detected hexagon.");
+  }
+}
+
+/**
+* Stelt de globale grondtoon in, werkt UI en audio bij.
+* @param {number} newRootNote - De nieuwe grondtoon (0-11).
+*/
+function setRootNote(newRootNote) {
+  const newRootMod = newRootNote % 12;
+  if (currentRootNote === newRootMod) { return; }
+  currentRootNote = newRootMod;
+  console.log("New Root Note set to:", noteNames[currentRootNote], `(${currentRootNote})`);
+
+  // 2. Werk de toonhoogte (pitch) bij van alle relevante nodes
+  nodes.forEach((node) => {
+      if (node.type === "sound" || node.type === "nebula") {
+           node.audioParams.scaleIndex = Math.max(
+              MIN_SCALE_INDEX,
+              Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0)
+           );
+          node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
+          if (isNaN(node.audioParams.pitch)) {
+              console.warn(`Pitch NaN voor node ${node.id} na root note change, index gereset.`);
+              node.audioParams.scaleIndex = 0;
+              node.audioParams.pitch = getFrequency(currentScale, 0);
+          }
+          updateNodeAudioParams(node);
+      }
+  });
+
+  // 3. Werk de toonhoogte bij van alle relevante connecties (zoals violen)
+  connections.forEach((conn) => {
+      if (conn.type === "string_violin") {
+          conn.audioParams.scaleIndex = Math.max(
+              MIN_SCALE_INDEX,
+              Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0)
+           );
+          conn.audioParams.pitch = getFrequency(currentScale, conn.audioParams.scaleIndex);
+          if (isNaN(conn.audioParams.pitch)) {
+              console.warn(`Pitch NaN voor connectie ${conn.id} na root note change, index gereset.`);
+              conn.audioParams.scaleIndex = 0;
+              conn.audioParams.pitch = getFrequency(currentScale, 0);
+          }
+          updateConnectionAudioParams(conn);
+      }
+  });
+
+  // 4. Herteken de piano roll
+  drawPianoRoll();
+
+  // 5. Update het edit panel
+  populateEditPanel();
+
+  // 6. Sla de nieuwe staat op
+  saveState();
+}
+
+// --- Einde Functies voor Piano Roll ---
+
 function rgbaToHex(rgba) {
   if (!rgba || !rgba.startsWith("rgba")) return "#ffffff"
   try {
@@ -5955,6 +5780,26 @@ function updateToolbarHeightVar() {
     `${toolbarHeight}px`
   )
 }
+
+// --- Piano Roll Canvas Initialisatie ---
+pianoRollCanvas = document.getElementById('pianoRollCanvas');
+if (pianoRollCanvas) {
+    pianoRollCtx = pianoRollCanvas.getContext('2d');
+    try {
+         pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+         pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+    } catch (e) {
+         console.warn("Kon pianoRollCanvas dimensies niet direct instellen:", e);
+         pianoRollCanvas.width = 100; // Fallback
+         pianoRollCanvas.height = 80; // Fallback
+    }
+    pianoRollCanvas.addEventListener('mousedown', handlePianoRollClick);
+    drawPianoRoll(); // Teken initieel
+    console.log("Piano Roll Canvas Initialized");
+} else {
+    console.error("#pianoRollCanvas element not found during initialization!");
+}
+// --- Einde Piano Roll Initialisatie ---
 
 function triggerSave() {
   try {
@@ -6088,30 +5933,31 @@ function handleMIDIMessage(message) {
   const [command, note, velocity] = message.data
   const midiChannel = (command & 0x0f) + 1
   const cmd = command & 0xf0
-  if (cmd === 0x90 && velocity > 0) {
-    const newTranspose = note - 60
-    globalTransposeOffset = Math.max(-12, Math.min(12, newTranspose))
-    updateScaleAndTransposeUI()
-    nodes.forEach((node) => {
-      if (node.type === "sound" || node.type === "nebula") {
-        node.audioParams.pitch = getFrequency(
-          currentScale,
-          node.audioParams.scaleIndex
-        )
-        updateNodeAudioParams(node)
-      }
-    })
-    connections.forEach((conn) => {
-      if (conn.type === "string_violin") {
-        conn.audioParams.pitch = getFrequency(
-          currentScale,
-          conn.audioParams.scaleIndex
-        )
-        updateConnectionAudioParams(conn)
-      }
-    })
-    saveState()
-  }
+  // if (cmd === 0x90 && velocity > 0) {
+  //   const newTranspose = note - 60
+  //   globalTransposeOffset = Math.max(-12, Math.min(12, newTranspose))
+ //    updateScaleAndTransposeUI()
+  //   nodes.forEach((node) => {
+  //     if (node.type === "sound" || node.type === "nebula") {
+  //       node.audioParams.pitch = getFrequency(
+  //         currentScale,
+  //         node.audioParams.scaleIndex
+ //        )
+ //        updateNodeAudioParams(node)
+ //      }
+ //    })
+  //   connections.forEach((conn) => {
+  //     if (conn.type === "string_violin") {
+  //       conn.audioParams.pitch = getFrequency(
+  //         currentScale,
+  //         conn.audioParams.scaleIndex
+  //       )
+  //       updateConnectionAudioParams(conn)
+  //     }
+  //   })
+  //   drawPianoRoll();
+ //    saveState()
+//   }
 }
 function sendMidiMessage(messageArray) {
   if (activeMidiOutput && messageArray) {
@@ -6125,6 +5971,83 @@ midiOutSelect.addEventListener("change", (e) =>
   selectMIDIOutput(e.target.value)
 )
 
+// ========================================================================
+// Functies voor StarSound Glide (Pitch + Crossfade + Lijn met CANVAS)
+// ========================================================================
+
+let glideStartStar = null
+const glideDuration = 0.5 // Duur van de glide/crossfade in seconden
+
+// --- Hulpfunctie: Haal AudioNode en GainNode voor een Ster ---
+// !!! BELANGRIJK: Pas deze functie aan jouw code !!!
+// (Deze functie blijft hetzelfde als voorheen - zorg dat hij correct is)
+function getAudioNodesForStar(starElement) {
+  // Voorbeeld implementatie - PAS DIT AAN!
+  const starId = starElement.id
+  // if (activeStars[starId]) {
+  //     return {
+  //         audioNode: activeStars[starId].audioNode,
+  //         gainNode: activeStars[starId].gainNode
+  //     };
+  // }
+  console.warn("getAudioNodesForStar() is niet correct geïmplementeerd!")
+  return { audioNode: null, gainNode: null }
+}
+
+// --- BIJGEWERKTE getFrequencyForStar functie (met Debugging) ---
+// Accepteert nu een node *object* uit de 'nodes' array
+function getFrequencyForStar(nodeObject) {
+    if (!nodeObject || !nodeObject.audioParams) {
+        console.warn(`getFrequencyForStar: Ongeldig node object (ID: ${nodeObject?.id}) of audioParams ontbreken.`);
+        return 440; // Fallback frequentie (A4)
+    }
+
+    // Haal de pitch direct uit de audioParams van het node object
+    const frequency = nodeObject.audioParams.pitch;
+
+    // --- DEBUG LOG ---
+    console.log(`getFrequencyForStar: Node ID=${nodeObject.id}, Type=${nodeObject.type}, ScaleIndex=${nodeObject.audioParams.scaleIndex}, Calculated Pitch=${frequency}`);
+    // --- EINDE DEBUG LOG ---
+
+    if (isNaN(frequency) || frequency <= 0) {
+         console.warn(`getFrequencyForStar: Ongeldige frequentie (${frequency}) gevonden voor node ${nodeObject.id}. Fallback.`);
+         return 440; // Fallback
+    }
+
+    return frequency;
+}
+
+
+// --- Hulpfunctie: Bepaal of geluiden verschillend zijn ---
+// !!! BELANGRIJK: Pas deze functie aan jouw code !!!
+// (Deze functie blijft hetzelfde als voorheen - zorg dat hij correct is)
+function areSoundsDifferent(star1Element, star2Element) {
+  console.warn("areSoundsDifferent() checkt niet daadwerkelijk verschil.")
+  return true
+}
+
+
+// Zorg dat de oude listener voor glideToolButton (die met isAddingGlide) verwijderd is.
+if (glideToolButton) {
+    glideToolButton.addEventListener('click', () => {
+        // Roep setActiveTool aan met de NIEUWE tool naam
+        setActiveTool('connect_glide');
+        console.log("Connect Glide mode AAN (via setActiveTool). Sleep van start naar doel ster.");
+        // Reset andere connect-states voor de zekerheid
+        isConnecting = false; // Wordt beheerd in mousedown/move
+        connectingNode = null;
+    });
+} else {
+    console.warn("Knop met ID #glide-tool-button niet gevonden.");
+}
+
+// --- Event Listener voor StarSound Clicks (voor Glide) ---
+// (Listener is aangepast om lijn *toe te voegen* aan de array, niet direct te tekenen)
+
+// ========================================================================
+// EINDE GLIDE FUNCTIES (CANVAS versie)
+// ========================================================================
+
 saveStateBtn.addEventListener("click", triggerSave)
 loadStateBtn.addEventListener("click", triggerLoad)
 loadStateInput.addEventListener("change", handleFileLoad)
@@ -6132,364 +6055,30 @@ window.addEventListener("resize", () => {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
   updateToolbarHeightVar()
+  // Piano roll resize en redraw
+  if (pianoRollCanvas && pianoRollCtx) {
+    try {
+         pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+         pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+         drawPianoRoll();
+    } catch (e) {
+         console.warn("Kon pianoRollCanvas niet resizen/hertekenen:", e);
+    }
+}
 })
-
-function setRootNote(newRootNote) {
-  if (currentRootNote === newRootNote) return; // Geen verandering
-
-  currentRootNote = newRootNote % 12; // Zorg dat het 0-11 is
-  console.log("New Root Note:", noteNames[currentRootNote]);
-
-
-  updateScaleAndTransposeUI();
-
-  // Update pitch van alle relevante nodes en connecties
-  nodes.forEach((node) => {
-      if (node.type === "sound" || node.type === "nebula") {
-          node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
-          updateNodeAudioParams(node);
-      }
-  });
-  connections.forEach((conn) => {
-      if (conn.type === "string_violin") {
-          conn.audioParams.pitch = getFrequency(currentScale, conn.audioParams.scaleIndex);
-          updateConnectionAudioParams(conn);
-      }
-  });
-
-  // Herteken de piano roll om de nieuwe highlight te tonen
-  drawPianoRoll();
-
-  // Update edit panel als dat open is
-  populateEditPanel();
-
-  // Sla de nieuwe staat op
-  saveState();
-}
-
-// Event listener voor klikken op de piano roll canvas
-function handlePianoRollClick(event) {
-  if (!pianoRollCanvas) return; // Check of canvas bestaat
-
-  const rect = pianoRollCanvas.getBoundingClientRect();
-  // Bereken de relatieve muispositie op het canvas element
-  const canvasX = event.clientX - rect.left;
-  const canvasY = event.clientY - rect.top;
-
-
-
-  let clickedSemitone = -1;
-
-  for (const hex of pianoRollHexagons) {
-      const dx = canvasX - hex.x;
-      const dy = canvasY - hex.y;
-      // Check of de klik binnen de (geschatte) radius van het hexagon centrum valt
-      if (Math.sqrt(dx * dx + dy * dy) < hex.radius * 0.85) { // *0.85 marge voor klikbaarheid
-          clickedSemitone = hex.semitone;
-          console.log(`Clicked on hexagon for note: ${noteNames[clickedSemitone]} (${clickedSemitone})`); // Debug
-          break;
-      }
-  }
-
-  if (clickedSemitone !== -1) {
-      setRootNote(clickedSemitone);
-  } else {
-      console.log("Click outside any detected hexagon."); // Debug
-  }
-}
-
-
 window.addEventListener("load", () => {
-  // 1. Initiële Canvas Setup
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
   updateToolbarHeightVar()
-
-  // --- CORRECTIE: Initialiseer pianoRollCanvas en pianoRollCtx ---
-  pianoRollCanvas = document.getElementById('pianoRollCanvas');
-  if (pianoRollCanvas) {
-      pianoRollCtx = pianoRollCanvas.getContext('2d');
-  } else {
-      console.error("#pianoRollCanvas element not found!");
-  }
-  // --- Einde Correctie ---
-
-
-  // 2. Populeer Scale Dropdown in Transport Bar (#scaleSelectTransport)
-  const scaleDropdown = scaleSelectTransport // Gebruik de juiste variabele (gedefinieerd bovenaan)
-  if (scaleDropdown) {
-    Object.keys(scales).forEach((key) => {
-      const o = document.createElement("option")
-      o.value = key
-      // Gebruik een kortere naam ipv scales[key].name
-      o.textContent = key.replace("_", " ").replace("pentatonic", "penta")
-      scaleDropdown.appendChild(o) // **CORRECTIE: Gebruik scaleDropdown**
-    })
-    scaleDropdown.value = currentScaleKey // **CORRECTIE: Gebruik scaleDropdown**
-    // Listener voor als de gebruiker een andere schaal kiest
-    scaleDropdown.addEventListener("change", (e) => changeScale(e.target.value))
-  } else {
-    console.error("#scaleSelectTransport element not found!")
-  }
-
-  // 3. Listener voor klikken op de Piano Roll Canvas
-  if (pianoRollCanvas) {
-    pianoRollCanvas.addEventListener("mousedown", handlePianoRollClick)
-  } else {
-    // Deze console.error zou nu niet meer moeten triggeren door de eerdere check
-    console.error("#pianoRollCanvas element not found for click listener!")
-  }
-
-  // 4. Overige UI Element Listeners (zorg dat listeners voor niet-bestaande elementen weg zijn)
-  if (playPauseBtn) playPauseBtn.addEventListener("click", togglePlayPause)
-  if (globalSyncToggleBtn)
-    globalSyncToggleBtn.addEventListener("click", () => {
-      isGlobalSyncEnabled = !isGlobalSyncEnabled
-      nodes.forEach((n) => {
-        if (n.isStartNode) {
-          n.lastTriggerTime = -1
-          n.nextSyncTriggerTime = 0
-          n.nextGridTriggerTime = 0
-          n.nextRandomTriggerTime = 0
-        }
-      })
-      lastBeatTime = 0
-      updateSyncUI()
-      saveState()
-    })
-  if (globalBpmInput)
-    globalBpmInput.addEventListener("change", (e) => {
-      const newBPM = parseInt(e.target.value, 10)
-      if (!isNaN(newBPM) && newBPM >= 30 && newBPM <= 300) {
-        globalBPM = newBPM
-        nodes.forEach((n) => {
-          if (n.isStartNode) {
-            n.nextSyncTriggerTime = 0
-            n.nextGridTriggerTime = 0
-          }
-        })
-        saveState()
-      } else {
-        globalBpmInput.value = globalBPM
-      }
-    })
-  if (restartPulsarsBtn)
-    restartPulsarsBtn.addEventListener("click", () => {
-      if (!isAudioReady || isGlobalSyncEnabled)
-        return
-      const nowTime = audioContext.currentTime
-      let restarted = false
-      selectedElements.forEach((el) => {
-        if (el.type === "node") {
-          const node = findNodeById(el.id)
-          if (node && node.isStartNode && node.type !== "pulsar_triggerable") {
-            node.lastTriggerTime = nowTime
-            node.isEnabled = true
-            node.animationState = 0.5
-            setTimeout(() => {
-              const checkNode = findNodeById(node.id)
-              if (checkNode) checkNode.animationState = 0
-            }, 150)
-            restarted = true
-          }
-        }
-      })
-      if (restarted) {
-        saveState()
-      }
-    })
-  if (mixerBtn)
-    mixerBtn.addEventListener("click", () => {
-      const isOpen = !mixerPanel.classList.contains("hidden")
-      resetSideToolbars()
-      hideBottomPanels()
-      if (!isOpen) {
-        mixerPanel.classList.remove("hidden")
-        mixerBtn.classList.add("active")
-        updateMixerUI()
-        // populateMixerPanel() // Assuming this function exists elsewhere
-      }
-    })
-  if (gridToggleBtn)
-    gridToggleBtn.addEventListener("click", () => {
-      isGridVisible = !isGridVisible
-      gridToggleBtn.textContent = `Grid: ${isGridVisible ? "ON" : "OFF"}`
-      gridToggleBtn.classList.toggle("active", isGridVisible)
-      gridOptionsDiv.classList.toggle("hidden", !isGridVisible)
-    })
-  if (gridTypeBtn)
-    gridTypeBtn.addEventListener("click", () => {
-      gridType = gridType === "lines" ? "dots" : "lines"
-      gridTypeBtn.textContent = `Type: ${
-        gridType === "lines" ? "Lines" : "Dots"
-      }`
-    })
-  if (gridSnapBtn)
-    gridSnapBtn.addEventListener("click", () => {
-      isSnapEnabled = !isSnapEnabled
-      gridSnapBtn.textContent = `Snap: ${isSnapEnabled ? "ON" : "OFF"}`
-      gridSnapBtn.classList.toggle("active", isSnapEnabled)
-    })
-  if (toggleInfoTextBtn)
-    toggleInfoTextBtn.addEventListener("click", () => {
-      isInfoTextVisible = !isInfoTextVisible
-      updateInfoToggleUI()
-    })
-  if (addSoundStarBtn)
-    addSoundStarBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "sound", true, "waveforms", "Sounds")
-    })
-  if (addNebulaBtn)
-    addNebulaBtn.addEventListener("click", (e) => {
-      setupAddTool(
-        e.currentTarget,
-        "nebula",
-        true,
-        "waveforms",
-        "Nebula Sounds"
-      )
-    })
-  if (addPulsarBtn)
-    addPulsarBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, null, true, "pulsarTypes", "Pulsars")
-    })
-  if (addDrumElementBtn)
-    addDrumElementBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, null, true, "drumElements", "Drum Elements")
-    })
-  if (addGateBtn)
-    addGateBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "gate")
-    })
-  if (addProbabilityGateBtn)
-    addProbabilityGateBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "probabilityGate")
-    })
-  if (addPitchShiftBtn)
-    addPitchShiftBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "pitchShift")
-    })
-  if (addRelayBtn)
-    addRelayBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "relay")
-    })
-  if (addReflectorBtn)
-    addReflectorBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "reflector")
-    })
-  if (addSwitchBtn)
-    addSwitchBtn.addEventListener("click", (e) => {
-      setupAddTool(e.currentTarget, "switch")
-    })
-  if (editBtn) editBtn.addEventListener("click", () => setActiveTool("edit"))
-  if (connectBtn)
-    connectBtn.addEventListener("click", () => setActiveTool("connect"))
-  if (connectStringBtn)
-    connectStringBtn.addEventListener("click", () =>
-      setActiveTool("connect_string")
-    )
-  // if (glideToolButton) glideToolButton.addEventListener('click', () => setActiveTool('connect_glide')); // Als je glide hebt
-  if (deleteBtn)
-    deleteBtn.addEventListener("click", () => setActiveTool("delete"))
-  if (undoBtn)
-    undoBtn.addEventListener("click", () => {
-      undo()
-    })
-  if (redoBtn)
-    redoBtn.addEventListener("click", () => {
-      redo()
-    })
-  if (hamburgerBtn)
-    hamburgerBtn.addEventListener("click", () => {
-      const isOpen = !hamburgerMenuPanel.classList.contains("hidden")
-      resetSideToolbars()
-      hideBottomPanels()
-      if (!isOpen) {
-        hamburgerMenuPanel.classList.remove("hidden")
-        setActiveTool("edit")
-        hamburgerBtn.classList.add("active")
-        populateEditPanel()
-      } else {
-        hamburgerMenuPanel.classList.add("hidden")
-        hamburgerBtn.classList.remove("active")
-      }
-    })
-  if (masterVolumeSlider) {
-    masterVolumeSlider.addEventListener("input", (e) => {
-      if (masterGain)
-        masterGain.gain.setTargetAtTime(
-          parseFloat(e.target.value),
-          audioContext.currentTime,
-          0.01
-        )
-      masterVolumeValue.textContent = parseFloat(e.target.value).toFixed(2)
-    })
-    masterVolumeSlider.addEventListener("change", saveState)
-  }
-  if (delaySendSlider) {
-    delaySendSlider.addEventListener("input", (e) => {
-      if (masterDelaySendGain)
-        masterDelaySendGain.gain.setTargetAtTime(
-          parseFloat(e.target.value),
-          audioContext.currentTime,
-          0.01
-        )
-      delaySendValue.textContent = parseFloat(e.target.value).toFixed(2)
-    })
-    delaySendSlider.addEventListener("change", saveState)
-  }
-  if (delayTimeSlider) {
-    delayTimeSlider.addEventListener("input", (e) => {
-      if (delayNode)
-        delayNode.delayTime.setTargetAtTime(
-          parseFloat(e.target.value),
-          audioContext.currentTime,
-          0.01
-        )
-      delayTimeValue.textContent = parseFloat(e.target.value).toFixed(2) + "s"
-    })
-    delayTimeSlider.addEventListener("change", saveState)
-  }
-  if (delayFeedbackSlider) {
-    delayFeedbackSlider.addEventListener("input", (e) => {
-      if (delayFeedbackGain)
-        delayFeedbackGain.gain.setTargetAtTime(
-          parseFloat(e.target.value),
-          audioContext.currentTime,
-          0.01
-        )
-      delayFeedbackValue.textContent = parseFloat(e.target.value).toFixed(2)
-    })
-    delayFeedbackSlider.addEventListener("change", saveState)
-  }
-  const showSingleNodesToggle = document.getElementById(
-    "showSingleNodeGroupsToggle"
-  )
-  if (showSingleNodesToggle) {
-    showSingleNodesToggle.addEventListener("change", (e) => {
-      // showSingleNodeGroups = e.target.checked // Assuming showSingleNodeGroups exists
-      // populateMixerPanel() // Assuming this function exists elsewhere
-    })
-  }
-  if (saveStateBtn) saveStateBtn.addEventListener("click", triggerSave)
-  if (loadStateBtn) loadStateBtn.addEventListener("click", triggerLoad)
-  if (loadStateInput) loadStateInput.addEventListener("change", handleFileLoad)
-  if (midiInSelect)
-    midiInSelect.addEventListener("change", (e) =>
-      selectMIDIInput(e.target.value)
-    )
-  if (midiOutSelect)
-    midiOutSelect.addEventListener("change", (e) =>
-      selectMIDIOutput(e.target.value)
-    )
-
-  // Dit is de listener die eerder werd toegevoegd, maar nu binnen de if-check staat
-  // als pianoRollCanvas correct is geïnitialiseerd:
-  // if (pianoRollCanvas) {
-  //   pianoRollCanvas.addEventListener('mousedown', handlePianoRollClick);
-  // }
-
-  // 5. Initiële Staat & UI Updates
+  Object.keys(scales).forEach((key) => {
+    const o = document.createElement("option")
+    o.value = key
+    o.textContent = scales[key].name
+    scaleSelectPianoRoll.appendChild(o.cloneNode(true))
+  })
+  scaleSelectPianoRoll.value = currentScaleKey
+  rootNoteSelect.value = currentRootNote
+  globalBpmInput.value = globalBPM
   setActiveTool("edit")
   startMessage.style.display = "block"
   resetSideToolbars()
@@ -6498,8 +6087,4 @@ window.addEventListener("load", () => {
   hideBottomPanels()
   updateMixerUI()
   updateScaleAndTransposeUI()
-  drawPianoRoll() // Zorg dat dit wordt aangeroepen *nadat* pianoRollCtx is geïnitialiseerd
-
-  // Forceer een eerste tekening
-  requestAnimationFrame(draw)
 })
