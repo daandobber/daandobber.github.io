@@ -6,7 +6,8 @@
     <title>Celestial Music Constellations V17.2 - Utility Nodes</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-major-pentatonic"> <canvas id="mainCanvas"></canvas>
+<body class="theme-major-pentatonic">
+    <canvas id="mainCanvas"></canvas>
 
     <div id="toolbar">
         <div id="toolbar-add-elements">
@@ -47,6 +48,7 @@
              <hr>
         </div>
         <p><strong>Global Settings:</strong></p>
+        <small>(Scale is now in Transport Controls & Piano Roll)</small>
         <div id="editPanelContent">
             </div>
          <hr>
@@ -90,53 +92,44 @@
         <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
          <div class="transport-divider"></div>
         <button id="mixerBtn" title="Open Mixer">🎚️</button>
+        <button id="pianoRollBtn" title="Open Piano Roll/Transpose">🎹</button>
+    </div>
 
-        <div class="transport-divider"></div>
-        <div id="transportScaleControls">
-             <label for="scaleSelectTransport" class="visually-hidden">Scale:</label>
-             <select id="scaleSelectTransport" title="Change musical scale and theme"></select>
-             <canvas id="pianoRollCanvas" width="300" height="45" title="Click to set Root Note"></canvas> </div>
-        </div> <div id="mixerPanel" class="bottom-panel hidden">
+    <div id="mixerPanel" class="bottom-panel hidden">
         <h3>Mixer</h3>
-        <div class="panel-section master-controls">
-            <div class="mixer-channel vertical">
-                 <label for="masterVolumeSlider">Master</label>
-                 <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume" orient="vertical">
-                 <span id="masterVolumeValue">0.80</span>
-            </div>
-             <div class="mixer-channel vertical">
-                 <label for="delaySendSlider">Delay Send</label>
-                 <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount" orient="vertical">
-                 <span id="delaySendValue">0.30</span>
-             </div>
-             <div class="mixer-channel vertical">
-                 <label for="delayTimeSlider">Delay Time</label>
-                 <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)" orient="vertical">
-                 <span id="delayTimeValue">0.25s</span>
-             </div>
-             <div class="mixer-channel vertical">
-                 <label for="delayFeedbackSlider">Delay Fdbk</label>
-                 <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount" orient="vertical">
-                 <span id="delayFeedbackValue">0.40</span>
-             </div>
+        <div class="panel-section">
+            <label for="masterVolumeSlider">Master Volume:</label>
+            <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
+            <span id="masterVolumeValue">0.80</span>
         </div>
-        <hr class="mixer-divider">
-        <div class="mixer-controls">
-             <div class="mixer-options">
-                 <label>
-                     <input type="checkbox" id="showSingleNodeGroupsToggle" checked> Show Single Nodes
-                 </label>
-                 <span id="mixerGroupCount">Groups: 0</span>
-             </div>
-             <div id="mixerChannelsContainer">
-                 </div>
+        <div class="panel-section">
+            <label for="delaySendSlider">Delay Send:</label>
+            <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount">
+            <span id="delaySendValue">0.30</span>
+            <label for="delayTimeSlider">Delay Time:</label>
+            <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)">
+            <span id="delayTimeValue">0.25s</span>
+             <label for="delayFeedbackSlider">Delay Feedback:</label>
+            <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
+            <span id="delayFeedbackValue">0.40</span>
         </div>
     </div>
+
+    <div id="pianoRollPanel" class="bottom-panel hidden">
+        <h3>Scale & Root</h3>
+        <canvas id="pianoRollCanvas"></canvas>
+    
+        <div class="panel-section scale-selector-section">
+            <label for="scaleSelectPianoRoll">Scale:</label>
+            <select id="scaleSelectPianoRoll" title="Change musical scale and theme">
+                </select>
+        </div>
+    </div>
+
 
     <div id="beatIndicator"></div>
     <div id="startMessage">Klik of tik om de sterren te wekken</div>
     <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
-
     <script src="app.js"></script>
 </body>
 </html>
