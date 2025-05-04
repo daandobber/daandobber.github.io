@@ -12,16 +12,18 @@
     <div id="toolbar">
         <div id="toolbar-add-elements">
             <button id="addSoundStarBtn" title="Add Sound Star (S)">★</button>
-            <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
-            <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
-            <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
             <button id="addSamplerBtn" title="Add Sampler Instrument">🛰️</button>
+            <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
+            <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
+            <button id="addPortalNebulaBtn" title="Add Portal Nebula (X)">🌀</button>
+            <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
             <button id="addGateBtn" title="Add Gate">🚦</button>
             <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
             <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
             <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
             <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
             <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
+            <button id="brushBtn" title="Brush Tool (B)">🖌️</button>
         </div>
         <hr class="toolbar-divider">
         <div id="toolbar-tools">
@@ -70,6 +72,9 @@
     <div id="sideToolbar" class="panel slide-panel hidden">
         <h3 id="sideToolbarTitle">Elements</h3>
         <div id="sideToolbarContent">
+            <label>Select Note:</label> <div id="hexNoteSelectorContainer" class="hex-note-container">
+            </div>
+    </div>
             </div>
     </div>
 
@@ -103,6 +108,9 @@
             <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
             <span id="masterVolumeValue">0.80</span>
         </div>
+    
+        <div id="mixerGroupControlsContainer" class="panel-section">
+            </div>
         <div class="panel-section">
             <label for="delaySendSlider">Delay Send:</label>
             <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount">
