@@ -2,7 +2,7 @@ const canvas = document.getElementById("mainCanvas")
 const ctx = canvas.getContext("2d")
 const startMessage = document.getElementById("startMessage")
 const loadingIndicator = document.getElementById("loadingIndicator")
-const scaleSelectPianoRoll = document.getElementById("scaleSelectPianoRoll")
+const scaleSelectTransport = document.getElementById("scaleSelectTransport");
 const groupControlsDiv = document.getElementById("groupControls")
 const groupVolumeSlider = document.getElementById("groupVolumeSlider")
 const groupFluctuateToggle = document.getElementById("groupFluctuateToggle")
@@ -25,9 +25,7 @@ const saveStateBtn = document.getElementById("saveStateBtn")
 const loadStateBtn = document.getElementById("loadStateBtn")
 const loadStateInput = document.getElementById("loadStateInput")
 const mixerBtn = document.getElementById("mixerBtn")
-const pianoRollBtn = document.getElementById("pianoRollBtn")
 const mixerPanel = document.getElementById("mixerPanel")
-const pianoRollPanel = document.getElementById("pianoRollPanel")
 const masterVolumeSlider = document.getElementById("masterVolumeSlider")
 const masterVolumeValue = document.getElementById("masterVolumeValue")
 const delaySendSlider = document.getElementById("delaySendSlider")
@@ -690,7 +688,7 @@ async function setupAudio() {
       updateLoadingIndicator();
       isAudioReady = true;
       resetSideToolbars();
-      changeScale(scaleSelectPianoRoll.value, true);
+      changeScale(scaleSelectTransport.value, true);
       updateSyncUI();
       updateGroupControlsUI();
       updateInfoToggleUI();
@@ -2614,126 +2612,175 @@ function stopStringSound(connection) {
   } catch (e) {}
 }
 
+
 function addNode(x, y, type, subtype = null) {
   if (!isAudioReady) return null;
-  let currentEvent = window.event;
+  let currentEvent = window.event; // Get current event if available
+  // Apply snap only if enabled AND shift key is NOT pressed during the add action
   let applySnap = isSnapEnabled && !(currentEvent && currentEvent.shiftKey);
   let finalPos = applySnap ? snapToGrid(x, y) : { x: x, y: y };
+
+  // Determine node properties based on type
   const isStartNodeType = isPulsarType(type);
   let nodeType = type;
   let initialScaleIndex = 0;
   let initialPitch = 0;
-  let nodeSubtype = subtype;
+  let nodeSubtype = subtype; // Could be waveform, drum type, pulsar type etc.
   let initialBaseHue = null;
 
+  // --- Pitch/Scale/Subtype Logic for Sound/Nebula/Portal ---
   if (type === "sound" || type === "nebula" || type === PORTAL_NEBULA_TYPE) {
-      if (type !== PORTAL_NEBULA_TYPE) {
-          if (noteIndexToAdd !== -1) {
+      if (type !== PORTAL_NEBULA_TYPE) { // Original Sound & Nebula need pitch
+          // Use selected note index if available, otherwise random within scale
+          if (noteIndexToAdd !== -1 && noteIndexToAdd !== null && noteIndexToAdd >= MIN_SCALE_INDEX && noteIndexToAdd <= MAX_SCALE_INDEX) {
               initialScaleIndex = noteIndexToAdd;
           } else {
-              initialScaleIndex = Math.floor(Math.random() * currentScale.notes.length * 2);
+              // Default random logic if no note is selected
+              initialScaleIndex = Math.floor(Math.random() * currentScale.notes.length * 2); // Random within 2 octaves of base
           }
+          // Clamp index to valid range
           initialScaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, initialScaleIndex));
           initialPitch = getFrequency(currentScale, initialScaleIndex);
+          // Fallback if frequency calculation fails
           if (isNaN(initialPitch)) {
+              console.warn(`Pitch calculation failed for scale index ${initialScaleIndex}, resetting to 0.`);
               initialScaleIndex = 0;
               initialPitch = getFrequency(currentScale, 0);
           }
       }
 
+      // Hue and specific subtype logic
       if (type === "nebula") {
-          initialBaseHue = Math.random() * 360;
-          if (nodeSubtype && nodeSubtype.startsWith("sampler_")) { nodeSubtype = "sawtooth"; }
+          initialBaseHue = Math.random() * 360; // Random hue for nebula
+          // Nebula cannot be a sampler, default to sawtooth if sampler subtype was passed
+          if (nodeSubtype && nodeSubtype.startsWith("sampler_")) {
+              console.warn("Cannot add sampler as Nebula, defaulting to sawtooth.");
+              nodeSubtype = "sawtooth";
+          }
       } else if (type === PORTAL_NEBULA_TYPE) {
-          initialBaseHue = PORTAL_NEBULA_DEFAULTS.baseColorHue + (Math.random() - 0.5) * 40;
-          initialPitch = PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
-          nodeSubtype = null;
+          initialBaseHue = PORTAL_NEBULA_DEFAULTS.baseColorHue + (Math.random() - 0.5) * 40; // Base portal hue with variation
+          initialPitch = PORTAL_NEBULA_DEFAULTS.droneBaseFreq; // Fixed base freq for portal
+          nodeSubtype = null; // Portal doesn't use waveform subtypes
       }
 
+      // Default waveform for 'sound' type if none provided or if sampler is invalid
       if (type === "sound" && !nodeSubtype) {
-           nodeSubtype = 'fmBell';
-      } else if (type === "sound" && nodeSubtype && nodeSubtype.startsWith('sampler_') && !(typeof SAMPLER_DEFINITIONS !== 'undefined' && SAMPLER_DEFINITIONS.find(s => s.id === nodeSubtype.replace('sampler_', '')))) {
-          nodeSubtype = 'fmBell';
+           console.log("No subtype for sound node, defaulting to fmBell.");
+           nodeSubtype = 'fmBell'; // Default waveform
+      } else if (type === "sound" && nodeSubtype && nodeSubtype.startsWith('sampler_')) {
+          // Check if the sampler actually exists and is loaded (optional but good)
+          const samplerId = nodeSubtype.replace('sampler_', '');
+          const definition = typeof SAMPLER_DEFINITIONS !== 'undefined' ? SAMPLER_DEFINITIONS.find(s => s.id === samplerId) : null;
+          if (!definition || definition.loadFailed) {
+              console.warn(`Sampler '${samplerId}' not found or failed to load. Defaulting sound node to fmBell.`);
+              nodeSubtype = 'fmBell'; // Fallback if sampler is invalid
+          }
       }
   }
 
+  // --- Drum Defaults ---
   const drumDefaults = isDrumType(type) ? DRUM_ELEMENT_DEFAULTS[type] : {};
-  const randomSize = (isStartNodeType || isDrumType(type) || type === PORTAL_NEBULA_TYPE)
-      ? MIN_NODE_SIZE + Math.random() * (MAX_NODE_SIZE - MIN_NODE_SIZE) * 0.7
-      : (type === "relay" || type === "reflector" || type === "switch" ? 0.7 : 1.0);
-  const starPoints = isStartNodeType ? 6 : 5;
 
+  // --- Node Size ---
+  // Pulsars, Drums, Portals get random size, others default or specific small size
+  const randomSize = (isStartNodeType || isDrumType(type) || type === PORTAL_NEBULA_TYPE)
+      ? MIN_NODE_SIZE + Math.random() * (MAX_NODE_SIZE - MIN_NODE_SIZE) * 0.7 // Random size within 70% range
+      : (type === "relay" || type === "reflector" || type === "switch" ? 0.7 : 1.0); // Logic/Utility nodes are smaller
+
+  const starPoints = isStartNodeType ? 6 : 5; // Pulsars have 6 points
+
+  // --- Create Node Object ---
   const newNode = {
       id: nodeIdCounter++,
       x: finalPos.x,
       y: finalPos.y,
       size: randomSize,
-      radius: NODE_RADIUS_BASE,
+      radius: NODE_RADIUS_BASE, // Base radius (visual size depends on this * size)
       type: nodeType,
-      baseHue: initialBaseHue,
-      connections: new Set(),
+      baseHue: initialBaseHue, // Used for Nebula/Portal color
+      connections: new Set(), // IDs of connected nodes
       isSelected: false,
-      isInConstellation: false,
+      isInConstellation: false, // For group highlighting
       audioParams: {
+          // Timing/Intensity (Pulsars/Gates/Probs)
           triggerInterval: DEFAULT_TRIGGER_INTERVAL,
-          waveform: nodeSubtype,
+          syncSubdivisionIndex: DEFAULT_SUBDIVISION_INDEX, // Default for sync mode
+          probability: DEFAULT_PROBABILITY,
+          pulseIntensity: DEFAULT_PULSE_INTENSITY, // Default pulse strength
+          // Sound Synthesis (Sound/Nebula/Strings/Drums)
+          waveform: nodeSubtype, // Could be 'sine', 'sampler_piano', etc. null for others
+          pitch: initialPitch, // Calculated frequency
+          scaleIndex: initialScaleIndex, // Index in the current scale
+          volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0), // Drum/Portal specific vol, else 1
+          // Effects Sends
           reverbSend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_REVERB_SEND * 1.5) : DEFAULT_REVERB_SEND,
           delaySend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_DELAY_SEND * 1.2) : DEFAULT_DELAY_SEND,
-          lowPassFreq: MAX_FILTER_FREQ,
-          fmModDepthScale: 1.0,
-          pitch: initialPitch,
-          scaleIndex: initialScaleIndex,
-          volLfoRate: 0.1 + Math.random() * 0.2,
-          volLfoDepth: 0,
-          probability: DEFAULT_PROBABILITY,
-          pulseIntensity: DEFAULT_PULSE_INTENSITY,
-          baseFreq: drumDefaults?.baseFreq,
-          decay: drumDefaults?.decay,
-          noiseDecay: drumDefaults?.noiseDecay,
-          volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0),
-          detune: 7,
-          lfoDepthFactor: 1
+          // Sound Specific
+          lowPassFreq: MAX_FILTER_FREQ, // Initial filter cutoff
+          fmModDepthScale: 1.0, // For FM sounds
+          volLfoRate: 0.1 + Math.random() * 0.2, // Rate for volume fluctuation LFO
+          volLfoDepth: 0, // Depth of volume fluctuation (controlled by group setting)
+          // Nebula Specific
+          detune: 7, // Base detune for nebula oscillators
+          lfoDepthFactor: 1, // Multiplier for filter LFO depth
+          // Drum Specific
+          baseFreq: drumDefaults?.baseFreq, // e.g., Kick fundamental
+          decay: drumDefaults?.decay, // e.g., Kick decay time
+          noiseDecay: drumDefaults?.noiseDecay, // e.g., Snare noise decay
+          // Pitch Shift Specific
+          pitchShiftIndex: type === "pitchShift" ? DEFAULT_PITCH_SHIFT_INDEX : 0,
+          pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[DEFAULT_PITCH_SHIFT_INDEX] : 0,
+          pitchShiftAlternating: false,
+          pitchShiftDirection: 1,
+           // Gate Specific
+          gateModeIndex: type === "gate" ? DEFAULT_GATE_MODE_INDEX : 0,
+          gateCounter: 0,
+          lastRandomGateResult: true,
+          // MIDI Out Specific
+          midiOutEnabled: false,
+          midiChannel: 1,
+          midiNote: 60, // Default MIDI note C4
       },
-      color: null,
-      audioNodes: null,
-      isStartNode: isStartNodeType,
-      isTriggered: false,
-      lastTriggerPulseId: -1,
-      animationState: 0,
-      lastTriggerTime: -1,
-      currentAngle: (type === "gate" || (type === "sound" && nodeSubtype?.startsWith("sampler_"))) ? Math.random() * Math.PI * 2 : 0, // Portal gebruikt dit nu niet direct
-      innerAngle: 0, // Alleen voor oude nebula stijl
-      pulsePhase: type === "nebula" || type === PORTAL_NEBULA_TYPE ? Math.random() * Math.PI * 2 : 0,
-      gateModeIndex: type === "gate" ? DEFAULT_GATE_MODE_INDEX : 0,
-      gateCounter: 0,
-      lastRandomGateResult: true,
-      pitchShiftIndex: type === "pitchShift" ? DEFAULT_PITCH_SHIFT_INDEX : 0,
-      pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[DEFAULT_PITCH_SHIFT_INDEX] : 0,
-      pitchShiftAlternating: false,
-      pitchShiftDirection: 1,
-      syncSubdivisionIndex: DEFAULT_SUBDIVISION_INDEX,
-      nextSyncTriggerTime: 0,
-      nextRandomTriggerTime: 0,
-      starPoints: starPoints,
-      isEnabled: true,
-      pulseOriginNodeId: -1,
-      midiOutEnabled: false,
-      midiChannel: 1,
-      midiNote: 60,
-      primaryInputConnectionId: type === "switch" ? null : undefined
+      color: null, // Specific color override (e.g., for Pulsars)
+      audioNodes: null, // References to Web Audio API nodes
+      isStartNode: isStartNodeType, // Is it a pulsar?
+      isTriggered: false, // Is it currently playing sound?
+      lastTriggerPulseId: -1, // To prevent infinite loops
+      animationState: 0, // For visual feedback (glow, etc.)
+      // Pulsar State
+      lastTriggerTime: -1, // Time of last non-sync trigger
+      nextSyncTriggerTime: 0, // Scheduled time for next sync trigger
+      nextRandomTriggerTime: 0, // Scheduled time for random pulsar trigger
+      isEnabled: true, // Can the pulsar trigger? (Triggerable starts enabled)
+      // Visuals
+      starPoints: starPoints, // How many points for star shape (pulsars)
+      currentAngle: (type === "gate" || (type === "sound" && nodeSubtype?.startsWith("sampler_"))) ? Math.random() * Math.PI * 2 : 0, // Rotation for gates/samplers
+      innerAngle: 0, // Inner rotation (legacy nebula)
+      pulsePhase: type === "nebula" || type === PORTAL_NEBULA_TYPE ? Math.random() * Math.PI * 2 : 0, // Phase for visual pulsing
+      // Switch Specific
+      primaryInputConnectionId: type === "switch" ? null : undefined // ID of the connection designated as primary input
   };
 
-  newNode.audioNodes = createAudioNodesForNode(newNode);
-  if (newNode.audioNodes) {
-      // updateNodeAudioParams moet misschien later portal type herkennen
-      // voor nu zou het geen kwaad moeten kunnen
-      updateNodeAudioParams(newNode);
+  // --- Create Audio ---
+  if (isAudioReady) {
+    newNode.audioNodes = createAudioNodesForNode(newNode);
+    if (newNode.audioNodes) {
+      updateNodeAudioParams(newNode); // Set initial audio parameters
+    } else {
+       console.warn(`Failed to create audio nodes for new node type: ${newNode.type}`);
+    }
   }
+
+  // --- Add to List & Update ---
   nodes.push(newNode);
-  saveState();
-  identifyAndRouteAllGroups();
-  return newNode;
+  console.log(`Node added: ID=${newNode.id}, Type=${newNode.type}, Subtype=${newNode.audioParams.waveform}, Pos=(${newNode.x.toFixed(0)}, ${newNode.y.toFixed(0)})`);
+
+  saveState(); // Save the new state for undo/redo
+  identifyAndRouteAllGroups(); // Update audio routing based on new node
+
+  return newNode; // Return the created node object
 }
+
 function stopNodeAudio(node) {
   if (!node || !node.audioNodes) return;
   try {
@@ -4303,12 +4350,12 @@ function handlePulsarTriggerToggle(node) {
 let _tempWasSelectedAtMouseDown = false;
 
 function handleMouseDown(event) {
-  console.log(`DEBUG handleMouseDown Start: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}'`);
+  console.log(`DEBUG handleMouseDown Start: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}'`); // Keep for debugging
 
   if (!isPlaying && event.target === canvas) { togglePlayPause(); return; }
   if (!isAudioReady) return;
 
-  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target) || pianoRollPanel.contains(event.target);
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
   if (targetIsPanelControl) { return; }
 
   updateMousePos(event);
@@ -4345,6 +4392,7 @@ function handleMouseDown(event) {
   }
 
   if (elementClickedAtMouseDown) {
+      // Logic for clicking existing elements (mostly unchanged)
       const element = elementClickedAtMouseDown;
       const node = element.type === 'node' ? nodeClickedAtMouseDown : null;
       const connection = element.type === 'connection' ? connectionClickedAtMouseDown : null;
@@ -4355,7 +4403,8 @@ function handleMouseDown(event) {
           resizeStartY = screenMousePos.y;
           canvas.style.cursor = 'ns-resize';
       } else if (event.shiftKey && currentTool !== 'edit') {
-          if (isElementSelected(element.type, element.id)) {
+          // Handle shift-click selection/deselection
+           if (isElementSelected(element.type, element.id)) {
               selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
           } else {
               selectedElements.add(element);
@@ -4363,15 +4412,16 @@ function handleMouseDown(event) {
           if (currentTool === 'edit') updateConstellationGroup();
           updateGroupControlsUI();
           populateEditPanel();
-          nodeClickedAtMouseDown = null;
+          nodeClickedAtMouseDown = null; // Prevent drag starting after shift-click select/deselect
           connectionClickedAtMouseDown = null;
       } else if (event.altKey && currentTool === 'edit' && node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) {
-           // Action in MouseUp
+          // Action for alt-click on node in MouseUp
       } else if (event.altKey && currentTool === 'edit' && connection && connection.type === 'string_violin') {
-           // Action in MouseUp
+          // Action for alt-click on connection in MouseUp
       } else {
+          // Logic for connect, delete, edit drag start (unchanged)
           if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide') {
-              if (node && !['nebula', PORTAL_NEBULA_TYPE].includes(node.type)) { // Prevent connecting from portal too
+              if (node && !['nebula', PORTAL_NEBULA_TYPE].includes(node.type)) {
                   isConnecting = true;
                   connectingNode = node;
                   if (currentTool === 'connect_string') {
@@ -4389,25 +4439,25 @@ function handleMouseDown(event) {
               nodeClickedAtMouseDown = null;
               connectionClickedAtMouseDown = null;
           } else if (currentTool === 'edit') {
-              let selectionChanged = false;
+               let selectionChanged = false;
               if (!isElementSelected(element.type, element.id)) {
                   if (!event.shiftKey) selectedElements.clear();
                   selectedElements.add(element);
                   selectionChanged = true;
-               } else if (event.shiftKey) {
+              } else if (event.shiftKey) {
                   selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
                   selectionChanged = true;
-               }
+              }
 
-              if (node) {
+              if (node) { // Start dragging if clicking a node in edit mode
                   isDragging = true;
                   dragStartPos = { ...mousePos };
                   nodeDragOffsets.clear();
                   selectedElements.forEach(el => {
-                       if (el.type === 'node') {
-                           const n = findNodeById(el.id);
-                           if (n) nodeDragOffsets.set(el.id, { x: n.x - mousePos.x, y: n.y - mousePos.y });
-                       }
+                      if (el.type === 'node') {
+                          const n = findNodeById(el.id);
+                          if (n) nodeDragOffsets.set(el.id, { x: n.x - mousePos.x, y: n.y - mousePos.y });
+                      }
                   });
                   canvas.style.cursor = 'move';
               }
@@ -4415,10 +4465,10 @@ function handleMouseDown(event) {
               if (selectionChanged) {
                   updateConstellationGroup();
                   populateEditPanel();
-               }
+              }
           }
       }
-  } else {
+  } else { // Clicked on empty space
       if (currentTool === 'edit') {
           isSelecting = true;
           selectionRect = { startX: mousePos.x, startY: mousePos.y, endX: mousePos.x, endY: mousePos.y, active: false };
@@ -4430,38 +4480,23 @@ function handleMouseDown(event) {
               }
           }
       } else if (currentTool === 'add' && nodeTypeToAdd !== null) {
-          console.log(`DEBUG handleMouseDown: In 'add' mode check, type='${nodeTypeToAdd}'`);
-
-          const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch'];
-          const canAddNode = directAddTypes.includes(nodeTypeToAdd) ||
-                             (nodeTypeToAdd === 'sound' && waveformToAdd) ||
-                             (nodeTypeToAdd === 'nebula' && waveformToAdd) ||
-                             (isPulsarType(nodeTypeToAdd)) ||
-                             (isDrumType(nodeTypeToAdd)) ||
-                             (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
-
-          console.log(`DEBUG handleMouseDown: Check 'canAddNode' = ${canAddNode}`);
-
-          if (canAddNode) {
-              console.log(`DEBUG handleMouseDown: Poging tot aanroepen addNode...`);
-              const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
-              console.log(`DEBUG handleMouseDown: addNode gaf terug:`, newNode);
-              if (newNode) {
-                  if (!event.shiftKey) selectedElements.clear();
-                  selectedElements.add({type: 'node', id: newNode.id});
-                  populateEditPanel();
-              } else {
-                  console.error("DEBUG handleMouseDown: addNode gaf null terug!");
-              }
-          } else {
-               console.log(`DEBUG handleMouseDown: canAddNode is false, node wordt NIET toegevoegd.`);
-          }
-      } else if (!['connect', 'connect_string', 'connect_glide', 'delete'].includes(currentTool) ) {
-           if (selectedElements.size > 0 && !event.shiftKey) {
+           console.log(`DEBUG handleMouseDown: 'add' mode detected, node will be added on mouseUp.`);
+           if (!event.shiftKey && selectedElements.size > 0) {
                selectedElements.clear();
-               updateGroupControlsUI();
+               updateConstellationGroup();
                populateEditPanel();
            }
+      } else if (currentTool === 'brush') {
+          // *** REMOVED BRUSH RESET FROM HERE ***
+          // isBrushing = false; // NO LONGER RESET HERE
+          // lastBrushNode = null; // NO LONGER RESET HERE
+          // console.log("Brush: MouseDown detected, brush state preserved."); // Updated log
+      } else if (!['connect', 'connect_string', 'connect_glide', 'delete'].includes(currentTool)) {
+          if (selectedElements.size > 0 && !event.shiftKey) {
+              selectedElements.clear();
+              updateGroupControlsUI();
+              populateEditPanel();
+          }
       }
   }
   hideBottomPanels();
@@ -4469,266 +4504,357 @@ function handleMouseDown(event) {
 
 
 function handleMouseUp(event) {
-    if (!isAudioReady) return;
-    const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target) || pianoRollPanel.contains(event.target);
-    if (targetIsPanelControl) {
-        isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false;
-        selectionRect.active = false; connectingNode = null; nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null;
-        canvas.style.cursor = 'crosshair';
-        return;
-    }
+  if (!isAudioReady) return;
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
+  if (targetIsPanelControl) {
+      // Reset states if mouse up happens over a control panel
+      isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false;
+      selectionRect.active = false; connectingNode = null; nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null;
+      canvas.style.cursor = 'crosshair'; // Reset cursor
+      return;
+  }
 
-    updateMousePos(event);
-    const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y);
-    const connectionUnderCursor = !nodeUnderCursor ? findConnectionNear(mousePos.x, mousePos.y) : null;
-    let elementUnderCursor = null;
-    if (nodeUnderCursor) elementUnderCursor = { type: 'node', id: nodeUnderCursor.id };
-    else if (connectionUnderCursor) elementUnderCursor = { type: 'connection', id: connectionUnderCursor.id };
+  updateMousePos(event);
+  const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y);
+  const connectionUnderCursor = !nodeUnderCursor ? findConnectionNear(mousePos.x, mousePos.y) : null;
+  let elementUnderCursor = null;
+  if (nodeUnderCursor) elementUnderCursor = { type: 'node', id: nodeUnderCursor.id };
+  else if (connectionUnderCursor) elementUnderCursor = { type: 'connection', id: connectionUnderCursor.id };
 
-    const wasSelectedAtStart = _tempWasSelectedAtMouseDown;
-    _tempWasSelectedAtMouseDown = false;
+  // Use temporary variable set in mouseDown to know if the clicked element was selected *at the start*
+  const wasSelectedAtStart = _tempWasSelectedAtMouseDown;
+  _tempWasSelectedAtMouseDown = false; // Reset temporary flag
 
-    const wasResizing = isResizing;
-    const wasConnecting = isConnecting;
-    const wasDragging = isDragging;
-    const wasSelecting = isSelecting;
-    const wasPanning = isPanning;
-    const nodeClickedStart = nodeClickedAtMouseDown;
-    const connectionClickedStart = connectionClickedAtMouseDown;
-    const elementClickedStart = nodeClickedStart ? { type: 'node', id: nodeClickedStart.id } : (connectionClickedStart ? { type: 'connection', id: connectionClickedStart.id } : null);
-    let stateWasChanged = false;
+  const wasResizing = isResizing;
+  const wasConnecting = isConnecting;
+  const wasDragging = isDragging; // Check if dragging was active
+  const wasSelecting = isSelecting; // Check if selection rectangle was active
+  const wasPanning = isPanning;
+  const nodeClickedStart = nodeClickedAtMouseDown;
+  const connectionClickedStart = connectionClickedAtMouseDown;
+  const elementClickedStart = nodeClickedStart ? { type: 'node', id: nodeClickedStart.id } : (connectionClickedStart ? { type: 'connection', id: connectionClickedStart.id } : null);
+  let stateWasChanged = false; // Flag to track if saveState is needed
 
-    isResizing = false;
-    isConnecting = false;
-    isDragging = false;
-    isSelecting = false;
-    isPanning = false;
-    selectionRect.active = false;
-    canvas.style.cursor = 'crosshair';
+  // Reset interaction states
+  isResizing = false;
+  isConnecting = false;
+  isDragging = false;
+  isSelecting = false;
+  isPanning = false;
+  selectionRect.active = false; // Deactivate selection rectangle drawing
+  canvas.style.cursor = 'crosshair'; // Reset cursor
 
-    if (wasConnecting) {
-        if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor.type)) {
-            connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
-            stateWasChanged = true;
-        }
-        connectingNode = null;
-        connectionTypeToAdd = 'standard';
-    }
-    else if (!wasDragging && !wasPanning && !wasResizing) {
-        if (currentTool === 'brush') {
-            if (!elementUnderCursor) {
-                let typeToPlace = brushNodeType; // Default: het geselecteerde type
-                let subtypeToPlace = (brushNodeType === 'sound') ? brushWaveform : null; // Alleen subtype voor sound
+  // --- Logic based on what was happening ---
 
-                if (!isBrushing && brushStartWithPulse) {
-                    // Eerste klik EN vinkje aan: plaats een pulsar!
-                    typeToPlace = 'pulsar_standard'; // Overschrijf type
-                    subtypeToPlace = null; // Pulsar heeft geen waveform subtype
-                    console.log("Brush: Placing Pulsar as first node.");
-                } else {
-                     // Tweede+ klik OF vinkje uit: plaats het geselecteerde type
-                     console.log(`Brush: Placing selected type: ${brushNodeType} / ${subtypeToPlace}`);
-                }
+  if (wasConnecting) {
+      // Complete connection if dropped on a valid node
+      if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor.type)) {
+          connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
+          stateWasChanged = true;
+      }
+      connectingNode = null; // Reset connecting node regardless
+      connectionTypeToAdd = 'standard'; // Reset connection type
+  }
+  else if (wasResizing) {
+      // Resizing is finished, state was likely changed during mouseMove
+      stateWasChanged = true; // Assume size changed, trigger save
+  }
+  else if (wasDragging) {
+       // Dragging finished, position was likely changed during mouseMove
+       stateWasChanged = true; // Assume position changed, trigger save
+       identifyAndRouteAllGroups(); // Reroute audio after dragging nodes potentially changes groups
+  }
+  else if (wasSelecting && didDrag) {
+      // Selection rectangle finished
+      const selX1 = Math.min(selectionRect.startX, selectionRect.endX);
+      const selY1 = Math.min(selectionRect.startY, selectionRect.endY);
+      const selX2 = Math.max(selectionRect.startX, selectionRect.endX);
+      const selY2 = Math.max(selectionRect.startY, selectionRect.endY);
 
-                 const newNode = addNode(mousePos.x, mousePos.y, typeToPlace, subtypeToPlace);
+      if (!event.shiftKey) selectedElements.clear(); // Clear previous selection unless shift is held
 
-                 if (newNode) {
-                     stateWasChanged = true; // Node is toegevoegd
-                     if (isBrushing && lastBrushNode) {
-                         // Verbind met vorige node (kan pulsar of sound zijn)
-                         connectNodes(lastBrushNode, newNode, 'standard');
-                     }
-                     // De startpuls logica van hiervoor is nu niet meer nodig,
-                     // de pulsar doet zijn werk vanzelf als hij geplaatst is.
+      nodes.forEach(n => {
+          if (n.x >= selX1 && n.x <= selX2 && n.y >= selY1 && n.y <= selY2) {
+              selectedElements.add({ type: 'node', id: n.id });
+          }
+      });
+      connections.forEach(c => {
+          const nA = findNodeById(c.nodeAId);
+          const nB = findNodeById(c.nodeBId);
+          if (nA && nB) {
+              const midX = (nA.x + nB.x) / 2 + c.controlPointOffsetX;
+              const midY = (nA.y + nB.y) / 2 + c.controlPointOffsetY;
+              if (midX >= selX1 && midX <= selX2 && midY >= selY1 && midY <= selY2) {
+                  selectedElements.add({ type: 'connection', id: c.id });
+              }
+          }
+      });
+      stateWasChanged = true; // Selection potentially changed
+      updateConstellationGroup();
+      populateEditPanel();
+  }
+  // --- Handle simple clicks (no drag, pan, resize, connect) ---
+  else if (!wasDragging && !wasPanning && !wasResizing) {
+      if (currentTool === 'brush') {
+          if (!elementUnderCursor) { // Clicked on empty space with brush
+              let typeToPlace = brushNodeType;
+              let subtypeToPlace = (brushNodeType === 'sound') ? brushWaveform : null;
 
-                     lastBrushNode = newNode;
-                     isBrushing = true;
-                     selectedElements.clear();
-                     selectedElements.add({ type: 'node', id: newNode.id });
-                     populateEditPanel();
-                 }
-            } else {
-                 console.log("Brush: Chain ended by clicking existing element.");
-                 isBrushing = false;
-                 lastBrushNode = null;
-                 if (!isElementSelected(elementUnderCursor.type, elementUnderCursor.id)) {
-                     if (!event.shiftKey) selectedElements.clear();
-                     selectedElements.add(elementUnderCursor);
-                     updateConstellationGroup();
-                     populateEditPanel();
-                     stateWasChanged = true;
-                 }
-            }
-        } else if (currentTool === 'edit') {
-            if (elementClickedStart && elementUnderCursor && elementClickedStart.type === elementUnderCursor.type && elementClickedStart.id === elementUnderCursor.id) {
-                 const targetElement = elementClickedStart;
-                 const node = targetElement.type === 'node' ? nodeClickedStart : null;
-                 const connection = targetElement.type === 'connection' ? connectionClickedStart : null;
-                 if (event.button === 0) {
-                     if (event.altKey) {
-                         if (node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) { handlePitchCycleDown(targetElement); stateWasChanged = true; }
-                         else if (connection && connection.type === 'string_violin') { handlePitchCycleDown(targetElement); stateWasChanged = true; }
-                     } else if (!event.shiftKey) {
-                         if (wasSelectedAtStart) {
-                             if (node) {
-                                 if (node.type === 'pulsar_manual') { triggerManualPulsar(node); }
-                                 else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles') { if (isGlobalSyncEnabled) { handleSubdivisionCycle(node); } else { handleTapTempo(node); } stateWasChanged = true; }
-                                 else if (node.type === 'sound' || node.type === 'nebula') { handlePitchCycle(targetElement); stateWasChanged = true; }
-                                 else if (node.type === 'gate') { handleGateCycle(node); stateWasChanged = true; }
-                                 else if (node.type === 'probabilityGate') { handleProbabilityCycle(node); stateWasChanged = true; }
-                                 else if (node.type === 'pitchShift') { handlePitchShiftCycle(node); stateWasChanged = true; }
-                                 else if (isDrumType(node.type)) { triggerNodeEffect(node); }
-                             } else if (connection && connection.type === 'string_violin') { handlePitchCycle(targetElement); stateWasChanged = true; }
-                         } else {
-                             if (!isElementSelected(targetElement.type, targetElement.id) || selectedElements.size > 1) { selectedElements.clear(); selectedElements.add(targetElement); updateConstellationGroup(); populateEditPanel(); stateWasChanged = true; }
-                         }
-                     }
-                 }
-            } else if (!elementClickedStart && !event.shiftKey) {
-                 if (selectedElements.size > 0) { selectedElements.clear(); updateConstellationGroup(); populateEditPanel(); stateWasChanged = true; }
-                 isBrushing = false;
-                 lastBrushNode = null;
-            }
-        } else {
-             isBrushing = false;
-             lastBrushNode = null;
-             if (currentTool === 'add' && !elementClickedStart) {
-                 const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch'];
-                 const canAddNode = directAddTypes.includes(nodeTypeToAdd) || (nodeTypeToAdd === 'sound' && waveformToAdd) || (nodeTypeToAdd === 'nebula' && waveformToAdd) || (isPulsarType(nodeTypeToAdd)) || (isDrumType(nodeTypeToAdd)) || (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
-                 if (canAddNode) {
-                     const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
-                     if (newNode) { if (!event.shiftKey) selectedElements.clear(); selectedElements.add({type: 'node', id: newNode.id}); populateEditPanel(); stateWasChanged = true; }
-                 }
-             } else if (currentTool === 'delete' && elementClickedStart) {
-                  if (elementClickedStart.type === 'node') removeNode(nodeClickedStart);
-                  else if (elementClickedStart.type === 'connection') removeConnection(connectionClickedStart);
-             } else if (!elementClickedStart && !event.shiftKey) {
-                  if (selectedElements.size > 0) { selectedElements.clear(); updateGroupControlsUI(); populateEditPanel(); stateWasChanged = true;}
-             }
-        }
-    }
+              // Special case: First click in a chain with 'start with pulse' enabled
+              if (!isBrushing && brushStartWithPulse) {
+                  typeToPlace = 'pulsar_standard';
+                  subtypeToPlace = null;
+                  console.log("Brush: Placing Pulsar as first node.");
+              } else {
+                  console.log(`Brush: Placing selected type: ${brushNodeType} / ${subtypeToPlace}`);
+              }
 
-    didDrag = false;
-    nodeClickedAtMouseDown = null;
-    connectionClickedAtMouseDown = null;
-    nodeWasSelectedAtMouseDown = false;
-    nodeDragOffsets.clear();
-    panStart = { x: 0, y: 0 };
-    connectionTypeToAdd = 'standard';
-    if (stateWasChanged && !isPerformingUndoRedo) {
-        saveState();
-    }
-    updateGroupControlsUI();
+              const newNode = addNode(mousePos.x, mousePos.y, typeToPlace, subtypeToPlace);
+
+              if (newNode) {
+                  stateWasChanged = true;
+                  if (isBrushing && lastBrushNode) {
+                      // Connect to previous node if continuing a chain
+                      connectNodes(lastBrushNode, newNode, 'standard');
+                  }
+                  lastBrushNode = newNode; // Update last node for the next potential connection
+                  isBrushing = true; // Indicate that we are now actively brushing
+                  selectedElements.clear(); // Deselect previous elements
+                  selectedElements.add({ type: 'node', id: newNode.id }); // Select the new node
+                  populateEditPanel();
+              }
+          } else { // Clicked on existing element with brush
+              console.log("Brush: Chain ended by clicking existing element.");
+              isBrushing = false; // End the brush chain
+              lastBrushNode = null;
+              // Select the clicked element if it wasn't already
+              if (!isElementSelected(elementUnderCursor.type, elementUnderCursor.id)) {
+                   if (!event.shiftKey) selectedElements.clear();
+                   selectedElements.add(elementUnderCursor);
+                   updateConstellationGroup();
+                   populateEditPanel();
+                   stateWasChanged = true;
+               }
+          }
+      } else if (currentTool === 'edit') {
+          // Handle clicks in edit mode
+          if (elementClickedStart && elementUnderCursor && elementClickedStart.type === elementUnderCursor.type && elementClickedStart.id === elementUnderCursor.id) {
+              // Clicked and released on the same element
+              const targetElement = elementClickedStart;
+              const node = targetElement.type === 'node' ? nodeClickedStart : null;
+              const connection = targetElement.type === 'connection' ? connectionClickedStart : null;
+
+              if (event.button === 0) { // Left click
+                  if (event.altKey) { // Alt-click
+                      if (node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) { handlePitchCycleDown(targetElement); stateWasChanged = true; }
+                      else if (connection && connection.type === 'string_violin') { handlePitchCycleDown(targetElement); stateWasChanged = true; }
+                  } else if (!event.shiftKey) { // Normal left click (not shift)
+                      // If it was already selected, perform primary action
+                      if (wasSelectedAtStart) {
+                          if (node) {
+                              if (node.type === 'pulsar_manual') { triggerManualPulsar(node); /* No state change for manual trigger */ }
+                              else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles') { if (isGlobalSyncEnabled) { handleSubdivisionCycle(node); } else { handleTapTempo(node); } stateWasChanged = true; }
+                              else if (node.type === 'sound' || node.type === 'nebula') { handlePitchCycle(targetElement); stateWasChanged = true; }
+                              else if (node.type === 'gate') { handleGateCycle(node); stateWasChanged = true; }
+                              else if (node.type === 'probabilityGate') { handleProbabilityCycle(node); stateWasChanged = true; }
+                              else if (node.type === 'pitchShift') { handlePitchShiftCycle(node); stateWasChanged = true; }
+                              else if (isDrumType(node.type)) { triggerNodeEffect(node); /* No state change for drum trigger */ }
+                          } else if (connection && connection.type === 'string_violin') { handlePitchCycle(targetElement); stateWasChanged = true; }
+                      } else {
+                          // If it wasn't selected (or multiple things were), select only this one
+                          if (!isElementSelected(targetElement.type, targetElement.id) || selectedElements.size > 1) {
+                              selectedElements.clear();
+                              selectedElements.add(targetElement);
+                              updateConstellationGroup();
+                              populateEditPanel();
+                              stateWasChanged = true;
+                          }
+                      }
+                  }
+                  // If shift key was held, selection was already handled in mouseDown
+              }
+          } else if (!elementClickedStart && !event.shiftKey) {
+              // Clicked on empty space in edit mode without shift -> Deselect all
+               if (selectedElements.size > 0) {
+                   selectedElements.clear();
+                   updateConstellationGroup();
+                   populateEditPanel();
+                   stateWasChanged = true;
+               }
+               isBrushing = false; // Also ensure brush stops if user clicks empty space in edit mode
+               lastBrushNode = null;
+          }
+      } else { // Handle other tools (add, delete etc) on simple click
+          isBrushing = false; // Stop brush if any other tool is used
+          lastBrushNode = null;
+
+          if (currentTool === 'add' && !elementClickedStart) {
+              // *** ADD NODE LOGIC MOVED HERE (from mouseDown) ***
+              const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch'];
+              const canAddNode = directAddTypes.includes(nodeTypeToAdd) ||
+                                 (nodeTypeToAdd === 'sound' && waveformToAdd) ||
+                                 (nodeTypeToAdd === 'nebula' && waveformToAdd) || // Nebula added here
+                                 (isPulsarType(nodeTypeToAdd)) ||
+                                 (isDrumType(nodeTypeToAdd)) ||
+                                 (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
+
+              console.log(`DEBUG handleMouseUp: 'add' tool, canAddNode=${canAddNode}`);
+
+              if (canAddNode) {
+                  const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
+                  if (newNode) {
+                      console.log(`DEBUG handleMouseUp: Node added, id=${newNode.id}`);
+                      if (!event.shiftKey) selectedElements.clear(); // Deselect others unless shift is held
+                      selectedElements.add({type: 'node', id: newNode.id}); // Select the new node
+                      populateEditPanel();
+                      stateWasChanged = true; // State definitely changed
+                  } else {
+                       console.error("DEBUG handleMouseUp: addNode failed!");
+                  }
+              }
+          } else if (currentTool === 'delete' && elementClickedStart) {
+              // Delete tool action (already handled in mouseDown, but double-check)
+              // This case might not be reached often if handled in mouseDown
+              if (elementClickedStart.type === 'node') removeNode(nodeClickedStart);
+              else if (elementClickedStart.type === 'connection') removeConnection(connectionClickedStart);
+              stateWasChanged = true;
+          } else if (!elementClickedStart && !event.shiftKey) {
+               // Click on empty space with tools other than add/edit/brush -> Deselect all
+               if (selectedElements.size > 0) {
+                   selectedElements.clear();
+                   updateGroupControlsUI();
+                   populateEditPanel();
+                   stateWasChanged = true;
+               }
+          }
+      }
+  }
+
+  // Reset temporary interaction states
+  didDrag = false;
+  nodeClickedAtMouseDown = null;
+  connectionClickedAtMouseDown = null;
+  nodeWasSelectedAtMouseDown = false;
+  nodeDragOffsets.clear();
+  panStart = { x: 0, y: 0 };
+  connectionTypeToAdd = 'standard'; // Reset just in case
+
+  // Save state if anything significant happened
+  if (stateWasChanged && !isPerformingUndoRedo) {
+      saveState();
+  }
+  updateGroupControlsUI(); // Update UI based on final selection
 }
 function handleMouseMove(event) {
-  if (!isAudioReady) return
-  updateMousePos(event)
-  if (
-    !didDrag &&
-    (isDragging || isResizing || isConnecting || isSelecting || isPanning) &&
-    distance(
-      screenMousePos.x,
-      screenMousePos.y,
-      mouseDownPos.x * viewScale + viewOffsetX,
-      mouseDownPos.y * viewScale + viewOffsetY
-    ) > 3
-  ) {
-    didDrag = true
-    if (isSelecting) {
-      selectionRect.active = true
-    }
-  }
-  if (isPanning) {
-    const dx = screenMousePos.x - panStart.x
-    const dy = screenMousePos.y - panStart.y
-    viewOffsetX += dx
-    viewOffsetY += dy
-    panStart = { ...screenMousePos }
-    canvas.style.cursor = "grabbing"
-  } else if (isResizing && nodeClickedAtMouseDown) {
-    const dy_screen = screenMousePos.y - resizeStartY
-    const sf = 1 + dy_screen / 100
-    const targetNode = findNodeById(nodeClickedAtMouseDown.id)
-    if (targetNode) {
-      targetNode.size = Math.max(
-        MIN_NODE_SIZE,
-        Math.min(MAX_NODE_SIZE, resizeStartSize * sf)
-      )
-      updateNodeAudioParams(targetNode)
-    }
-    canvas.style.cursor = "ns-resize"
-  } else if (isConnecting) {
-    canvas.style.cursor = "grabbing"
-  } else if (isSelecting && didDrag) {
-    selectionRect.endX = mousePos.x
-    selectionRect.endY = mousePos.y
-    canvas.style.cursor = "crosshair"
-  } else if (isDragging && didDrag) {
-    const dx_world = mousePos.x - dragStartPos.x
-    const dy_world = mousePos.y - dragStartPos.y
-    const effectiveSnap = isSnapEnabled && !event.shiftKey
-    selectedElements.forEach((el) => {
-      if (el.type === "node") {
-        const n = findNodeById(el.id)
-        const offset = nodeDragOffsets.get(el.id)
-        if (n && offset) {
-          let targetX = dragStartPos.x + offset.x + dx_world
-          let targetY = dragStartPos.y + offset.y + dy_world
-          if (effectiveSnap) {
-            const snapped = snapToGrid(targetX, targetY)
-            targetX = snapped.x
-            targetY = snapped.y
-          }
-          n.x = targetX
-          n.y = targetY
-        }
-      }
-    })
-    connections.forEach((conn) => {
-      const nodeASelected = isElementSelected("node", conn.nodeAId)
-      const nodeBSelected = isElementSelected("node", conn.nodeBId)
-      if (nodeASelected || nodeBSelected) {
-        const nA = findNodeById(conn.nodeAId)
-        const nB = findNodeById(conn.nodeBId)
-        if (nA && nB) conn.length = distance(nA.x, nA.y, nB.x, nB.y)
-      }
-    })
-    canvas.style.cursor = "move"
-  } else {
-    const hN = findNodeAt(mousePos.x, mousePos.y)
-    const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null
+    if (!isAudioReady) return;
+    updateMousePos(event);
+
+    // Check if drag/resize/connect/select/pan started and significant movement occurred
+    const dragThreshold = 7; // <-- Verhoogd van 3 naar bijvoorbeeld 7 pixels
     if (
-      currentTool === "edit" &&
-      event.altKey &&
-      hN &&
-      (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")
+        !didDrag &&
+        (isDragging || isResizing || isConnecting || isSelecting || isPanning) &&
+        distance(
+            screenMousePos.x,
+            screenMousePos.y,
+            mouseDownPos.x * viewScale + viewOffsetX, // Calculate screen coords of mouseDown
+            mouseDownPos.y * viewScale + viewOffsetY
+        ) > dragThreshold // <-- Gebruik de verhoogde drempelwaarde
     ) {
-      canvas.style.cursor = "pointer"
-    } else if (
-      currentTool === "edit" &&
-      event.altKey &&
-      hC &&
-      hC.type === "string_violin"
-    ) {
-      canvas.style.cursor = "pointer"
-    } else if (currentTool === "edit" && event.shiftKey && hN) {
-      canvas.style.cursor = "ns-resize"
-    } else if (
-      (currentTool === "connect" || currentTool === "connect_string") &&
-      hN &&
-      !["nebula"].includes(hN.type)
-    ) {
-      canvas.style.cursor = "grab"
-    } else if (currentTool === "delete" && (hN || hC)) {
-      canvas.style.cursor = "pointer"
-    } else if (currentTool === "edit" && (hN || hC)) {
-      canvas.style.cursor = "move"
-    } else if (currentTool === "add") {
-      canvas.style.cursor = "copy"
-    } else {
-      canvas.style.cursor = "crosshair"
+        didDrag = true; // Mark as dragged only after significant movement
+        if (isSelecting) {
+            selectionRect.active = true; // Activate selection rect drawing only after drag starts
+        }
     }
-  }
+
+    // --- Rest van de handleMouseMove functie blijft hetzelfde ---
+    if (isPanning) {
+        const dx = screenMousePos.x - panStart.x;
+        const dy = screenMousePos.y - panStart.y;
+        viewOffsetX += dx;
+        viewOffsetY += dy;
+        panStart = { ...screenMousePos };
+        canvas.style.cursor = "grabbing";
+    } else if (isResizing && nodeClickedAtMouseDown) {
+        // Handle resizing (no changes needed here for the bug)
+        const dy_screen = screenMousePos.y - resizeStartY;
+        const scaleFactor = 1 + dy_screen / 100; // Adjust sensitivity as needed
+        const targetNode = findNodeById(nodeClickedAtMouseDown.id);
+        if (targetNode) {
+            targetNode.size = Math.max(
+                MIN_NODE_SIZE,
+                Math.min(MAX_NODE_SIZE, resizeStartSize * scaleFactor)
+            );
+            updateNodeAudioParams(targetNode); // Update audio based on new size
+        }
+        canvas.style.cursor = "ns-resize";
+    } else if (isConnecting) {
+        // Handle drawing temporary connection line (no changes needed here)
+        canvas.style.cursor = "grabbing"; // Or specific connect cursor
+    } else if (isSelecting && didDrag) {
+        // Update selection rectangle end position (no changes needed here)
+        selectionRect.endX = mousePos.x;
+        selectionRect.endY = mousePos.y;
+        canvas.style.cursor = "crosshair";
+    } else if (isDragging && didDrag) {
+        // Handle dragging selected elements (no changes needed here)
+        const dx_world = mousePos.x - dragStartPos.x;
+        const dy_world = mousePos.y - dragStartPos.y;
+        const effectiveSnap = isSnapEnabled && !event.shiftKey;
+
+        selectedElements.forEach((el) => {
+            if (el.type === "node") {
+                const n = findNodeById(el.id);
+                const offset = nodeDragOffsets.get(el.id);
+                if (n && offset) {
+                    let targetX = dragStartPos.x + offset.x + dx_world;
+                    let targetY = dragStartPos.y + offset.y + dy_world;
+                    if (effectiveSnap) {
+                        const snapped = snapToGrid(targetX, targetY);
+                        targetX = snapped.x;
+                        targetY = snapped.y;
+                    }
+                    n.x = targetX;
+                    n.y = targetY;
+                }
+            }
+        });
+
+        // Update connection lengths if connected nodes moved
+        connections.forEach((conn) => {
+            const nodeASelected = isElementSelected("node", conn.nodeAId);
+            const nodeBSelected = isElementSelected("node", conn.nodeBId);
+            if (nodeASelected || nodeBSelected) {
+                const nA = findNodeById(conn.nodeAId);
+                const nB = findNodeById(conn.nodeBId);
+                if (nA && nB) conn.length = distance(nA.x, nA.y, nB.x, nB.y);
+            }
+        });
+        canvas.style.cursor = "move";
+    } else {
+        // Update cursor based on tool and what's under the mouse (hover effects)
+        const hN = findNodeAt(mousePos.x, mousePos.y);
+        const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null;
+
+        // Cursor logic (geen directe wijzigingen hier nodig voor de bug)
+        if (currentTool === "edit" && event.altKey && hN && (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")) {
+             canvas.style.cursor = "pointer"; // Indicate pitch cycle down possible
+        } else if (currentTool === "edit" && event.altKey && hC && hC.type === "string_violin") {
+             canvas.style.cursor = "pointer"; // Indicate pitch cycle down possible
+        } else if (currentTool === "edit" && event.shiftKey && hN) {
+             canvas.style.cursor = "ns-resize"; // Indicate resize possible
+        } else if ((currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide') && hN && !['nebula', PORTAL_NEBULA_TYPE].includes(hN.type)) {
+             canvas.style.cursor = "grab"; // Indicate connection start possible
+        } else if (currentTool === "delete" && (hN || hC)) {
+             canvas.style.cursor = "pointer"; // Indicate delete possible
+        } else if (currentTool === "edit" && (hN || hC)) {
+             canvas.style.cursor = "move"; // Indicate drag possible
+        } else if (currentTool === "add" || currentTool === 'brush') { // Add Brush tool here
+             canvas.style.cursor = "copy"; // Indicate add/brush possible
+        } else {
+             canvas.style.cursor = "crosshair"; // Default
+        }
+    }
 }
 function handleWheel(event) {
   event.preventDefault()
@@ -5655,60 +5781,71 @@ function populateBrushOptionsPanel() {
    
 
   function updateScaleAndTransposeUI() {
-    if (scaleSelectPianoRoll) scaleSelectPianoRoll.value = currentScaleKey;
-  }
-function changeScale(scaleKey, skipNodeUpdate = false) {
-  if (!scales[scaleKey]) return
-  currentScaleKey = scaleKey
-  currentScale = scales[scaleKey]
-  document.body.className = currentScale.theme
-  scaleSelectPianoRoll.value = scaleKey
-  if (!skipNodeUpdate) {
-    nodes.forEach((node) => {
-      if (node.type === "sound" || node.type === "nebula") {
-        node.audioParams.scaleIndex = Math.max(
-          MIN_SCALE_INDEX,
-          Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0)
-        )
-        node.audioParams.pitch = getFrequency(
-          currentScale,
-          node.audioParams.scaleIndex
-        )
-        if (isNaN(node.audioParams.pitch)) {
-          node.audioParams.scaleIndex = 0
-          node.audioParams.pitch = getFrequency(currentScale, 0)
+    if (scaleSelectTransport) scaleSelectTransport.value = currentScaleKey;}
+  function changeScale(scaleKey, skipNodeUpdate = false) {
+    if (!scales[scaleKey]) return;
+    currentScaleKey = scaleKey;
+    currentScale = scales[scaleKey];
+    document.body.className = currentScale.theme;
+    if (scaleSelectTransport) { // Update de select in de transport bar
+         scaleSelectTransport.value = scaleKey;
+    }
+
+    if (!skipNodeUpdate) {
+        nodes.forEach((node) => {
+            if (node.type === "sound" || node.type === "nebula") {
+                node.audioParams.scaleIndex = Math.max(
+                    MIN_SCALE_INDEX,
+                    Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0)
+                );
+                node.audioParams.pitch = getFrequency(
+                    currentScale,
+                    node.audioParams.scaleIndex
+                );
+                if (isNaN(node.audioParams.pitch)) {
+                    node.audioParams.scaleIndex = 0;
+                    node.audioParams.pitch = getFrequency(currentScale, 0);
+                }
+                updateNodeAudioParams(node);
+            }
+        });
+        connections.forEach((conn) => {
+            if (conn.type === "string_violin") {
+                conn.audioParams.scaleIndex = Math.max(
+                    MIN_SCALE_INDEX,
+                    Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0)
+                );
+                conn.audioParams.pitch = getFrequency(
+                    currentScale,
+                    conn.audioParams.scaleIndex
+                );
+                if (isNaN(conn.audioParams.pitch)) {
+                    conn.audioParams.scaleIndex = 0;
+                    conn.audioParams.pitch = getFrequency(currentScale, 0);
+                }
+                updateConnectionAudioParams(conn);
+            }
+        });
+    }
+
+    if (
+        !sideToolbar.classList.contains("hidden") &&
+        (nodeTypeToAdd === "sound" || nodeTypeToAdd === "nebula")
+    ) {
+        noteIndexToAdd = -1; // Reset note to add when scale changes with panel open
+        if (currentTool === 'add' || currentTool === 'brush') { // Check if add or brush tool is active
+            // Update de hex selector als die getoond wordt
+            if (document.getElementById('hexNoteSelectorContainer')) { // Check of hex selector bestaat
+                 createHexNoteSelectorDOM(sideToolbarContent); // Herbouw hex selector voor nieuwe schaal
+            }
         }
-        updateNodeAudioParams(node)
-      }
-    })
-    connections.forEach((conn) => {
-      if (conn.type === "string_violin") {
-        conn.audioParams.scaleIndex = Math.max(
-          MIN_SCALE_INDEX,
-          Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0)
-        )
-        conn.audioParams.pitch = getFrequency(
-          currentScale,
-          conn.audioParams.scaleIndex
-        )
-        if (isNaN(conn.audioParams.pitch)) {
-          conn.audioParams.scaleIndex = 0
-          conn.audioParams.pitch = getFrequency(currentScale, 0)
-        }
-        updateConnectionAudioParams(conn)
-      }
-    })
-  }
-  if (
-    !sideToolbar.classList.contains("hidden") &&
-    (nodeTypeToAdd === "sound" || nodeTypeToAdd === "nebula")
-  ) {
-    noteIndexToAdd = -1
-    createHexNoteSelectorDOM(sideToolbarContent)
-  }
-  drawPianoRoll();
-  populateEditPanel()
-  if (!skipNodeUpdate) saveState()
+    }
+
+    drawPianoRoll();
+    populateEditPanel(); // Update edit panel if open, as note names might change
+    if (!skipNodeUpdate) {
+        saveState();
+    }
 }
 function updateSyncUI() {
   globalSyncToggleBtn.textContent = `Sync: ${
@@ -5766,9 +5903,7 @@ function updateMixerUI() {
 
 function hideBottomPanels() {
   mixerPanel.classList.add("hidden")
-  pianoRollPanel.classList.add("hidden")
   mixerBtn.classList.remove("active")
-  pianoRollBtn.classList.remove("active")
 }
 
 function togglePlayPause() {
@@ -5857,7 +5992,7 @@ hamburgerBtn.addEventListener("click", () => {
     hamburgerBtn.classList.remove("active")
   }
 })
-scaleSelectPianoRoll.addEventListener("change", (e) =>
+scaleSelectTransport.addEventListener("change", (e) =>
   changeScale(e.target.value)
 )
 // VERVANG de bestaande 'input' listener voor groupVolumeSlider met deze:
@@ -6080,33 +6215,13 @@ mixerBtn.addEventListener("click", () => {
       mixerBtn.classList.add("active");
       console.log("Mixer Knop Geklikt - Controleer isReverbReady:", isReverbReady); // LOG 1
       console.log("Mixer Knop Geklikt - Roep updateMixerGUI aan..."); // LOG 2
-      updateMixerGUI(); // <<== Zorg dat DIT de functie is die we hebben bijgewerkt!
+      updateMixerGUI(); 
       // updateMixerUI(); // Verwijder deze regel als hij er stond, het is een oudere functie
   } else {
       // Paneel sluiten (gebeurt al door hideBottomPanels, maar zet knop uit)
       mixerBtn.classList.remove("active");
   }
 });
-pianoRollBtn.addEventListener("click", () => {
-  const isOpen = !pianoRollPanel.classList.contains("hidden")
-  resetSideToolbars()
-  hideBottomPanels()
-  if (!isOpen) {
-    pianoRollPanel.classList.remove("hidden")
-    pianoRollBtn.classList.add("active")
-    updateScaleAndTransposeUI()
-    // Zorg dat canvas dimensies correct zijn en teken opnieuw
-    if (pianoRollCanvas && pianoRollCtx) {
-      try {
-           pianoRollCanvas.width = pianoRollCanvas.clientWidth;
-           pianoRollCanvas.height = pianoRollCanvas.clientHeight;
-           drawPianoRoll(); // <-- Zorg dat deze aanroep er staat
-      } catch(e) {
-           console.warn("Kon pianoRollCanvas niet tekenen bij openen paneel:", e);
-      }
- }
-  }
-})
 masterVolumeSlider.addEventListener("input", (e) => {
   if (masterGain)
     masterGain.gain.setTargetAtTime(
@@ -6153,8 +6268,7 @@ window.addEventListener("keydown", (e) => {
       e.target.tagName.toLowerCase()
   );
   const bottomPanelOpen =
-      !mixerPanel.classList.contains("hidden") ||
-      !pianoRollPanel.classList.contains("hidden");
+      !mixerPanel.classList.contains("hidden")
 
   if (targetIsInput && bottomPanelOpen) return;
   if (targetIsInput && !bottomPanelOpen && e.key !== "Escape") return;
@@ -6897,8 +7011,22 @@ function populateEditPanel() {
 // --- Functies voor Piano Roll ---
 
 function drawPianoRoll() {
-  if (!pianoRollCtx || !pianoRollCanvas || pianoRollPanel.classList.contains('hidden')) {
+  if (!pianoRollCtx || !pianoRollCanvas) {
       return;
+  }
+
+  try {
+      if (pianoRollCanvas.clientWidth > 0 && pianoRollCanvas.width !== pianoRollCanvas.clientWidth) {
+           pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+      }
+       if (pianoRollCanvas.clientHeight <= 0 && pianoRollCanvas.height <= 0) {
+           pianoRollCanvas.height = 60; // Kleinere default hoogte voor deze layout
+       } else if (pianoRollCanvas.height !== pianoRollCanvas.clientHeight) {
+          pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+       }
+  } catch (e) {
+       console.warn("Kon pianoRollCanvas dimensies niet correct instellen:", e);
+       if(pianoRollCanvas.width <= 0 || pianoRollCanvas.height <= 0) return;
   }
 
   const canvasWidth = pianoRollCanvas.width;
@@ -6908,76 +7036,86 @@ function drawPianoRoll() {
 
   const scaleNotes = currentScale.notes;
   const rootNoteModulo = currentRootNote % 12;
+  const noteNameMap = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const naturalNotes = [0, 2, 4, 5, 7, 9, 11];
+  const sharpNotes = [1, 3, 6, 8, 10];
 
-  const numNotesToDraw = 12;
-  const horizontalMargin = 10;
-  const verticalMargin = 5;
+  // --- Berekening voor Strak Hex Raster ---
+  const numHexagons = 12; // C tot B
+  const horizontalMargin = 6;
+  const verticalMargin = 4;
   const availableWidth = canvasWidth - 2 * horizontalMargin;
 
-  let hexRadius = availableWidth / (numNotesToDraw * 1.5 + 0.5);
-  hexRadius = Math.max(8, Math.min(16, hexRadius));
+  // Bereken radius zodat ~6.5 hexagons breed passen (staggered)
+  // Ongeveer (N/2 + 0.5) * 1.5 * R breedte nodig
+  let hexRadius = availableWidth / ((numHexagons / 2 + 0.5) * 1.5);
 
-  const hexWidth = 2 * hexRadius;
+  // Beperk door hoogte (1 volledige hex hoogte + 2x halve hoogte voor stagger + marges)
   const hexHeight = Math.sqrt(3) * hexRadius;
-  const verticalSpacing = hexHeight;
-  const horizontalSpacing = hexWidth * 3 / 4;
-  let startX = horizontalMargin + hexRadius;
-  let startY = Math.max(verticalMargin + hexHeight / 2, canvasHeight / 2);
+  const maxRadiusH = (canvasHeight - 2 * verticalMargin) / (Math.sqrt(3));
+  hexRadius = Math.max(5, Math.min(maxRadiusH, hexRadius, 15)); // Kleinere max radius
 
-  let hexCol = 0;
-  const maxCols = Math.floor((canvasWidth - 2 * horizontalMargin + horizontalSpacing / 4) / horizontalSpacing);
+  // Definitieve maten
+  const finalHexHeight = Math.sqrt(3) * hexRadius;
+  const hSpacing = hexRadius * 1.5; // Horizontale afstand tussen kolom centers
+  const vSpacing = finalHexHeight / 2; // Verticale afstand tussen rijen / stagger offset
 
-  for (let i = 0; i < numNotesToDraw; i++) {
-      if (hexCol >= maxCols) break;
+  // Startpositie (links, verticaal gecentreerd)
+  const startX = horizontalMargin + hexRadius;
+  const totalContentHeight = finalHexHeight; // Hoogte van 1 rij hexagons
+  const startY = (canvasHeight / 2); // Baseline voor even kolommen
 
-      const noteInOctave = i;
-      const posX = startX + hexCol * horizontalSpacing;
-      const posY = startY + (hexCol % 2 !== 0 ? hexRadius * 0.1 : -hexRadius * 0.1);
+  pianoRollCtx.lineWidth = 1;
+  pianoRollCtx.font = `bold ${Math.max(6, Math.min(9, hexRadius * 0.55))}px sans-serif`;
+  pianoRollCtx.textAlign = "center";
+  pianoRollCtx.textBaseline = "middle";
 
-      const noteRelativeToRoot = (noteInOctave - rootNoteModulo + 12) % 12;
+  let currentColumn = 0;
+  for (let i = 0; i < numHexagons; i++) { // Loop C, C#, D... B
+      const noteModulo = i; // 0 = C, 1 = C#, ... 11 = B
+      const isNatural = naturalNotes.includes(noteModulo);
+
+      // Bepaal kolom en positie
+      const posX = startX + currentColumn * hSpacing;
+      const posY = startY + (currentColumn % 2 !== 0 ? vSpacing : 0); // Stagger oneven kolommen
+
+      const noteRelativeToRoot = (noteModulo - rootNoteModulo + 12) % 12;
       const isScaleNote = scaleNotes.includes(noteRelativeToRoot);
-      const isRootNote = noteInOctave === rootNoteModulo;
+      const isRootNote = noteModulo === rootNoteModulo;
 
-      let fillStyle = "rgba(40, 40, 50, 0.7)";
-      let strokeStyle = "rgba(80, 80, 100, 0.5)";
-      if (isScaleNote) {
-          fillStyle = "rgba(120, 160, 230, 0.7)";
-          strokeStyle = "rgba(160, 200, 255, 0.7)";
-      }
-      if (isRootNote) {
-          fillStyle = "rgba(255, 230, 80, 0.8)";
-          strokeStyle = "rgba(255, 240, 120, 0.9)";
+      // Styling gebaseerd op piano toetsen
+      let fillStyle, strokeStyle, textColor;
+      if (isNatural) {
+          fillStyle = "rgba(200, 210, 230, 0.8)";
+          strokeStyle = "rgba(230, 240, 255, 0.7)";
+          textColor = "#ddeeff";
+          if (isScaleNote) { fillStyle = "rgba(220, 230, 250, 0.9)"; } // Iets lichter in scale
+          if (isRootNote) { fillStyle = "rgba(255, 230, 80, 0.9)"; textColor = "#332"; strokeStyle = "rgba(255, 240, 120, 1)"; }
+      } else { // Sharp/Flat
+          fillStyle = "rgba(40, 45, 55, 0.9)";
+          strokeStyle = "rgba(70, 80, 95, 0.8)";
+          textColor = "#cdd5e0";
+           if (isScaleNote) { fillStyle = "rgba(80, 90, 110, 0.9)"; } // Iets lichter in scale
+           if (isRootNote) { fillStyle = "rgba(210, 190, 60, 0.9)"; textColor = "#332"; strokeStyle = "rgba(230, 210, 100, 1)"; }
       }
 
+      // Teken hexagon
       pianoRollCtx.fillStyle = fillStyle;
       pianoRollCtx.strokeStyle = strokeStyle;
-      pianoRollCtx.lineWidth = 1;
-
       pianoRollCtx.beginPath();
       for (let side = 0; side < 6; side++) {
-          pianoRollCtx.lineTo(
-              posX + hexRadius * Math.cos(side * Math.PI / 3),
-              posY + hexRadius * Math.sin(side * Math.PI / 3)
-          );
+          pianoRollCtx.lineTo(posX + hexRadius * Math.cos(side * Math.PI / 3), posY + hexRadius * Math.sin(side * Math.PI / 3));
       }
       pianoRollCtx.closePath();
       pianoRollCtx.fill();
       pianoRollCtx.stroke();
 
-      pianoRollCtx.fillStyle = "#ddeeff";
-      pianoRollCtx.font = `bold ${Math.max(7, Math.min(10, hexRadius * 0.7))}px sans-serif`;
-      pianoRollCtx.textAlign = "center";
-      pianoRollCtx.textBaseline = "middle";
-      pianoRollCtx.fillText(noteNames[noteInOctave], posX, posY + 1);
+      // Teken tekst
+      pianoRollCtx.fillStyle = textColor;
+      pianoRollCtx.fillText(noteNameMap[noteModulo], posX, posY + 1);
 
-      pianoRollHexagons.push({
-          x: posX,
-          y: posY,
-          radius: hexRadius,
-          semitone: noteInOctave
-      });
-
-      hexCol++;
+      pianoRollHexagons.push({ x: posX, y: posY, radius: hexRadius, semitone: noteModulo });
+      currentColumn++;
   }
 }
 
@@ -7436,10 +7574,12 @@ window.addEventListener("load", () => {
       const o = document.createElement("option");
       o.value = key;
       o.textContent = scales[key].name; // Of korte naam: key.replace...
-      scaleSelectPianoRoll.appendChild(o.cloneNode(true));
+      scaleSelectTransport.appendChild(o.cloneNode(true));
+      scaleSelectTransport.addEventListener("change", (e) => changeScale(e.target.value));
+      scaleSelectTransport.value = currentScaleKey;
   });
   // Stel initiële waarden in voor UI elementen die *niet* van audioContext afhangen
-  scaleSelectPianoRoll.value = currentScaleKey;
+  scaleSelectTransport.value = currentScaleKey;
   globalBpmInput.value = globalBPM;
 
   // Reset UI states
