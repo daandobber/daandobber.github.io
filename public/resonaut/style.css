@@ -63,22 +63,22 @@
     --button-disabled-bg: #2a355a;
     --button-disabled-color: #7788aa;
     --toolbar-width: 52px;
-    --side-toolbar-width: 200px;
+    --side-toolbar-width: 240px;
     --hamburger-panel-width: 240px;
     --bottom-panel-height: 200px;
-
-    /* --- Nieuwe variabelen voor Hex Selector --- */
-    --hex-note-size: 28px;
+    --hex-note-size: 26px;
     --hex-note-gap: 1px;
-    --hex-color-out-scale-bg: rgba(40, 40, 50, 0.7);
-    --hex-color-out-scale-border: rgba(80, 80, 100, 0.5);
-    --hex-color-in-scale-bg: rgba(120, 160, 230, 0.7);
-    --hex-color-in-scale-border: rgba(160, 200, 255, 0.7);
-    --hex-color-root-bg: rgba(255, 230, 80, 0.8);
-    --hex-color-root-border: rgba(255, 240, 120, 0.9);
     --hex-color-selected-border: rgba(255, 255, 255, 0.9);
-    --hex-color-text: #ddeeff;
     --hex-color-root-text: #332;
+    --hex-color-disabled-text: #8899aa;
+    --hex-disabled-opacity: 0.5;
+    --hex-color-out-scale-bg: rgba(26, 42, 74, 0.6);
+    --hex-color-out-scale-border: rgba(48, 64, 112, 0.4);
+    --hex-color-in-scale-bg: rgba(96, 117, 176, 0.7);
+    --hex-color-in-scale-border: rgba(121, 145, 204, 0.7);
+    --hex-color-root-bg: rgba(255, 255, 200, 0.8);
+    --hex-color-root-border: rgba(255, 255, 230, 0.9);
+    --hex-color-text: #ddeeff;
 }
 
 body.theme-minor-pentatonic {
@@ -142,6 +142,13 @@ body.theme-minor-pentatonic {
     --beat-indicator-color: rgba(224, 199, 255, 0.5);
     --button-disabled-bg: #3a254a;
     --button-disabled-color: #aa88aa;
+    --hex-color-out-scale-bg: rgba(64, 32, 80, 0.6);
+    --hex-color-out-scale-border: rgba(80, 48, 112, 0.4);
+    --hex-color-in-scale-bg: rgba(136, 96, 176, 0.7);
+    --hex-color-in-scale-border: rgba(161, 116, 204, 0.7);
+    --hex-color-root-bg: rgba(255, 200, 255, 0.8);
+    --hex-color-root-border: rgba(255, 230, 255, 0.9);
+    --hex-color-text: #eeddee;
 }
 
 body.theme-major {
@@ -205,6 +212,13 @@ body.theme-major {
     --beat-indicator-color: rgba(180, 255, 230, 0.5);
     --button-disabled-bg: #255a50;
     --button-disabled-color: #77aa99;
+    --hex-color-out-scale-bg: rgba(21, 64, 64, 0.6);
+    --hex-color-out-scale-border: rgba(48, 112, 96, 0.4);
+    --hex-color-in-scale-bg: rgba(96, 176, 144, 0.7);
+    --hex-color-in-scale-border: rgba(121, 204, 166, 0.7);
+    --hex-color-root-bg: rgba(200, 255, 220, 0.8);
+    --hex-color-root-border: rgba(230, 255, 240, 0.9);
+    --hex-color-text: #ddffee;
 }
 
 body.theme-minor {
@@ -268,6 +282,13 @@ body.theme-minor {
     --beat-indicator-color: rgba(255, 220, 200, 0.5);
     --button-disabled-bg: #5a3530;
     --button-disabled-color: #aa8877;
+    --hex-color-out-scale-bg: rgba(96, 53, 48, 0.6);
+    --hex-color-out-scale-border: rgba(112, 64, 64, 0.4);
+    --hex-color-in-scale-bg: rgba(176, 112, 112, 0.7);
+    --hex-color-in-scale-border: rgba(204, 137, 137, 0.7);
+    --hex-color-root-bg: rgba(255, 210, 180, 0.8);
+    --hex-color-root-border: rgba(255, 230, 210, 0.9);
+    --hex-color-text: #ffeedd;
 }
 
 body.theme-chromatic {
@@ -331,12 +352,18 @@ body.theme-chromatic {
     --beat-indicator-color: rgba(200, 200, 200, 0.5);
     --button-disabled-bg: #444;
     --button-disabled-color: #999;
+    --hex-color-out-scale-bg: rgba(80, 80, 96, 0.6);
+    --hex-color-out-scale-border: rgba(85, 85, 85, 0.4);
+    --hex-color-in-scale-bg: rgba(136, 136, 136, 0.7);
+    --hex-color-in-scale-border: rgba(170, 170, 170, 0.7);
+    --hex-color-root-bg: rgba(230, 230, 230, 0.8);
+    --hex-color-root-border: rgba(255, 255, 255, 0.9);
+    --hex-color-text: #f0f0f0;
 }
 
 body {
     margin: 0;
     overflow: hidden;
-    background-color: var(--bg-color);
     color: var(--text-color);
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     display: flex;
@@ -502,6 +529,7 @@ body {
 
 .panel .type-button,
 .panel .waveform-button,
+.panel .sampler-button,
 .panel .drum-element-button {
     display: flex;
     align-items: center;
@@ -521,6 +549,8 @@ body {
 }
 
 .panel .type-button .type-icon,
+.panel .waveform-button .type-icon,
+.panel .sampler-button .type-icon,
 .panel .drum-element-button .type-icon {
     font-size: 1.1em;
     min-width: 1.2em;
@@ -530,12 +560,14 @@ body {
 
 .panel .type-button:hover,
 .panel .waveform-button:hover,
+.panel .sampler-button:hover,
 .panel .drum-element-button:hover {
     background-color: var(--button-hover);
 }
 
 .panel .type-button.selected,
 .panel .waveform-button.selected,
+.panel .sampler-button.selected,
 .panel .drum-element-button.selected {
     background-color: var(--button-active);
     border-color: var(--text-color);
@@ -544,6 +576,7 @@ body {
 
 .panel .type-button.disabled,
 .panel .waveform-button.disabled,
+.panel .sampler-button.disabled,
 .panel .drum-element-button.disabled {
     background-color: var(--button-disabled-bg);
     color: var(--button-disabled-color);
@@ -731,14 +764,29 @@ body {
     left: 50%;
     transform: translateX(-50%);
     z-index: 6;
-    background-color: var(--panel-bg);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 30px;
-    padding: 8px 15px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    border: 1px solid rgba(100, 130, 180, 0.4);
+    border-radius: 25px;
+    padding: 5px 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    width: auto;
+    max-width: 95%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    height: auto;
+    overflow-x: auto;
+    white-space: nowrap;
+    background: none;
+}
+
+#transportControls button,
+#transportControls .transport-label,
+#transportControls select,
+#transportControls #bpmControls,
+#transportControls .transport-divider {
+    flex-shrink: 0;
+    margin: 0; 
 }
 
 #transportControls button {
@@ -791,9 +839,9 @@ body {
     background-color: var(--button-bg);
     color: var(--text-color);
     border: 1px solid var(--button-hover);
-    padding: 5px;
+    padding: 4px;
     border-radius: 3px;
-    width: 55px;
+    width: 50px;
     text-align: right;
     font-size: 0.9em;
     -moz-appearance: textfield;
@@ -811,6 +859,42 @@ body {
     height: 20px;
     background-color: var(--button-bg);
     margin: 0 5px;
+    align-self: center; /* Lijn divider verticaal uit */
+}
+
+#transportControls .transport-label {
+    margin: 0 3px 0 8px; 
+    font-size: 0.9em;
+    opacity: 0.9;
+    vertical-align: middle;
+}
+
+#transportControls select {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    vertical-align: middle;
+    cursor: pointer;
+    min-width: 120px;
+}
+#transportControls select:focus {
+    outline: 1px solid var(--button-active);
+    border-color: var(--button-active);
+}
+
+#transportControls #pianoRollCanvas {
+    display: block;
+    width: 300px; 
+    height: 55px; 
+    background-color: transparent; 
+    border-radius: 4px;
+    cursor: pointer;
+    order: 10;
+    flex-shrink: 0;
+    margin-left: 5px; 
 }
 
 #beatIndicator {
@@ -873,6 +957,7 @@ body {
 }
 .bottom-panel .panel-section:last-child {
     border-bottom: none;
+    padding-bottom: 0; /* Was al 0 */
 }
 
 
@@ -918,68 +1003,53 @@ body {
     padding-bottom: 15px;
 }
 
+.mixer-group-control-section {
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--button-bg);
+}
+.mixer-group-control-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.mixer-control-item {
+     display: flex;
+     align-items: center;
+     margin-bottom: 5px;
+}
+
 #mixerGroupControlsContainer label {
-    display: inline-block;
-    width: auto;
+    flex-basis: 140px;
+    flex-shrink: 0;
     margin-right: 10px;
+    text-align: right;
     font-size: 0.9em;
     opacity: 0.9;
-    vertical-align: middle;
 }
 
 #mixerGroupControlsContainer input[type="range"] {
-    width: calc(100% - 170px);
-    display: inline-block;
-    vertical-align: middle;
+    flex-grow: 1;
+    width: auto;
+    margin-right: 5px;
     margin-bottom: 0;
 }
 
-#mixerGroupControlsContainer span {
-    display: inline-block;
-    width: 40px;
+ #mixerGroupControlsContainer span {
+    flex-basis: 40px;
+    flex-shrink: 0;
     text-align: right;
     font-size: 0.85em;
     opacity: 0.8;
-    vertical-align: middle;
-    margin-left: 5px;
 }
 
 #mixerGroupControlsContainer small {
     display: block;
-    font-size: 0.85em;
+    text-align: center;
     opacity: 0.7;
-    text-align: center;
-    margin-top: 5px;
-}
-
-#pianoRollCanvas {
-    display: block;
-    width: 100%;
-    height: 80px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 4px;
     margin-top: 10px;
-    cursor: pointer;
-}
-
-#pianoRollPanel .scale-selector-section {
-    margin-top: 15px;
-    padding-bottom: 0;
-    border-bottom: none;
-    text-align: center;
-}
-
-#pianoRollPanel .scale-selector-section label {
-  margin-right: 5px;
-  vertical-align: middle;
-}
-
-#pianoRollPanel .scale-selector-section select {
-   width: auto;
-   min-width: 150px;
-   display: inline-block;
-   vertical-align: middle;
-   margin-bottom: 0;
+    width: 100%;
 }
 
 .visually-hidden {
@@ -993,148 +1063,34 @@ body {
     border: 0;
 }
 
-/* Container voor EEN groep in de mixer */
-.mixer-group-control-section {
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--button-bg);
-}
-.mixer-group-control-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
 
-/* Container voor EEN control item (label+slider+value) */
-.mixer-control-item {
-     display: flex; /* Gebruik flexbox voor uitlijning */
-     align-items: center; /* Centreer verticaal */
-     margin-bottom: 5px; /* Ruimte tussen volume en delay */
-}
-
-/* Pas bestaande mixer styling aan indien nodig */
-#mixerGroupControlsContainer label {
-    flex-basis: 140px; /* Geef label vaste basis breedte */
-    flex-shrink: 0; /* Voorkom krimpen */
-    margin-right: 10px;
-    text-align: right; /* Lijn rechts uit voor netheid */
-    font-size: 0.9em;
-    opacity: 0.9;
-}
-
-#mixerGroupControlsContainer input[type="range"] {
-    flex-grow: 1; /* Laat slider de rest van de ruimte nemen */
-    width: auto; /* Override vaste breedte */
-    margin-right: 5px; /* Ruimte voor de span */
-    margin-bottom: 0; /* Geen extra marge onderaan */
-}
-
- #mixerGroupControlsContainer span {
-    flex-basis: 40px; /* Vaste breedte voor waarde */
-    flex-shrink: 0; /* Voorkom krimpen */
-    text-align: right;
-    font-size: 0.85em;
-    opacity: 0.8;
-}
-
-#mixerGroupControlsContainer small { /* Styling voor 'no groups' melding */
-    display: block;
-    text-align: center;
-    opacity: 0.7;
-    margin-top: 10px;
-    width: 100%;
-}
-
-/* === Hexagon Note Selector Styles (Themed & Updated) === */
-:root {
-    /* Basis variabelen blijven globaal */
-    --hex-note-size: 26px;
-    --hex-note-gap: 1px;
-    --hex-color-selected-border: rgba(255, 255, 255, 0.9); /* Vast wit voor selectie */
-    --hex-color-root-text: #332; /* Vast donker voor root tekst */
-    --hex-color-disabled-text: #8899aa; /* Kleur voor disabled tekst */
-    --hex-disabled-opacity: 0.5; /* Opaciteit voor disabled */
-  }
-  
-  /* Definieer kleuren PER THEMA */
-  body.theme-major-pentatonic { /* Default/Deep Space */
-    --hex-color-out-scale-bg: rgba(26, 42, 74, 0.6); /* Donkerder panel bg */
-    --hex-color-out-scale-border: rgba(48, 64, 112, 0.4); /* Button bg */
-    --hex-color-in-scale-bg: rgba(96, 117, 176, 0.7); /* Button active */
-    --hex-color-in-scale-border: rgba(121, 145, 204, 0.7); /* Iets lichter */
-    --hex-color-root-bg: rgba(255, 255, 200, 0.8); /* Start node color */
-    --hex-color-root-border: rgba(255, 255, 230, 0.9); /* Start node border */
-    --hex-color-text: #ddeeff; /* Standaard text */
-  }
-  body.theme-minor-pentatonic { /* Nebula */
-    --hex-color-out-scale-bg: rgba(64, 32, 80, 0.6);
-    --hex-color-out-scale-border: rgba(80, 48, 112, 0.4);
-    --hex-color-in-scale-bg: rgba(136, 96, 176, 0.7);
-    --hex-color-in-scale-border: rgba(161, 116, 204, 0.7);
-    --hex-color-root-bg: rgba(255, 200, 255, 0.8);
-    --hex-color-root-border: rgba(255, 230, 255, 0.9);
-    --hex-color-text: #eeddee;
-  }
-  body.theme-major { /* Aurora */
-    --hex-color-out-scale-bg: rgba(21, 64, 64, 0.6);
-    --hex-color-out-scale-border: rgba(48, 112, 96, 0.4);
-    --hex-color-in-scale-bg: rgba(96, 176, 144, 0.7);
-    --hex-color-in-scale-border: rgba(121, 204, 166, 0.7);
-    --hex-color-root-bg: rgba(200, 255, 220, 0.8);
-    --hex-color-root-border: rgba(230, 255, 240, 0.9);
-    --hex-color-text: #ddffee;
-  }
-  body.theme-minor { /* Sunset */
-    --hex-color-out-scale-bg: rgba(96, 53, 48, 0.6);
-    --hex-color-out-scale-border: rgba(112, 64, 64, 0.4);
-    --hex-color-in-scale-bg: rgba(176, 112, 112, 0.7);
-    --hex-color-in-scale-border: rgba(204, 137, 137, 0.7);
-    --hex-color-root-bg: rgba(255, 210, 180, 0.8);
-    --hex-color-root-border: rgba(255, 230, 210, 0.9);
-    --hex-color-text: #ffeedd;
-  }
-  body.theme-chromatic { /* Starfield */
-    --hex-color-out-scale-bg: rgba(80, 80, 96, 0.6);
-    --hex-color-out-scale-border: rgba(85, 85, 85, 0.4);
-    --hex-color-in-scale-bg: rgba(136, 136, 136, 0.7);
-    --hex-color-in-scale-border: rgba(170, 170, 170, 0.7);
-    --hex-color-root-bg: rgba(230, 230, 230, 0.8); /* Witte start node */
-    --hex-color-root-border: rgba(255, 255, 255, 0.9);
-    --hex-color-text: #f0f0f0;
-  }
-  
-  
-  /* Container voor de kolommen */
-  .hex-note-container {
+.hex-note-container {
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Start links */
-    padding: 5px 5px 10px 5px; /* Padding, meer onderaan voor scrollbar */
+    justify-content: flex-start;
+    padding: 5px 5px 10px 5px;
     max-width: 100%;
     min-height: 80px;
-    overflow-x: auto; /* Horizontaal scrollen toestaan */
-    overflow-y: hidden; /* Geen verticale scroll */
-    /* Styling voor scrollbar (optioneel) */
+    overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--button-active) var(--button-bg);
-  }
-  .hex-note-container::-webkit-scrollbar { height: 6px; }
-  .hex-note-container::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
-  .hex-note-container::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
-  
-  /* Stijl voor de kolommen */
-  .hex-column {
+}
+.hex-note-container::-webkit-scrollbar { height: 6px; }
+.hex-note-container::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
+.hex-note-container::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
+
+.hex-column {
     margin: 0 calc(var(--hex-note-gap) * -0.5);
     display: flex;
     flex-direction: column;
     align-items: center;
-  }
-  .hex-column:nth-child(odd) {
+}
+.hex-column:nth-child(odd) {
     transform: translateY(calc(var(--hex-note-size) * 0.8660254 / 2 + var(--hex-note-gap) / 2));
-  }
-  
-  /* Stijl voor individuele hexagon */
-  .hexagon-note {
+}
+
+.hexagon-note {
     width: var(--hex-note-size);
     height: calc(var(--hex-note-size) * 0.8660254);
     background-color: var(--hex-color-out-scale-bg);
@@ -1156,1322 +1112,66 @@ body {
     -moz-user-select: none;
     -ms-user-select: none;
     flex-shrink: 0;
-  }
-  
-  /* Hover effect alleen als NIET disabled */
-  .hexagon-note:not(.hex-disabled):hover {
+}
+
+.hexagon-note:not(.hex-disabled):hover {
     transform: scale(1.15);
     z-index: 10;
     border-color: var(--hex-color-selected-border);
-  }
-  
-  /* Stijl voor noot binnen de toonladder */
-  .hexagon-note.hex-in-scale {
+}
+
+.hexagon-note.hex-in-scale {
     background-color: var(--hex-color-in-scale-bg);
     border-color: var(--hex-color-in-scale-border);
-  }
-  
-  /* Stijl voor de root noot */
-  .hexagon-note.hex-root {
+}
+.hexagon-note.hex-root {
     background-color: var(--hex-color-root-bg);
     border-color: var(--hex-color-root-border);
     color: var(--hex-color-root-text);
-  }
-  
-  /* Stijl voor de geselecteerde noot (alleen als NIET disabled) */
-  .hexagon-note.hex-selected:not(.hex-disabled) {
+}
+.hexagon-note.hex-selected:not(.hex-disabled) {
     border-width: 2px;
     border-color: var(--hex-color-selected-border);
     transform: scale(1.1);
     box-shadow: 0 0 6px var(--hex-color-selected-border);
     z-index: 5;
-  }
-  
-  /* Stijl voor disabled (out-of-scale) noten */
-  .hexagon-note.hex-disabled {
+}
+.hexagon-note.hex-disabled {
     opacity: var(--hex-disabled-opacity);
-    cursor: default; /* Geen pointer cursor */
+    cursor: default;
     color: var(--hex-color-disabled-text);
-    background-color: var(--hex-color-out-scale-bg); /* Zorg dat achtergrond klopt */
+    background-color: var(--hex-color-out-scale-bg);
     border-color: var(--hex-color-out-scale-border);
-  }
-  
-  /* Stijl voor de Random Note knop */
-  .hex-random-toggle {
-      background-color: var(--button-bg);
-      color: var(--text-color);
-      border: 1px solid var(--button-hover);
-      padding: 4px 8px;
-      cursor: pointer;:root {
-        --bg-gradient-stop-1: #0a1020;
-        --bg-gradient-stop-2: #1a2a4a;
-        --gate-node-color: rgba(180, 160, 220, 0.6);
-        --gate-node-border: rgba(210, 190, 255, 0.8);
-        --probability-gate-node-color: rgba(160, 220, 220, 0.6);
-        --probability-gate-node-border: rgba(190, 255, 255, 0.8);
-        --pitch-node-color: rgba(220, 180, 160, 0.6);
-        --pitch-node-border: rgba(255, 210, 190, 0.8);
-        --relay-node-color: rgba(180, 180, 180, 0.5);
-        --relay-node-border: rgba(210, 210, 210, 0.7);
-        --reflector-node-color: rgba(150, 180, 200, 0.6);
-        --reflector-node-border: rgba(180, 210, 230, 0.8);
-        --switch-node-color: rgba(200, 150, 180, 0.6);
-        --switch-node-border: rgba(230, 180, 210, 0.8);
-        --nebula-color: rgba(180, 220, 255, 0.5);
-        --nebula-border: rgba(210, 230, 255, 0.8);
-        --start-node-color: rgba(255, 255, 200, 0.9);
-        --start-node-border: rgba(255, 255, 230, 1);
-        --start-node-disabled-color: rgba(160, 160, 120, 0.5);
-        --start-node-disabled-border: rgba(180, 180, 140, 0.7);
-        --pulsar-standard-color: var(--start-node-color);
-        --pulsar-standard-border: var(--start-node-border);
-        --pulsar-random-volume-color: rgba(255, 220, 180, 0.9);
-        --pulsar-random-volume-border: rgba(255, 230, 200, 1);
-        --pulsar-random-particles-color: rgba(200, 255, 200, 0.9);
-        --pulsar-random-particles-border: rgba(220, 255, 220, 1);
-        --pulsar-triggerable-color: rgba(200, 200, 255, 0.9);
-        --pulsar-triggerable-border: rgba(220, 220, 255, 1);
-        --drum-kick-color: rgba(255, 160, 160, 0.8);
-        --drum-kick-border: rgba(255, 190, 190, 1);
-        --drum-snare-color: rgba(160, 255, 160, 0.8);
-        --drum-snare-border: rgba(190, 255, 190, 1);
-        --drum-hihat-color: rgba(255, 255, 160, 0.8);
-        --drum-hihat-border: rgba(255, 255, 190, 1);
-        --drum-clap-color: rgba(160, 220, 255, 0.8);
-        --drum-clap-border: rgba(190, 230, 255, 1);
-        --drum-tom1-color: rgba(255, 180, 140, 0.8);
-        --drum-tom1-border: rgba(255, 200, 170, 1);
-        --drum-tom2-color: rgba(255, 200, 140, 0.8);
-        --drum-tom2-border: rgba(255, 220, 170, 1);
-        --drum-cowbell-color: rgba(200, 160, 255, 0.8);
-        --drum-cowbell-border: rgba(220, 190, 255, 1);
-        --connection-color: rgba(100, 130, 180, 0.4);
-        --string-violin-connection-color: rgba(200, 220, 180, 0.6);
-        --string-violin-pulse-color: rgba(220, 240, 200, 1);
-        --string-glide-connection-color: rgba(255, 200, 100, 0.6);
-        --string-glide-pulse-color: rgba(255, 220, 120, 1);
-        --pulse-color: rgba(255, 255, 255, 1);
-        --pulse-logic-color: rgba(255, 200, 150, 1);
-        --pulse-visual-color: var(--pulse-color);
-        --particle-color: rgba(200, 220, 255, 0.8);
-        --wind-particle-color: rgba(150, 180, 220, 0.1);
-        --panel-bg: rgba(20, 30, 55, 0.9);
-        --button-bg: #304070;
-        --button-hover: #405088;
-        --button-active: #6075b0;
-        --text-color: #ddeeff;
-        --selection-rect-color: rgba(150, 200, 255, 0.3);
-        --grid-color: rgba(100, 130, 180, 0.15);
-        --constellation-highlight: rgba(255, 255, 150, 0.15);
-        --beat-indicator-color: rgba(180, 210, 255, 0.5);
-        --button-disabled-bg: #2a355a;
-        --button-disabled-color: #7788aa;
-        --toolbar-width: 52px;
-        --side-toolbar-width: 240px; /* <<< VERHOOGD */
-        --hamburger-panel-width: 240px;
-        --bottom-panel-height: 200px;
-    
-        /* Hex Selector Basis variabelen */
-        --hex-note-size: 26px;
-        --hex-note-gap: 1px;
-        --hex-color-selected-border: rgba(255, 255, 255, 0.9);
-        --hex-color-root-text: #332;
-        --hex-color-disabled-text: #8899aa;
-        --hex-disabled-opacity: 0.5;
-    }
-    
-    body.theme-minor-pentatonic {
-        --bg-gradient-stop-1: #201030;
-        --bg-gradient-stop-2: #402050;
-        --gate-node-color: rgba(160, 160, 220, 0.6);
-        --gate-node-border: rgba(190, 190, 255, 0.8);
-        --probability-gate-node-color: rgba(180, 160, 200, 0.6);
-        --probability-gate-node-border: rgba(210, 190, 230, 0.8);
-        --pitch-node-color: rgba(220, 160, 200, 0.6);
-        --pitch-node-border: rgba(255, 190, 230, 0.8);
-        --relay-node-color: rgba(180, 170, 190, 0.5);
-        --relay-node-border: rgba(210, 200, 220, 0.7);
-        --reflector-node-color: rgba(170, 150, 200, 0.6);
-        --reflector-node-border: rgba(200, 180, 230, 0.8);
-        --switch-node-color: rgba(200, 150, 200, 0.6);
-        --switch-node-border: rgba(230, 180, 230, 0.8);
-        --nebula-color: rgba(200, 180, 230, 0.5);
-        --nebula-border: rgba(220, 200, 250, 0.8);
-        --start-node-color: rgba(255, 200, 255, 0.9);
-        --start-node-border: rgba(255, 230, 255, 1);
-        --start-node-disabled-color: rgba(160, 120, 160, 0.5);
-        --start-node-disabled-border: rgba(180, 150, 180, 0.7);
-        --pulsar-standard-color: var(--start-node-color);
-        --pulsar-standard-border: var(--start-node-border);
-        --pulsar-random-volume-color: rgba(255, 200, 220, 0.9);
-        --pulsar-random-volume-border: rgba(255, 220, 230, 1);
-        --pulsar-random-particles-color: rgba(220, 200, 255, 0.9);
-        --pulsar-random-particles-border: rgba(230, 220, 255, 1);
-        --pulsar-triggerable-color: rgba(255, 200, 200, 0.9);
-        --pulsar-triggerable-border: rgba(255, 220, 220, 1);
-        --drum-kick-color: rgba(255, 160, 200, 0.8);
-        --drum-kick-border: rgba(255, 190, 220, 1);
-        --drum-snare-color: rgba(160, 255, 200, 0.8);
-        --drum-snare-border: rgba(190, 255, 220, 1);
-        --drum-hihat-color: rgba(200, 200, 255, 0.8);
-        --drum-hihat-border: rgba(220, 220, 255, 1);
-        --drum-clap-color: rgba(160, 200, 255, 0.8);
-        --drum-clap-border: rgba(190, 220, 255, 1);
-        --drum-tom1-color: rgba(255, 160, 160, 0.8);
-        --drum-tom1-border: rgba(255, 190, 190, 1);
-        --drum-tom2-color: rgba(255, 180, 160, 0.8);
-        --drum-tom2-border: rgba(255, 200, 190, 1);
-        --drum-cowbell-color: rgba(180, 160, 255, 0.8);
-        --drum-cowbell-border: rgba(200, 180, 255, 1);
-        --connection-color: rgba(150, 110, 180, 0.4);
-        --string-violin-connection-color: rgba(220, 180, 200, 0.6);
-        --string-violin-pulse-color: rgba(240, 200, 220, 1);
-        --pulse-color: rgba(255, 240, 255, 1);
-        --pulse-logic-color: rgba(255, 180, 255, 1);
-        --pulse-visual-color: var(--pulse-color);
-        --particle-color: rgba(230, 200, 255, 0.8);
-        --wind-particle-color: rgba(190, 160, 220, 0.1);
-        --panel-bg: rgba(40, 25, 60, 0.9);
-        --button-bg: #503070;
-        --button-hover: #684088;
-        --button-active: #8860b0;
-        --selection-rect-color: rgba(200, 150, 255, 0.3);
-        --grid-color: rgba(150, 110, 180, 0.15);
-        --constellation-highlight: rgba(255, 200, 255, 0.15);
-        --beat-indicator-color: rgba(224, 199, 255, 0.5);
-        --button-disabled-bg: #3a254a;
-        --button-disabled-color: #aa88aa;
-        /* Hex Colors */
-        --hex-color-out-scale-bg: rgba(64, 32, 80, 0.6);
-        --hex-color-out-scale-border: rgba(80, 48, 112, 0.4);
-        --hex-color-in-scale-bg: rgba(136, 96, 176, 0.7);
-        --hex-color-in-scale-border: rgba(161, 116, 204, 0.7);
-        --hex-color-root-bg: rgba(255, 200, 255, 0.8);
-        --hex-color-root-border: rgba(255, 230, 255, 0.9);
-        --hex-color-text: #eeddee;
-    }
-    
-    body.theme-major {
-        --bg-gradient-stop-1: #102525;
-        --bg-gradient-stop-2: #154040;
-        --gate-node-color: rgba(160, 220, 180, 0.6);
-        --gate-node-border: rgba(190, 255, 210, 0.8);
-        --probability-gate-node-color: rgba(160, 200, 220, 0.6);
-        --probability-gate-node-border: rgba(190, 230, 255, 0.8);
-        --pitch-node-color: rgba(160, 180, 220, 0.6);
-        --pitch-node-border: rgba(190, 210, 255, 0.8);
-        --relay-node-color: rgba(170, 190, 180, 0.5);
-        --relay-node-border: rgba(200, 220, 210, 0.7);
-        --reflector-node-color: rgba(150, 200, 180, 0.6);
-        --reflector-node-border: rgba(180, 230, 210, 0.8);
-        --switch-node-color: rgba(150, 180, 200, 0.6);
-        --switch-node-border: rgba(180, 210, 230, 0.8);
-        --nebula-color: rgba(180, 230, 210, 0.5);
-        --nebula-border: rgba(200, 250, 230, 0.8);
-        --start-node-color: rgba(200, 255, 220, 0.9);
-        --start-node-border: rgba(230, 255, 240, 1);
-        --start-node-disabled-color: rgba(120, 160, 130, 0.5);
-        --start-node-disabled-border: rgba(150, 180, 160, 0.7);
-        --pulsar-standard-color: var(--start-node-color);
-        --pulsar-standard-border: var(--start-node-border);
-        --pulsar-random-volume-color: rgba(180, 255, 200, 0.9);
-        --pulsar-random-volume-border: rgba(200, 255, 220, 1);
-        --pulsar-random-particles-color: rgba(200, 220, 255, 0.9);
-        --pulsar-random-particles-border: rgba(220, 230, 255, 1);
-        --pulsar-triggerable-color: rgba(255, 220, 200, 0.9);
-        --pulsar-triggerable-border: rgba(255, 230, 220, 1);
-        --drum-kick-color: rgba(180, 255, 180, 0.8);
-        --drum-kick-border: rgba(200, 255, 200, 1);
-        --drum-snare-color: rgba(180, 220, 255, 0.8);
-        --drum-snare-border: rgba(200, 230, 255, 1);
-        --drum-hihat-color: rgba(255, 200, 180, 0.8);
-        --drum-hihat-border: rgba(255, 220, 200, 1);
-        --drum-clap-color: rgba(160, 255, 220, 0.8);
-        --drum-clap-border: rgba(190, 255, 230, 1);
-        --drum-tom1-color: rgba(140, 220, 180, 0.8);
-        --drum-tom1-border: rgba(170, 240, 200, 1);
-        --drum-tom2-color: rgba(140, 200, 180, 0.8);
-        --drum-tom2-border: rgba(170, 220, 200, 1);
-        --drum-cowbell-color: rgba(160, 255, 160, 0.8);
-        --drum-cowbell-border: rgba(190, 255, 190, 1);
-        --connection-color: rgba(100, 180, 150, 0.4);
-        --string-violin-connection-color: rgba(180, 230, 180, 0.6);
-        --string-violin-pulse-color: rgba(200, 250, 200, 1);
-        --pulse-color: rgba(230, 255, 255, 1);
-        --pulse-logic-color: rgba(180, 255, 200, 1);
-        --pulse-visual-color: var(--pulse-color);
-        --particle-color: rgba(180, 255, 230, 0.8);
-        --wind-particle-color: rgba(150, 220, 190, 0.1);
-        --panel-bg: rgba(20, 55, 50, 0.9);
-        --button-bg: #307060;
-        --button-hover: #408870;
-        --button-active: #60b090;
-        --selection-rect-color: rgba(150, 255, 200, 0.3);
-        --grid-color: rgba(100, 180, 150, 0.15);
-        --constellation-highlight: rgba(200, 255, 220, 0.15);
-        --beat-indicator-color: rgba(180, 255, 230, 0.5);
-        --button-disabled-bg: #255a50;
-        --button-disabled-color: #77aa99;
-        /* Hex Colors */
-        --hex-color-out-scale-bg: rgba(21, 64, 64, 0.6);
-        --hex-color-out-scale-border: rgba(48, 112, 96, 0.4);
-        --hex-color-in-scale-bg: rgba(96, 176, 144, 0.7);
-        --hex-color-in-scale-border: rgba(121, 204, 166, 0.7);
-        --hex-color-root-bg: rgba(200, 255, 220, 0.8);
-        --hex-color-root-border: rgba(230, 255, 240, 0.9);
-        --hex-color-text: #ddffee;
-    }
-    
-    body.theme-minor {
-        --bg-gradient-stop-1: #301a1a;
-        --bg-gradient-stop-2: #502a2a;
-        --gate-node-color: rgba(220, 160, 160, 0.6);
-        --gate-node-border: rgba(255, 190, 190, 0.8);
-        --probability-gate-node-color: rgba(220, 180, 160, 0.6);
-        --probability-gate-node-border: rgba(255, 210, 190, 0.8);
-        --pitch-node-color: rgba(220, 200, 160, 0.6);
-        --pitch-node-border: rgba(255, 230, 190, 0.8);
-        --relay-node-color: rgba(190, 170, 170, 0.5);
-        --relay-node-border: rgba(220, 200, 200, 0.7);
-        --reflector-node-color: rgba(200, 170, 150, 0.6);
-        --reflector-node-border: rgba(230, 200, 180, 0.8);
-        --switch-node-color: rgba(200, 170, 170, 0.6);
-        --switch-node-border: rgba(230, 200, 200, 0.8);
-        --nebula-color: rgba(230, 190, 180, 0.5);
-        --nebula-border: rgba(250, 210, 200, 0.8);
-        --start-node-color: rgba(255, 210, 180, 0.9);
-        --start-node-border: rgba(255, 230, 210, 1);
-        --start-node-disabled-color: rgba(160, 130, 110, 0.5);
-        --start-node-disabled-border: rgba(180, 150, 130, 0.7);
-        --pulsar-standard-color: var(--start-node-color);
-        --pulsar-standard-border: var(--start-node-border);
-        --pulsar-random-volume-color: rgba(255, 180, 180, 0.9);
-        --pulsar-random-volume-border: rgba(255, 200, 200, 1);
-        --pulsar-random-particles-color: rgba(255, 220, 180, 0.9);
-        --pulsar-random-particles-border: rgba(255, 230, 200, 1);
-        --pulsar-triggerable-color: rgba(220, 180, 255, 0.9);
-        --pulsar-triggerable-border: rgba(230, 200, 255, 1);
-        --drum-kick-color: rgba(255, 180, 160, 0.8);
-        --drum-kick-border: rgba(255, 200, 180, 1);
-        --drum-snare-color: rgba(255, 220, 160, 0.8);
-        --drum-snare-border: rgba(255, 230, 180, 1);
-        --drum-hihat-color: rgba(200, 255, 160, 0.8);
-        --drum-hihat-border: rgba(220, 255, 180, 1);
-        --drum-clap-color: rgba(255, 160, 180, 0.8);
-        --drum-clap-border: rgba(255, 190, 200, 1);
-        --drum-tom1-color: rgba(220, 180, 140, 0.8);
-        --drum-tom1-border: rgba(240, 200, 170, 1);
-        --drum-tom2-color: rgba(220, 160, 140, 0.8);
-        --drum-tom2-border: rgba(240, 180, 170, 1);
-        --drum-cowbell-color: rgba(255, 220, 100, 0.8);
-        --drum-cowbell-border: rgba(255, 230, 130, 1);
-        --connection-color: rgba(180, 130, 110, 0.4);
-        --string-violin-connection-color: rgba(230, 180, 160, 0.6);
-        --string-violin-pulse-color: rgba(250, 200, 180, 1);
-        --pulse-color: rgba(255, 245, 230, 1);
-        --pulse-logic-color: rgba(255, 180, 180, 1);
-        --pulse-visual-color: var(--pulse-color);
-        --particle-color: rgba(255, 220, 200, 0.8);
-        --wind-particle-color: rgba(220, 180, 160, 0.1);
-        --panel-bg: rgba(60, 35, 30, 0.9);
-        --button-bg: #704040;
-        --button-hover: #885050;
-        --button-active: #b07070;
-        --selection-rect-color: rgba(255, 180, 150, 0.3);
-        --grid-color: rgba(180, 130, 110, 0.15);
-        --constellation-highlight: rgba(255, 210, 180, 0.15);
-        --beat-indicator-color: rgba(255, 220, 200, 0.5);
-        --button-disabled-bg: #5a3530;
-        --button-disabled-color: #aa8877;
-        /* Hex Colors */
-        --hex-color-out-scale-bg: rgba(96, 53, 48, 0.6);
-        --hex-color-out-scale-border: rgba(112, 64, 64, 0.4);
-        --hex-color-in-scale-bg: rgba(176, 112, 112, 0.7);
-        --hex-color-in-scale-border: rgba(204, 137, 137, 0.7);
-        --hex-color-root-bg: rgba(255, 210, 180, 0.8);
-        --hex-color-root-border: rgba(255, 230, 210, 0.9);
-        --hex-color-text: #ffeedd;
-    }
-    
-    body.theme-chromatic {
-        --bg-gradient-stop-1: #101015;
-        --bg-gradient-stop-2: #282830;
-        --gate-node-color: rgba(180, 180, 180, 0.6);
-        --gate-node-border: rgba(210, 210, 210, 0.8);
-        --probability-gate-node-color: rgba(190, 190, 190, 0.6);
-        --probability-gate-node-border: rgba(220, 220, 220, 0.8);
-        --pitch-node-color: rgba(200, 200, 200, 0.6);
-        --pitch-node-border: rgba(230, 230, 230, 0.8);
-        --relay-node-color: rgba(160, 160, 160, 0.5);
-        --relay-node-border: rgba(190, 190, 190, 0.7);
-        --reflector-node-color: rgba(170, 170, 180, 0.6);
-        --reflector-node-border: rgba(200, 200, 210, 0.8);
-        --switch-node-color: rgba(180, 170, 190, 0.6);
-        --switch-node-border: rgba(210, 200, 220, 0.8);
-        --nebula-color: rgba(210, 210, 220, 0.5);
-        --nebula-border: rgba(230, 230, 240, 0.8);
-        --start-node-color: rgba(255, 255, 255, 0.9);
-        --start-node-border: rgba(230, 230, 230, 1);
-        --start-node-disabled-color: rgba(160, 160, 160, 0.5);
-        --start-node-disabled-border: rgba(180, 180, 180, 0.7);
-        --pulsar-standard-color: var(--start-node-color);
-        --pulsar-standard-border: var(--start-node-border);
-        --pulsar-random-volume-color: rgba(230, 230, 230, 0.9);
-        --pulsar-random-volume-border: rgba(240, 240, 240, 1);
-        --pulsar-random-particles-color: rgba(210, 210, 210, 0.9);
-        --pulsar-random-particles-border: rgba(225, 225, 225, 1);
-        --pulsar-triggerable-color: rgba(190, 190, 190, 0.9);
-        --pulsar-triggerable-border: rgba(215, 215, 215, 1);
-        --drum-kick-color: rgba(200, 200, 200, 0.8);
-        --drum-kick-border: rgba(220, 220, 220, 1);
-        --drum-snare-color: rgba(180, 180, 180, 0.8);
-        --drum-snare-border: rgba(200, 200, 200, 1);
-        --drum-hihat-color: rgba(220, 220, 220, 0.8);
-        --drum-hihat-border: rgba(240, 240, 240, 1);
-        --drum-clap-color: rgba(170, 170, 170, 0.8);
-        --drum-clap-border: rgba(190, 190, 190, 1);
-        --drum-tom1-color: rgba(190, 190, 190, 0.8);
-        --drum-tom1-border: rgba(210, 210, 210, 1);
-        --drum-tom2-color: rgba(180, 180, 180, 0.8);
-        --drum-tom2-border: rgba(200, 200, 200, 1);
-        --drum-cowbell-color: rgba(210, 210, 210, 0.8);
-        --drum-cowbell-border: rgba(230, 230, 230, 1);
-        --connection-color: rgba(150, 150, 160, 0.4);
-        --string-violin-connection-color: rgba(200, 200, 200, 0.6);
-        --string-violin-pulse-color: rgba(220, 220, 220, 1);
-        --pulse-color: rgba(255, 255, 255, 1);
-        --pulse-logic-color: rgba(200, 200, 255, 1);
-        --pulse-visual-color: var(--pulse-color);
-        --particle-color: rgba(220, 220, 230, 0.8);
-        --wind-particle-color: rgba(180, 180, 190, 0.1);
-        --panel-bg: rgba(50, 50, 60, 0.9);
-        --button-bg: #555;
-        --button-hover: #666;
-        --button-active: #888;
-        --selection-rect-color: rgba(200, 200, 200, 0.3);
-        --grid-color: rgba(150, 150, 160, 0.15);
-        --constellation-highlight: rgba(220, 220, 220, 0.15);
-        --beat-indicator-color: rgba(200, 200, 200, 0.5);
-        --button-disabled-bg: #444;
-        --button-disabled-color: #999;
-        /* Hex Colors */
-        --hex-color-out-scale-bg: rgba(80, 80, 96, 0.6);
-        --hex-color-out-scale-border: rgba(85, 85, 85, 0.4);
-        --hex-color-in-scale-bg: rgba(136, 136, 136, 0.7);
-        --hex-color-in-scale-border: rgba(170, 170, 170, 0.7);
-        --hex-color-root-bg: rgba(230, 230, 230, 0.8);
-        --hex-color-root-border: rgba(255, 255, 255, 0.9);
-        --hex-color-text: #f0f0f0;
-    }
-    
-    body {
-        margin: 0;
-        overflow: hidden;
-        background-color: var(--bg-color); /* Legacy, remove? */
-        color: var(--text-color);
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        transition: background 0.8s ease;
-    }
-    
-    #mainCanvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-        cursor: crosshair;
-        background: linear-gradient(135deg, var(--bg-gradient-stop-1), var(--bg-gradient-stop-2));
-        touch-action: none;
-    }
-    
-    #startMessage, #loadingIndicator {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 20px 30px;
-        background-color: rgba(0, 0, 0, 0.7);
-        border-radius: 10px;
-        font-size: 1.2em;
-        pointer-events: none;
-        z-index: 10;
-        text-align: center;
-        color: #fff;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-    }
-    
-    #loadingIndicator {
-        padding: 15px;
-        font-size: 1em;
-        z-index: 11;
-    }
-    
-    #toolbar {
-        position: fixed;
-        left: 10px;
-        top: 10px;
-        z-index: 10;
-        background-color: var(--panel-bg);
-        border-radius: 5px;
-        padding: 5px;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-        border: 1px solid rgba(255,255,255,0.1);
-        width: var(--toolbar-width);
-        box-sizing: border-box;
-    }
-    
-    #toolbar-add-elements, #toolbar-tools {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-    
-    #toolbar button {
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--button-hover);
-        padding: 8px;
-        cursor: pointer;
-        text-align: center;
-        border-radius: 3px;
-        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-        font-size: 18px;
-        width: 100%;
-        min-height: 40px;
-        box-sizing: border-box;
-        line-height: 1;
-    }
-    
-    #toolbar button:hover {
-        background-color: var(--button-hover);
-    }
-    
-    #toolbar button.active {
-        background-color: var(--button-active);
-        border-color: var(--text-color);
-        color: white;
-        box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
-    }
-    
-    .toolbar-divider {
-        border: none;
-        height: 1px;
-        background-color: var(--button-bg);
-        margin: 3px 0;
-    }
-    
-    .panel {
-        position: fixed;
-        top: 10px;
-        background-color: var(--panel-bg);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 5px;
-        padding: 15px;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-        color: var(--text-color);
-        transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0.3s;
-        height: calc(100vh - 30px);
-        overflow-y: auto;
-        box-sizing: border-box;
-        scrollbar-width: thin;
-        scrollbar-color: var(--button-active) var(--button-bg);
-        transform: translateX(-110%);
-        opacity: 0;
-        visibility: hidden;
-        z-index: 8;
-    }
-    .panel:not(.hidden) {
-         transform: translateX(0);
-         opacity: 1;
-         pointer-events: auto;
-         visibility: visible;
-         transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0s;
-    }
-    
-    .panel::-webkit-scrollbar { width: 6px; }
-    .panel::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
-    .panel::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
-    
-    #hamburgerMenuPanel {
-        left: calc(var(--toolbar-width) + 20px);
-        width: var(--hamburger-panel-width);
-        z-index: 9;
-    }
-    #hamburgerMenuPanel.hidden {
-         transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
-    }
-    
-    #sideToolbar {
-        left: calc(var(--toolbar-width) + 20px);
-        width: var(--side-toolbar-width); /* <<< Deze wordt nu gebruikt */
-        z-index: 8;
-    }
-    #sideToolbar.hidden {
-        transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
-    }
-    
-    .panel h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        font-size: 1.1em;
-        font-weight: bold;
-        border-bottom: 1px solid var(--button-bg);
-        padding-bottom: 8px;
-    }
-    
-    #sideToolbarContent .type-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 15px;
-    }
-    
-    .panel .type-button,
-    .panel .waveform-button,
-    .panel .drum-element-button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--button-hover);
-        padding: 8px 10px;
-        margin-bottom: 0;
-        cursor: pointer;
-        text-align: left;
-        border-radius: 4px;
-        transition: background-color 0.2s ease, border-color 0.2s ease;
-        font-size: 0.9em;
-        box-sizing: border-box;
-        width: 100%;
-    }
-    
-    .panel .type-button .type-icon,
-    .panel .drum-element-button .type-icon {
-        font-size: 1.1em;
-        min-width: 1.2em;
-        text-align: center;
-        opacity: 0.8;
-    }
-    
-    .panel .type-button:hover,
-    .panel .waveform-button:hover,
-    .panel .drum-element-button:hover {
-        background-color: var(--button-hover);
-    }
-    
-    .panel .type-button.selected,
-    .panel .waveform-button.selected,
-    .panel .drum-element-button.selected {
-        background-color: var(--button-active);
-        border-color: var(--text-color);
-        color: white;
-    }
-    
-    .panel .type-button.disabled,
-    .panel .waveform-button.disabled,
-    .panel .drum-element-button.disabled {
-        background-color: var(--button-disabled-bg);
-        color: var(--button-disabled-color);
-        cursor: not-allowed;
-        border-color: var(--button-bg);
-        text-decoration: line-through;
-        opacity: 0.7;
-    }
-    
-    .panel-section {
-        margin-bottom: 15px;
-        border-bottom: 1px solid var(--button-bg);
-        padding-bottom: 10px;
-    }
-    .panel-section:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-        margin-bottom: 0;
-    }
-    
-    .panel label {
-        font-size: 0.9em;
-        margin: 10px 0 3px 0;
-        display: block;
-        opacity: 0.9;
-    }
-    
-    .panel input[type="range"],
-    .panel input[type="text"],
-    .panel input[type="color"],
-    .panel select,
-    .panel input[type="number"] {
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--button-hover);
-        padding: 6px;
-        border-radius: 3px;
-        margin-bottom: 10px;
-        width: 100%;
-        box-sizing: border-box;
-        font-size: 0.9em;
-        transition: background-color 0.2s ease, border-color 0.2s ease;
-        vertical-align: middle;
-        cursor: pointer;
-    }
-    
-    .panel input[type="number"] {
-        -moz-appearance: textfield;
-    }
-    .panel input[type=number]::-webkit-inner-spin-button,
-    .panel input[type=number]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    
-    .panel input[type="checkbox"] {
-         width: auto;
-         margin-right: 5px;
-         vertical-align: middle;
-         cursor: pointer;
-    }
-    
-    .panel input[type="color"] {
-        padding: 2px;
-        height: 30px;
-    }
-    
-    .panel input[type="range"] { padding: 0; height: 18px; }
-    .panel input[type=range]::-webkit-slider-runnable-track { height: 4px; background: var(--button-hover); border-radius: 2px; }
-    .panel input[type=range]::-moz-range-track { height: 4px; background: var(--button-hover); border-radius: 2px; }
-    .panel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; margin-top: -5px; cursor: pointer; }
-    .panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; border: none; cursor: pointer; }
-    .panel select:focus, .panel input[type="range"]:focus, .panel input[type="number"]:focus, .panel input[type="text"]:focus, .panel input[type="color"]:focus { outline: 1px solid var(--button-active); border-color: var(--button-active); }
-    .panel hr { border: none; border-top: 1px solid var(--button-bg); margin: 12px 0; opacity: 0.5; }
-    .panel p { margin: 10px 0 5px 0; font-size: 0.9em; font-weight: bold; opacity: 0.9; color: var(--text-color); }
-    .panel p:first-of-type { margin-top: 0; }
-    .panel small { display: block; font-size: 0.8em; opacity: 0.7; margin-bottom: 8px; margin-top: 5px; line-height: 1.3; color: var(--button-disabled-color); }
-    .panel button {
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--button-hover);
-        padding: 8px 12px;
-        cursor: pointer;
-        border-radius: 3px;
-        transition: background-color 0.2s ease, border-color 0.2s ease;
-        font-size: 0.9em;
-        margin-top: 5px;
-        margin-right: 5px;
-        display: inline-block;
-    }
-    .panel button:hover { background-color: var(--button-hover); }
-    .panel button:active { background-color: var(--button-active); }
-    
-    .panel .edit-drum-sound {
-        margin-left: 15px;
-        margin-bottom: 10px;
-        padding-left: 10px;
-        border-left: 2px solid var(--button-bg);
-    }
-    .panel .edit-drum-sound strong {
-        display: block;
-        margin-bottom: 5px;
-        font-size: 1em;
-    }
-    
-    
-    #groupControls.hidden { display: none; }
-    #groupControls label[for="groupFluctuateAmount"], #groupControls #groupFluctuateAmount { margin-left: 20px; width: calc(100% - 20px); }
-    
-    #gridControls {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 5;
-        background-color: var(--panel-bg);
-        border-radius: 5px;
-        padding: 5px;
-        color: var(--text-color);
-        box-shadow: -2px 2px 10px rgba(0,0,0,0.3);
-        font-size: 14px;
-        border: 1px solid rgba(255,255,255,0.1);
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
-    
-    #gridControls button {
-        background: var(--button-bg);
-        color: var(--text-color);
-        border: none;
-        padding: 6px 10px;
-        cursor: pointer;
-        border-radius: 3px;
-        width: auto;
-        text-align: left;
-        font-weight: bold;
-        transition: background-color 0.2s ease;
-        margin: 2px 0;
-        font-size: 0.85em;
-    }
-    
-    #gridControls button:hover {
-        background: var(--button-hover);
-    }
-    
-    #gridControls button.active {
-        background: var(--button-active);
-        color: white;
-    }
-    
-    #gridOptions {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        width: 100%;
-        margin-top: 3px;
-        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-        max-height: 0;
-        opacity: 0;
-        overflow: hidden;
-        visibility: hidden;
-    }
-    
-    #gridOptions:not(.hidden) {
-        max-height: 100px;
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    
-    #gridOptions label {
-        font-size: 0.8em;
-        margin: 3px 5px 0 0;
-        opacity: 0.9;
-        align-self: center;
-    }
-    
-    #gridOptions > div {
-        display: flex;
-        align-items: center;
-    }
-    
-    #transportControls {
-        position: absolute;
-        bottom: 15px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 6;
-        background-color: var(--panel-bg);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 30px;
-        padding: 8px 15px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-    
-    #transportControls button {
-        background: var(--button-bg);
-        color: var(--text-color);
-        border: none;
-        padding: 8px 15px;
-        cursor: pointer;
-        border-radius: 20px;
-        font-size: 0.9em;
-        font-weight: bold;
-        transition: background-color 0.2s ease, transform 0.1s ease;
-    }
-    
-    #transportControls button:hover {
-        background-color: var(--button-hover);
-    }
-    
-    #transportControls button:active {
-        transform: scale(0.95);
-    }
-    
-    #transportControls button.active {
-        background-color: var(--button-active);
-        color: white;
-    }
-    
-    #transportControls button#restartPulsarsBtn.hidden {
-        display: none;
-    }
-    
-    #transportControls #bpmControls {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-left: 5px;
-    }
-    
-    #transportControls #bpmControls.hidden {
-        display: none;
-    }
-    
-    #transportControls #bpmControls label {
-        margin: 0;
-        font-size: 0.9em;
-        opacity: 0.9;
-    }
-    
-    #transportControls #bpmControls input[type="number"] {
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--button-hover);
-        padding: 5px;
-        border-radius: 3px;
-        width: 55px;
-        text-align: right;
-        font-size: 0.9em;
-        -moz-appearance: textfield;
-         appearance: textfield;
-    }
-    
-    #transportControls input[type=number]::-webkit-inner-spin-button,
-    #transportControls input[type=number]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-    
-    .transport-divider {
-        width: 1px;
-        height: 20px;
-        background-color: var(--button-bg);
-        margin: 0 5px;
-    }
-    
-    #beatIndicator {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 5px;
-        background-color: var(--beat-indicator-color);
-        opacity: 0;
-        transition: opacity 0.05s ease-out;
-        pointer-events: none;
-        z-index: 1;
-    }
-    
-    #beatIndicator.active {
-        opacity: 1;
-        transition: opacity 0.01s ease-in;
-    }
-    
-    .bottom-panel {
-        position: fixed;
-        bottom: calc(var(--bottom-panel-height) * -1 - 30px);
-        left: 50%;
-        transform: translateX(-50%);
-        width: 80%;
-        max-width: 600px;
-        height: var(--bottom-panel-height);
-        background-color: var(--panel-bg);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px 10px 0 0;
-        padding: 15px;
-        box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.3);
-        z-index: 7;
-        transition: bottom 0.3s ease-out;
-        color: var(--text-color);
-        overflow-y: auto;
-        box-sizing: border-box;
-        scrollbar-width: thin;
-        scrollbar-color: var(--button-active) var(--button-bg);
-    }
-    
-    .bottom-panel:not(.hidden) {
-        bottom: 0;
-    }
-    
-    .bottom-panel h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        font-size: 1.1em;
-        font-weight: bold;
-        border-bottom: 1px solid var(--button-bg);
-        padding-bottom: 8px;
-    }
-    
-    .bottom-panel .panel-section {
-        margin-bottom: 10px;
-        padding-bottom: 5px;
-        border-bottom: 1px solid var(--button-bg);
-    }
-    .bottom-panel .panel-section:last-child {
-        border-bottom: none;
-    }
-    
-    
-    .bottom-panel label {
-        font-size: 0.9em;
-        margin: 5px 0 2px 0;
-        display: inline-block;
-        width: auto;
-        margin-right: 10px;
-        vertical-align: middle;
-        opacity: 0.9;
-    }
-    
-    .bottom-panel input[type="range"] {
-        width: calc(100% - 120px);
-        display: inline-block;
-        vertical-align: middle;
-        margin-bottom: 5px;
-    }
-    .bottom-panel select {
-         width: auto;
-         display: inline-block;
-         vertical-align: middle;
-         margin-bottom: 5px;
-         margin-right: 15px;
-         min-width: 80px;
-    }
-    
-    
-    .bottom-panel span {
-        display: inline-block;
-        width: 40px;
-        text-align: right;
-        font-size: 0.85em;
-        opacity: 0.8;
-        vertical-align: middle;
-        margin-left: 5px;
-    }
-    
-    #mixerGroupControlsContainer {
-        min-height: 30px;
-        padding-top: 5px;
-        padding-bottom: 15px;
-    }
-    
-    #mixerGroupControlsContainer label {
-        display: inline-block;
-        width: auto;
-        margin-right: 10px;
-        font-size: 0.9em;
-        opacity: 0.9;
-        vertical-align: middle;
-    }
-    
-    #mixerGroupControlsContainer input[type="range"] {
-        width: calc(100% - 170px);
-        display: inline-block;
-        vertical-align: middle;
-        margin-bottom: 0;
-    }
-    
-    #mixerGroupControlsContainer span {
-        display: inline-block;
-        width: 40px;
-        text-align: right;
-        font-size: 0.85em;
-        opacity: 0.8;
-        vertical-align: middle;
-        margin-left: 5px;
-    }
-    
-    #mixerGroupControlsContainer small {
-        display: block;
-        font-size: 0.85em;
-        opacity: 0.7;
-        text-align: center;
-        margin-top: 5px;
-    }
-    
-    #pianoRollCanvas {
-        display: block;
-        width: 100%;
-        height: 80px;
-        background-color: rgba(0, 0, 0, 0.2);
-        border-radius: 4px;
-        margin-top: 10px;
-        cursor: pointer;
-    }
-    
-    #pianoRollPanel .scale-selector-section {
-        margin-top: 15px;
-        padding-bottom: 0;
-        border-bottom: none;
-        text-align: center;
-    }
-    
-    #pianoRollPanel .scale-selector-section label {
-      margin-right: 5px;
-      vertical-align: middle;
-    }
-    
-    #pianoRollPanel .scale-selector-section select {
-       width: auto;
-       min-width: 150px;
-       display: inline-block;
-       vertical-align: middle;
-       margin-bottom: 0;
-    }
-    
-    .visually-hidden {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        margin: -1px;
-        padding: 0;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        border: 0;
-    }
-    
-    .mixer-group-control-section {
-        padding-bottom: 10px;
-        margin-bottom: 10px;
-        border-bottom: 1px solid var(--button-bg);
-    }
-    .mixer-group-control-section:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-    }
-    
-    .mixer-control-item {
-         display: flex;
-         align-items: center;
-         margin-bottom: 5px;
-    }
-    
-    #mixerGroupControlsContainer label {
-        flex-basis: 140px;
-        flex-shrink: 0;
-        margin-right: 10px;
-        text-align: right;
-        font-size: 0.9em;
-        opacity: 0.9;
-    }
-    
-    #mixerGroupControlsContainer input[type="range"] {
-        flex-grow: 1;
-        width: auto;
-        margin-right: 5px;
-        margin-bottom: 0;
-    }
-    
-     #mixerGroupControlsContainer span {
-        flex-basis: 40px;
-        flex-shrink: 0;
-        text-align: right;
-        font-size: 0.85em;
-        opacity: 0.8;
-    }
-    
-    #mixerGroupControlsContainer small {
-        display: block;
-        text-align: center;
-        opacity: 0.7;
-        margin-top: 10px;
-        width: 100%;
-    }
-    
-    /* === Hexagon Note Selector Styles (Themed & Updated) === */
-    /* Globale variabelen voor hex selector */
-    :root {
-      --hex-note-size: 26px;
-      --hex-note-gap: 1px;
-      --hex-color-selected-border: rgba(255, 255, 255, 0.9);
-      --hex-color-root-text: #332;
-      --hex-color-disabled-text: #8899aa;
-      --hex-disabled-opacity: 0.5;
-    }
-    
-    /* Kleuren per thema */
-    body.theme-major-pentatonic {
-      --hex-color-out-scale-bg: rgba(26, 42, 74, 0.6);
-      --hex-color-out-scale-border: rgba(48, 64, 112, 0.4);
-      --hex-color-in-scale-bg: rgba(96, 117, 176, 0.7);
-      --hex-color-in-scale-border: rgba(121, 145, 204, 0.7);
-      --hex-color-root-bg: rgba(255, 255, 200, 0.8);
-      --hex-color-root-border: rgba(255, 255, 230, 0.9);
-      --hex-color-text: #ddeeff;
-    }
-    body.theme-minor-pentatonic {
-      --hex-color-out-scale-bg: rgba(64, 32, 80, 0.6);
-      --hex-color-out-scale-border: rgba(80, 48, 112, 0.4);
-      --hex-color-in-scale-bg: rgba(136, 96, 176, 0.7);
-      --hex-color-in-scale-border: rgba(161, 116, 204, 0.7);
-      --hex-color-root-bg: rgba(255, 200, 255, 0.8);
-      --hex-color-root-border: rgba(255, 230, 255, 0.9);
-      --hex-color-text: #eeddee;
-    }
-    body.theme-major {
-      --hex-color-out-scale-bg: rgba(21, 64, 64, 0.6);
-      --hex-color-out-scale-border: rgba(48, 112, 96, 0.4);
-      --hex-color-in-scale-bg: rgba(96, 176, 144, 0.7);
-      --hex-color-in-scale-border: rgba(121, 204, 166, 0.7);
-      --hex-color-root-bg: rgba(200, 255, 220, 0.8);
-      --hex-color-root-border: rgba(230, 255, 240, 0.9);
-      --hex-color-text: #ddffee;
-    }
-    body.theme-minor {
-      --hex-color-out-scale-bg: rgba(96, 53, 48, 0.6);
-      --hex-color-out-scale-border: rgba(112, 64, 64, 0.4);
-      --hex-color-in-scale-bg: rgba(176, 112, 112, 0.7);
-      --hex-color-in-scale-border: rgba(204, 137, 137, 0.7);
-      --hex-color-root-bg: rgba(255, 210, 180, 0.8);
-      --hex-color-root-border: rgba(255, 230, 210, 0.9);
-      --hex-color-text: #ffeedd;
-    }
-    body.theme-chromatic {
-      --hex-color-out-scale-bg: rgba(80, 80, 96, 0.6);
-      --hex-color-out-scale-border: rgba(85, 85, 85, 0.4);
-      --hex-color-in-scale-bg: rgba(136, 136, 136, 0.7);
-      --hex-color-in-scale-border: rgba(170, 170, 170, 0.7);
-      --hex-color-root-bg: rgba(230, 230, 230, 0.8);
-      --hex-color-root-border: rgba(255, 255, 255, 0.9);
-      --hex-color-text: #f0f0f0;
-    }
-    
-    /* Container voor de kolommen, nu met scroll */
-    .hex-note-container {
-      display: flex;
-      align-items: center;
-      justify-content: flex-start; /* Start links zodat scrollen logisch is */
-      padding: 5px 5px 10px 5px; /* Padding onderaan voor scrollbar ruimte */
-      max-width: 100%;
-      min-height: 80px;
-      overflow-x: auto; /* Horizontaal scrollen AAN */
-      overflow-y: hidden;
-      scrollbar-width: thin;
-      scrollbar-color: var(--button-active) var(--button-bg);
-    }
-    .hex-note-container::-webkit-scrollbar { height: 6px; }
-    .hex-note-container::-webkit-scrollbar-track { background: var(--button-bg); border-radius: 3px;}
-    .hex-note-container::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
-    
-    /* Kolom stijl */
-    .hex-column {
-      margin: 0 calc(var(--hex-note-gap) * -0.5);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .hex-column:nth-child(odd) {
-      transform: translateY(calc(var(--hex-note-size) * 0.8660254 / 2 + var(--hex-note-gap) / 2));
-    }
-    
-    /* Individuele hexagon */
-    .hexagon-note {
-      width: var(--hex-note-size);
-      height: calc(var(--hex-note-size) * 0.8660254);
-      background-color: var(--hex-color-out-scale-bg);
-      clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-sizing: border-box;
-      border: 1px solid var(--hex-color-out-scale-border);
-      cursor: pointer;
-      margin-bottom: calc(var(--hex-note-gap) * 1.15);
-      transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
-      font-size: calc(var(--hex-note-size) * 0.30);
-      color: var(--hex-color-text);
-      font-weight: bold;
-      position: relative;
-      user-select: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      flex-shrink: 0;
-    }
-    
-    /* Hover alleen als NIET disabled */
-    .hexagon-note:not(.hex-disabled):hover {
-      transform: scale(1.15);
-      z-index: 10;
-      border-color: var(--hex-color-selected-border);
-    }
-    
-    /* States */
-    .hexagon-note.hex-in-scale {
-      background-color: var(--hex-color-in-scale-bg);
-      border-color: var(--hex-color-in-scale-border);
-    }
-    .hexagon-note.hex-root {
-      background-color: var(--hex-color-root-bg);
-      border-color: var(--hex-color-root-border);
-      color: var(--hex-color-root-text);
-    }
-    .hexagon-note.hex-selected:not(.hex-disabled) {
-      border-width: 2px;
-      border-color: var(--hex-color-selected-border);
-      transform: scale(1.1);
-      box-shadow: 0 0 6px var(--hex-color-selected-border);
-      z-index: 5;
-    }
-    .hexagon-note.hex-disabled {
-      opacity: var(--hex-disabled-opacity);
-      cursor: default;
-      color: var(--hex-color-disabled-text);
-      background-color: var(--hex-color-out-scale-bg);
-      border-color: var(--hex-color-out-scale-border);
-    }
-    
-    /* Random knop */
-    .hex-random-toggle {
-        background-color: var(--button-bg);
-        color: var(--text-color);
-        border: 1px solid var(--button-hover);
-        padding: 4px 8px;
-        cursor: pointer;
-        border-radius: 3px;
-        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-        font-size: 0.8em;
-        margin-bottom: 8px;
-        display: block;
-        width: fit-content;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    .hex-random-toggle:hover {
-        background-color: var(--button-hover);
-    }
-    .hex-random-toggle.active {
-        background-color: var(--button-active);
-        border-color: var(--text-color);
-        color: white;
-        box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
-    }
-    
-    /* Optionele Keyframes voor hover animatie */
-    /* @keyframes hexHoverPulse {
-      0% { box-shadow: 0 0 3px transparent; }
-      50% { box-shadow: 0 0 8px var(--hex-color-selected-border); }
-      100% { box-shadow: 0 0 3px transparent; }
-    } */
-    
-    /* Label boven hex container (optioneel) */
-    #hexNoteSelectorContainer + label {
-        font-size: 0.9em;
-        margin-bottom: 3px;
-        display: block;
-        opacity: 0.9;
-    }
-      border-radius: 3px;
-      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-      font-size: 0.8em;
-      margin-bottom: 8px;
-      display: block;
-      width: fit-content;
-      margin-left: auto;
-      margin-right: auto;
-  }
-  .hex-random-toggle:hover {
-      background-color: var(--button-hover);
-  }
-  .hex-random-toggle.active {
-      background-color: var(--button-active);
-      border-color: var(--text-color);
-      color: white;
-      box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
-  }
+}
+
+.hex-random-toggle {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 0.8em;
+    margin-bottom: 8px;
+    display: block;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+.hex-random-toggle:hover {
+    background-color: var(--button-hover);
+}
+.hex-random-toggle.active {
+    background-color: var(--button-active);
+    border-color: var(--text-color);
+    color: white;
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+}
+
+#hexNoteSelectorContainer + label {
+    font-size: 0.9em;
+    margin-bottom: 3px;
+    display: block;
+    opacity: 0.9;
+}
