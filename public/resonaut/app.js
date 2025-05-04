@@ -6409,117 +6409,188 @@ canvas.addEventListener('contextmenu', handleContextMenu);
 
 function animationLoop() {
   animationFrameId = requestAnimationFrame(animationLoop);
-  if (!isAudioReady || !isPlaying) return;
+  // Zorg ervoor dat de audio context klaar en actief is voor we doorgaan
+  if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
+      // Optioneel: log hier indien nodig: console.log("Animation loop paused (audio not ready or not playing).");
+      return; // Stop de uitvoering van deze frame als audio niet klaar is
+  }
+
   const now = audioContext.currentTime;
   const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
-  const secondsPerBeat = 60.0 / globalBPM;
+  const secondsPerBeat = 60.0 / (globalBPM || 120); // Voeg fallback toe voor BPM voor zekerheid
 
-  if (isGlobalSyncEnabled && beatIndicatorElement) {
-      if (now >= lastBeatTime + secondsPerBeat) {
-          beatIndicatorElement.classList.add("active");
-          setTimeout(() => beatIndicatorElement.classList.remove("active"), 50);
+  // Update beat indicator (controleer of element bestaat)
+  if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
+      const epsilon = 0.01; // Kleine marge voor timing
+      if (now >= lastBeatTime + secondsPerBeat - epsilon) {
+           if (!beatIndicatorElement.classList.contains("active")) {
+               beatIndicatorElement.classList.add("active");
+               setTimeout(() => { // Gebruik setTimeout voor betrouwbare verwijdering
+                   if(beatIndicatorElement) beatIndicatorElement.classList.remove("active");
+               }, 50);
+           }
+          // Bereken de correcte laatste beattijd opnieuw
           lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
       }
   } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
+      // Zet indicator uit als sync uit staat
       beatIndicatorElement.classList.remove("active");
       lastBeatTime = 0;
   }
 
-  nodes.forEach((node) => {
-      if (node.isStartNode && node.isEnabled &&
-          (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles")) {
 
-          let shouldPulse = false;
-          let pulseData = {};
+  try { // --- Begin try...catch rond node processing ---
 
-          if (node.type === "pulsar_random_particles") {
-              if (node.nextRandomTriggerTime === 0) {
-                  node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-              }
-              if (now >= node.nextRandomTriggerTime) {
-                  shouldPulse = true;
-                  node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-              }
-          } else {
-              if (isGlobalSyncEnabled) {
-                  const subdiv = subdivisionOptions[node.syncSubdivisionIndex];
-                  const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                  if (node.nextSyncTriggerTime === 0) {
-                      const currentBeat = now / secondsPerBeat;
-                      const currentSubdivision = Math.floor(currentBeat / subdiv.value);
-                      node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
-                      if (node.nextSyncTriggerTime <= now + 0.005) node.nextSyncTriggerTime += nodeIntervalSeconds;
+      nodes.forEach((node) => {
+          // Pulsar logic
+          if (node.isStartNode && node.isEnabled &&
+              (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles")) {
+
+              let shouldPulse = false;
+              let pulseData = {};
+
+              if (node.type === "pulsar_random_particles") {
+                  // Random timing logic (lijkt ok)
+                  if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) { // Reset als ver in verleden
+                       node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
                   }
-                  if (now >= node.nextSyncTriggerTime) {
+                  if (now >= node.nextRandomTriggerTime) {
                       shouldPulse = true;
-                      node.nextSyncTriggerTime += nodeIntervalSeconds;
-                       if (node.nextSyncTriggerTime <= now) {
-                          node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
-                           if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
+                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                  }
+              } else { // Standard or Random Volume Pulsar
+                  if (isGlobalSyncEnabled) {
+                      // *** SYNC LOGICA - EXTRA CONTROLES TOEGEVOEGD ***
+                      const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; // Gebruik default als index mist
+                      if (index >= 0 && index < subdivisionOptions.length) { // Controleer of index geldig is
+                          const subdiv = subdivisionOptions[index];
+                          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) { // Controleer of subdiv object en waarde geldig zijn
+                              const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                              if (nodeIntervalSeconds > 0) { // Voorkom deling door nul of negatief interval
+                                  // Initialiseer of reset timing indien nodig
+                                  if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
+                                      const currentBeat = now / secondsPerBeat;
+                                      const currentSubdivision = Math.floor(currentBeat / subdiv.value);
+                                      node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
+                                      if (node.nextSyncTriggerTime <= now + 0.005) { // Zorg dat het in de toekomst ligt
+                                          node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      }
+                                  }
+                                  // Check of het tijd is om te pulsen (met kleine marge)
+                                  if (now >= node.nextSyncTriggerTime - 0.005) {
+                                      shouldPulse = true;
+                                      node.nextSyncTriggerTime += nodeIntervalSeconds; // Plan volgende puls
+                                      // Robuustheid: zorg dat volgende tijd niet vastzit in het verleden
+                                      if (node.nextSyncTriggerTime <= now) {
+                                          node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
+                                          if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                       }
+                                  }
+                              } else {
+                                   console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
+                              }
+                          } else {
+                               console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
+                          }
+                      } else {
+                           console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
+                           node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX; // Probeer te herstellen
+                      }
+                      // *** EINDE SYNC LOGICA CONTROLES ***
+                  } else { // Sync Uitgeschakeld - Interval Logica
+                      if (node.lastTriggerTime < 0) {
+                          node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
+                      }
+                      const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                      if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
+                          shouldPulse = true;
+                          node.lastTriggerTime = now;
                       }
                   }
-              } else {
-                  if (node.lastTriggerTime < 0) node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
-                  if (now - node.lastTriggerTime >= (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL)) {
-                      shouldPulse = true;
-                      node.lastTriggerTime = now;
+              } // End standard/random volume pulsar check
+
+              if (shouldPulse) {
+                  // Pulse data setup (intensity, color etc.)
+                  pulseData = {
+                      intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
+                      color: node.color ?? null,
+                      particleMultiplier: 1.0,
+                  };
+                  if (node.type === "pulsar_random_volume") {
+                      pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
                   }
-              }
-          }
 
-          if (shouldPulse) {
-              pulseData = {
-                  intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
-                  color: node.color ?? null,
-                  particleMultiplier: 1.0,
-              };
-              if (node.type === "pulsar_random_volume") {
-                  pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
-              }
+                  currentGlobalPulseId++;
+                  node.animationState = 1;
+                  setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
 
-              currentGlobalPulseId++;
-              node.animationState = 1;
-              setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
+                  // Propagate trigger naar buren
+                  node.connections.forEach(neighborId => {
+                      const neighborNode = findNodeById(neighborId);
+                      const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                      if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
+                           const travelTime = connection.length * DELAY_FACTOR;
+                           try { // Extra try-catch rond propagatie
+                               createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
+                               propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
+                           } catch (propError) {
+                               console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
+                           }
+                      }
+                  });
+              } // End if shouldPulse
 
-              node.connections.forEach(neighborId => {
-                  const neighborNode = findNodeById(neighborId);
-                  const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                  if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
-                      const travelTime = connection.length * DELAY_FACTOR;
-                      createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
-                      propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
-                  }
-              });
-          }
+          } // End Pulsar specific logic
 
-      } else if (node.type === "gate") {
-          node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
-          node.currentAngle %= 2 * Math.PI;
-      } else if (node.type === "nebula") {
-           // Use the lowered speeds
-           node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
-           node.currentAngle %= 2 * Math.PI;
-           node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
-           node.innerAngle %= 2 * Math.PI;
-           node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
-           node.pulsePhase %= 2 * Math.PI;
-       } else if (node.type === PORTAL_NEBULA_TYPE) {
-           // Update portal pulse phase for visuals
-           node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
-           node.pulsePhase %= 2 * Math.PI;
-       }
-  });
+          // Andere node animaties (gate rotatie, nebula pulsing, etc.)
+          else if (node.type === "gate") {
+              node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
+              node.currentAngle %= 2 * Math.PI;
+          } else if (node.type === "nebula") {
+               node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
+               node.currentAngle %= 2 * Math.PI;
+               node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
+               node.innerAngle %= 2 * Math.PI;
+               node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
+               node.pulsePhase %= 2 * Math.PI;
+           } else if (node.type === PORTAL_NEBULA_TYPE) {
+               node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
+               node.pulsePhase %= 2 * Math.PI;
+           }
+      }); // End nodes.forEach
 
-  updateNebulaInteractionAudio();
-
-  if (currentTool === 'brush' && isBrushing && lastBrushNode) {
-      if (Math.random() < 0.3) {
-          createParticles(lastBrushNode.x, lastBrushNode.y, 1);
+      // Update nebula interacties
+      try {
+          updateNebulaInteractionAudio();
+      } catch (nebError) {
+           console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
       }
-  }
 
-  draw();
-  previousFrameTime = now;
+      // Update brush particles (indien nodig)
+      if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+          if (Math.random() < 0.3) {
+              createParticles(lastBrushNode.x, lastBrushNode.y, 1);
+          }
+      }
+
+      // Voer teken-operaties uit
+      draw();
+
+  } catch (loopError) { // --- Vang fouten in node processing op ---
+      console.error("Fout opgetreden in animationLoop:", loopError);
+      // Probeer de loop te stoppen om herhaalde fouten te voorkomen
+      if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+          console.error("Animation loop gestopt vanwege fout.");
+          // Optioneel: probeer audio context ook te pauzeren?
+          // if (audioContext && audioContext.state === 'running') {
+          //     togglePlayPause(); // Of roep direct suspend aan
+          // }
+      }
+  } // --- Einde try...catch ---
+
+  previousFrameTime = now; // Update tijd voor volgende frame berekening
 }
 function startAnimationLoop() {
   if (!animationFrameId) {
