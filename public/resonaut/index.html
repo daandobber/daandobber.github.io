@@ -89,17 +89,22 @@
     </div>
 
     <div id="transportControls">
-        <button id="playPauseBtn">Play ▶</button>
-        <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
-        <div id="bpmControls" class="hidden">
-             <label for="globalBpmInput">BPM:</label>
-             <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
-        </div>
-        <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
-         <div class="transport-divider"></div>
-        <button id="mixerBtn" title="Open Mixer">🎚️</button>
-        <button id="pianoRollBtn" title="Open Piano Roll/Transpose">🎹</button>
+    <button id="playPauseBtn">Play ▶</button>
+    <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+    <div id="bpmControls" class="hidden">
+         <label for="globalBpmInput">BPM:</label>
+         <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
     </div>
+    <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+    <div class="transport-divider"></div>
+    <select id="scaleSelectTransport" title="Change musical scale and theme">
+        </select>
+    <div class="transport-divider"></div>
+
+    <button id="mixerBtn" title="Open Mixer">🎚️</button>
+    <div class="transport-divider"></div> <canvas id="pianoRollCanvas"></canvas>
+
+</div>
 
     <div id="mixerPanel" class="bottom-panel hidden">
         <h3>Mixer</h3>
@@ -121,17 +126,6 @@
              <label for="delayFeedbackSlider">Delay Feedback:</label>
             <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
             <span id="delayFeedbackValue">0.40</span>
-        </div>
-    </div>
-
-    <div id="pianoRollPanel" class="bottom-panel hidden">
-        <h3>Scale & Root</h3>
-        <canvas id="pianoRollCanvas"></canvas>
-    
-        <div class="panel-section scale-selector-section">
-            <label for="scaleSelectPianoRoll">Scale:</label>
-            <select id="scaleSelectPianoRoll" title="Change musical scale and theme">
-                </select>
         </div>
     </div>
 
