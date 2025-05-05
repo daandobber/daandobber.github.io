@@ -8,11 +8,8 @@ const groupVolumeSlider = document.getElementById("groupVolumeSlider")
 const groupFluctuateToggle = document.getElementById("groupFluctuateToggle")
 const groupFluctuateAmount = document.getElementById("groupFluctuateAmount")
 const groupNodeCountSpan = document.getElementById("groupNodeCount")
-const gridControlsDiv = document.getElementById("gridControls")
 const gridOptionsDiv = document.getElementById("gridOptions")
 const gridToggleBtn = document.getElementById("gridToggleBtn")
-const gridTypeBtn = document.getElementById("gridTypeBtn")
-const gridSnapBtn = document.getElementById("gridSnapBtn")
 const toggleInfoTextBtn = document.getElementById("toggleInfoTextBtn")
 const transportControlsDiv = document.getElementById("transportControls")
 const globalSyncToggleBtn = document.getElementById("globalSyncToggleBtn")
@@ -24,7 +21,6 @@ const beatIndicatorElement = document.getElementById("beatIndicator")
 const saveStateBtn = document.getElementById("saveStateBtn")
 const loadStateBtn = document.getElementById("loadStateBtn")
 const loadStateInput = document.getElementById("loadStateInput")
-const mixerBtn = document.getElementById("mixerBtn")
 const mixerPanel = document.getElementById("mixerPanel")
 const masterVolumeSlider = document.getElementById("masterVolumeSlider")
 const masterVolumeValue = document.getElementById("masterVolumeValue")
@@ -53,6 +49,7 @@ const editBtn = document.getElementById("editBtn")
 const connectBtn = document.getElementById("connectBtn")
 const connectStringBtn = document.getElementById("connectStringBtn")
 const glideToolButton = document.getElementById("glide-tool-button")
+const connectWaveTrailBtn = document.getElementById("connectWaveTrailBtn");
 const GLIDE_LINE_COLOR = 'rgba(255, 180, 255, 0.8)'; // Roze-achtige kleur voor glide lijn
 const GLIDE_LINE_WIDTH = 2.5; // Lijn dikte
 const deleteBtn = document.getElementById("deleteBtn")
@@ -67,6 +64,10 @@ const sideToolbarContent = document.getElementById("sideToolbarContent")
 const A4_FREQ = 440.0;
 const A4_MIDI_NOTE = 69;
 const PORTAL_NEBULA_TYPE = 'portal_nebula';
+const gridSnapBtn = document.getElementById("gridSnapBtn");
+const GRAIN_DURATION = 0.09; // 90ms
+const GRAIN_OVERLAP = 0.07;  // 70ms overlap
+const GRAIN_INTERVAL = GRAIN_DURATION - GRAIN_OVERLAP; // Interval wordt 0.02s (50 grains/sec)
 
 let audioContext
 let masterGain
@@ -2390,7 +2391,7 @@ function updateAndDrawParticles(deltaTime, now) {
     } catch (e) {}
   })
 }
-function createVisualPulse(connId, dur, startNodeId, hopsLeft = Infinity, pulseType = 'trigger', pulseColor = null, intensity = 1.0) { // pulseStyleOptions verwijderd
+function createVisualPulse(connId, dur, startNodeId, hopsLeft = Infinity, pulseType = 'trigger', pulseColor = null, intensity = 1.0) {
   if (!isAudioReady || dur <= 0) return;
   const connection = findConnectionById(connId);
   if (!connection) return;
@@ -2401,36 +2402,55 @@ function createVisualPulse(connId, dur, startNodeId, hopsLeft = Infinity, pulseT
       id: pulseIdCounter++,
       connectionId: connId,
       startTime: audioContext.currentTime,
-      duration: dur,
+      duration: dur, // Duur van de reis over de lijn
       startNodeId: startNodeId,
       hopsLeft: hopsLeft,
       type: pulseType,
       color: pulseColor,
-      intensity: intensity
-      // style: 'standard' // Niet meer nodig tenzij je andere styles wilt
+      intensity: intensity,
+      // --- NIEUW: State voor granular synth ---
+      granularGainNode: null, // Gain node specifiek voor deze puls/trail
+      lastGrainTime: 0        // Tijdstip laatste grain gestart
+      // --- EINDE NIEUW ---
   };
+
+  // Initialiseer gain node als het een wavetrail is en we audio hebben
+  if (connection.type === 'wavetrail' && connection.audioParams?.buffer && audioContext) {
+      try {
+          visualPulse.granularGainNode = audioContext.createGain();
+          visualPulse.granularGainNode.connect(masterGain); // Verbind met master output
+          visualPulse.lastGrainTime = visualPulse.startTime; // Start direct met grains genereren
+           // Stel initieel volume in (bijv. gebaseerd op intensiteit)
+           visualPulse.granularGainNode.gain.setValueAtTime(intensity * 0.7, visualPulse.startTime); // Start volume (0.7 is voorbeeld factor)
+      } catch (e) {
+          console.error("Error creating granular gain node:", e);
+          visualPulse.granularGainNode = null; // Zorg dat het null is bij fout
+      }
+  }
+  // --- EINDE AANPASSING ---
+
+
   activePulses.push(visualPulse);
 
+  // Bestaande logica voor string/glide blijft ongewijzigd
   if (connection.type === 'string_violin') {
-      visualPulse.audioStartTime = audioContext.currentTime;
-      visualPulse.audioEndTime = audioContext.currentTime + dur;
+       visualPulse.audioStartTime = audioContext.currentTime; // Let op: deze lijken niet gebruikt te worden?
+       visualPulse.audioEndTime = audioContext.currentTime + dur; //
       startStringSound(connection, visualPulse.intensity);
   }
   if (connection.type === 'glide') {
-    const sourceNode = findNodeById(startNodeId);
-    const targetNode = findNodeById(targetNodeId);
-    if (sourceNode && targetNode) {
-        try {
-            const sourceFreq = sourceNode.audioParams.pitch;
-            const targetFreq = targetNode.audioParams.pitch;
-            const glideDuration = dur;
-            startTravelingGlideSound(sourceNode, targetFreq, glideDuration, intensity);
-        } catch (e) {
-            console.warn("Glide kon niet worden gestart:", e);
-        }
-    }
-}
-
+      const sourceNode = findNodeById(startNodeId);
+      const targetNode = findNodeById(targetNodeId);
+      if (sourceNode && targetNode && sourceNode.audioParams?.pitch && targetNode.audioParams?.pitch) {
+          try {
+              const sourceFreq = sourceNode.audioParams.pitch;
+              const targetFreq = targetNode.audioParams.pitch;
+              startTravelingGlideSound(sourceNode, targetFreq, dur, intensity);
+          } catch (e) {
+              console.warn("Glide kon niet worden gestart:", e);
+          }
+      }
+  }
 }
 
 function startTravelingGlideSound(sourceNode, targetFrequency, duration, intensity = 1.0) {
@@ -2480,53 +2500,249 @@ function startTravelingGlideSound(sourceNode, targetFrequency, duration, intensi
 
 function updateAndDrawPulses(now) {
   const defaultPulseColor = getComputedStyle(document.documentElement).getPropertyValue('--pulse-visual-color').trim() || 'rgba(255, 255, 255, 1)';
-  // sequentialPulseColor is niet meer nodig hier
   const stringPulseColor = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-pulse-color').trim() || '#ffccaa';
+  const wavetrailGlowColor = 'rgba(230, 255, 230, 0.7)';
+  const envelopeResolution = 128;
+  const hanningWindowCurve = createHanningWindow(envelopeResolution); // Zorg dat deze functie bestaat
 
   activePulses = activePulses.filter((p) => {
       const elapsedTime = now - p.startTime;
       const connection = findConnectionById(p.connectionId);
+
       if (!connection || elapsedTime >= p.duration) {
+          // Cleanup (ongewijzigd)
           if (connection && connection.type === "string_violin" && p.audioStartTime) { stopStringSound(connection); }
+          if (connection && connection.type === 'wavetrail' && p.granularGainNode) {
+              try {
+                  p.granularGainNode.gain.cancelScheduledValues(now);
+                  p.granularGainNode.gain.setTargetAtTime(0, now, 0.05);
+                  setTimeout(() => { if (p.granularGainNode) p.granularGainNode.disconnect(); }, 60);
+              } catch (e) { console.error("Error cleaning up granular gain node:", e); }
+              p.granularGainNode = null;
+          }
           return false;
       }
+
       const nodeA = findNodeById(connection.nodeAId);
       const nodeB = findNodeById(connection.nodeBId);
       if (!nodeA || !nodeB) return false;
 
-      const startNodeForDraw = p.startNodeId === nodeA.id ? nodeA : nodeB;
-      const endNodeForDraw = p.startNodeId === nodeA.id ? nodeB : nodeA;
       const progress = Math.min(1.0, elapsedTime / p.duration);
-      const midX = (startNodeForDraw.x + endNodeForDraw.x) / 2 + connection.controlPointOffsetX;
-      const midY = (startNodeForDraw.y + endNodeForDraw.y) / 2 + connection.controlPointOffsetY;
-      const pX = lerp(lerp(startNodeForDraw.x, midX, progress), lerp(midX, endNodeForDraw.x, progress), progress);
-      const pY = lerp(lerp(startNodeForDraw.y, midY, progress), lerp(midY, endNodeForDraw.y, progress), progress);
-      const prevProgress = Math.max(0, progress - 0.02);
-      const prevX = lerp(lerp(startNodeForDraw.x, midX, prevProgress), lerp(midX, endNodeForDraw.x, prevProgress), prevProgress);
-      const prevY = lerp(lerp(startNodeForDraw.y, midY, prevProgress), lerp(midY, endNodeForDraw.y, prevProgress), prevProgress);
-      const angle = Math.atan2(pY - prevY, pX - prevX);
-      const tailLength = 5 + p.duration * 30;
 
-      let colorToUse = p.color || defaultPulseColor;
-      let pulseSize = PULSE_SIZE;
-      let shadowBlurSize = 8;
-
-      // Alleen nog check voor string type connectie
-      if (connection.type === 'string_violin') {
-          colorToUse = p.color || stringPulseColor;
-          pulseSize *= 0.9;
-          shadowBlurSize = 6;
+      // Ophalen buffer data etc (ongewijzigd)
+      let bufferDuration = 0;
+      let pathData = null;
+      let totalPathPoints = 0;
+      let hasAudio = false;
+      if (connection.type === 'wavetrail' && connection.audioParams?.buffer && connection.audioParams?.waveformPath) {
+          bufferDuration = connection.audioParams.buffer.duration;
+          pathData = connection.audioParams.waveformPath;
+          totalPathPoints = pathData.length;
+          hasAudio = true;
       }
 
-      ctx.fillStyle = colorToUse;
-      ctx.shadowColor = colorToUse;
-      ctx.shadowBlur = shadowBlurSize / viewScale;
+      // --- Granular Synthesis Logica (Aangepast) ---
+      if (connection.type === 'wavetrail' && hasAudio && bufferDuration > 0) {
+          // Maak gain node aan indien nodig
+          if (!p.granularGainNode && audioContext) {
+               try {
+                  p.granularGainNode = audioContext.createGain();
+                  p.granularGainNode.connect(masterGain);
+                  p.lastGrainTime = p.startTime; // Begin direct
+                  // Start volume
+                  p.granularGainNode.gain.setValueAtTime((p.intensity || 1.0) * 0.7, p.startTime);
+              } catch (e) { p.granularGainNode = null; }
+          }
 
-      ctx.beginPath();
-      ctx.arc(pX, pY, pulseSize, 0, Math.PI * 2);
-      ctx.fill();
+          if (p.granularGainNode) { // Alleen doorgaan als gain node bestaat
+              // Haal per-connectie grain parameters op
+              const grainDuration = connection.audioParams.grainDuration || 0.09;
+              const grainOverlap = connection.audioParams.grainOverlap || 0.07;
+              const grainInterval = Math.max(0.005, grainDuration - grainOverlap);
+              const playbackRate = connection.audioParams.playbackRate || 1.0; // <<< NIEUW
 
-      // Teken staart
+              const startTimeOffset = connection.audioParams.startTimeOffset || 0;
+              const endTimeOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+              const actualEndTime = Math.max(startTimeOffset + 0.01, endTimeOffset);
+              const effectiveDuration = actualEndTime - startTimeOffset;
+
+              // --- NIEUW: Bepaal richting ---
+              const isReverse = (p.startNodeId === connection.nodeBId);
+
+              // Bereken huidige buffertijd, rekening houdend met richting
+              let currentBufferTime;
+              if (isReverse) {
+                  // Bij reverse: progress 0..1 mapt naar audio endTime..startTime
+                  currentBufferTime = startTimeOffset + (1.0 - progress) * effectiveDuration;
+              } else {
+                  // Bij forward: progress 0..1 mapt naar audio startTime..endTime
+                  currentBufferTime = startTimeOffset + progress * effectiveDuration;
+              }
+              // --- EINDE RICHTING ---
+
+              // Trigger nieuwe grain als interval verstreken is
+              if (now - p.lastGrainTime >= grainInterval && effectiveDuration > 0) {
+                  try {
+                      const grainSource = audioContext.createBufferSource();
+                      grainSource.buffer = connection.audioParams.buffer;
+                      // --- NIEUW: Zet playbackRate ---
+                      grainSource.playbackRate.setValueAtTime(playbackRate, now);
+                      // --- EINDE NIEUW ---
+
+                      const grainGain = audioContext.createGain();
+                      grainGain.gain.setValueAtTime(0, now);
+                      grainGain.gain.setValueCurveAtTime(hanningWindowCurve, now, grainDuration);
+                      grainSource.connect(grainGain);
+                      grainGain.connect(p.granularGainNode);
+
+                      const offset = Math.max(0, Math.min(bufferDuration - 0.001, currentBufferTime)); // Clamp offset binnen buffer
+                      const duration = Math.min(grainDuration / playbackRate, bufferDuration - offset); // Duur schaalt met rate! Clamp tov buffer einde
+
+                      if (duration > 0.001) {
+                         grainSource.start(now, offset, duration);
+                         grainSource.onended = () => { try { grainSource.disconnect(); grainGain.disconnect(); } catch(e) {} };
+                      } else {
+                           try { grainSource.disconnect(); grainGain.disconnect(); } catch(e) {}
+                      }
+                      p.lastGrainTime = now;
+                  } catch (grainError) { console.error(`Error creating audio grain for pulse ${p.id}:`, grainError); }
+              }
+          }
+      }
+      // --- EINDE Granular Synthesis Logica ---
+
+      // --- Visuele Representatie van de Pulse ---
+      const startNodeForDraw = p.startNodeId === nodeA.id ? nodeA : nodeB;
+      const midX = (startNodeForDraw.x + (p.startNodeId === nodeA.id ? nodeB.x : nodeA.x)) / 2 + connection.controlPointOffsetX;
+      const midY = (startNodeForDraw.y + (p.startNodeId === nodeA.id ? nodeB.y : nodeA.y)) / 2 + connection.controlPointOffsetY;
+      const pX = lerp(lerp(startNodeForDraw.x, midX, progress), lerp(midX, (p.startNodeId === nodeA.id ? nodeB.x : nodeA.x), progress), progress);
+      const pY = lerp(lerp(startNodeForDraw.y, midY, progress), lerp(midY, (p.startNodeId === nodeA.id ? nodeB.y : nodeA.y), progress), progress);
+
+      if (connection.type === 'wavetrail' && hasAudio) {
+          // Teken Waveform Glow Effect
+          let currentAmplitude = 0;
+          let positiveGlowAmplitude = 0;
+          let negativeGlowAmplitude = 0;
+          // Bepaal amplitude op huidige positie (logica ongewijzigd)
+          const startTimeOffset = connection.audioParams.startTimeOffset || 0;
+          const endTimeOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+          const actualEndTime = Math.max(startTimeOffset + 0.01, endTimeOffset);
+          const effectiveDuration = actualEndTime - startTimeOffset;
+          const isReverse = (p.startNodeId === connection.nodeBId); // Check richting weer
+          let currentBufferTime;
+          if (isReverse) { currentBufferTime = startTimeOffset + (1.0 - progress) * effectiveDuration; }
+          else { currentBufferTime = startTimeOffset + progress * effectiveDuration; }
+          const audioProgress = currentBufferTime / bufferDuration;
+          const i = Math.max(0, Math.min(totalPathPoints - 1, Math.floor(audioProgress * totalPathPoints)));
+          if (pathData[i]) {
+              currentAmplitude = Math.abs(pathData[i].max - pathData[i].min);
+              positiveGlowAmplitude = pathData[i].max > 0 ? pathData[i].max : 0;
+              negativeGlowAmplitude = pathData[i].min < 0 ? pathData[i].min : 0;
+          }
+
+          if (currentAmplitude > 0.05) { // Teken glow
+               ctx.save();
+               // ... (bereken glow geometrie zoals voorheen) ...
+               const glowLineWidth = (1.5 + currentAmplitude * 3.0) / viewScale;
+               const glowAlpha = Math.min(0.7, 0.2 + currentAmplitude * 0.5);
+               const glowBlur = (12 + currentAmplitude * 18) / viewScale;
+               const maxVisualAmplitude = 15 / viewScale;
+               const dx_glow = nodeB.x - nodeA.x; const dy_glow = nodeB.y - nodeA.y;
+               const lineAngle_glow = Math.atan2(dy_glow, dx_glow);
+               const perpAngle_glow = lineAngle_glow + Math.PI / 2;
+               const topGlowOffsetX = Math.cos(perpAngle_glow) * positiveGlowAmplitude * maxVisualAmplitude * 1.1;
+               const topGlowOffsetY = Math.sin(perpAngle_glow) * positiveGlowAmplitude * maxVisualAmplitude * 1.1;
+               const bottomGlowOffsetX = Math.cos(perpAngle_glow) * negativeGlowAmplitude * maxVisualAmplitude * 1.1;
+               const bottomGlowOffsetY = Math.sin(perpAngle_glow) * negativeGlowAmplitude * maxVisualAmplitude * 1.1;
+
+               // ... (pas effecten toe en teken glow lijn zoals voorheen) ...
+               ctx.globalCompositeOperation = 'lighter';
+               ctx.strokeStyle = wavetrailGlowColor.replace(/[\d\.]+\)$/g, `${glowAlpha})`);
+               ctx.lineWidth = glowLineWidth;
+               ctx.shadowColor = wavetrailGlowColor.replace(/[\d\.]+\)$/g, `${glowAlpha * 0.7})`);
+               ctx.shadowBlur = glowBlur;
+               ctx.lineCap = 'round';
+               ctx.beginPath();
+               ctx.moveTo(pX + bottomGlowOffsetX, pY + bottomGlowOffsetY);
+               ctx.lineTo(pX + topGlowOffsetX, pY + topGlowOffsetY);
+               ctx.stroke();
+
+               ctx.restore();
+          }
+      } else {
+          // Teken Standaard Pulse voor andere types of wavetrail ZONDER audio
+          drawStandardPulseVisual(p, pX, pY, connection, progress); // Gebruik helper functie
+      }
+
+      return true; // Houd pulse actief
+  });
+}
+
+function playWaveTrailBuffer(connection) {
+  if (!audioContext || !connection || connection.type !== 'wavetrail' || !connection.audioParams?.buffer) {
+       if (connection?.audioParams && !connection.audioParams.buffer) {
+           console.warn(`Attempted to play WaveTrail ${connection.id}, but no audio buffer is loaded.`);
+       }
+       return;
+  }
+
+  try {
+      const source = audioContext.createBufferSource();
+      source.buffer = connection.audioParams.buffer;
+      source.connect(masterGain);
+      source.start(0);
+      console.log(`Playing WaveTrail ${connection.id} buffer.`);
+
+       source.onended = () => {
+           try {
+               source.disconnect();
+           } catch(e) {}
+       };
+
+  } catch (error) {
+      console.error(`Error playing WaveTrail buffer for connection ${connection.id}:`, error);
+  }
+}
+
+function drawStandardPulseVisual(p, pX, pY, connection, progress) {
+  const defaultPulseColor = getComputedStyle(document.documentElement).getPropertyValue('--pulse-visual-color').trim() || 'rgba(255, 255, 255, 1)';
+  const stringPulseColor = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-pulse-color').trim() || '#ffccaa';
+
+  let colorToUse = p.color || defaultPulseColor;
+  let pulseSize = PULSE_SIZE / viewScale;
+  let shadowBlurSize = 8 / viewScale;
+
+  if (connection.type === 'string_violin') {
+      colorToUse = p.color || stringPulseColor;
+      pulseSize *= 0.9;
+      shadowBlurSize = 6 / viewScale;
+  }
+  // Glide of Standaard gebruiken default stijl
+
+  ctx.save();
+  ctx.fillStyle = colorToUse;
+  ctx.shadowColor = colorToUse;
+  ctx.shadowBlur = shadowBlurSize;
+  ctx.beginPath();
+  ctx.arc(pX, pY, pulseSize, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Staart tekenen (vereist start/end nodes en offsets, of pre-berekende angle)
+  // We moeten angle hier opnieuw berekenen of meegeven
+  const nodeA = findNodeById(connection.nodeAId);
+  const nodeB = findNodeById(connection.nodeBId);
+  if(nodeA && nodeB) {
+      const startNodeForDraw = p.startNodeId === nodeA.id ? nodeA : nodeB;
+      const midX = (startNodeForDraw.x + (p.startNodeId === nodeA.id ? nodeB.x : nodeA.x)) / 2 + connection.controlPointOffsetX;
+      const midY = (startNodeForDraw.y + (p.startNodeId === nodeA.id ? nodeB.y : nodeA.y)) / 2 + connection.controlPointOffsetY;
+
+      const prevProgress = Math.max(0, progress - 0.02);
+      const prevX = lerp(lerp(startNodeForDraw.x, midX, prevProgress), lerp(midX, (p.startNodeId === nodeA.id ? nodeB.x : nodeA.x), prevProgress), prevProgress);
+      const prevY = lerp(lerp(startNodeForDraw.y, midY, prevProgress), lerp(midY, (p.startNodeId === nodeA.id ? nodeB.y : nodeA.y), prevProgress), prevProgress);
+      const angle = Math.atan2(pY - prevY, pX - prevX);
+      const tailLength = (5 + p.duration * 30) / viewScale;
+
       ctx.beginPath();
       ctx.moveTo(pX + Math.cos(angle + Math.PI * 0.8) * pulseSize * 0.5, pY + Math.sin(angle + Math.PI * 0.8) * pulseSize * 0.5);
       ctx.lineTo(pX + Math.cos(angle + Math.PI) * tailLength, pY + Math.sin(angle + Math.PI) * tailLength);
@@ -2540,10 +2756,61 @@ function updateAndDrawPulses(now) {
       } catch (e) {}
       ctx.fillStyle = tailGradient;
       ctx.fill();
+  }
+  ctx.restore();
+}
 
-      ctx.shadowBlur = 0;
-      return true;
-  });
+function createHanningWindow(length) {
+  const curve = new Float32Array(length);
+  if (length <= 1) {
+       if(length === 1) curve[0] = 1; // Handle edge case
+       return curve;
+   }
+  for (let i = 0; i < length; i++) {
+      // Hanning window formule
+      curve[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (length - 1)));
+  }
+  return curve;
+}
+
+function deepCopyState(stateToCopy) {
+  if (!stateToCopy) return null;
+  try {
+      const stringified = JSON.stringify(stateToCopy, (key, value) => {
+          if (value instanceof Set) {
+              return Array.from(value);
+          }
+          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer)) {
+              return undefined;
+          }
+          return value;
+      });
+      const parsed = JSON.parse(stringified);
+
+      if (parsed.nodes) {
+          parsed.nodes.forEach((node) => {
+              node.connections = node.connections ? new Set(node.connections) : new Set();
+               if (!node.audioParams) node.audioParams = {}; // Ensure audioParams exists
+          });
+      }
+      parsed.selectedElements = parsed.selectedElements ? new Set(parsed.selectedElements.map(el => ({...el}))) : new Set();
+      parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs ? new Set(parsed.fluctuatingGroupNodeIDs) : new Set();
+
+      if(parsed.connections) {
+          parsed.connections.forEach(conn => {
+               if (!conn.audioParams) conn.audioParams = {}; // Ensure audioParams exists
+               if (conn.type === 'wavetrail' && conn.audioParams) {
+                  conn.audioParams.buffer = null;
+                  conn.audioParams.waveformPath = null;
+               }
+          });
+      }
+
+      return parsed;
+  } catch (e) {
+      console.error("Error during deep copy/parse state:", e);
+      return null;
+  }
 }
 
 function startSamplerGlide_Granular(sourceNode, targetFreq, duration, grainDuration = 0.15, overlap = 0.05, intensity = 1.0) {
@@ -2897,6 +3164,7 @@ function removeNode(nodeToRemove) {
     saveState()
   }
 }
+// --- connectNodes ---
 function connectNodes(nodeA, nodeB, type = 'standard') {
   if (!nodeA || !nodeB || nodeA === nodeB || nodeA.type === 'nebula' || nodeB.type === 'nebula' || nodeA.type === PORTAL_NEBULA_TYPE || nodeB.type === PORTAL_NEBULA_TYPE ) return;
   const exists = connections.some(c => (c.nodeAId === nodeA.id && c.nodeBId === nodeB.id) || (c.nodeAId === nodeB.id && c.nodeBId === nodeA.id));
@@ -2944,13 +3212,175 @@ function connectNodes(nodeA, nodeB, type = 'standard') {
       if (newConnection.audioNodes) {
           updateConnectionAudioParams(newConnection);
       }
+  } else if (type === 'wavetrail') {
+      newConnection.audioParams = {
+          buffer: null,
+          fileName: null,
+          waveformPath: null,
+          startTimeOffset: 0,
+          endTimeOffset: null,
+          grainDuration: 0.09, // <<< NIEUW: Default Grain Duur
+          grainOverlap: 0.07,  // <<< NIEUW: Default Grain Overlap
+          playbackRate: 1.0   // <<< NIEUW: Default Playback Rate
+      };
   }
 
   connections.push(newConnection);
   createParticles(nodeB.x, nodeB.y, 15);
-
   updateConstellationGroup();
   identifyAndRouteAllGroups();
+  saveState();
+}
+
+// --- deepCopyState ---
+// (Deze functie was al correct en filtert alleen buffer/audioNodes,
+// dus grainDuration/Overlap/playbackRate worden automatisch meegenomen)
+function deepCopyState(stateToCopy) {
+  if (!stateToCopy) return null;
+  try {
+      const stringified = JSON.stringify(stateToCopy, (key, value) => {
+          if (value instanceof Set) {
+              return Array.from(value);
+          }
+          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer)) {
+              return undefined;
+          }
+          return value;
+      });
+      const parsed = JSON.parse(stringified);
+
+      if (parsed.nodes) {
+          parsed.nodes.forEach((node) => {
+              node.connections = node.connections ? new Set(node.connections) : new Set();
+               if (!node.audioParams) node.audioParams = {};
+          });
+      }
+      parsed.selectedElements = parsed.selectedElements ? new Set(parsed.selectedElements.map(el => ({...el}))) : new Set();
+      parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs ? new Set(parsed.fluctuatingGroupNodeIDs) : new Set();
+
+      if(parsed.connections) {
+          parsed.connections.forEach(conn => {
+               if (!conn.audioParams) conn.audioParams = {};
+               if (conn.type === 'wavetrail' && conn.audioParams) {
+                  conn.audioParams.buffer = null;
+               }
+          });
+      }
+       if(parsed.nodes) {
+           parsed.nodes.forEach(node => {
+                if (!node.audioParams) node.audioParams = {};
+           });
+       }
+      return parsed;
+  } catch (e) {
+      console.error("Error during deep copy/parse state:", e);
+      return null;
+  }
+}
+
+// --- loadState ---
+function loadState(stateToLoad) {
+  if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
+      console.error("Ongeldige of incomplete state data om te laden.");
+      return;
+  }
+  isPerformingUndoRedo = true;
+
+  nodes.forEach((node) => stopNodeAudio(node));
+  connections.forEach((conn) => stopConnectionAudio(conn));
+
+  nodes = stateToLoad.nodes;
+  connections = stateToLoad.connections;
+  selectedElements = stateToLoad.selectedElements ? new Set(stateToLoad.selectedElements.map(el => ({...el}))) : new Set();
+  fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ? new Set(stateToLoad.fluctuatingGroupNodeIDs) : new Set();
+  nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
+  connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
+  isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
+  globalBPM = stateToLoad.globalBPM ?? 120;
+  currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
+  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
+  currentRootNote = stateToLoad.currentRootNote ?? 0;
+  globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
+  viewOffsetX = stateToLoad.viewOffsetX ?? 0;
+  viewOffsetY = stateToLoad.viewOffsetY ?? 0;
+  viewScale = stateToLoad.viewScale ?? 1.0;
+
+  if (isAudioReady) {
+      const now = audioContext.currentTime;
+      const loadTimeConstant = 0.01;
+      if (masterGain) masterGain.gain.setTargetAtTime(stateToLoad.masterVolume ?? 0.8, now, loadTimeConstant);
+      if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(stateToLoad.delaySend ?? 0.3, now, loadTimeConstant);
+      if (delayNode) delayNode.delayTime.setTargetAtTime(stateToLoad.delayTime ?? 0.25, now, loadTimeConstant);
+      if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(stateToLoad.delayFeedback ?? 0.4, now, loadTimeConstant);
+      if (portalGroupGain) portalGroupGain.gain.setTargetAtTime(stateToLoad.portalVolume ?? 0.7, now, loadTimeConstant);
+      if (originalNebulaGroupGain) originalNebulaGroupGain.gain.setTargetAtTime(stateToLoad.originalNebulaVolume ?? 0.8, now, loadTimeConstant);
+  }
+
+  nodes.forEach((node) => {
+      node.audioNodes = null;
+      node.connections = node.connections ? new Set(node.connections) : new Set();
+      node.isSelected = isElementSelected("node", node.id);
+      node.isStartNode = isPulsarType(node.type);
+      node.isEnabled = node.isEnabled !== undefined ? node.isEnabled : node.type !== "pulsar_triggerable";
+      if (node.type === 'pulsar_manual') node.isEnabled = true;
+      node.primaryInputConnectionId = node.primaryInputConnectionId ?? (node.type === "switch" ? null : undefined);
+      node.baseHue = node.baseHue ?? null;
+      if (!node.audioParams) node.audioParams = {};
+      node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+      node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+      node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
+      node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+      node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+      node.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams?.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex;
+      node.gateModeIndex = node.gateModeIndex ?? node.audioParams?.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
+      node.audioParams.gateModeIndex = node.gateModeIndex;
+      node.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams?.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
+      node.audioParams.pitchShiftIndex = node.pitchShiftIndex;
+      node.audioParams.volume = node.audioParams.volume ?? 1.0;
+
+      if (isDrumType(node.type)) { /* ... drum defaults ... */ }
+      if (["sound", "nebula"].includes(node.type)) { /* ... scale/pitch ... */ }
+      if (node.type === PORTAL_NEBULA_TYPE) { /* ... portal defaults ... */ }
+
+      if (isAudioReady) {
+          node.audioNodes = createAudioNodesForNode(node);
+          if (node.audioNodes) { updateNodeAudioParams(node); }
+      }
+  });
+
+  connections.forEach((conn) => {
+      conn.isSelected = isElementSelected("connection", conn.id);
+       if (!conn.audioParams) conn.audioParams = {};
+
+      if (conn.type === "string_violin") {
+          /* ... string violin load ... */
+      } else if (conn.type === 'wavetrail') {
+          conn.audioParams.buffer = null;
+          conn.audioParams.waveformPath = conn.audioParams.waveformPath || null; // Behoud pad indien opgeslagen
+          conn.audioParams.fileName = conn.audioParams.fileName || null;
+          // <<< NIEUW: Herstel nieuwe params met defaults >>>
+          conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
+          conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset === undefined ? null : conn.audioParams.endTimeOffset; // Behoud null indien null
+          conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
+          conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
+          conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
+          // <<< EINDE NIEUW >>>
+          conn.audioNodes = null;
+      } else {
+          conn.audioNodes = null;
+      }
+  });
+
+  updateSyncUI();
+  updateScaleAndTransposeUI();
+  if(isAudioReady) updateMixerUI();
+  updateConstellationGroup();
+  populateEditPanel();
+  drawPianoRoll();
+  identifyAndRouteAllGroups();
+  isPerformingUndoRedo = false;
+  console.log("State loaded successfully.");
 }
 function removeConnection(connToRemove, updateGroup = true) {
   if (!connToRemove) return
@@ -3287,58 +3717,165 @@ function drawGrid() {
 }
 
 function drawConnection(conn) {
-    const nA = findNodeById(conn.nodeAId);
-    const nB = findNodeById(conn.nodeBId);
-    if (!nA || !nB || !ctx) return; // Voeg ctx check toe
+  const nA = findNodeById(conn.nodeAId);
+  const nB = findNodeById(conn.nodeBId);
+  if (!nA || !nB || !ctx) return;
 
-    const mX = (nA.x + nB.x) / 2;
-    const mY = (nA.y + nB.y) / 2;
-    const cX = mX + conn.controlPointOffsetX;
-    const cY = mY + conn.controlPointOffsetY;
-    const isSelected = isElementSelected('connection', conn.id);
-    let clr;
-    let thickness;
-    let dash = [];
+  const isSelected = isElementSelected('connection', conn.id);
+  let baseClr = 'grey';
+  let thickness = 1 / viewScale;
+  let dash = [];
+  let drawAsWaveformBars = false;
 
-    // Bepaal stijl op basis van connectie type
-    if (conn.type === 'string_violin') {
-        clr = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa';
-        thickness = (1.5 + 2.0 * (1 - Math.min(1, conn.length / 500))) / viewScale;
-        dash = [5 / viewScale, 3 / viewScale];
-    } else if (conn.type === 'glide') {
-        clr = GLIDE_LINE_COLOR; // Gebruik de roze-achtige kleur (gedefinieerd bovenaan)
-        thickness = (GLIDE_LINE_WIDTH + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale; // Gebruik glide dikte
-        dash = [8 / viewScale, 4 / viewScale]; // Ander stippelpatroon
-    } else { // Standaard connectie
-        clr = getComputedStyle(document.documentElement).getPropertyValue('--connection-color').trim() || '#8AC';
-        thickness = (1.0 + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale;
-        // dash = []; // Geen stippels voor standaard
-    }
+  ctx.save();
 
-    // Bewaar huidige context staat
-    ctx.save();
+  // Bepaal basis stijl per type
+  if (conn.type === 'string_violin') {
+      baseClr = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa';
+      thickness = (1.5 + 2.0 * (1 - Math.min(1, conn.length / 500))) / viewScale;
+      dash = [5 / viewScale, 3 / viewScale];
+      ctx.setLineDash(dash);
+  } else if (conn.type === 'glide') {
+      baseClr = GLIDE_LINE_COLOR;
+      thickness = (GLIDE_LINE_WIDTH + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale;
+      dash = [8 / viewScale, 4 / viewScale];
+      ctx.setLineDash(dash);
+  } else if (conn.type === 'wavetrail') {
+      thickness = Math.max(0.5, 1.5 / viewScale); // Dikte van de balkjes
+      dash = []; // Solide lijn voor balkjes
+      if (conn.audioParams?.buffer && conn.audioParams?.waveformPath) {
+          baseClr = 'rgba(180, 255, 180, 0.8)'; // Kleur van de balkjes
+          drawAsWaveformBars = true; // Ja, we tekenen balkjes
+      } else {
+          baseClr = 'rgba(200, 200, 200, 0.5)'; // Placeholder kleur
+          dash = [4 / viewScale, 4 / viewScale]; // Placeholder stijl
+          ctx.setLineDash(dash);
+      }
+  } else { // Standaard connectie
+      baseClr = getComputedStyle(document.documentElement).getPropertyValue('--connection-color').trim() || '#8AC';
+      thickness = (1.0 + 1.5 * (1 - Math.min(1, conn.length / 500))) / viewScale;
+      ctx.setLineDash(dash);
+  }
 
-    ctx.strokeStyle = isSelected ? 'rgba(255, 255, 0, 0.9)' : clr;
-    ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? (2 / viewScale) : 0);
-    ctx.setLineDash(dash); // Pas stippellijn toe
+  // Algemene lijn stijl instellingen (kleur/dikte kan hieronder overschreven worden)
+  ctx.strokeStyle = isSelected ? 'rgba(255, 255, 0, 0.9)' : baseClr;
+  ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? (2 / viewScale) : 0);
+  ctx.globalAlpha = 1.0;
+  ctx.shadowBlur = 0;
 
-    ctx.beginPath();
-    ctx.moveTo(nA.x, nA.y);
-    ctx.quadraticCurveTo(cX, cY, nB.x, nB.y);
-    ctx.stroke();
 
-    // Animatie voor string (kan blijven) - of misschien ook voor glide?
-    if (conn.animationState > 0) {
-        conn.animationState -= 0.1;
-        conn.animationState = Math.max(0, conn.animationState);
-        ctx.shadowColor = clr;
-        ctx.shadowBlur = conn.animationState * 15 / viewScale;
-        ctx.stroke(); // Teken nogmaals met schaduw
-        ctx.shadowBlur = 0; // Reset schaduw
-    }
+  if (drawAsWaveformBars) {
+      // --- Teken Waveform als Balkjes (Geselecteerd Deel Gemapped naar Volle Lengte) ---
+      const pathData = conn.audioParams.waveformPath;
+      const totalPathPoints = pathData.length; // Totaal aantal datapunten voor hele audio
 
-    // Herstel context staat (inclusief line dash)
-    ctx.restore();
+      if (totalPathPoints > 0 && conn.audioParams.buffer) { // Check ook buffer hier
+          // De vage basislijn is hier verwijderd
+
+          // Haal audio parameters op
+          const bufferDuration = conn.audioParams.buffer.duration;
+          const startTimeOffset = conn.audioParams.startTimeOffset || 0;
+          const endTimeOffset = conn.audioParams.endTimeOffset ?? bufferDuration;
+          const actualEndTime = Math.max(startTimeOffset + 0.01, endTimeOffset);
+
+          // Bereken de start- en eindindex in de pathData array die overeenkomt met de selectie
+          const startSampleIndex = Math.max(0, Math.min(totalPathPoints - 1, Math.floor((startTimeOffset / bufferDuration) * totalPathPoints)));
+          const endSampleIndex = Math.max(0, Math.min(totalPathPoints - 1, Math.ceil((actualEndTime / bufferDuration) * totalPathPoints)));
+          // Bereken het aantal datapunten binnen de selectie
+          const selectedDataPointCount = Math.max(1, endSampleIndex - startSampleIndex + 1);
+
+          // Bereid tekenstijlen voor balkjes voor
+          const maxAmplitude = 15 / viewScale; // Max hoogte balkjes
+          const barWidth = Math.max(0.5, 1.5 / viewScale); // Dikte balkjes
+          ctx.lineWidth = barWidth; // Zet dikte voor de balkjes
+          ctx.strokeStyle = isSelected ? 'rgba(220, 255, 220, 0.9)' : baseClr; // Kleur balkjes
+          ctx.setLineDash([]); // Zeker weten solide
+
+          // Bereken lijn geometrie
+          const dx = nB.x - nA.x;
+          const dy = nB.y - nA.y;
+          const angle = Math.atan2(dy, dx);
+          const perpAngle = angle + Math.PI / 2; // Loodrechte hoek
+
+          // Bepaal hoeveel balkjes we VISUEEL willen tekenen (bv max 200 of gebaseerd op selectie)
+          const visualBarCount = Math.min(selectedDataPointCount, 200);
+
+          // Loop door het aantal visuele balkjes
+          for (let j = 0; j < visualBarCount; j++) {
+              // 1. Bereken VISUELE progress (0 tot 1) langs de lijn
+              const visualProgress = visualBarCount === 1 ? 0.5 : j / (visualBarCount - 1 || 1);
+
+              // 2. MAP visuele progress naar de index 'i' BINNEN het geselecteerde deel van pathData
+              const i = Math.round(startSampleIndex + visualProgress * (selectedDataPointCount - 1));
+              const clamped_i = Math.max(startSampleIndex, Math.min(endSampleIndex, i));
+
+              // 3. Bereken de VISUELE positie (lx, ly) op de lijn
+              const lx = nA.x + dx * visualProgress;
+              const ly = nA.y + dy * visualProgress;
+
+              // 4. Haal waveform data op met de gemapte index 'clamped_i'
+              const waveData = pathData[clamped_i];
+              if (!waveData) continue;
+
+              // 5. Bereken balk offsets
+              const positiveAmplitude = waveData.max > 0 ? waveData.max : 0;
+              const negativeAmplitude = waveData.min < 0 ? waveData.min : 0;
+              const topOffsetX = Math.cos(perpAngle) * positiveAmplitude * maxAmplitude;
+              const topOffsetY = Math.sin(perpAngle) * positiveAmplitude * maxAmplitude;
+              const bottomOffsetX = Math.cos(perpAngle) * negativeAmplitude * maxAmplitude;
+              const bottomOffsetY = Math.sin(perpAngle) * negativeAmplitude * maxAmplitude;
+
+              // 6. Teken het balkje
+              ctx.beginPath();
+              ctx.moveTo(lx + bottomOffsetX, ly + bottomOffsetY);
+              ctx.lineTo(lx + topOffsetX, ly + topOffsetY);
+              ctx.stroke();
+          }
+      } else {
+           // Fallback als pathData leeg is (teken placeholder)
+           ctx.strokeStyle = baseClr;
+           ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? (2 / viewScale) : 0);
+           ctx.setLineDash(dash);
+           ctx.beginPath();
+           const mX = (nA.x + nB.x) / 2; const mY = (nA.y + nB.y) / 2;
+           const cX = mX + conn.controlPointOffsetX; const cY = mY + conn.controlPointOffsetY;
+           ctx.moveTo(nA.x, nA.y); ctx.quadraticCurveTo(cX, cY, nB.x, nB.y);
+           ctx.stroke();
+      }
+      // --- EINDE Waveform Bars ---
+  } else {
+      // Teken normale curve voor andere types
+      ctx.strokeStyle = isSelected ? 'rgba(255, 255, 0, 0.9)' : baseClr;
+      ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? (2 / viewScale) : 0);
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      const mX = (nA.x + nB.x) / 2; const mY = (nA.y + nB.y) / 2;
+      const cX = mX + conn.controlPointOffsetX; const cY = mY + conn.controlPointOffsetY;
+      ctx.moveTo(nA.x, nA.y); ctx.quadraticCurveTo(cX, cY, nB.x, nB.y);
+      ctx.stroke();
+  }
+
+  ctx.shadowBlur = 0;
+  if (conn.animationState > 0 && conn.type === 'string_violin') {
+      ctx.strokeStyle = isSelected ? 'rgba(255, 255, 0, 0.9)' : (getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa');
+      ctx.lineWidth = Math.max(0.5, thickness) + (isSelected ? (2 / viewScale) : 0);
+      ctx.setLineDash([5 / viewScale, 3 / viewScale]);
+      ctx.shadowColor = isSelected ? 'rgba(255, 255, 0, 0.9)' : (getComputedStyle(document.documentElement).getPropertyValue('--string-violin-pulse-color').trim() || '#ffccaa');
+      ctx.shadowBlur = conn.animationState * 15 / viewScale;
+      ctx.beginPath();
+      const mX = (nA.x + nB.x) / 2;
+      const mY = (nA.y + nB.y) / 2;
+      const cX = mX + conn.controlPointOffsetX;
+      const cY = mY + conn.controlPointOffsetY;
+      ctx.moveTo(nA.x, nA.y);
+      ctx.quadraticCurveTo(cX, cY, nB.x, nB.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      conn.animationState -= 0.1;
+      conn.animationState = Math.max(0, conn.animationState);
+  }
+
+  ctx.restore();
 }
 function drawStarShape(ctx, x, y, points, outerR, innerR) {
   ctx.beginPath()
@@ -3741,37 +4278,48 @@ function drawNode(node) {
 
 
 function drawTemporaryConnection() {
-    // Alleen tekenen als we daadwerkelijk een connectie aan het slepen zijn
-    if (isConnecting && connectingNode) {
-        ctx.beginPath();
-        ctx.moveTo(connectingNode.x, connectingNode.y); // Van start node
-        ctx.lineTo(mousePos.x, mousePos.y); // Naar huidige muispositie
+  if (isConnecting && connectingNode) {
+      // De console.log kan hier weg als je wilt, of laat hem staan ter verificatie
+      // console.log("drawTemporaryConnection: Drawing type", connectionTypeToAdd);
 
-        // Kies stijl op basis van connectionTypeToAdd (bepaald in handleMouseDown)
-        let strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Default (voor standaard connect)
-        let lineWidth = 1 / viewScale;
-        let lineDash = [5 / viewScale, 5 / viewScale];
+      ctx.save(); // Isoleer stijlen voor deze lijn
 
-        if (connectionTypeToAdd === 'string_violin') {
-            strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa';
-            lineWidth = 2 / viewScale;
-            lineDash = [5 / viewScale, 3 / viewScale];
-        } else if (connectionTypeToAdd === 'glide') {
-            // Gebruik de constanten die we eerder hebben gedefinieerd
-            strokeStyle = GLIDE_LINE_COLOR;
-            lineWidth = GLIDE_LINE_WIDTH / viewScale;
-            lineDash = [8 / viewScale, 4 / viewScale]; // Specifiek patroon voor glide
-        }
+      // Standaardstijlen (voor 'standard' connect)
+      let strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      let lineWidth = 1 / viewScale;
+      let lineDash = [5 / viewScale, 5 / viewScale];
 
-        // Bewaar context staat (belangrijk!)
-        ctx.save();
-        ctx.strokeStyle = strokeStyle;
-        ctx.lineWidth = Math.max(0.5, lineWidth); // Zorg voor minimale dikte
-        ctx.setLineDash(lineDash);
-        ctx.stroke();
-        // Herstel context staat (reset lineDash etc.)
-        ctx.restore();
-    }
+      // Pas stijl aan voor specifieke types
+      if (connectionTypeToAdd === 'string_violin') {
+          strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--string-violin-connection-color').trim() || '#ffccaa';
+          lineWidth = 2 / viewScale;
+          lineDash = [5 / viewScale, 3 / viewScale];
+      } else if (connectionTypeToAdd === 'glide') {
+          strokeStyle = GLIDE_LINE_COLOR;
+          lineWidth = GLIDE_LINE_WIDTH / viewScale;
+          lineDash = [8 / viewScale, 4 / viewScale];
+      } else if (connectionTypeToAdd === 'wavetrail') {
+           // Gebruik nu de bedoelde stijl (maar wel duidelijk zichtbaar)
+           strokeStyle = 'rgba(150, 255, 150, 1.0)'; // Lichtgroen, Opaque
+           lineWidth = 3 / viewScale; // Iets dikker
+           lineDash = []; // Solide lijn
+           ctx.globalAlpha = 1.0; // Zeker weten niet transparant
+      }
+
+      // Pas de stijlen toe
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = Math.max(0.5, lineWidth);
+      ctx.setLineDash(lineDash);
+      // ctx.globalCompositeOperation = 'source-over'; // Reset indien nodig
+
+      // Teken de lijn
+      ctx.beginPath();
+      ctx.moveTo(connectingNode.x, connectingNode.y);
+      ctx.lineTo(mousePos.x, mousePos.y);
+      ctx.stroke();
+
+      ctx.restore(); // Herstel context staat
+  }
 }
 
 function drawSelectionRect() {
@@ -3819,6 +4367,7 @@ function drawBackground(now) {
   ctx.fillStyle = gradient
   ctx.fillRect(topLeft.x, topLeft.y, worldWidth, worldHeight)
 }
+
 function draw() {
   const now = audioContext ? audioContext.currentTime : performance.now() / 1000;
   const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
@@ -3826,9 +4375,9 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.translate(viewOffsetX, viewOffsetY);
   ctx.scale(viewScale, viewScale);
+
   drawBackground(now);
   drawGrid();
-  updateFluctuatingNodesLFO();
   updateAndDrawParticles(deltaTime, now);
   connections.forEach(drawConnection);
   nodes.forEach((node) => drawNode(node));
@@ -3850,29 +4399,16 @@ function draw() {
 
   updateAndDrawPulses(now);
 
-  if (currentTool === 'brush' && isBrushing && lastBrushNode) {
-      ctx.save();
-      let lineColor = 'rgba(255, 255, 100, 0.6)';
-      const pulseAlpha = 0.3 + (Math.sin(now * 6) + 1) * 0.25;
-      const finalLineColor = lineColor.replace(/[\d\.]+\)$/g, `${pulseAlpha})`);
-      ctx.strokeStyle = finalLineColor;
-      ctx.lineWidth = Math.max(0.8, 1.5 / viewScale);
-      ctx.setLineDash([5 / viewScale, 3 / viewScale]);
-      ctx.beginPath();
-      ctx.moveTo(lastBrushNode.x, lastBrushNode.y);
-      ctx.lineTo(mousePos.x, mousePos.y);
-      ctx.stroke();
-      ctx.restore();
+  // Teken tijdelijke connectie lijn indien bezig met verbinden EN juiste tool actief
+  if (isConnecting && (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail')) {
+       drawTemporaryConnection(); // Aanroep blijft
   }
 
-  if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide') {
-      drawTemporaryConnection();
-  }
   drawSelectionRect();
 
   ctx.restore();
   previousFrameTime = now;
-  ctx.setLineDash([]);
+  // ctx.setLineDash([]); // Reset hier indien nodig
 }
 function updateNebulaInteractionAudio() {
     // Check of audio context etc. klaar zijn (zoals voorheen)
@@ -4079,6 +4615,73 @@ function drawPlasmaBridge(ctx, nodeA, nodeB, alpha) { // Alpha is nu basis inten
   }
 
   ctx.restore();
+}
+
+function generateWaveformPath(audioBuffer, targetPointCount = 200) {
+  if (!audioBuffer || targetPointCount <= 0) {
+      return null;
+  }
+  try {
+      // Gebruik kanaal 0 (links of mono)
+      const channelData = audioBuffer.getChannelData(0);
+      const totalSamples = channelData.length;
+      const points = Math.min(targetPointCount, totalSamples); // Niet meer punten dan samples
+      if (points <= 0) return [{min: 0, max: 0}]; // Voorkom deling door nul
+
+      const waveformPath = [];
+      const samplesPerPoint = Math.floor(totalSamples / points);
+
+      if (samplesPerPoint <= 0) { // Gevallen met heel weinig samples
+           for(let i = 0; i < points; i++) {
+               const sampleIndex = Math.min(totalSamples - 1, Math.floor(i * (totalSamples / points)));
+               const sample = channelData[sampleIndex] || 0;
+               waveformPath.push({ min: sample, max: sample });
+           }
+           return waveformPath;
+      }
+
+
+      let currentSampleIndex = 0;
+      for (let i = 0; i < points; i++) {
+          const chunkEnd = Math.min(totalSamples, currentSampleIndex + samplesPerPoint);
+          let chunkMin = 1.0;
+          let chunkMax = -1.0;
+
+          // Vind min/max in dit segment
+          for (let j = currentSampleIndex; j < chunkEnd; j++) {
+              const sample = channelData[j];
+              if (sample < chunkMin) {
+                  chunkMin = sample;
+              }
+              if (sample > chunkMax) {
+                  chunkMax = sample;
+              }
+          }
+           // Als chunk leeg was of geen variatie had
+           if (chunkMin > chunkMax) {
+               const sample = channelData[currentSampleIndex] || 0;
+               chunkMin = sample;
+               chunkMax = sample;
+           }
+
+          waveformPath.push({ min: chunkMin, max: chunkMax });
+          currentSampleIndex = chunkEnd; // Ga naar volgend segment
+           // Voorkom oneindige loop als samplesPerPoint 0 was
+           if (samplesPerPoint === 0 && currentSampleIndex >= totalSamples) break;
+      }
+
+      // Zorg dat we altijd het gevraagde aantal punten hebben (eventueel dupliceren laatste)
+      while (waveformPath.length < targetPointCount && waveformPath.length > 0) {
+           waveformPath.push({...waveformPath[waveformPath.length - 1]});
+      }
+       if(waveformPath.length === 0) return [{min: 0, max: 0}]; // Fallback
+
+      return waveformPath;
+
+  } catch (error) {
+      console.error("Error generating waveform path:", error);
+      return null;
+  }
 }
 
 function updateMousePos(event) {
@@ -4350,12 +4953,17 @@ function handlePulsarTriggerToggle(node) {
 let _tempWasSelectedAtMouseDown = false;
 
 function handleMouseDown(event) {
-  console.log(`DEBUG handleMouseDown Start: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}'`); // Keep for debugging
+  // Start van functie, setup, checks voor panel controls etc. blijven hetzelfde
+  console.log(`DEBUG handleMouseDown Start: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}'`);
 
   if (!isPlaying && event.target === canvas) { togglePlayPause(); return; }
   if (!isAudioReady) return;
 
-  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target)
+                              || sideToolbar.contains(event.target)
+                              // || gridControlsDiv.contains(event.target) // Verwijderd
+                              || transportControlsDiv.contains(event.target)
+                              || mixerPanel.contains(event.target);
   if (targetIsPanelControl) { return; }
 
   updateMousePos(event);
@@ -4391,20 +4999,21 @@ function handleMouseDown(event) {
       return;
   }
 
-  if (elementClickedAtMouseDown) {
-      // Logic for clicking existing elements (mostly unchanged)
+  // --- LOGICA START HIER ---
+  if (elementClickedAtMouseDown) { // Klik op een bestaand element (node of connectie)
       const element = elementClickedAtMouseDown;
       const node = element.type === 'node' ? nodeClickedAtMouseDown : null;
       const connection = element.type === 'connection' ? connectionClickedAtMouseDown : null;
 
       if (event.shiftKey && currentTool === 'edit' && node) {
+          // Start Resize
           isResizing = true;
           resizeStartSize = node.size;
           resizeStartY = screenMousePos.y;
           canvas.style.cursor = 'ns-resize';
       } else if (event.shiftKey && currentTool !== 'edit') {
-          // Handle shift-click selection/deselection
-           if (isElementSelected(element.type, element.id)) {
+          // Shift-klik selectie/deselectie (geen drag start)
+          if (isElementSelected(element.type, element.id)) {
               selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
           } else {
               selectedElements.add(element);
@@ -4412,67 +5021,78 @@ function handleMouseDown(event) {
           if (currentTool === 'edit') updateConstellationGroup();
           updateGroupControlsUI();
           populateEditPanel();
-          nodeClickedAtMouseDown = null; // Prevent drag starting after shift-click select/deselect
+          nodeClickedAtMouseDown = null;
           connectionClickedAtMouseDown = null;
-      } else if (event.altKey && currentTool === 'edit' && node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) {
-          // Action for alt-click on node in MouseUp
-      } else if (event.altKey && currentTool === 'edit' && connection && connection.type === 'string_violin') {
-          // Action for alt-click on connection in MouseUp
+      } else if (event.altKey && currentTool === 'edit') {
+          // Alt-klik acties worden afgehandeld in handleMouseUp
       } else {
-          // Logic for connect, delete, edit drag start (unchanged)
-          if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide') {
+          // Geen Shift of Alt ingedrukt, check de actieve tool:
+          if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') {
+              // *** HIER ZIJN DE NIEUWE LOGS ***
+              console.log("DEBUG MouseDown: Connect tool active. Clicked on node?", !!node); // LOG M1
               if (node && !['nebula', PORTAL_NEBULA_TYPE].includes(node.type)) {
+                  console.log("DEBUG MouseDown: Starting connection from node", node.id); // LOG M2
                   isConnecting = true;
                   connectingNode = node;
                   if (currentTool === 'connect_string') {
                       connectionTypeToAdd = 'string_violin';
                   } else if (currentTool === 'connect_glide') {
                       connectionTypeToAdd = 'glide';
+                  } else if (currentTool === 'connect_wavetrail') {
+                      connectionTypeToAdd = 'wavetrail';
                   } else {
                       connectionTypeToAdd = 'standard';
                   }
+                  console.log("DEBUG MouseDown: connectionTypeToAdd =", connectionTypeToAdd); // LOG M3
                   canvas.style.cursor = 'grabbing';
+              } else if (node) {
+                   console.log("DEBUG MouseDown: Cannot start connection from node type:", node.type); // LOG M4
+              } else {
+                   console.log("DEBUG MouseDown: Connect tool active but did not click on a node."); // LOG M5
               }
+              // *** EINDE NIEUWE LOGS ***
           } else if (currentTool === 'delete') {
+              // Delete actie
               if (node) removeNode(node);
               else if (connection) removeConnection(connection);
               nodeClickedAtMouseDown = null;
               connectionClickedAtMouseDown = null;
           } else if (currentTool === 'edit') {
+               // Start Drag
                let selectionChanged = false;
-              if (!isElementSelected(element.type, element.id)) {
-                  if (!event.shiftKey) selectedElements.clear();
-                  selectedElements.add(element);
-                  selectionChanged = true;
-              } else if (event.shiftKey) {
-                  selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
-                  selectionChanged = true;
-              }
+               if (!isElementSelected(element.type, element.id)) {
+                   // Selecteer alleen dit element (want geen shift)
+                   selectedElements.clear();
+                   selectedElements.add(element);
+                   selectionChanged = true;
+               }
+               // Als al geselecteerd (en geen shift), start drag zonder selectie te wijzigen
 
-              if (node) { // Start dragging if clicking a node in edit mode
-                  isDragging = true;
-                  dragStartPos = { ...mousePos };
-                  nodeDragOffsets.clear();
-                  selectedElements.forEach(el => {
-                      if (el.type === 'node') {
-                          const n = findNodeById(el.id);
-                          if (n) nodeDragOffsets.set(el.id, { x: n.x - mousePos.x, y: n.y - mousePos.y });
-                      }
-                  });
-                  canvas.style.cursor = 'move';
-              }
+               if (node) { // Kan alleen nodes slepen
+                   isDragging = true;
+                   dragStartPos = { ...mousePos };
+                   nodeDragOffsets.clear();
+                   selectedElements.forEach(el => {
+                       if (el.type === 'node') {
+                           const n = findNodeById(el.id);
+                           if (n) nodeDragOffsets.set(el.id, { x: n.x - mousePos.x, y: n.y - mousePos.y });
+                       }
+                   });
+                   canvas.style.cursor = 'move';
+               }
 
-              if (selectionChanged) {
-                  updateConstellationGroup();
-                  populateEditPanel();
-              }
+               if (selectionChanged) {
+                   updateConstellationGroup();
+                   populateEditPanel();
+               }
           }
       }
-  } else { // Clicked on empty space
+  } else { // Klik op lege ruimte
       if (currentTool === 'edit') {
+          // Start Selectie Rechthoek
           isSelecting = true;
           selectionRect = { startX: mousePos.x, startY: mousePos.y, endX: mousePos.x, endY: mousePos.y, active: false };
-          if (!event.shiftKey) {
+          if (!event.shiftKey) { // Deselecteer als shift niet ingedrukt is
               if (selectedElements.size > 0) {
                   selectedElements.clear();
                   updateConstellationGroup();
@@ -4480,6 +5100,7 @@ function handleMouseDown(event) {
               }
           }
       } else if (currentTool === 'add' && nodeTypeToAdd !== null) {
+           // Add tool klik op leeg: doe niets hier, gebeurt in mouseUp
            console.log(`DEBUG handleMouseDown: 'add' mode detected, node will be added on mouseUp.`);
            if (!event.shiftKey && selectedElements.size > 0) {
                selectedElements.clear();
@@ -4487,11 +5108,10 @@ function handleMouseDown(event) {
                populateEditPanel();
            }
       } else if (currentTool === 'brush') {
-          // *** REMOVED BRUSH RESET FROM HERE ***
-          // isBrushing = false; // NO LONGER RESET HERE
-          // lastBrushNode = null; // NO LONGER RESET HERE
-          // console.log("Brush: MouseDown detected, brush state preserved."); // Updated log
-      } else if (!['connect', 'connect_string', 'connect_glide', 'delete'].includes(currentTool)) {
+          // Brush tool klik op leeg: doe niets hier, gebeurt in mouseUp
+           // console.log("Brush: MouseDown detected, brush state preserved.");
+      } else if (!['connect', 'connect_string', 'connect_glide', 'connect_wavetrail', 'delete'].includes(currentTool)) {
+          // Andere tools op leeg: deselecteer indien nodig
           if (selectedElements.size > 0 && !event.shiftKey) {
               selectedElements.clear();
               updateGroupControlsUI();
@@ -4499,13 +5119,12 @@ function handleMouseDown(event) {
           }
       }
   }
-  hideBottomPanels();
+  hideOverlappingPanels(); // Sluit panelen indien nodig
 }
-
 
 function handleMouseUp(event) {
   if (!isAudioReady) return;
-  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || gridControlsDiv.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
   if (targetIsPanelControl) {
       // Reset states if mouse up happens over a control panel
       isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false;
@@ -4549,9 +5168,9 @@ function handleMouseUp(event) {
   if (wasConnecting) {
       // Complete connection if dropped on a valid node
       if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor.type)) {
-          connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
-          stateWasChanged = true;
-      }
+        connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd); // Geef type mee
+        stateWasChanged = true;
+    }
       connectingNode = null; // Reset connecting node regardless
       connectionTypeToAdd = 'standard'; // Reset connection type
   }
@@ -4746,115 +5365,100 @@ function handleMouseUp(event) {
   updateGroupControlsUI(); // Update UI based on final selection
 }
 function handleMouseMove(event) {
-    if (!isAudioReady) return;
-    updateMousePos(event);
+  if (!isAudioReady) return;
+  updateMousePos(event);
 
-    // Check if drag/resize/connect/select/pan started and significant movement occurred
-    const dragThreshold = 7; // <-- Verhoogd van 3 naar bijvoorbeeld 7 pixels
-    if (
-        !didDrag &&
-        (isDragging || isResizing || isConnecting || isSelecting || isPanning) &&
-        distance(
-            screenMousePos.x,
-            screenMousePos.y,
-            mouseDownPos.x * viewScale + viewOffsetX, // Calculate screen coords of mouseDown
-            mouseDownPos.y * viewScale + viewOffsetY
-        ) > dragThreshold // <-- Gebruik de verhoogde drempelwaarde
-    ) {
-        didDrag = true; // Mark as dragged only after significant movement
-        if (isSelecting) {
-            selectionRect.active = true; // Activate selection rect drawing only after drag starts
-        }
-    }
+  // Check for significant movement to set didDrag flag
+  const dragThreshold = 7;
+  if (!didDrag && (isDragging || isResizing || isConnecting || isSelecting || isPanning) &&
+      distance(
+          screenMousePos.x, screenMousePos.y,
+          mouseDownPos.x * viewScale + viewOffsetX,
+          mouseDownPos.y * viewScale + viewOffsetY
+      ) > dragThreshold
+  ) {
+      didDrag = true;
+      if (isSelecting) {
+          selectionRect.active = true;
+      }
+  }
 
-    // --- Rest van de handleMouseMove functie blijft hetzelfde ---
-    if (isPanning) {
-        const dx = screenMousePos.x - panStart.x;
-        const dy = screenMousePos.y - panStart.y;
-        viewOffsetX += dx;
-        viewOffsetY += dy;
-        panStart = { ...screenMousePos };
-        canvas.style.cursor = "grabbing";
-    } else if (isResizing && nodeClickedAtMouseDown) {
-        // Handle resizing (no changes needed here for the bug)
-        const dy_screen = screenMousePos.y - resizeStartY;
-        const scaleFactor = 1 + dy_screen / 100; // Adjust sensitivity as needed
-        const targetNode = findNodeById(nodeClickedAtMouseDown.id);
-        if (targetNode) {
-            targetNode.size = Math.max(
-                MIN_NODE_SIZE,
-                Math.min(MAX_NODE_SIZE, resizeStartSize * scaleFactor)
-            );
-            updateNodeAudioParams(targetNode); // Update audio based on new size
-        }
-        canvas.style.cursor = "ns-resize";
-    } else if (isConnecting) {
-        // Handle drawing temporary connection line (no changes needed here)
-        canvas.style.cursor = "grabbing"; // Or specific connect cursor
-    } else if (isSelecting && didDrag) {
-        // Update selection rectangle end position (no changes needed here)
-        selectionRect.endX = mousePos.x;
-        selectionRect.endY = mousePos.y;
-        canvas.style.cursor = "crosshair";
-    } else if (isDragging && didDrag) {
-        // Handle dragging selected elements (no changes needed here)
-        const dx_world = mousePos.x - dragStartPos.x;
-        const dy_world = mousePos.y - dragStartPos.y;
-        const effectiveSnap = isSnapEnabled && !event.shiftKey;
-
-        selectedElements.forEach((el) => {
-            if (el.type === "node") {
-                const n = findNodeById(el.id);
-                const offset = nodeDragOffsets.get(el.id);
-                if (n && offset) {
-                    let targetX = dragStartPos.x + offset.x + dx_world;
-                    let targetY = dragStartPos.y + offset.y + dy_world;
-                    if (effectiveSnap) {
-                        const snapped = snapToGrid(targetX, targetY);
-                        targetX = snapped.x;
-                        targetY = snapped.y;
-                    }
-                    n.x = targetX;
-                    n.y = targetY;
-                }
-            }
-        });
-
-        // Update connection lengths if connected nodes moved
-        connections.forEach((conn) => {
-            const nodeASelected = isElementSelected("node", conn.nodeAId);
-            const nodeBSelected = isElementSelected("node", conn.nodeBId);
-            if (nodeASelected || nodeBSelected) {
-                const nA = findNodeById(conn.nodeAId);
-                const nB = findNodeById(conn.nodeBId);
-                if (nA && nB) conn.length = distance(nA.x, nA.y, nB.x, nB.y);
-            }
-        });
-        canvas.style.cursor = "move";
-    } else {
-        // Update cursor based on tool and what's under the mouse (hover effects)
-        const hN = findNodeAt(mousePos.x, mousePos.y);
-        const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null;
-
-        // Cursor logic (geen directe wijzigingen hier nodig voor de bug)
-        if (currentTool === "edit" && event.altKey && hN && (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")) {
-             canvas.style.cursor = "pointer"; // Indicate pitch cycle down possible
-        } else if (currentTool === "edit" && event.altKey && hC && hC.type === "string_violin") {
-             canvas.style.cursor = "pointer"; // Indicate pitch cycle down possible
-        } else if (currentTool === "edit" && event.shiftKey && hN) {
-             canvas.style.cursor = "ns-resize"; // Indicate resize possible
-        } else if ((currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide') && hN && !['nebula', PORTAL_NEBULA_TYPE].includes(hN.type)) {
-             canvas.style.cursor = "grab"; // Indicate connection start possible
-        } else if (currentTool === "delete" && (hN || hC)) {
-             canvas.style.cursor = "pointer"; // Indicate delete possible
-        } else if (currentTool === "edit" && (hN || hC)) {
-             canvas.style.cursor = "move"; // Indicate drag possible
-        } else if (currentTool === "add" || currentTool === 'brush') { // Add Brush tool here
-             canvas.style.cursor = "copy"; // Indicate add/brush possible
-        } else {
-             canvas.style.cursor = "crosshair"; // Default
-        }
-    }
+  // Handle different interaction modes
+  if (isPanning) {
+      const dx = screenMousePos.x - panStart.x;
+      const dy = screenMousePos.y - panStart.y;
+      viewOffsetX += dx;
+      viewOffsetY += dy;
+      panStart = { ...screenMousePos };
+      canvas.style.cursor = "grabbing";
+  } else if (isResizing && nodeClickedAtMouseDown) {
+      const dy_screen = screenMousePos.y - resizeStartY;
+      const scaleFactor = 1 + dy_screen / 100;
+      const targetNode = findNodeById(nodeClickedAtMouseDown.id);
+      if (targetNode) {
+          targetNode.size = Math.max(
+              MIN_NODE_SIZE,
+              Math.min(MAX_NODE_SIZE, resizeStartSize * scaleFactor)
+          );
+          updateNodeAudioParams(targetNode);
+      }
+      canvas.style.cursor = "ns-resize";
+  } else if (isConnecting) {
+      // *** LOG HIER TOEGEVOEGD ***
+      console.log("handleMouseMove: isConnecting =", isConnecting, "Calling drawTemporaryConnection...");
+      // De aanroep zelf gebeurt nu binnen de draw() loop, dus deze log is vooral ter indicatie.
+      // De draw() functie checkt zelf of isConnecting true is.
+      // Het tekenen gebeurt in draw(), niet direct hier.
+      canvas.style.cursor = "grabbing";
+  } else if (isSelecting && didDrag) {
+      selectionRect.endX = mousePos.x;
+      selectionRect.endY = mousePos.y;
+      canvas.style.cursor = "crosshair";
+  } else if (isDragging && didDrag) {
+      const dx_world = mousePos.x - dragStartPos.x;
+      const dy_world = mousePos.y - dragStartPos.y;
+      const effectiveSnap = isSnapEnabled && !event.shiftKey;
+      selectedElements.forEach((el) => {
+          if (el.type === "node") {
+              const n = findNodeById(el.id);
+              const offset = nodeDragOffsets.get(el.id);
+              if (n && offset) {
+                  let targetX = dragStartPos.x + offset.x + dx_world;
+                  let targetY = dragStartPos.y + offset.y + dy_world;
+                  if (effectiveSnap) {
+                      const snapped = snapToGrid(targetX, targetY);
+                      targetX = snapped.x;
+                      targetY = snapped.y;
+                  }
+                  n.x = targetX;
+                  n.y = targetY;
+              }
+          }
+      });
+      connections.forEach((conn) => {
+          const nodeASelected = isElementSelected("node", conn.nodeAId);
+          const nodeBSelected = isElementSelected("node", conn.nodeBId);
+          if (nodeASelected || nodeBSelected) {
+              const nA = findNodeById(conn.nodeAId);
+              const nB = findNodeById(conn.nodeBId);
+              if (nA && nB) conn.length = distance(nA.x, nA.y, nB.x, nB.y);
+          }
+      });
+      canvas.style.cursor = "move";
+  } else {
+      // Hover cursor logic (blijft hetzelfde)
+      const hN = findNodeAt(mousePos.x, mousePos.y);
+      const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null;
+      // ... (cursor aanpassen op basis van tool en hover) ...
+       if (currentTool === "edit" && event.altKey && hN && (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")) { canvas.style.cursor = "pointer"; }
+       else if (currentTool === "edit" && event.altKey && hC && hC.type === "string_violin") { canvas.style.cursor = "pointer"; }
+       else if (currentTool === "edit" && event.shiftKey && hN) { canvas.style.cursor = "ns-resize"; }
+       else if ((currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') && hN && !['nebula', PORTAL_NEBULA_TYPE].includes(hN.type)) { canvas.style.cursor = "grab"; }
+       else if (currentTool === "delete" && (hN || hC)) { canvas.style.cursor = "pointer"; }
+       else if (currentTool === "edit" && (hN || hC)) { canvas.style.cursor = "move"; }
+       else if (currentTool === "add" || currentTool === 'brush') { canvas.style.cursor = "copy"; }
+       else { canvas.style.cursor = "crosshair"; }
+  }
 }
 function handleWheel(event) {
   event.preventDefault()
@@ -4870,32 +5474,48 @@ function handleWheel(event) {
 }
 
 function deepCopyState(stateToCopy) {
-  if (!stateToCopy) return null
+  if (!stateToCopy) return null;
   try {
-    const stringified = JSON.stringify(stateToCopy, (key, value) => {
-      if (value instanceof Set) {
-        return Array.from(value)
+      const stringified = JSON.stringify(stateToCopy, (key, value) => {
+          if (value instanceof Set) {
+              return Array.from(value);
+          }
+          // Sla ALLEEN buffer niet op, de rest (incl. waveformPath) wel
+          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer)) {
+              return undefined;
+          }
+          return value;
+      });
+      const parsed = JSON.parse(stringified);
+
+      if (parsed.nodes) {
+          parsed.nodes.forEach((node) => {
+              node.connections = node.connections ? new Set(node.connections) : new Set();
+               if (!node.audioParams) node.audioParams = {};
+          });
       }
-      if (key === "audioNodes") return undefined
-      return value
-    })
-    const parsed = JSON.parse(stringified)
-    if (parsed.nodes) {
-      parsed.nodes.forEach((node) => {
-        node.connections = node.connections
-          ? new Set(node.connections)
-          : new Set()
-      })
-    }
-    parsed.selectedElements = parsed.selectedElements
-      ? new Set(parsed.selectedElements.map((el) => ({ ...el })))
-      : new Set()
-    parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs
-      ? new Set(parsed.fluctuatingGroupNodeIDs)
-      : new Set()
-    return parsed
+      parsed.selectedElements = parsed.selectedElements ? new Set(parsed.selectedElements.map(el => ({...el}))) : new Set();
+      parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs ? new Set(parsed.fluctuatingGroupNodeIDs) : new Set();
+
+      if(parsed.connections) {
+          parsed.connections.forEach(conn => {
+               if (!conn.audioParams) conn.audioParams = {};
+               if (conn.type === 'wavetrail' && conn.audioParams) {
+                  conn.audioParams.buffer = null; // Buffer is nooit meegesaved
+                  // conn.audioParams.waveformPath = null; // NIET resetten, moet uit JSON komen
+               }
+               // waveformPath wordt nu automatisch meegenomen bij parsen
+          });
+      }
+       if(parsed.nodes) {
+           parsed.nodes.forEach(node => {
+                if (!node.audioParams) node.audioParams = {};
+           });
+       }
+      return parsed;
   } catch (e) {
-    return null
+      console.error("Error during deep copy/parse state:", e);
+      return null;
   }
 }
 function saveState() {
@@ -4922,7 +5542,7 @@ function saveState() {
       portalVolume: portalGroupGain?.gain.value ?? 0.7,
       originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8
   };
-  const copiedState = deepCopyState(currentState);
+  const copiedState = deepCopyState(currentState); // Roept de aangepaste deepCopy aan
   if (!copiedState) return;
   if (historyIndex < historyStack.length - 1) {
       historyStack = historyStack.slice(0, historyIndex + 1);
@@ -4952,6 +5572,7 @@ function loadState(stateToLoad) {
   isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
   globalBPM = stateToLoad.globalBPM ?? 120;
   currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
+  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"]; // Update currentScale direct
   currentRootNote = stateToLoad.currentRootNote ?? 0;
   globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
   viewOffsetX = stateToLoad.viewOffsetX ?? 0;
@@ -4961,18 +5582,12 @@ function loadState(stateToLoad) {
   if (isAudioReady) {
       const now = audioContext.currentTime;
       const loadTimeConstant = 0.01;
-
       if (masterGain) masterGain.gain.setTargetAtTime(stateToLoad.masterVolume ?? 0.8, now, loadTimeConstant);
       if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(stateToLoad.delaySend ?? 0.3, now, loadTimeConstant);
       if (delayNode) delayNode.delayTime.setTargetAtTime(stateToLoad.delayTime ?? 0.25, now, loadTimeConstant);
       if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(stateToLoad.delayFeedback ?? 0.4, now, loadTimeConstant);
-
-      if (portalGroupGain) {
-           portalGroupGain.gain.setTargetAtTime(stateToLoad.portalVolume ?? 0.7, now, loadTimeConstant);
-      }
-      if (originalNebulaGroupGain) {
-           originalNebulaGroupGain.gain.setTargetAtTime(stateToLoad.originalNebulaVolume ?? 0.8, now, loadTimeConstant);
-      }
+      if (portalGroupGain) portalGroupGain.gain.setTargetAtTime(stateToLoad.portalVolume ?? 0.7, now, loadTimeConstant);
+      if (originalNebulaGroupGain) originalNebulaGroupGain.gain.setTargetAtTime(stateToLoad.originalNebulaVolume ?? 0.8, now, loadTimeConstant);
   }
 
   nodes.forEach((node) => {
@@ -4984,16 +5599,18 @@ function loadState(stateToLoad) {
       if (node.type === 'pulsar_manual') node.isEnabled = true;
       node.primaryInputConnectionId = node.primaryInputConnectionId ?? (node.type === "switch" ? null : undefined);
       node.baseHue = node.baseHue ?? null;
-
       if (!node.audioParams) node.audioParams = {};
       node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
       node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
       node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
       node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
       node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; // Prefer property on node itself
+      node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex; // Copy to main property if needed
       node.audioParams.gateModeIndex = node.gateModeIndex ?? node.audioParams.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
+      node.gateModeIndex = node.audioParams.gateModeIndex; // Copy
       node.audioParams.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
+      node.pitchShiftIndex = node.audioParams.pitchShiftIndex; //Copy
       node.audioParams.volume = node.audioParams.volume ?? 1.0;
 
       if (isDrumType(node.type)) {
@@ -5007,17 +5624,16 @@ function loadState(stateToLoad) {
       }
       if (["sound", "nebula"].includes(node.type)) {
           node.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0));
-          node.audioParams.pitch = getFrequency(scales[currentScaleKey], node.audioParams.scaleIndex);
+          node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
           if (isNaN(node.audioParams.pitch)) {
               node.audioParams.scaleIndex = 0;
-              node.audioParams.pitch = getFrequency(scales[currentScaleKey], 0);
+              node.audioParams.pitch = getFrequency(currentScale, 0);
           }
       }
       if (node.type === PORTAL_NEBULA_TYPE) {
            node.audioParams.pitch = node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
            node.audioParams.volume = node.audioParams.volume ?? 0.6;
       }
-
 
       if (isAudioReady) {
           node.audioNodes = createAudioNodesForNode(node);
@@ -5029,29 +5645,40 @@ function loadState(stateToLoad) {
 
   connections.forEach((conn) => {
       conn.isSelected = isElementSelected("connection", conn.id);
+       if (!conn.audioParams) conn.audioParams = {}; // Ensure audioParams object exists
+
       if (conn.type === "string_violin") {
-         if (!conn.audioParams) conn.audioParams = {};
          const defaults = STRING_VIOLIN_DEFAULTS;
          Object.keys(defaults).forEach((key) => { conn.audioParams[key] = conn.audioParams[key] ?? defaults[key]; });
          conn.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0));
-         conn.audioParams.pitch = getFrequency(scales[currentScaleKey], conn.audioParams.scaleIndex);
-         if (isNaN(conn.audioParams.pitch)) { conn.audioParams.scaleIndex = 0; conn.audioParams.pitch = getFrequency(scales[currentScaleKey], 0); }
+         conn.audioParams.pitch = getFrequency(currentScale, conn.audioParams.scaleIndex);
+         if (isNaN(conn.audioParams.pitch)) { conn.audioParams.scaleIndex = 0; conn.audioParams.pitch = getFrequency(currentScale, 0); }
          if (isAudioReady) {
              conn.audioNodes = createAudioNodesForConnection(conn);
              if (conn.audioNodes) { updateConnectionAudioParams(conn); }
          } else { conn.audioNodes = null; }
-      } else { conn.audioNodes = null; }
+      } else if (conn.type === 'wavetrail') {
+          conn.audioParams.buffer = null; // Buffer wordt nooit opgeslagen
+          conn.audioParams.waveformPath = null; // Pad moet opnieuw gegenereerd
+          conn.audioParams.fileName = conn.audioParams.fileName || null; // Behoud bestandsnaam
+          conn.audioNodes = null;
+          console.log(`WaveTrail ${conn.id} loaded. File needed: ${conn.audioParams.fileName || 'Unknown'}`);
+      } else {
+          conn.audioNodes = null; // Standard/glide hebben geen nodes
+      }
   });
 
+  // Update UI
   updateSyncUI();
   updateScaleAndTransposeUI();
   if(isAudioReady) updateMixerUI();
   updateConstellationGroup();
-  populateEditPanel();
+  populateEditPanel(); // Ensure file input shows for loaded wavetrails
   drawPianoRoll();
-  identifyAndRouteAllGroups();
+  identifyAndRouteAllGroups(); // Reroute audio after loading
 
   isPerformingUndoRedo = false;
+  console.log("State loaded successfully.");
 }
 function undo() {
   if (historyIndex > 0) {
@@ -5496,14 +6123,12 @@ function setActiveTool(toolName) {
   if (currentTool === 'brush' && toolName !== 'brush') {
       isBrushing = false;
       lastBrushNode = null;
-      sideToolbar.classList.add("hidden");
-      if (brushBtn) brushBtn.classList.remove('active'); // Zorg dat knop uit gaat
+      if (brushBtn) brushBtn.classList.remove('active');
   }
   if (currentTool === "add" && toolName !== "add") {
       nodeTypeToAdd = null;
       waveformToAdd = null;
       noteIndexToAdd = -1;
-      if (toolName !== 'brush') resetSideToolbars(); // Reset alleen als nieuwe tool niet brush is
       const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
       addButtons.forEach((btn) => btn.classList.remove("active"));
   }
@@ -5511,7 +6136,7 @@ function setActiveTool(toolName) {
   currentTool = toolName;
   connectingNode = null;
   isConnecting = false;
-  connectionTypeToAdd = 'standard';
+  connectionTypeToAdd = 'standard'; // Default, wordt overschreven indien nodig
 
   editBtn.classList.toggle("active", toolName === "edit");
   connectBtn.classList.toggle("active", toolName === "connect");
@@ -5519,46 +6144,54 @@ function setActiveTool(toolName) {
   if (glideToolButton) {
     glideToolButton.classList.toggle('active', toolName === 'connect_glide');
   }
+  if (connectWaveTrailBtn) { // Nieuwe knop check
+      connectWaveTrailBtn.classList.toggle('active', toolName === 'connect_wavetrail');
+  }
+  if (connectWaveTrailBtn) {
+    connectWaveTrailBtn.addEventListener('click', () => {
+        setActiveTool('connect_wavetrail'); // Gebruik een unieke naam voor de tool
+    });
+} else {
+    console.error("#connectWaveTrailBtn not found during listener setup!");
+}
   deleteBtn.classList.toggle("active", toolName === "delete");
-  if (brushBtn) { // Check of brushBtn bestaat
+  if (brushBtn) {
        brushBtn.classList.toggle('active', toolName === 'brush');
   }
-
 
   if (toolName !== "add" && toolName !== "brush") {
       const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
       addButtons.forEach((btn) => btn.classList.remove("active"));
-      resetSideToolbars();
+      // Sluit alleen panelen die *kunnen* storen; mixer blijft ongemoeid
+      hideOverlappingPanels();
   } else if (toolName === 'add') {
-       // Als 'add' wordt geselecteerd, sluit andere panelen
        hamburgerMenuPanel.classList.add("hidden");
        hamburgerBtn.classList.remove("active");
-       if (brushBtn) brushBtn.classList.remove('active'); // Deactiveer brush knop
-       sideToolbar.classList.add('hidden'); // Verberg eventueel brush paneel
+       if (brushBtn) brushBtn.classList.remove('active');
   } else if (toolName === 'brush') {
-       // Als 'brush' wordt geselecteerd, sluit andere panelen/reset 'add' state
        nodeTypeToAdd = null; waveformToAdd = null; noteIndexToAdd = -1;
        const addButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
        addButtons.forEach(btn => btn.classList.remove("active"));
        hamburgerMenuPanel.classList.add("hidden");
        hamburgerBtn.classList.remove("active");
-       // Het tonen van het brush paneel gebeurt in de event listener van de knop
+  }
+
+  if (toolName !== 'edit' || (toolName === 'edit' && hamburgerMenuPanel.classList.contains('hidden'))) {
+       hideOverlappingPanels();
   }
 
   isResizing = false;
   isSelecting = false;
   selectionRect.active = false;
   isPanning = false;
+
   updateGroupControlsUI();
   updateRestartPulsarsButtonVisibility();
-  hideBottomPanels();
+
   if (toolName === "edit") {
        populateEditPanel();
   } else {
-       editPanelContent.innerHTML = ""; // Maak edit panel leeg als andere tool actief is
-       // Als er elementen geselecteerd waren, deselecteer ze misschien?
-       // selectedElements.clear();
-       // updateConstellationGroup();
+       editPanelContent.innerHTML = "";
   }
 }
   
@@ -5901,9 +6534,17 @@ function updateMixerUI() {
   }
 }
 
-function hideBottomPanels() {
-  mixerPanel.classList.add("hidden")
-  mixerBtn.classList.remove("active")
+function hideOverlappingPanels() {
+  // Sluit panelen die automatisch moeten sluiten (mixer blijft open)
+  // Gebruik 'if' checks voor robuustheid tegen 'null' errors als elementen er (nog) niet zijn
+  const sideToolbar = document.getElementById("sideToolbar");
+  const hamburgerMenuPanel = document.getElementById("hamburgerMenuPanel");
+  const hamburgerBtn = document.getElementById("hamburgerBtn"); // Nodig om knop 'uit' te zetten
+
+  if (sideToolbar) sideToolbar.classList.add("hidden");
+  if (hamburgerMenuPanel) hamburgerMenuPanel.classList.add("hidden");
+  if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+  // Belangrijk: Sluit de mixer hier NIET
 }
 
 function togglePlayPause() {
@@ -5981,7 +6622,7 @@ playPauseBtn.addEventListener("click", togglePlayPause)
 hamburgerBtn.addEventListener("click", () => {
   const isOpen = !hamburgerMenuPanel.classList.contains("hidden")
   resetSideToolbars()
-  hideBottomPanels()
+  hideOverlappingPanels()
   if (!isOpen) {
     hamburgerMenuPanel.classList.remove("hidden")
     setActiveTool("edit")
@@ -6048,19 +6689,19 @@ gridToggleBtn.addEventListener("click", () => {
   gridToggleBtn.classList.toggle("active", isGridVisible)
   gridOptionsDiv.classList.toggle("hidden", !isGridVisible)
 })
-gridTypeBtn.addEventListener("click", () => {
-  gridType = gridType === "lines" ? "dots" : "lines"
-  gridTypeBtn.textContent = `Type: ${gridType === "lines" ? "Lines" : "Dots"}`
-})
-gridSnapBtn.addEventListener("click", () => {
-  isSnapEnabled = !isSnapEnabled
-  gridSnapBtn.textContent = `Snap: ${isSnapEnabled ? "ON" : "OFF"}`
-  gridSnapBtn.classList.toggle("active", isSnapEnabled)
-})
 toggleInfoTextBtn.addEventListener("click", () => {
   isInfoTextVisible = !isInfoTextVisible
   updateInfoToggleUI()
 })
+if (gridSnapBtn) {
+  gridSnapBtn.addEventListener("click", () => {
+      isSnapEnabled = !isSnapEnabled;
+      gridSnapBtn.textContent = `Snap: ${isSnapEnabled ? "ON" : "OFF"}`;
+      gridSnapBtn.classList.toggle("active", isSnapEnabled);
+  });
+} else {
+  console.error("#gridSnapBtn not found during listener setup!");
+}
 globalSyncToggleBtn.addEventListener("click", () => {
   isGlobalSyncEnabled = !isGlobalSyncEnabled
   nodes.forEach((n) => {
@@ -6204,24 +6845,27 @@ undoBtn.addEventListener("click", () => {
 redoBtn.addEventListener("click", () => {
   redo()
 })
-mixerBtn.addEventListener("click", () => {
-  const isOpen = !mixerPanel.classList.contains("hidden");
-  resetSideToolbars();
-  hideBottomPanels(); // Sluit andere panelen
-
-  if (!isOpen) {
-      // Paneel openen
-      mixerPanel.classList.remove("hidden");
-      mixerBtn.classList.add("active");
-      console.log("Mixer Knop Geklikt - Controleer isReverbReady:", isReverbReady); // LOG 1
-      console.log("Mixer Knop Geklikt - Roep updateMixerGUI aan..."); // LOG 2
-      updateMixerGUI(); 
-      // updateMixerUI(); // Verwijder deze regel als hij er stond, het is een oudere functie
-  } else {
-      // Paneel sluiten (gebeurt al door hideBottomPanels, maar zet knop uit)
-      mixerBtn.classList.remove("active");
-  }
-});
+if (mixerToggleBtn) {
+  mixerToggleBtn.addEventListener('click', () => {
+      const mixerPanel = document.getElementById("mixerPanel"); // Haal hier op binnen de listener
+      if (mixerPanel) { // Check of paneel bestaat
+          const isHidden = mixerPanel.classList.contains('hidden');
+          if (isHidden) {
+              hideOverlappingPanels(); // Sluit andere panelen eerst
+              mixerPanel.classList.remove('hidden');
+              mixerToggleBtn.classList.add('active');
+              updateMixerGUI(); // Update inhoud bij openen
+          } else {
+              mixerPanel.classList.add('hidden');
+              mixerToggleBtn.classList.remove('active');
+          }
+      } else {
+          console.error("#mixerPanel not found inside mixerToggleBtn listener!");
+      }
+  });
+} else {
+  console.error("#mixerToggleBtn not found during listener setup!");
+}
 masterVolumeSlider.addEventListener("input", (e) => {
   if (masterGain)
     masterGain.gain.setTargetAtTime(
@@ -6374,7 +7018,7 @@ window.addEventListener("keydown", (e) => {
       }
       setActiveTool("edit");
       resetSideToolbars();
-      hideBottomPanels();
+      hideOverlappingPanels();
       e.preventDefault(); // Voorkom standaard browser escape acties
   } else if (e.altKey && currentTool === "edit") {
       e.preventDefault();
@@ -6408,189 +7052,189 @@ function handleContextMenu(event) {
 canvas.addEventListener('contextmenu', handleContextMenu);
 
 function animationLoop() {
-  animationFrameId = requestAnimationFrame(animationLoop);
-  // Zorg ervoor dat de audio context klaar en actief is voor we doorgaan
-  if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
-      // Optioneel: log hier indien nodig: console.log("Animation loop paused (audio not ready or not playing).");
-      return; // Stop de uitvoering van deze frame als audio niet klaar is
-  }
+    animationFrameId = requestAnimationFrame(animationLoop);
+    // Zorg ervoor dat de audio context klaar en actief is voor we doorgaan
+    if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
+        // Optioneel: log hier indien nodig: console.log("Animation loop paused (audio not ready or not playing).");
+        return; // Stop de uitvoering van deze frame als audio niet klaar is
+    }
 
-  const now = audioContext.currentTime;
-  const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
-  const secondsPerBeat = 60.0 / (globalBPM || 120); // Voeg fallback toe voor BPM voor zekerheid
+    const now = audioContext.currentTime;
+    const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+    const secondsPerBeat = 60.0 / (globalBPM || 120); // Voeg fallback toe voor BPM voor zekerheid
 
-  // Update beat indicator (controleer of element bestaat)
-  if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
-      const epsilon = 0.01; // Kleine marge voor timing
-      if (now >= lastBeatTime + secondsPerBeat - epsilon) {
-           if (!beatIndicatorElement.classList.contains("active")) {
-               beatIndicatorElement.classList.add("active");
-               setTimeout(() => { // Gebruik setTimeout voor betrouwbare verwijdering
-                   if(beatIndicatorElement) beatIndicatorElement.classList.remove("active");
-               }, 50);
-           }
-          // Bereken de correcte laatste beattijd opnieuw
-          lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
-      }
-  } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
-      // Zet indicator uit als sync uit staat
-      beatIndicatorElement.classList.remove("active");
-      lastBeatTime = 0;
-  }
+    // Update beat indicator (controleer of element bestaat)
+    if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
+        const epsilon = 0.01; // Kleine marge voor timing
+        if (now >= lastBeatTime + secondsPerBeat - epsilon) {
+             if (!beatIndicatorElement.classList.contains("active")) {
+                 beatIndicatorElement.classList.add("active");
+                 setTimeout(() => { // Gebruik setTimeout voor betrouwbare verwijdering
+                     if(beatIndicatorElement) beatIndicatorElement.classList.remove("active");
+                 }, 50);
+             }
+            // Bereken de correcte laatste beattijd opnieuw
+            lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
+        }
+    } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
+        // Zet indicator uit als sync uit staat
+        beatIndicatorElement.classList.remove("active");
+        lastBeatTime = 0;
+    }
 
 
-  try { // --- Begin try...catch rond node processing ---
+    try { // --- Begin try...catch rond node processing ---
 
-      nodes.forEach((node) => {
-          // Pulsar logic
-          if (node.isStartNode && node.isEnabled &&
-              (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles")) {
+        nodes.forEach((node) => {
+            // Pulsar logic
+            if (node.isStartNode && node.isEnabled &&
+                (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles")) {
 
-              let shouldPulse = false;
-              let pulseData = {};
+                let shouldPulse = false;
+                let pulseData = {};
 
-              if (node.type === "pulsar_random_particles") {
-                  // Random timing logic (lijkt ok)
-                  if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) { // Reset als ver in verleden
-                       node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                  }
-                  if (now >= node.nextRandomTriggerTime) {
-                      shouldPulse = true;
-                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                  }
-              } else { // Standard or Random Volume Pulsar
-                  if (isGlobalSyncEnabled) {
-                      // *** SYNC LOGICA - EXTRA CONTROLES TOEGEVOEGD ***
-                      const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; // Gebruik default als index mist
-                      if (index >= 0 && index < subdivisionOptions.length) { // Controleer of index geldig is
-                          const subdiv = subdivisionOptions[index];
-                          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) { // Controleer of subdiv object en waarde geldig zijn
-                              const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                              if (nodeIntervalSeconds > 0) { // Voorkom deling door nul of negatief interval
-                                  // Initialiseer of reset timing indien nodig
-                                  if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
-                                      const currentBeat = now / secondsPerBeat;
-                                      const currentSubdivision = Math.floor(currentBeat / subdiv.value);
-                                      node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
-                                      if (node.nextSyncTriggerTime <= now + 0.005) { // Zorg dat het in de toekomst ligt
-                                          node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                      }
-                                  }
-                                  // Check of het tijd is om te pulsen (met kleine marge)
-                                  if (now >= node.nextSyncTriggerTime - 0.005) {
-                                      shouldPulse = true;
-                                      node.nextSyncTriggerTime += nodeIntervalSeconds; // Plan volgende puls
-                                      // Robuustheid: zorg dat volgende tijd niet vastzit in het verleden
-                                      if (node.nextSyncTriggerTime <= now) {
-                                          node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
-                                          if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                       }
-                                  }
-                              } else {
-                                   console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
-                              }
-                          } else {
-                               console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
-                          }
-                      } else {
-                           console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
-                           node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX; // Probeer te herstellen
-                      }
-                      // *** EINDE SYNC LOGICA CONTROLES ***
-                  } else { // Sync Uitgeschakeld - Interval Logica
-                      if (node.lastTriggerTime < 0) {
-                          node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
-                      }
-                      const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
-                      if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
-                          shouldPulse = true;
-                          node.lastTriggerTime = now;
-                      }
-                  }
-              } // End standard/random volume pulsar check
+                if (node.type === "pulsar_random_particles") {
+                    // Random timing logic (lijkt ok)
+                    if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) { // Reset als ver in verleden
+                         node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                    }
+                    if (now >= node.nextRandomTriggerTime) {
+                        shouldPulse = true;
+                        node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                    }
+                } else { // Standard or Random Volume Pulsar
+                    if (isGlobalSyncEnabled) {
+                        // *** SYNC LOGICA - EXTRA CONTROLES TOEGEVOEGD ***
+                        const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; // Gebruik default als index mist
+                        if (index >= 0 && index < subdivisionOptions.length) { // Controleer of index geldig is
+                            const subdiv = subdivisionOptions[index];
+                            if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) { // Controleer of subdiv object en waarde geldig zijn
+                                const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                                if (nodeIntervalSeconds > 0) { // Voorkom deling door nul of negatief interval
+                                    // Initialiseer of reset timing indien nodig
+                                    if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
+                                        const currentBeat = now / secondsPerBeat;
+                                        const currentSubdivision = Math.floor(currentBeat / subdiv.value);
+                                        node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
+                                        if (node.nextSyncTriggerTime <= now + 0.005) { // Zorg dat het in de toekomst ligt
+                                            node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                        }
+                                    }
+                                    // Check of het tijd is om te pulsen (met kleine marge)
+                                    if (now >= node.nextSyncTriggerTime - 0.005) {
+                                        shouldPulse = true;
+                                        node.nextSyncTriggerTime += nodeIntervalSeconds; // Plan volgende puls
+                                        // Robuustheid: zorg dat volgende tijd niet vastzit in het verleden
+                                        if (node.nextSyncTriggerTime <= now) {
+                                            node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
+                                            if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                         }
+                                    }
+                                } else {
+                                     console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
+                                }
+                            } else {
+                                 console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
+                            }
+                        } else {
+                             console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
+                             node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX; // Probeer te herstellen
+                        }
+                        // *** EINDE SYNC LOGICA CONTROLES ***
+                    } else { // Sync Uitgeschakeld - Interval Logica
+                        if (node.lastTriggerTime < 0) {
+                            node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
+                        }
+                        const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                        if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
+                            shouldPulse = true;
+                            node.lastTriggerTime = now;
+                        }
+                    }
+                } // End standard/random volume pulsar check
 
-              if (shouldPulse) {
-                  // Pulse data setup (intensity, color etc.)
-                  pulseData = {
-                      intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
-                      color: node.color ?? null,
-                      particleMultiplier: 1.0,
-                  };
-                  if (node.type === "pulsar_random_volume") {
-                      pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
-                  }
+                if (shouldPulse) {
+                    // Pulse data setup (intensity, color etc.)
+                    pulseData = {
+                        intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
+                        color: node.color ?? null,
+                        particleMultiplier: 1.0,
+                    };
+                    if (node.type === "pulsar_random_volume") {
+                        pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
+                    }
 
-                  currentGlobalPulseId++;
-                  node.animationState = 1;
-                  setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
+                    currentGlobalPulseId++;
+                    node.animationState = 1;
+                    setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
 
-                  // Propagate trigger naar buren
-                  node.connections.forEach(neighborId => {
-                      const neighborNode = findNodeById(neighborId);
-                      const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                      if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
-                           const travelTime = connection.length * DELAY_FACTOR;
-                           try { // Extra try-catch rond propagatie
-                               createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
-                               propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
-                           } catch (propError) {
-                               console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
-                           }
-                      }
-                  });
-              } // End if shouldPulse
+                    // Propagate trigger naar buren
+                    node.connections.forEach(neighborId => {
+                        const neighborNode = findNodeById(neighborId);
+                        const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                        if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
+                             const travelTime = connection.length * DELAY_FACTOR;
+                             try { // Extra try-catch rond propagatie
+                                 createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
+                                 propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
+                             } catch (propError) {
+                                 console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
+                             }
+                        }
+                    });
+                } // End if shouldPulse
 
-          } // End Pulsar specific logic
+            } // End Pulsar specific logic
 
-          // Andere node animaties (gate rotatie, nebula pulsing, etc.)
-          else if (node.type === "gate") {
-              node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
-              node.currentAngle %= 2 * Math.PI;
-          } else if (node.type === "nebula") {
-               node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
-               node.currentAngle %= 2 * Math.PI;
-               node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
-               node.innerAngle %= 2 * Math.PI;
-               node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
-               node.pulsePhase %= 2 * Math.PI;
-           } else if (node.type === PORTAL_NEBULA_TYPE) {
-               node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
-               node.pulsePhase %= 2 * Math.PI;
-           }
-      }); // End nodes.forEach
+            // Andere node animaties (gate rotatie, nebula pulsing, etc.)
+            else if (node.type === "gate") {
+                node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
+                node.currentAngle %= 2 * Math.PI;
+            } else if (node.type === "nebula") {
+                 node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
+                 node.currentAngle %= 2 * Math.PI;
+                 node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
+                 node.innerAngle %= 2 * Math.PI;
+                 node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
+                 node.pulsePhase %= 2 * Math.PI;
+             } else if (node.type === PORTAL_NEBULA_TYPE) {
+                 node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
+                 node.pulsePhase %= 2 * Math.PI;
+             }
+        }); // End nodes.forEach
 
-      // Update nebula interacties
-      try {
-          updateNebulaInteractionAudio();
-      } catch (nebError) {
-           console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
-      }
+        // Update nebula interacties
+        try {
+            updateNebulaInteractionAudio();
+        } catch (nebError) {
+             console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
+        }
 
-      // Update brush particles (indien nodig)
-      if (currentTool === 'brush' && isBrushing && lastBrushNode) {
-          if (Math.random() < 0.3) {
-              createParticles(lastBrushNode.x, lastBrushNode.y, 1);
-          }
-      }
+        // Update brush particles (indien nodig)
+        if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+            if (Math.random() < 0.3) {
+                createParticles(lastBrushNode.x, lastBrushNode.y, 1);
+            }
+        }
 
-      // Voer teken-operaties uit
-      draw();
+        // Voer teken-operaties uit
+        draw();
 
-  } catch (loopError) { // --- Vang fouten in node processing op ---
-      console.error("Fout opgetreden in animationLoop:", loopError);
-      // Probeer de loop te stoppen om herhaalde fouten te voorkomen
-      if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
-          animationFrameId = null;
-          console.error("Animation loop gestopt vanwege fout.");
-          // Optioneel: probeer audio context ook te pauzeren?
-          // if (audioContext && audioContext.state === 'running') {
-          //     togglePlayPause(); // Of roep direct suspend aan
-          // }
-      }
-  } // --- Einde try...catch ---
+    } catch (loopError) { // --- Vang fouten in node processing op ---
+        console.error("Fout opgetreden in animationLoop:", loopError);
+        // Probeer de loop te stoppen om herhaalde fouten te voorkomen
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            console.error("Animation loop gestopt vanwege fout.");
+            // Optioneel: probeer audio context ook te pauzeren?
+            // if (audioContext && audioContext.state === 'running') {
+            //     togglePlayPause(); // Of roep direct suspend aan
+            // }
+        }
+    } // --- Einde try...catch ---
 
-  previousFrameTime = now; // Update tijd voor volgende frame berekening
+    previousFrameTime = now; // Update tijd voor volgende frame berekening
 }
 function startAnimationLoop() {
   if (!animationFrameId) {
@@ -6641,442 +7285,669 @@ function createSlider(
 }
 
 function populateEditPanel() {
-  editPanelContent.innerHTML = ""
+  editPanelContent.innerHTML = "";
   if (currentTool !== "edit" || selectedElements.size === 0) {
-    if (
-      !hamburgerMenuPanel.classList.contains("hidden") &&
-      selectedElements.size === 0
-    ) {
-      hamburgerMenuPanel.classList.add("hidden")
-      hamburgerBtn.classList.remove("active")
-    }
-    return
+      if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && selectedElements.size === 0) {
+           hamburgerMenuPanel.classList.add("hidden");
+           if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+      }
+      return;
   }
 
-  const selectedArray = Array.from(selectedElements)
-  const firstElementData = selectedArray[0]
-  const fragment = document.createDocumentFragment()
-  const title = document.createElement("p")
+  const selectedArray = Array.from(selectedElements);
+  const firstElementData = selectedArray[0];
+  const fragment = document.createDocumentFragment();
+  const title = document.createElement("p");
 
   const nodeTypes = new Set(
-    selectedArray
+      selectedArray
       .filter((el) => el.type === "node")
       .map((el) => findNodeById(el.id)?.type)
-  )
+  );
   const connectionTypesSet = new Set(
-    selectedArray
+      selectedArray
       .filter((el) => el.type === "connection")
       .map((el) => findConnectionById(el.id)?.type)
-  )
+  );
 
-  let titleText = ""
-  let allSameLogicalType = false
-  let logicalType = ""
+  let titleText = "";
+  let allSameLogicalType = false;
+  let logicalType = "";
 
   if (selectedArray.length === 1) {
-    const element =
-      firstElementData.type === "node"
-        ? findNodeById(firstElementData.id)
-        : findConnectionById(firstElementData.id)
-    if (element) {
-      logicalType = element.type.replace(/_/g, " ")
-      titleText = `Edit ${logicalType} #${element.id}`
-      allSameLogicalType = true
-    } else {
-      titleText = "Edit Element"
-    }
+      const element = firstElementData.type === "node" ? findNodeById(firstElementData.id) : findConnectionById(firstElementData.id);
+      if (element) {
+          logicalType = element.type.replace(/_/g, " ");
+          titleText = `Edit ${logicalType} #${element.id}`;
+          allSameLogicalType = true;
+      } else {
+          titleText = "Edit Element";
+      }
   } else {
-    const types = new Set([...nodeTypes, ...connectionTypesSet])
-    if (types.size === 1) {
-      logicalType = [...types][0].replace(/_/g, " ")
-      titleText = `Edit ${selectedArray.length} ${logicalType}s`
-      allSameLogicalType = true
-    } else {
-      titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`
-      allSameLogicalType = false
-    }
+      const types = new Set([...nodeTypes, ...connectionTypesSet]);
+      if (types.size === 1) {
+          logicalType = [...types][0].replace(/_/g, " ");
+          titleText = `Edit ${selectedArray.length} ${logicalType}s`;
+          allSameLogicalType = true;
+      } else {
+          titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
+          allSameLogicalType = false;
+      }
   }
-  title.innerHTML = `<strong>${titleText}</strong>`
-  fragment.appendChild(title)
+  title.innerHTML = `<strong>${titleText}</strong>`;
+  fragment.appendChild(title);
 
   const elementsWithNote = selectedArray.filter((elData) => {
-    const el =
-      elData.type === "node"
-        ? findNodeById(elData.id)
-        : findConnectionById(elData.id)
-    return (
-      el &&
-      (el.type === "sound" ||
-        el.type === "nebula" ||
-        (elData.type === "connection" && el.type === "string_violin"))
-    )
-  })
+      const el = elData.type === "node" ? findNodeById(elData.id) : findConnectionById(elData.id);
+      return (
+          el &&
+          (el.type === "sound" ||
+           el.type === "nebula" ||
+           (elData.type === "connection" && el.type === "string_violin"))
+      );
+  });
 
   if (elementsWithNote.length > 0) {
-    const targetDataForNoteSelector = elementsWithNote.map((el) => ({
-      type: el.type,
-      id: el.id
-    }))
-    createHexNoteSelectorDOM(fragment, targetDataForNoteSelector)
+      const targetDataForNoteSelector = elementsWithNote.map((el) => ({ type: el.type, id: el.id }));
+      createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
   }
 
   if (allSameLogicalType) {
-    if (firstElementData.type === "node") {
-      const node = findNodeById(firstElementData.id)
-      if (isPulsarType(node.type)) {
-        const section = document.createElement("div")
-        section.classList.add("panel-section")
-        const enableLabel = document.createElement("label")
-        enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`
-        enableLabel.textContent =
-          node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:"
-        section.appendChild(enableLabel)
-        const enableCheckbox = document.createElement("input")
-        enableCheckbox.type = "checkbox"
-        enableCheckbox.id = `edit-pulsar-enable-${node.id}`
-        enableCheckbox.checked = node.isEnabled
-        enableCheckbox.disabled = selectedArray.length > 1
-        enableCheckbox.addEventListener("change", () =>
-          handlePulsarTriggerToggle(node)
-        )
-        section.appendChild(enableCheckbox)
-        section.appendChild(document.createElement("br"))
+      if (firstElementData.type === "node") {
+          const node = findNodeById(firstElementData.id);
+          if (node && isPulsarType(node.type)) {
+              const section = document.createElement("div");
+              section.classList.add("panel-section");
+              const enableLabel = document.createElement("label");
+              enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
+              enableLabel.textContent = node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
+              section.appendChild(enableLabel);
+              const enableCheckbox = document.createElement("input");
+              enableCheckbox.type = "checkbox";
+              enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
+              enableCheckbox.checked = node.isEnabled;
+              enableCheckbox.disabled = selectedArray.length > 1;
+              enableCheckbox.addEventListener("change", () => handlePulsarTriggerToggle(node));
+              section.appendChild(enableCheckbox);
+              section.appendChild(document.createElement("br"));
 
-        if (node.type !== "pulsar_random_particles") {
-          if (isGlobalSyncEnabled) {
-            const subdivLabel = document.createElement("label")
-            subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`
-            subdivLabel.textContent = "Sync Subdivision:"
-            section.appendChild(subdivLabel)
-            const subdivSelect = document.createElement("select")
-            subdivSelect.id = `edit-pulsar-subdiv-${node.id}`
-            subdivSelect.disabled = selectedArray.length > 1
-            subdivisionOptions.forEach((opt, index) => {
-              const option = document.createElement("option")
-              option.value = index
-              option.textContent = opt.label
-              if (index === node.syncSubdivisionIndex) option.selected = true
-              subdivSelect.appendChild(option)
-            })
-            subdivSelect.addEventListener("change", (e) => {
-              node.syncSubdivisionIndex = parseInt(e.target.value, 10)
-              node.nextSyncTriggerTime = 0
-              saveState()
-            })
-            section.appendChild(subdivSelect)
-          } else {
-            const intervalVal = node.audioParams.triggerInterval.toFixed(1)
-            const intervalSlider = createSlider(
-              `edit-pulsar-interval-${node.id}`,
-              `Interval (${intervalVal}s):`,
-              0.1,
-              10.0,
-              0.1,
-              node.audioParams.triggerInterval,
-              null,
-              (e) => {
-                const newInterval = parseFloat(e.target.value)
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id)
-                  if (n) n.audioParams.triggerInterval = newInterval
-                })
-                e.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(
-                  1
-                )}s):`
+              if (node.type !== "pulsar_random_particles") {
+                  if (isGlobalSyncEnabled) {
+                      const subdivLabel = document.createElement("label");
+                      subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
+                      subdivLabel.textContent = "Sync Subdivision:";
+                      section.appendChild(subdivLabel);
+                      const subdivSelect = document.createElement("select");
+                      subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
+                      subdivSelect.disabled = selectedArray.length > 1;
+                      subdivisionOptions.forEach((opt, index) => {
+                          const option = document.createElement("option");
+                          option.value = index;
+                          option.textContent = opt.label;
+                          if (index === (node.syncSubdivisionIndex ?? node.audioParams?.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
+                          subdivSelect.appendChild(option);
+                      });
+                      subdivSelect.addEventListener("change", (e) => {
+                         selectedArray.forEach(elData => {
+                              const n = findNodeById(elData.id);
+                              if (n && isPulsarType(n.type)) {
+                                  n.syncSubdivisionIndex = parseInt(e.target.value, 10);
+                                  n.nextSyncTriggerTime = 0;
+                              }
+                          });
+                          saveState();
+                      });
+                      section.appendChild(subdivSelect);
+                  } else {
+                      const currentInterval = node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+                      const intervalVal = currentInterval.toFixed(1);
+                      const intervalSlider = createSlider(
+                          `edit-pulsar-interval-${node.id}`,
+                          `Interval (${intervalVal}s):`, 0.1, 10.0, 0.1, currentInterval,
+                          saveState,
+                          (e) => {
+                              const newInterval = parseFloat(e.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n?.audioParams) n.audioParams.triggerInterval = newInterval;
+                              });
+                              e.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
+                          }
+                      );
+                      section.appendChild(intervalSlider);
+                  }
+              } else {
+                  const timingInfo = document.createElement("small");
+                  timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
+                  section.appendChild(timingInfo);
               }
-            )
-            section.appendChild(intervalSlider)
-          }
-        } else {
-          const timingInfo = document.createElement("small")
-          timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(
-            1
-          )}/sec avg)`
-          section.appendChild(timingInfo)
-        }
-        section.appendChild(document.createElement("br"))
+              section.appendChild(document.createElement("br"));
 
-        if (node.type !== "pulsar_random_volume") {
-          const intensityVal = node.audioParams.pulseIntensity.toFixed(2)
-          const intensitySlider = createSlider(
-            `edit-pulsar-intensity-${node.id}`,
-            `Pulse Intensity (${intensityVal}):`,
-            MIN_PULSE_INTENSITY,
-            MAX_PULSE_INTENSITY,
-            0.01,
-            node.audioParams.pulseIntensity,
-            null,
-            (e) => {
-              const newIntensity = parseFloat(e.target.value)
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id)
-                if (n) n.audioParams.pulseIntensity = newIntensity
-              })
-              e.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(
-                2
-              )}):`
-            }
-          )
-          section.appendChild(intensitySlider)
-        } else {
-          const intensityInfo = document.createElement("small")
-          intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(
-            1
-          )} - ${MAX_PULSE_INTENSITY.toFixed(1)})`
-          section.appendChild(intensityInfo)
-        }
-        section.appendChild(document.createElement("br"))
-        const colorLabel = document.createElement("label")
-        colorLabel.htmlFor = `edit-pulsar-color-${node.id}`
-        colorLabel.textContent = "Pulsar Color:"
-        section.appendChild(colorLabel)
-        const colorInput = document.createElement("input")
-        colorInput.type = "color"
-        colorInput.id = `edit-pulsar-color-${node.id}`
-        const styles = getComputedStyle(document.documentElement)
-        const defaultColorVar = `--${node.type.replace("_", "-")}-color`
-        const fallbackColorVar = "--start-node-color"
-        const defaultColorRgba =
-          styles.getPropertyValue(defaultColorVar).trim() ||
-          styles.getPropertyValue(fallbackColorVar).trim()
-        const defaultColorHex = rgbaToHex(defaultColorRgba)
-        colorInput.value = node.color ? rgbaToHex(node.color) : defaultColorHex
-        colorInput.addEventListener("input", (e) => {
-          const newColor = hexToRgba(e.target.value, 0.9)
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id)
-            if (n) n.color = newColor
-          })
-        })
-        colorInput.addEventListener("change", saveState)
-        section.appendChild(colorInput)
-        fragment.appendChild(section)
-      } else if (isDrumType(node.type)) {
-        const section = document.createElement("div")
-        section.classList.add("panel-section")
-        const params = node.audioParams
-        const defaults = DRUM_ELEMENT_DEFAULTS[node.type]
-        const soundDiv = document.createElement("div")
-        soundDiv.classList.add("edit-drum-sound")
-        const soundLabel = document.createElement("strong")
-        soundLabel.textContent = defaults.label
-        soundDiv.appendChild(soundLabel)
-        const tuneVal = params.baseFreq.toFixed(0)
-        const tuneSlider = createSlider(
-          `edit-drum-tune-${node.id}`,
-          `Tune (${tuneVal}Hz):`,
-          20,
-          node.type === "drum_hihat"
-            ? 15000
-            : node.type === "drum_cowbell" || node.type === "drum_clap"
-            ? 2000
-            : 1000,
-          1,
-          params.baseFreq,
-          null,
-          (e) => {
-            const newFreq = parseFloat(e.target.value)
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id)
-              if (n) n.audioParams.baseFreq = newFreq
-            })
-            e.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(
-              0
-            )}Hz):`
-          }
-        )
-        soundDiv.appendChild(tuneSlider)
-        if (params.decay !== undefined) {
-          const decayVal = params.decay.toFixed(2)
-          const decaySlider = createSlider(
-            `edit-drum-decay-${node.id}`,
-            `Decay (${decayVal}s):`,
-            0.01,
-            1.5,
-            0.01,
-            params.decay,
-            null,
-            (e) => {
-              const newDecay = parseFloat(e.target.value)
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id)
-                if (n) n.audioParams.decay = newDecay
-              })
-              e.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(
-                2
-              )}s):`
-            }
-          )
-          soundDiv.appendChild(decaySlider)
-        }
-        if (params.noiseDecay !== undefined) {
-          const noiseDecayVal = params.noiseDecay.toFixed(2)
-          const noiseDecaySlider = createSlider(
-            `edit-drum-noisedecay-${node.id}`,
-            `Noise Decay (${noiseDecayVal}s):`,
-            0.01,
-            0.5,
-            0.01,
-            params.noiseDecay,
-            null,
-            (e) => {
-              const newNoiseDecay = parseFloat(e.target.value)
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id)
-                if (n) n.audioParams.noiseDecay = newNoiseDecay
-              })
-              e.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(
-                2
-              )}s):`
-            }
-          )
-          soundDiv.appendChild(noiseDecaySlider)
-        }
-        const volVal = params.volume.toFixed(2)
-        const volSlider = createSlider(
-          `edit-drum-vol-${node.id}`,
-          `Volume (${volVal}):`,
-          0,
-          1.5,
-          0.01,
-          params.volume,
-          saveState,
-          (e) => {
-            const newVol = parseFloat(e.target.value)
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id)
-              if (n) {
-                n.audioParams.volume = newVol
-                updateNodeAudioParams(n)
+              if (node.type !== "pulsar_random_volume") {
+                  const currentIntensity = node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                  const intensityVal = currentIntensity.toFixed(2);
+                  const intensitySlider = createSlider(
+                      `edit-pulsar-intensity-${node.id}`,
+                      `Pulse Intensity (${intensityVal}):`, MIN_PULSE_INTENSITY, MAX_PULSE_INTENSITY, 0.01, currentIntensity,
+                      saveState,
+                      (e) => {
+                          const newIntensity = parseFloat(e.target.value);
+                          selectedArray.forEach((elData) => {
+                              const n = findNodeById(elData.id);
+                              if (n?.audioParams) n.audioParams.pulseIntensity = newIntensity;
+                          });
+                          e.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
+                      }
+                  );
+                  section.appendChild(intensitySlider);
+              } else {
+                  const intensityInfo = document.createElement("small");
+                  intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
+                  section.appendChild(intensityInfo);
               }
-            })
-            e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(
-              2
-            )}):`
+              section.appendChild(document.createElement("br"));
+              const colorLabel = document.createElement("label");
+              colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
+              colorLabel.textContent = "Pulsar Color:";
+              section.appendChild(colorLabel);
+              const colorInput = document.createElement("input");
+              colorInput.type = "color";
+              colorInput.id = `edit-pulsar-color-${node.id}`;
+              const styles = getComputedStyle(document.documentElement);
+              const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
+              const fallbackColorVar = "--start-node-color";
+              const defaultColorRgba = styles.getPropertyValue(defaultColorVar).trim() || styles.getPropertyValue(fallbackColorVar).trim();
+              const defaultColorHex = rgbaToHex(defaultColorRgba);
+              colorInput.value = node.color ? rgbaToHex(node.color) : defaultColorHex;
+              colorInput.addEventListener("input", (e) => {
+                  const newColor = hexToRgba(e.target.value, 0.9);
+                   selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n) n.color = newColor;
+                  });
+              });
+              colorInput.addEventListener("change", saveState);
+              section.appendChild(colorInput);
+              fragment.appendChild(section);
+
+          } else if (isDrumType(node.type)) {
+               const section = document.createElement("div");
+               section.classList.add("panel-section");
+               const params = node.audioParams;
+               const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
+               const soundDiv = document.createElement("div");
+               soundDiv.classList.add("edit-drum-sound");
+               const soundLabel = document.createElement("strong");
+               soundLabel.textContent = defaults.label;
+               soundDiv.appendChild(soundLabel);
+
+               const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
+               const tuneVal = currentBaseFreq.toFixed(0);
+               const tuneSlider = createSlider(
+                   `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20,
+                   node.type === "drum_hihat" ? 15000 : node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000, 1, currentBaseFreq,
+                   saveState,
+                   (e) => {
+                       const newFreq = parseFloat(e.target.value);
+                       selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
+                       e.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
+                   }
+               );
+               soundDiv.appendChild(tuneSlider);
+
+              if (params?.decay !== undefined || defaults?.decay !== undefined) {
+                  const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
+                  const decayVal = currentDecay.toFixed(2);
+                  const decaySlider = createSlider(
+                      `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
+                      saveState,
+                      (e) => {
+                           const newDecay = parseFloat(e.target.value);
+                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
+                           e.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
+                      }
+                  );
+                  soundDiv.appendChild(decaySlider);
+              }
+
+              if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
+                   const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
+                  const noiseDecayVal = currentNoiseDecay.toFixed(2);
+                  const noiseDecaySlider = createSlider(
+                       `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
+                      saveState,
+                      (e) => {
+                          const newNoiseDecay = parseFloat(e.target.value);
+                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
+                           e.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
+                      }
+                  );
+                  soundDiv.appendChild(noiseDecaySlider);
+              }
+
+               const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
+               const volVal = currentVolume.toFixed(2);
+               const volSlider = createSlider(
+                   `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
+                   saveState,
+                   (e) => {
+                       const newVol = parseFloat(e.target.value);
+                       selectedArray.forEach((elData) => {
+                           const n = findNodeById(elData.id);
+                           if (n?.audioParams) {
+                               n.audioParams.volume = newVol;
+                               updateNodeAudioParams(n);
+                           }
+                       });
+                       e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                   }
+               );
+               soundDiv.appendChild(volSlider);
+               section.appendChild(soundDiv);
+               fragment.appendChild(section);
+
+           } else if (node.type === "switch" && selectedArray.length === 1) {
+               const section = document.createElement("div");
+               section.classList.add("panel-section");
+               const label = document.createElement("label");
+               label.textContent = "Primary Input Connection:";
+               section.appendChild(label);
+               const select = document.createElement("select");
+               select.id = `edit-switch-primary-${node.id}`;
+               const noneOpt = document.createElement("option");
+               noneOpt.value = "null";
+               noneOpt.textContent = "None (Set on next pulse)";
+               select.appendChild(noneOpt);
+               node.connections.forEach((neighborId) => {
+                   const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                   if (conn) {
+                       const otherNode = findNodeById(neighborId);
+                       const option = document.createElement("option");
+                       option.value = conn.id;
+                       option.textContent = `From Node #${neighborId} (${otherNode?.type || "?"})`;
+                       if (conn.id === node.primaryInputConnectionId) {
+                           option.selected = true;
+                       }
+                       select.appendChild(option);
+                   }
+               });
+               select.addEventListener("change", (e) => {
+                   node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                   saveState();
+               });
+               section.appendChild(select);
+               fragment.appendChild(section);
+           }
+
+      } else if (firstElementData.type === "connection") {
+          const connection = findConnectionById(firstElementData.id);
+          if (connection) {
+               if (connection.type === "string_violin") {
+                   const section = document.createElement("div");
+                   section.classList.add("panel-section");
+                   const params = connection.audioParams;
+                   const defaults = STRING_VIOLIN_DEFAULTS;
+
+                   const currentVol = params?.volume ?? defaults.volume;
+                   const volVal = currentVol.toFixed(2);
+                   const volSlider = createSlider(
+                       `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
+                       saveState,
+                       (e) => {
+                           const newVol = parseFloat(e.target.value);
+                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
+                            e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                       }
+                   );
+                   section.appendChild(volSlider);
+
+                   const currentAttack = params?.attack ?? defaults.attack;
+                   const attackVal = currentAttack.toFixed(2);
+                   const attackSlider = createSlider(
+                       `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
+                       saveState,
+                       (e) => {
+                            const newVal = parseFloat(e.target.value);
+                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
+                            e.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
+                       }
+                   );
+                   section.appendChild(attackSlider);
+
+                   const currentRelease = params?.release ?? defaults.release;
+                   const releaseVal = currentRelease.toFixed(2);
+                   const releaseSlider = createSlider(
+                       `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
+                       saveState,
+                       (e) => {
+                            const newVal = parseFloat(e.target.value);
+                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
+                            e.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
+                       }
+                   );
+                   section.appendChild(releaseSlider);
+                   fragment.appendChild(section);
+
+               } else if (connection.type === 'wavetrail') {
+                  const section = document.createElement("div");
+                  section.classList.add("panel-section");
+
+                  const fileLabel = document.createElement("label");
+                  fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
+                  fileLabel.textContent = "Audio File:";
+                  section.appendChild(fileLabel);
+
+                  const fileInput = document.createElement("input");
+                  fileInput.type = "file";
+                  fileInput.id = `edit-wavetrail-file-${connection.id}`;
+                  fileInput.accept = ".wav,.mp3,audio/*";
+                  fileInput.style.marginBottom = '5px';
+                  fileInput.addEventListener('change', (e) => handleWaveTrailFileInputChange(e, connection));
+                  section.appendChild(fileInput);
+
+                  const fileNameDisplay = document.createElement("small");
+                  fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
+                  fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || 'None selected'}`;
+                  fileNameDisplay.style.display = 'block';
+                  section.appendChild(fileNameDisplay);
+
+                  if (connection.audioParams?.buffer) {
+                      const bufferDuration = connection.audioParams.buffer.duration;
+                      const currentOffset = connection.audioParams.startTimeOffset || 0;
+                      const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+                      const currentStartOffset = connection.audioParams.startTimeOffset || 0; // Redundant?
+                      const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
+                      const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
+                      const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
+
+                      const offsetLabel = document.createElement("label");
+                      offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
+                      offsetLabel.style.marginTop = '10px';
+                      offsetLabel.textContent = `Start Offset (${currentOffset.toFixed(2)}s):`;
+                      section.appendChild(offsetLabel);
+
+                      const offsetSlider = document.createElement("input");
+                      offsetSlider.type = "range";
+                      offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
+                      offsetSlider.min = "0";
+                      offsetSlider.max = bufferDuration.toFixed(3);
+                      offsetSlider.step = "0.01";
+                      offsetSlider.value = currentOffset;
+                      offsetSlider.title = "Scrub Start Time";
+
+                      const offsetValueDisplay = document.createElement("span");
+                      offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
+                      offsetValueDisplay.textContent = `${currentOffset.toFixed(2)}s`;
+                      offsetValueDisplay.style.fontSize = '0.8em';
+                      offsetValueDisplay.style.marginLeft = '5px';
+                      offsetValueDisplay.style.opacity = '0.8';
+
+                      const endOffsetLabel = document.createElement("label");
+                      endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
+                      endOffsetLabel.style.marginTop = '10px';
+                      endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
+
+                      const endOffsetSlider = document.createElement("input");
+                      endOffsetSlider.type = "range";
+                      endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
+                      endOffsetSlider.min = currentStartOffset.toFixed(3); // Dynamic min based on start
+                      endOffsetSlider.max = bufferDuration.toFixed(3);
+                      endOffsetSlider.step = "0.01";
+                      endOffsetSlider.value = currentEndOffset;
+                      endOffsetSlider.title = "Scrub End Time";
+
+                      const endOffsetValueDisplay = document.createElement("span");
+                      endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
+                      endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
+                      endOffsetValueDisplay.style.fontSize = '0.8em';
+                      endOffsetValueDisplay.style.marginLeft = '5px';
+                      endOffsetValueDisplay.style.opacity = '0.8';
+
+                      offsetSlider.addEventListener('input', (e) => {
+                          const newOffset = parseFloat(e.target.value);
+                          const maxOffset = Math.max(0, bufferDuration - 0.05);
+                          const clampedOffset = Math.min(newOffset, maxOffset);
+                          const currentEndValue = parseFloat(endOffsetSlider.value);
+
+                          if (connection.audioParams.startTimeOffset !== clampedOffset) {
+                               connection.audioParams.startTimeOffset = clampedOffset;
+                               offsetLabel.textContent = `Start Offset (${clampedOffset.toFixed(2)}s):`;
+                               offsetValueDisplay.textContent = `${clampedOffset.toFixed(2)}s`;
+                               endOffsetSlider.min = (clampedOffset + 0.05).toFixed(3);
+                                if (currentEndValue < clampedOffset + 0.05) {
+                                     const newEndValue = clampedOffset + 0.05;
+                                     endOffsetSlider.value = newEndValue;
+                                     connection.audioParams.endTimeOffset = (bufferDuration - newEndValue < 0.01) ? null : newEndValue;
+                                     const displayValue = connection.audioParams.endTimeOffset ?? bufferDuration;
+                                     endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
+                                     endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+                                }
+                          }
+                           if (newOffset > maxOffset) { e.target.value = clampedOffset; }
+                      });
+                      offsetSlider.addEventListener('change', saveState);
+
+                      endOffsetSlider.addEventListener('input', (e) => {
+                          const newEndOffset = parseFloat(e.target.value);
+                          const minEndOffset = connection.audioParams.startTimeOffset + 0.05;
+                          const clampedEndOffset = Math.max(minEndOffset, newEndOffset);
+                          const finalEndOffset = (bufferDuration - clampedEndOffset < 0.01) ? null : clampedEndOffset;
+
+                          if (connection.audioParams.endTimeOffset !== finalEndOffset) {
+                              connection.audioParams.endTimeOffset = finalEndOffset;
+                              const displayValue = finalEndOffset ?? bufferDuration;
+                              endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
+                              endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+                          }
+                           if (newEndOffset < minEndOffset) { e.target.value = minEndOffset; }
+                      });
+                      endOffsetSlider.addEventListener('change', saveState);
+
+                      section.appendChild(offsetSlider);
+                      section.appendChild(offsetValueDisplay);
+                      section.appendChild(endOffsetLabel);
+                      section.appendChild(endOffsetSlider);
+                      section.appendChild(endOffsetValueDisplay);
+
+                      // Grain Duration Slider
+                      const grainDurLabel = document.createElement("label");
+                      grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
+                      grainDurLabel.style.marginTop = '15px';
+                      grainDurLabel.textContent = `Grain Duration (${(currentGrainDuration * 1000).toFixed(0)}ms):`;
+                      section.appendChild(grainDurLabel);
+
+                      const grainDurSlider = document.createElement("input");
+                      grainDurSlider.type = "range"; grainDurSlider.id = `edit-wavetrail-graindur-${connection.id}`;
+                      grainDurSlider.min = "0.01"; grainDurSlider.max = "0.3"; grainDurSlider.step = "0.005";
+                      grainDurSlider.value = currentGrainDuration; grainDurSlider.title = "Grain Duration";
+
+                      const grainDurValueDisplay = document.createElement("span");
+                       grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`; // Unique ID
+                       grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`;
+                       grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+                      const grainOverlapSlider = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`); // Find overlap slider later
+
+                      grainDurSlider.addEventListener('input', (e) => {
+                          const newDur = parseFloat(e.target.value);
+                          connection.audioParams.grainDuration = newDur;
+                          grainDurLabel.textContent = `Grain Duration (${(newDur * 1000).toFixed(0)}ms):`;
+                          grainDurValueDisplay.textContent = `${(newDur * 1000).toFixed(0)}ms`;
+                          if (grainOverlapSlider) {
+                              const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3);
+                              grainOverlapSlider.max = newMaxOverlap;
+                              // Clamp current overlap value if needed
+                              const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
+                              const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
+                              if (parseFloat(grainOverlapSlider.value) > parseFloat(newMaxOverlap)) {
+                                   grainOverlapSlider.value = newMaxOverlap;
+                                   connection.audioParams.grainOverlap = parseFloat(newMaxOverlap);
+                                    if(overlapValueDisplay) overlapValueDisplay.textContent = `${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms`;
+                                    if(overlapLabel) overlapLabel.textContent = `Grain Overlap (${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms):`;
+                              }
+                          }
+                      });
+                      grainDurSlider.addEventListener('change', saveState);
+                      section.appendChild(grainDurSlider);
+                      section.appendChild(grainDurValueDisplay);
+
+                      // Grain Overlap Slider
+                      const grainOverlapLabel = document.createElement("label");
+                      grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
+                      grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`;
+                      section.appendChild(grainOverlapLabel);
+
+                      const grainOverlapSliderElement = document.createElement("input"); // Assign to distinct var name
+                      grainOverlapSliderElement.type = "range";
+                      grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`;
+                      grainOverlapSliderElement.min = "0";
+                      grainOverlapSliderElement.max = (currentGrainDuration - 0.005).toFixed(3);
+                      grainOverlapSliderElement.step = "0.005";
+                      grainOverlapSliderElement.value = Math.min(currentGrainOverlap, parseFloat(grainOverlapSliderElement.max));
+                      grainOverlapSliderElement.title = "Grain Overlap";
+
+                      const grainOverlapValueDisplay = document.createElement("span");
+                      grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`; // Unique ID
+                      grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`;
+                      grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+                      grainOverlapSliderElement.addEventListener('input', (e) => { // Use distinct var name
+                          const newOverlap = parseFloat(e.target.value);
+                          const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
+                          const clampedOverlap = Math.min(newOverlap, maxOverlap);
+                          connection.audioParams.grainOverlap = clampedOverlap;
+                          grainOverlapLabel.textContent = `Grain Overlap (${(clampedOverlap * 1000).toFixed(0)}ms):`;
+                          grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
+                           if (newOverlap > maxOverlap) { e.target.value = clampedOverlap; }
+                      });
+                      grainOverlapSliderElement.addEventListener('change', saveState); // Use distinct var name
+                      section.appendChild(grainOverlapSliderElement); // Use distinct var name
+                      section.appendChild(grainOverlapValueDisplay);
+
+                      // Playback Rate Slider
+                      const rateLabel = document.createElement("label");
+                      rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
+                      rateLabel.style.marginTop = '15px';
+                      rateLabel.textContent = `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`;
+                      section.appendChild(rateLabel);
+
+                      const rateSlider = document.createElement("input");
+                      rateSlider.type = "range"; rateSlider.id = `edit-wavetrail-rate-${connection.id}`;
+                      rateSlider.min = "0.25"; rateSlider.max = "4.0"; rateSlider.step = "0.01";
+                      rateSlider.value = currentPlaybackRate; rateSlider.title = "Playback Rate / Pitch";
+
+                      const rateValueDisplay = document.createElement("span");
+                      rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`; // Unique ID
+                      rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`;
+                      rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+                      rateSlider.addEventListener('input', (e) => {
+                          const newRate = parseFloat(e.target.value);
+                          connection.audioParams.playbackRate = newRate;
+                          rateLabel.textContent = `Playback Rate (${newRate.toFixed(2)}x):`;
+                          rateValueDisplay.textContent = `${newRate.toFixed(2)}x`;
+                      });
+                      rateSlider.addEventListener('change', saveState);
+
+                      const resetButton = document.createElement('button');
+                      resetButton.textContent = 'Reset Rate';
+                      resetButton.style.marginLeft = '10px'; resetButton.style.padding = '2px 6px'; resetButton.style.fontSize = '0.8em';
+                      resetButton.type = 'button'; // Prevent form submission if inside a form
+                      resetButton.addEventListener('click', () => {
+                            connection.audioParams.playbackRate = 1.0;
+                            rateSlider.value = 1.0;
+                            rateLabel.textContent = `Playback Rate (1.00x):`;
+                            rateValueDisplay.textContent = `1.00x`;
+                            saveState();
+                       });
+
+                      section.appendChild(rateSlider);
+                      section.appendChild(rateValueDisplay);
+                      section.appendChild(resetButton);
+                  }
+                  fragment.appendChild(section);
+               }
           }
-        )
-        soundDiv.appendChild(volSlider)
-        section.appendChild(soundDiv)
-        fragment.appendChild(section)
-      } else if (node.type === "switch" && selectedArray.length === 1) {
-        const section = document.createElement("div")
-        section.classList.add("panel-section")
-        const label = document.createElement("label")
-        label.textContent = "Primary Input Connection:"
-        section.appendChild(label)
-        const select = document.createElement("select")
-        select.id = `edit-switch-primary-${node.id}`
-        const noneOpt = document.createElement("option")
-        noneOpt.value = "null"
-        noneOpt.textContent = "None (Set on next pulse)"
-        select.appendChild(noneOpt)
-        node.connections.forEach((connId) => {
-          const conn = findConnectionById(connId)
-          if (conn) {
-            const otherNodeId =
-              conn.nodeAId === node.id ? conn.nodeBId : conn.nodeAId
-            const otherNode = findNodeById(otherNodeId)
-            const option = document.createElement("option")
-            option.value = conn.id
-            option.textContent = `From Node #${otherNodeId} (${
-              otherNode?.type || "?"
-            })`
-            if (conn.id === node.primaryInputConnectionId) {
-              option.selected = true
-            }
-            select.appendChild(option)
-          }
-        })
-        select.addEventListener("change", (e) => {
-          node.primaryInputConnectionId =
-            e.target.value === "null" ? null : parseInt(e.target.value, 10)
-          saveState()
-        })
-        section.appendChild(select)
-        fragment.appendChild(section)
       }
-    } else if (firstElementData.type === "connection") {
-      const connection = findConnectionById(firstElementData.id)
-      if (connection.type === "string_violin") {
-        const section = document.createElement("div")
-        section.classList.add("panel-section")
-        const params = connection.audioParams
-        const defaults = STRING_VIOLIN_DEFAULTS
-        const volVal = (params.volume ?? defaults.volume).toFixed(2)
-        const volSlider = createSlider(
-          `edit-string-vol-${connection.id}`,
-          `Volume (${volVal}):`,
-          0,
-          1.0,
-          0.01,
-          params.volume ?? defaults.volume,
-          saveState,
-          (e) => {
-            const newVol = parseFloat(e.target.value)
-            selectedArray.forEach((elData) => {
-              const c = findConnectionById(elData.id)
-              if (c) c.audioParams.volume = newVol
-            })
-            e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(
-              2
-            )}):`
-          }
-        )
-        section.appendChild(volSlider)
-        const attackVal = (params.attack ?? defaults.attack).toFixed(2)
-        const attackSlider = createSlider(
-          `edit-string-attack-${connection.id}`,
-          `Attack (${attackVal}s):`,
-          0.01,
-          1.0,
-          0.01,
-          params.attack ?? defaults.attack,
-          saveState,
-          (e) => {
-            const newVal = parseFloat(e.target.value)
-            selectedArray.forEach((elData) => {
-              const c = findConnectionById(elData.id)
-              if (c) c.audioParams.attack = newVal
-            })
-            e.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(
-              2
-            )}s):`
-          }
-        )
-        section.appendChild(attackSlider)
-        const releaseVal = (params.release ?? defaults.release).toFixed(2)
-        const releaseSlider = createSlider(
-          `edit-string-release-${connection.id}`,
-          `Release (${releaseVal}s):`,
-          0.1,
-          5.0,
-          0.01,
-          params.release ?? defaults.release,
-          saveState,
-          (e) => {
-            const newVal = parseFloat(e.target.value)
-            selectedArray.forEach((elData) => {
-              const c = findConnectionById(elData.id)
-              if (c) c.audioParams.release = newVal
-            })
-            e.target.previousElementSibling.textContent = `Release (${newVal.toFixed(
-              2
-            )}s):`
-          }
-        )
-        section.appendChild(releaseSlider)
-        fragment.appendChild(section)
-      }
-    }
+  } else {
+       const multiInfo = document.createElement("small");
+       multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
+       fragment.appendChild(multiInfo);
   }
 
-  editPanelContent.appendChild(fragment)
-  if (!hamburgerMenuPanel.classList.contains("hidden")) {
-  } else if (currentTool === "edit" && selectedElements.size >= 1) {
-    hamburgerMenuPanel.classList.remove("hidden")
-    hamburgerBtn.classList.add("active")
+  editPanelContent.appendChild(fragment);
+
+  if (hamburgerMenuPanel && hamburgerMenuPanel.classList.contains("hidden") && currentTool === 'edit' && selectedElements.size > 0) {
+       hamburgerMenuPanel.classList.remove("hidden");
+       if (hamburgerBtn) hamburgerBtn.classList.add("active");
   }
-  sideToolbar.classList.add("hidden")
+  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
+      sideToolbar.classList.add("hidden");
+      const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
+       addBrushButtons.forEach(btn => btn.classList.remove("active"));
+       if(brushBtn) brushBtn.classList.remove("active");
+  }
+}
+
+function handleWaveTrailFileInputChange(event, connection) {
+  if (!connection || connection.type !== 'wavetrail') return;
+  const file = event.target.files[0];
+  const fileNameDisplay = document.getElementById(`edit-wavetrail-filename-${connection.id}`);
+
+  if (file) {
+      console.log(`File selected for WaveTrail ${connection.id}: ${file.name}`);
+      if (fileNameDisplay) fileNameDisplay.textContent = `Loading: ${file.name}...`;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          loadAndDecodeAudio(e.target.result, connection);
+      };
+      reader.onerror = (e) => {
+          console.error("Error reading file:", e);
+          if (fileNameDisplay) fileNameDisplay.textContent = `Error reading file.`;
+          connection.audioParams.buffer = null;
+          connection.audioParams.fileName = null;
+      };
+      reader.readAsArrayBuffer(file);
+      connection.audioParams.fileName = file.name;
+  }
+  event.target.value = null;
+}
+
+async function loadAndDecodeAudio(arrayBuffer, connection) {
+  if (!audioContext || !connection) return;
+  const fileNameDisplay = document.getElementById(`edit-wavetrail-filename-${connection.id}`);
+  try {
+      let decodedBuffer;
+      if (audioContext.decodeAudioData.length !== 1) {
+          decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      } else {
+          decodedBuffer = await new Promise((resolve, reject) => {
+              audioContext.decodeAudioData(arrayBuffer, resolve, reject);
+          });
+      }
+      connection.audioParams.buffer = decodedBuffer; // Sla buffer op
+
+      // --- NIEUW: Genereer en sla waveform pad op ---
+      connection.audioParams.waveformPath = generateWaveformPath(decodedBuffer, 200); // Genereer pad met 200 punten
+      if (connection.audioParams.waveformPath) {
+           console.log(`Waveform path generated for WaveTrail ${connection.id}, points: ${connection.audioParams.waveformPath.length}`);
+      } else {
+           console.warn(`Failed to generate waveform path for WaveTrail ${connection.id}`);
+      }
+      // --- EINDE NIEUW ---
+
+      console.log(`Audio decoded successfully for WaveTrail ${connection.id}:`, connection.audioParams.buffer);
+      if (fileNameDisplay) fileNameDisplay.textContent = `Current: ${connection.audioParams.fileName || 'Unnamed'}`;
+      saveState(); // Sla staat op (nu incl. waveformPath)
+
+  } catch (error) {
+      console.error(`Error decoding audio data for WaveTrail ${connection.id}:`, error);
+      if (fileNameDisplay) fileNameDisplay.textContent = `Error decoding: ${connection.audioParams.fileName || 'file'}`;
+      connection.audioParams.buffer = null;
+      connection.audioParams.waveformPath = null; // Reset pad bij fout
+      connection.audioParams.fileName = null; // Reset naam bij decodeerfout? Of behouden? Behoud voor nu.
+  }
 }
 
 // --- Functies voor Piano Roll ---
@@ -7656,7 +8527,7 @@ window.addEventListener("load", () => {
   // Reset UI states
   setActiveTool("edit");
   resetSideToolbars();
-  hideBottomPanels();
+  hideOverlappingPanels();
   noteSelectElement = null;
   noteSelectContainer = null;
 
@@ -7672,7 +8543,7 @@ window.addEventListener("load", () => {
       drawPianoRoll();
       setActiveTool("edit");
       resetSideToolbars();
-      hideBottomPanels();
+      hideOverlappingPanels();
   } else {
       console.error("Audio setup mislukt vanuit window.onload.");
       startMessage.textContent = "Error loading audio.";
