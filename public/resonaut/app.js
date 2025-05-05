@@ -743,104 +743,75 @@ function setGroupVolume(volume, sourceSliderId) {
 
 function identifyAndRouteAllGroups() {
   if (!isAudioReady) return;
-  // console.log("--- Running identifyAndRouteAllGroups (Send After Group) ---"); // Logging uit
 
-  // Stappen 1-4: Vind groepen, maak gains, ruim oude op, update lijst (blijft hetzelfde)
   const visitedNodes = new Set();
   const newGroups = [];
   let nextGroupId = 0;
   const oldGainNodes = identifiedGroups.map(g => g.gainNode).filter(gn => gn);
 
+  // Stap 1-3: Vind groepen, maak nieuwe gain nodes
   nodes.forEach(node => {
       if (CONSTELLATION_NODE_TYPES.includes(node.type) && !visitedNodes.has(node.id)) {
           const constellationNodeIds = findConstellation(node.id);
           if (constellationNodeIds.size > 0) {
               constellationNodeIds.forEach(id => visitedNodes.add(id));
-              newGroups.push({ id: nextGroupId++, nodeIds: constellationNodeIds, gainNode: null });
+              // Maak gain node alleen als group niet al bestond met gain
+               let gainNode = audioContext.createGain();
+               gainNode.gain.value = 1.0; // Default volume
+              newGroups.push({ id: nextGroupId++, nodeIds: constellationNodeIds, gainNode: gainNode });
           }
       }
   });
 
-  newGroups.forEach(newGroup => {
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = 1.0;
-      newGroup.gainNode = gainNode;
-  });
-
+  // Stap 4: Ruim oude op
   oldGainNodes.forEach(oldGain => { if (oldGain) { try { oldGain.disconnect(); } catch(e){} } });
-
   identifiedGroups = newGroups;
 
-  // Stap 5a: Routeer Nodes (sound/drum) met NIEUWE send logica
+  // Stap 5a: Routeer Nodes (sound/drum)
   nodes.forEach(node => {
       if (CONSTELLATION_NODE_TYPES.includes(node.type)) {
-          const outputNode = node.audioNodes?.gainNode || node.audioNodes?.mainGain;
-          const delaySendGain = node.audioNodes?.delaySendGain;
-          const reverbSendGain = node.audioNodes?.reverbSendGain;
+          const outputNode = node.audioNodes?.gainNode || node.audioNodes?.mainGain; // Hoofd output van de node
+          const delaySendGain = node.audioNodes?.delaySendGain; // Specifieke send gain van de node
+          const reverbSendGain = node.audioNodes?.reverbSendGain; // Specifieke send gain van de node
 
-          if (!outputNode) return;
+          if (!outputNode) return; // Kan niet routeren zonder output
 
           const targetGroup = findGroupContainingNode(node.id);
-          // destinationNode is NU de Group Gain Node of de Master Gain Node
-          const destinationNode = targetGroup ? targetGroup.gainNode : masterGain;
+          const destinationNode = targetGroup ? targetGroup.gainNode : masterGain; // Eindbestemming (groep of master)
 
           // --- Disconnect eerst alles van de output en sends ---
           try { outputNode.disconnect(); } catch(e){}
-          if(delaySendGain) { try {delaySendGain.disconnect();} catch(e){} } // Disconnect input & output
-          if(reverbSendGain) { try {reverbSendGain.disconnect();} catch(e){} } // Disconnect input & output
+          if(delaySendGain) { try {delaySendGain.disconnect();} catch(e){} } // Koppel input los
+          if(reverbSendGain) { try {reverbSendGain.disconnect();} catch(e){} } // Koppel input los
 
           // --- Verbind Hoofd Pad ---
-          outputNode.connect(destinationNode); // Altijd Output -> Group/Master
+          outputNode.connect(destinationNode); // Verbind output naar eindbestemming
 
-          // --- Verbind Sends (Tap NU VANAF destinationNode!) ---
+          // --- Verbind Sends VANAF outputNode --- // *** CORRECTIE HIER ***
           if (reverbSendGain && isReverbReady && reverbNode) {
-              // Verbind Group/Master -> Send INPUT
-              destinationNode.connect(reverbSendGain);
-              // Verbind Send OUTPUT -> Effect
-              reverbSendGain.connect(reverbNode);
+              outputNode.connect(reverbSendGain); // ALTĲD output -> send input
+              reverbSendGain.connect(reverbNode);     // Send output -> Master effect
           }
           if (delaySendGain && isDelayReady && masterDelaySendGain) {
-              // Verbind Group/Master -> Send INPUT
-              destinationNode.connect(delaySendGain);
-              // Verbind Send OUTPUT -> Master Send INPUT
-              delaySendGain.connect(masterDelaySendGain);
+              outputNode.connect(delaySendGain); // ALTĲD output -> send input
+              delaySendGain.connect(masterDelaySendGain); // Send output -> Master send input
           }
-      } else if (node.type === 'nebula') {
-          // Nebula's worden niet gegroepeerd, dus hun sends moeten direct van hun output komen
-          // (We gaan ervan uit dat de verbindingen in createAudioNodesForNode correct en stabiel zijn)
-           const outputNode = node.audioNodes?.gainNode;
-           const delaySendGain = node.audioNodes?.delaySendGain;
-           const reverbSendGain = node.audioNodes?.reverbSendGain;
-           if(outputNode) {
-               // Zorg dat de hoofd output naar master gaat (als niet al verbonden)
-               // TODO: Robuustere check nodig als verbindingen elders verbroken kunnen worden
-               // Voor nu, vertrouw op initiële verbinding + sends uit createAudioNodesForNode
-
-               // Zorg dat sends correct verbonden blijven (herverbind voor zekerheid)
-               if (reverbSendGain && isReverbReady && reverbNode) {
-                  try { outputNode.disconnect(reverbSendGain); } catch(e){}
-                  try { reverbSendGain.disconnect(reverbNode); } catch(e){}
-                  outputNode.connect(reverbSendGain);
-                  reverbSendGain.connect(reverbNode);
-               }
-               if (delaySendGain && isDelayReady && masterDelaySendGain) {
-                  try { outputNode.disconnect(delaySendGain); } catch(e){}
-                  try { delaySendGain.disconnect(masterDelaySendGain); } catch(e){}
-                  outputNode.connect(delaySendGain);
-                  delaySendGain.connect(masterDelaySendGain);
-               }
-           }
+      } else if (node.type === 'nebula' || node.type === PORTAL_NEBULA_TYPE) {
+          // Nebula/Portal routing wordt afgehandeld in createAudioNodesForNode
+          // en zou direct naar hun respectievelijke group gains moeten gaan.
+          // We hoeven hier geen sends opnieuw te routeren.
       }
   });
 
-  // Stap 5b: String Connections (Implementeer dezelfde NIEUWE logica)
+  // Stap 5b: String Connections
    connections.forEach(conn => {
       if (conn.type === 'string_violin' && conn.audioNodes) {
-          const outputNode = conn.audioNodes.gainNode;
+          const outputNode = conn.audioNodes.gainNode; // String's eigen output
           const delaySendGain = conn.audioNodes.delaySendGain;
           const reverbSendGain = conn.audioNodes.reverbSendGain;
           if (!outputNode) return;
 
+          // Bepaal bestemming (groep of master)
           const nodeA = findNodeById(conn.nodeAId);
           const nodeB = findNodeById(conn.nodeBId);
           const groupA = nodeA ? findGroupContainingNode(nodeA.id) : null;
@@ -848,35 +819,35 @@ function identifyAndRouteAllGroups() {
           const targetGroup = (groupA && groupB && groupA === groupB) ? groupA : null;
           const destinationNode = targetGroup ? targetGroup.gainNode : masterGain;
 
-          // Disconnect
+          // --- Disconnect ---
           try { outputNode.disconnect(); } catch(e){}
           if(delaySendGain) { try {delaySendGain.disconnect();} catch(e){} }
           if(reverbSendGain) { try {reverbSendGain.disconnect();} catch(e){} }
 
-          // Verbind Hoofd Pad
+          // --- Verbind Hoofd Pad ---
           outputNode.connect(destinationNode);
 
-           // Verbind Sends (vanaf destinationNode)
+           // --- Verbind Sends VANAF outputNode --- // *** CORRECTIE HIER ***
           if (reverbSendGain && isReverbReady && reverbNode) {
-              destinationNode.connect(reverbSendGain);
-              reverbSendGain.connect(reverbNode);
+              outputNode.connect(reverbSendGain); // String Output -> Send Input
+              reverbSendGain.connect(reverbNode);     // Send Output -> Master Effect
           }
           if (delaySendGain && isDelayReady && masterDelaySendGain) {
-               destinationNode.connect(delaySendGain);
-               delaySendGain.connect(masterDelaySendGain);
+               outputNode.connect(delaySendGain); // String Output -> Send Input
+               delaySendGain.connect(masterDelaySendGain); // Send Output -> Master Send Input
           }
       }
   });
 
-  // Stap 5c: Verbind Group Gains met Master (blijft hetzelfde)
+  // Stap 5c: Verbind Group Gains met Master
    identifiedGroups.forEach(group => {
         if(group.gainNode) {
-             try { group.gainNode.disconnect(masterGain); } catch(e) {}
+             try { group.gainNode.disconnect(); } catch(e) {} // Voorkom dubbele connecties
              group.gainNode.connect(masterGain);
         }
    });
 
-  // Stap 6: Update de Mixer UI (blijft hetzelfde)
+  // Stap 6: Update Mixer UI
   updateMixerGUI();
 }
 
@@ -3932,14 +3903,15 @@ function drawSatelliteShape(ctx, x, y, r, arms = 1) {
 }
 
 function drawNode(node) {
-  ctx.shadowBlur = 0;
+  ctx.shadowBlur = 0; // Reset shadow blur at start
   const isSelected = isElementSelected("node", node.id);
   const isSelectedAndOutlineNeeded = isSelected && currentTool === "edit";
   const flashDuration = 0.1;
   let preTriggerFlash = 0;
-  let wobbleX = 0, wobbleY = 0;
+  let wobbleX = 0, wobbleY = 0; // Voor nebula/portal
   const now = audioContext ? audioContext.currentTime : performance.now() / 1000;
 
+  // Pre-trigger flash calculatie
   if (
       isPlaying &&
       isGlobalSyncEnabled &&
@@ -3948,33 +3920,30 @@ function drawNode(node) {
       node.nextSyncTriggerTime > 0 &&
       node.type !== "pulsar_random_particles"
   ) {
-      const timeToNext =
-          node.nextSyncTriggerTime - (audioContext?.currentTime ?? 0);
+      const timeToNext = node.nextSyncTriggerTime - (audioContext?.currentTime ?? 0);
       if (timeToNext > 0 && timeToNext < flashDuration) {
           preTriggerFlash = (1.0 - timeToNext / flashDuration) * 0.6;
       }
   }
 
+  // Animation state decay
   if (node.animationState > 0 && !node.isTriggered) {
-      node.animationState -=
-          ["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) || isDrumType(node.type)
-              ? 0.05
-              : 0.1;
+      node.animationState -= (["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) || isDrumType(node.type)) ? 0.03 : 0.08;
   }
   node.animationState = Math.max(0, node.animationState);
+
+  // Bereken radius en basis stijlen
   const bloomFactor = 1 + node.animationState * 0.5 + preTriggerFlash * 0.6;
   const currentRadius = NODE_RADIUS_BASE * node.size * bloomFactor;
+  const r = currentRadius;
   let fillColor, borderColor, glowColor;
   const styles = getComputedStyle(document.documentElement);
   const scaleBase = currentScale.baseHSL || { h: 200, s: 70, l: 70 };
   const isStartNodeDisabled = node.isStartNode && !node.isEnabled;
-  const disabledFillColorGeneral = styles
-      .getPropertyValue("--start-node-disabled-color")
-      .trim();
-  const disabledBorderColorGeneral = styles
-      .getPropertyValue("--start-node-disabled-border")
-      .trim();
+  const disabledFillColorGeneral = styles.getPropertyValue("--start-node-disabled-color").trim();
+  const disabledBorderColorGeneral = styles.getPropertyValue("--start-node-disabled-border").trim();
 
+  // Bepaal kleuren gebaseerd op type
   if (isPulsarType(node.type)) {
       const cssVarBase = `--${node.type.replace("_", "-")}`;
       const defaultFillVar = `${cssVarBase}-color`;
@@ -3986,70 +3955,43 @@ function drawNode(node) {
       glowColor = isStartNodeDisabled ? "transparent" : borderColor;
   } else if (isDrumType(node.type)) {
       const typeName = node.type.replace("_", "-");
-      fillColor = styles.getPropertyValue(`--${typeName}-color`).trim();
-      borderColor = styles.getPropertyValue(`--${typeName}-border`).trim();
+      fillColor = styles.getPropertyValue(`--${typeName}-color`).trim() || 'grey';
+      borderColor = styles.getPropertyValue(`--${typeName}-border`).trim() || 'darkgrey';
       glowColor = borderColor;
-  } else if (node.type === "gate") {
-      fillColor = styles.getPropertyValue("--gate-node-color").trim();
-      borderColor = styles.getPropertyValue("--gate-node-border").trim();
-      glowColor = borderColor;
-  } else if (node.type === "probabilityGate") {
-      fillColor = styles.getPropertyValue("--probability-gate-node-color").trim();
-      borderColor = styles.getPropertyValue("--probability-gate-node-border").trim();
-      glowColor = borderColor;
-  } else if (node.type === "pitchShift") {
-      fillColor = styles.getPropertyValue("--pitch-node-color").trim();
-      borderColor = styles.getPropertyValue("--pitch-node-border").trim();
-      glowColor = borderColor;
-  } else if (node.type === "relay") {
-      fillColor = styles.getPropertyValue("--relay-node-color").trim();
-      borderColor = styles.getPropertyValue("--relay-node-border").trim();
-      glowColor = borderColor;
-  } else if (node.type === "reflector") {
-      fillColor = styles.getPropertyValue("--reflector-node-color").trim();
-      borderColor = styles.getPropertyValue("--reflector-node-border").trim();
-      glowColor = borderColor;
-  } else if (node.type === "switch") {
-      fillColor = styles.getPropertyValue("--switch-node-color").trim();
-      borderColor = styles.getPropertyValue("--switch-node-border").trim();
-      glowColor = borderColor;
-  } else if (node.type === "sound" || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) {
-      const nodeBaseHue = ( (node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && node.baseHue !== null && node.baseHue !== undefined)
-          ? node.baseHue
-          : (scaleBase.h + (node.audioParams.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
+  } else if (node.type === "gate") { fillColor = styles.getPropertyValue("--gate-node-color").trim(); borderColor = styles.getPropertyValue("--gate-node-border").trim(); glowColor = borderColor; }
+  else if (node.type === "probabilityGate") { fillColor = styles.getPropertyValue("--probability-gate-node-color").trim(); borderColor = styles.getPropertyValue("--probability-gate-node-border").trim(); glowColor = borderColor; }
+  else if (node.type === "pitchShift") { fillColor = styles.getPropertyValue("--pitch-node-color").trim(); borderColor = styles.getPropertyValue("--pitch-node-border").trim(); glowColor = borderColor; }
+  else if (node.type === "relay") { fillColor = styles.getPropertyValue("--relay-node-color").trim(); borderColor = styles.getPropertyValue("--relay-node-border").trim(); glowColor = borderColor; }
+  else if (node.type === "reflector") { fillColor = styles.getPropertyValue("--reflector-node-color").trim(); borderColor = styles.getPropertyValue("--reflector-node-border").trim(); glowColor = borderColor; }
+  else if (node.type === "switch") { fillColor = styles.getPropertyValue("--switch-node-color").trim(); borderColor = styles.getPropertyValue("--switch-node-border").trim(); glowColor = borderColor; }
+  else if (node.type === "sound" || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) {
+      const nodeBaseHue = ( (node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + (node.audioParams.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
       const lightness = scaleBase.l * (0.8 + node.size * 0.2);
       const saturation = scaleBase.s * (node.type === "nebula" ? 0.7 : (node.type === PORTAL_NEBULA_TYPE ? 0.9 : 1.0));
       const alpha = (node.type === "nebula" ? 0.5 : (node.type === PORTAL_NEBULA_TYPE ? 0.7 : 0.6)) + node.size * 0.3;
       fillColor = hslToRgba(nodeBaseHue, saturation, lightness, Math.min(0.95, alpha));
       borderColor = hslToRgba(nodeBaseHue, saturation * 0.8, lightness * 0.6, 0.9);
       glowColor = hslToRgba(nodeBaseHue, saturation, lightness * 1.1, 1.0);
-  } else {
-      fillColor = "grey"; borderColor = "darkgrey"; glowColor = "white";
-  }
+  } else { fillColor = "grey"; borderColor = "darkgrey"; glowColor = "white"; }
 
+  // Standaard lijn/vulstijl
   ctx.fillStyle = fillColor;
   ctx.strokeStyle = borderColor;
-  const baseLineWidth =
-      (node.isStartNode ? 2.5 : node.type === "relay" || node.type === "reflector" || node.type === "switch" ? 1.0 : 1.5) / viewScale;
+  const baseLineWidth = (node.isStartNode ? 2.5 : node.type === "relay" || node.type === "reflector" || node.type === "switch" ? 1.0 : 1.5) / viewScale;
   ctx.lineWidth = Math.max(0.5, isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 / viewScale : baseLineWidth);
 
+  // Voorbereiding voor rotaties etc.
   let needsRestore = false;
-  if (
-      (node.type === "gate" || (node.type === "sound" && node.audioParams.waveform?.startsWith("sampler_"))) &&
-      node.currentAngle !== undefined
-  ) {
-      ctx.save();
-      ctx.translate(node.x, node.y);
-      if (node.type === "gate") {
-          ctx.rotate(node.currentAngle);
-      } else if (node.type === "sound" && node.audioParams.waveform.startsWith("sampler_")) {
-          node.currentAngle = (node.currentAngle + 0.005 * (performance.now() * 0.01)) % (Math.PI * 2);
-          ctx.rotate(node.currentAngle);
-      }
-      ctx.translate(-node.x, -node.y);
-      needsRestore = true;
+  if ((node.type === "gate" || (node.type === "sound" && node.audioParams.waveform?.startsWith("sampler_"))) && node.currentAngle !== undefined) {
+       ctx.save();
+       ctx.translate(node.x, node.y);
+       if (node.type === "gate") { ctx.rotate(node.currentAngle); }
+       else if (node.type === "sound" && node.audioParams.waveform.startsWith("sampler_")) { node.currentAngle = (node.currentAngle + 0.005 * (performance.now() * 0.01)) % (Math.PI * 2); ctx.rotate(node.currentAngle); }
+       ctx.translate(-node.x, -node.y);
+       needsRestore = true;
   }
 
+  // Constellation highlight
   if (node.isInConstellation && currentTool === "edit") {
       const highlightRadius = NODE_RADIUS_BASE * node.size + 5 / viewScale;
       ctx.fillStyle = styles.getPropertyValue("--constellation-highlight").trim() || "rgba(255, 255, 150, 0.15)";
@@ -4058,149 +4000,213 @@ function drawNode(node) {
       ctx.fill();
   }
 
-  if (
-      (node.animationState > 0 || preTriggerFlash > 0 || isSelectedAndOutlineNeeded || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) &&
-      !isStartNodeDisabled
-  ) {
-      ctx.shadowColor = glowColor;
-      let glowAmount = (node.isStartNode || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE || isDrumType(node.type) ? 5 : 0) + (node.animationState + preTriggerFlash) * 15 + (isSelectedAndOutlineNeeded ? 5 : 0);
-      if ((node.type === "gate"|| node.type === "probabilityGate" || node.type === "pitchShift" || node.type === "relay" || node.type === "reflector" || node.type === "switch") && node.animationState > 0) {
-          glowAmount = 10 + node.animationState * 10 + (isSelectedAndOutlineNeeded ? 5 : 0);
-      } else if (isSelectedAndOutlineNeeded && (node.type === "gate"|| node.type === "probabilityGate" || node.type === "pitchShift" || node.type === "relay" || node.type === "reflector" || node.type === "switch")) {
-          glowAmount = 5;
-      } else if (node.type === "nebula") {
-          const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8;
-          glowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0);
-      } else if (node.type === PORTAL_NEBULA_TYPE) {
+  // Glow effect
+  if ((node.animationState > 0 || preTriggerFlash > 0 || isSelectedAndOutlineNeeded || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && !isStartNodeDisabled) {
+       ctx.shadowColor = glowColor;
+       let glowAmount = (isPulsarType(node.type) || isDrumType(node.type) || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE ? 5 : 0) + (node.animationState + preTriggerFlash) * 15 + (isSelectedAndOutlineNeeded ? 5 : 0);
+       if ((node.type === "gate"|| node.type === "probabilityGate" || node.type === "pitchShift" || node.type === "relay" || node.type === "reflector" || node.type === "switch")) {
+           glowAmount = (isSelectedAndOutlineNeeded ? 5 : 0) + (node.animationState > 0 ? (10 + node.animationState * 10) : 0);
+       } else if (node.type === "nebula") {
+           const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8;
+           glowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0);
+       } else if (node.type === PORTAL_NEBULA_TYPE) {
            const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15;
            glowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0);
-      }
-      ctx.shadowBlur = Math.min(40, glowAmount) / viewScale; // Increased max glow slightly
+       }
+       ctx.shadowBlur = Math.min(40, glowAmount) / viewScale;
   } else {
-      ctx.shadowBlur = 0;
+       ctx.shadowBlur = 0;
   }
 
-  const r = currentRadius;
 
-  if (node.type === "sound") {
+  // --- NODE VORM TEKENEN ---
+  if (isDrumType(node.type)) {
+      ctx.lineWidth = Math.max(0.5, baseLineWidth);
+      ctx.strokeStyle = borderColor;
+      ctx.fillStyle = fillColor;
+
+      switch (node.type) {
+          case 'drum_kick':
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+              const innerKickR = r * (0.6 + node.animationState * 0.1);
+              ctx.fillStyle = node.color ? hexToRgba(rgbaToHex(node.color), 0.6) : fillColor.replace(/[\d\.]+\)$/g, '0.6)');
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, innerKickR, 0, Math.PI * 2);
+              ctx.fill();
+              break;
+          case 'drum_snare':
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+              ctx.save();
+              ctx.strokeStyle = borderColor + '80';
+              ctx.lineWidth = Math.max(0.5, 1 / viewScale);
+              const numWires = 3;
+              for (let i = 0; i < numWires; i++) {
+                  const offset = (i - (numWires - 1) / 2) * (r * 0.4);
+                  ctx.beginPath();
+                  ctx.moveTo(node.x - r * 0.7, node.y + offset);
+                  ctx.lineTo(node.x + r * 0.7, node.y + offset);
+                  ctx.stroke();
+              }
+              ctx.restore();
+              break;
+          case 'drum_hihat':
+              const cymbalYOffset = r * 0.2;
+              const cymbalWidth = r * 1.4;
+              const cymbalControlY = r * 0.3;
+              ctx.lineWidth = Math.max(0.5, baseLineWidth * 0.8);
+              ctx.beginPath();
+              ctx.moveTo(node.x - cymbalWidth / 2, node.y - cymbalYOffset);
+              ctx.quadraticCurveTo(node.x, node.y - cymbalYOffset - cymbalControlY, node.x + cymbalWidth / 2, node.y - cymbalYOffset);
+              ctx.stroke();
+              // Maak beweging onderkant groter
+              const bottomY = node.y + cymbalYOffset + node.animationState * (r * 0.35); // Verhoogd van 0.15 naar 0.35
+              ctx.beginPath();
+              ctx.moveTo(node.x - cymbalWidth / 2, bottomY);
+              ctx.quadraticCurveTo(node.x, bottomY + cymbalControlY, node.x + cymbalWidth / 2, bottomY);
+              ctx.stroke();
+              // Maak beweging stokje groter
+              const stickBaseY = node.y - r * 1.3; // Iets hoger starten?
+              const stickTipY = node.y - r * 0.3 + node.animationState * (r * 0.7); // Verhoogd van 0.5 naar 0.7
+              const stickX = node.x + r * 0.6;
+              ctx.save();
+              ctx.strokeStyle = borderColor;
+              ctx.lineWidth = Math.max(1, 2.5 / viewScale); // Iets dikker stokje
+              ctx.beginPath();
+              ctx.moveTo(stickX, stickBaseY);
+              ctx.lineTo(stickX + r * 0.1, stickTipY);
+              ctx.stroke();
+              ctx.restore();
+              break;
+          case 'drum_clap':
+              const handWidth = r * 0.8; // Iets breder gemaakt
+              const handHeight = r * 1.0; // Iets minder hoog
+              const minGap = r * 0.1; // Minimale afstand (bij trigger)
+              const maxGap = r * 0.7; // Maximale afstand (rust)
+              // Animatie omgekeerd: start dichtbij (animationState=1), eindig ver weg (animationState=0)
+              const currentGap = minGap + (1 - node.animationState) * (maxGap - minGap);
+              const yPos = node.y - handHeight / 2;
+              const borderRadius = r * 0.25; // Iets meer afronding
+              ctx.lineWidth = Math.max(0.5, baseLineWidth);
+              // Linker hand
+              drawRoundedRect(ctx, node.x - handWidth - currentGap / 2, yPos, handWidth, handHeight, borderRadius);
+              ctx.fill();
+              ctx.stroke();
+              // Rechter hand
+              drawRoundedRect(ctx, node.x + currentGap / 2, yPos, handWidth, handHeight, borderRadius);
+              ctx.fill();
+              ctx.stroke();
+              break;
+          case 'drum_tom1':
+          case 'drum_tom2':
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+              ctx.save();
+              ctx.strokeStyle = borderColor + '90';
+              ctx.lineWidth = Math.max(0.5, 1 / viewScale);
+              ctx.beginPath();
+              ctx.moveTo(node.x - r * 0.7, node.y);
+              ctx.lineTo(node.x + r * 0.7, node.y);
+              ctx.stroke();
+              ctx.restore();
+              break;
+          case 'drum_cowbell':
+              const topWidth = r * 0.8;
+              const bottomWidth = r * 1.3;
+              const cHeight = r * 1.1;
+              ctx.beginPath();
+              ctx.moveTo(node.x - topWidth / 2, node.y - cHeight / 2);
+              ctx.lineTo(node.x + topWidth / 2, node.y - cHeight / 2);
+              ctx.lineTo(node.x + bottomWidth / 2, node.y + cHeight / 2);
+              ctx.lineTo(node.x - bottomWidth / 2, node.y + cHeight / 2);
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+              break;
+          default:
+              ctx.beginPath();
+              ctx.rect(node.x - r * 0.8, node.y - r * 0.8, r * 1.6, r * 1.6);
+              ctx.fill();
+              ctx.stroke();
+              break;
+      }
+  } else if (node.type === "sound") {
       const waveform = node.audioParams.waveform;
       switch (waveform) {
           case "sine": ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); break;
           case "square": ctx.beginPath(); ctx.rect(node.x - r * 0.9, node.y - r * 0.9, r * 1.8, r * 1.8); ctx.fill(); ctx.stroke(); break;
           case "triangle": case "sawtooth": ctx.beginPath(); ctx.moveTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.866, node.y + r * 0.5); ctx.lineTo(node.x - r * 0.866, node.y + r * 0.5); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
           case "fmBell": case "fmXylo": drawStarShape(ctx, node.x, node.y, 5, r, r * 0.5); ctx.fill(); ctx.stroke(); break;
-          case "sampler_marimba": drawSatelliteShape(ctx, node.x, node.y, r, 1); break;
-          case "sampler_piano": drawSatelliteShape(ctx, node.x, node.y, r, 2); break;
-          case "sampler_flute": drawSatelliteShape(ctx, node.x, node.y, r * 0.9, 3); break;
-          default: ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); break;
+          default:
+              if (waveform?.startsWith("sampler_")) {
+                  let arms = 1;
+                  if (waveform === "sampler_piano") arms = 2;
+                  else if (waveform === "sampler_flute") arms = 3;
+                  drawSatelliteShape(ctx, node.x, node.y, r, arms);
+              } else {
+                  ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+              }
+              break;
       }
   } else if (node.type === "gate") {
-      const innerRadius = r * 0.4; const shieldRadius = r * 0.85; const openingStartAngle = -GATE_ANGLE_SIZE / 2; const openingEndAngle = GATE_ANGLE_SIZE / 2; ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = fillColor + "90"; ctx.fill(); ctx.fillStyle = borderColor + "A0"; ctx.beginPath(); ctx.moveTo(node.x + Math.cos(openingEndAngle) * innerRadius, node.y + Math.sin(openingEndAngle) * innerRadius); ctx.lineTo(node.x + Math.cos(openingEndAngle) * shieldRadius, node.y + Math.sin(openingEndAngle) * shieldRadius); ctx.arc(node.x, node.y, shieldRadius, openingEndAngle, openingStartAngle + Math.PI * 2, false); ctx.lineTo(node.x + Math.cos(openingStartAngle) * innerRadius, node.y + Math.sin(openingStartAngle) * innerRadius); ctx.arc(node.x, node.y, innerRadius, openingStartAngle + Math.PI * 2, openingEndAngle, true); ctx.closePath(); ctx.fill();
+      const innerRadius = r * 0.4; const shieldRadius = r * 0.85; const openingStartAngle = -GATE_ANGLE_SIZE / 2; const openingEndAngle = GATE_ANGLE_SIZE / 2;
+      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke();
+      const gateBgFill = fillColor + "90";
+      ctx.fillStyle = gateBgFill; ctx.fill();
+      ctx.fillStyle = borderColor + "A0";
+      ctx.beginPath();
+      ctx.moveTo(node.x + Math.cos(openingEndAngle) * innerRadius, node.y + Math.sin(openingEndAngle) * innerRadius);
+      ctx.lineTo(node.x + Math.cos(openingEndAngle) * shieldRadius, node.y + Math.sin(openingEndAngle) * shieldRadius);
+      ctx.arc(node.x, node.y, shieldRadius, openingEndAngle, openingStartAngle + Math.PI * 2, false);
+      ctx.lineTo(node.x + Math.cos(openingStartAngle) * innerRadius, node.y + Math.sin(openingStartAngle) * innerRadius);
+      ctx.arc(node.x, node.y, innerRadius, openingStartAngle + Math.PI * 2, openingEndAngle, true);
+      ctx.closePath(); ctx.fill();
       let shouldPassVisual = false; const mode = GATE_MODES[node.gateModeIndex || 0]; if (mode === "RAND") { shouldPassVisual = node.lastRandomGateResult; } else { const counterCheck = node.gateCounter || 0; switch (mode) { case "1/2": if (counterCheck % 2 === 0) shouldPassVisual = true; break; case "1/3": if (counterCheck % 3 === 0) shouldPassVisual = true; break; case "1/4": if (counterCheck % 4 === 0) shouldPassVisual = true; break; case "2/3": if (counterCheck % 3 !== 0) shouldPassVisual = true; break; case "3/4": if (counterCheck % 4 !== 0) shouldPassVisual = true; break; } }
       if (node.animationState > 0 && shouldPassVisual) { ctx.save(); ctx.strokeStyle = styles.getPropertyValue("--pulse-visual-color").trim() || "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = Math.max(1, 2.5 / viewScale); ctx.shadowColor = glowColor; ctx.shadowBlur = 10 / viewScale; ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.9, openingStartAngle, openingEndAngle); ctx.stroke(); ctx.restore(); }
   } else if (node.type === "probabilityGate") {
-      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); const fontSize = Math.max(8, (r * 0.8) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("%", node.x, node.y + fontSize * 0.1);
+      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const fontSize = Math.max(8, (r * 0.8) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("%", node.x, node.y + fontSize * 0.1);
   } else if (node.type === "pitchShift") {
-      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = fillColor + "90"; ctx.fill(); if (node.animationState < 0.5) { ctx.fillStyle = borderColor; ctx.beginPath(); const arrowSize = r * 0.5; const arrowY = node.y - arrowSize * 0.3; ctx.moveTo(node.x, arrowY - arrowSize / 2); ctx.lineTo(node.x - arrowSize / 2, arrowY + arrowSize / 2); ctx.lineTo(node.x + arrowSize / 2, arrowY + arrowSize / 2); ctx.closePath(); ctx.fill(); }
+      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = fillColor + "90"; ctx.fill();
+      if (node.animationState < 0.5) {
+          ctx.fillStyle = borderColor; ctx.beginPath(); const arrowSize = r * 0.5; const arrowY = node.y - arrowSize * 0.3;
+          ctx.moveTo(node.x, arrowY - arrowSize / 2); ctx.lineTo(node.x - arrowSize / 2, arrowY + arrowSize / 2); ctx.lineTo(node.x + arrowSize / 2, arrowY + arrowSize / 2); ctx.closePath(); ctx.fill();
+      }
   } else if (node.type === "relay") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   } else if (node.type === "reflector") {
-      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); const fontSize = Math.max(8, (r * 0.9) / viewScale); ctx.font = `${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⟲", node.x, node.y + fontSize * 0.1);
+      ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      const fontSize = Math.max(8, (r * 0.9) / viewScale); ctx.font = `${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("⟲", node.x, node.y + fontSize * 0.1);
   } else if (node.type === "switch") {
       ctx.beginPath(); ctx.moveTo(node.x - r * 0.8, node.y + r * 0.8); ctx.lineTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.8, node.y + r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-  }
-  else if (node.type === "nebula") {
+  } else if (node.type === "nebula") {
       wobbleX = Math.sin(now * 0.1 + node.id) * (2 / viewScale);
       wobbleY = Math.cos(now * 0.07 + node.id * 2) * (2 / viewScale);
       const nodeBaseHue = (node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + (node.audioParams.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
-      const baseSaturation = scaleBase.s * 0.8;
-      const baseLightness = scaleBase.l * (0.7 + node.size * 0.2);
-      const hueShiftSpeed = 10;
-      const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360;
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.translate(node.x + wobbleX, node.y + wobbleY);
-      const numBlobs = 5;
-      const baseRadius = NODE_RADIUS_BASE * node.size * 1.1;
-      for (let i = 0; i < numBlobs; i++) {
-          const angleOffset = (now * (0.1 + i * 0.02) + node.id + i * 1.1);
-          const distFactor = 0.15 + ((Math.sin(now * 0.15 + i * 0.9) + 1) / 2) * 0.25;
-          const offsetX = Math.cos(angleOffset) * baseRadius * distFactor;
-          const offsetY = Math.sin(angleOffset) * baseRadius * distFactor;
-          const radiusFactor = 0.6 + ((Math.cos(now * 0.2 + i * 1.3) + 1) / 2) * 0.4;
-          const blobRadius = baseRadius * radiusFactor * 0.7;
-          const blobAlpha = 0.15 + ((Math.sin(now * 0.25 + i * 1.5) + 1) / 2) * 0.15;
-          const blobLightness = baseLightness * (0.95 + ((Math.cos(now * 0.18 + i) + 1) / 2) * 0.15);
-          const blobSaturation = baseSaturation * (0.9 + ((Math.sin(now * 0.22 + i * 0.5) + 1) / 2) * 0.15);
-          const finalBlobAlpha = Math.min(1.0, blobAlpha * 1.5);
-          ctx.fillStyle = hslToRgba(currentHue, blobSaturation, blobLightness, finalBlobAlpha);
-          ctx.beginPath();
-          ctx.arc(offsetX, offsetY, blobRadius, 0, Math.PI * 2);
-          ctx.fill();
-      }
-      const coreRadius = baseRadius * 0.3;
-      const coreAlpha = 0.3;
-      ctx.fillStyle = hslToRgba(currentHue, baseSaturation * 1.1, baseLightness * 1.1, coreAlpha);
-      ctx.beginPath();
-      ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      ctx.save();
-      const currentGlowColor = hslToRgba(currentHue, baseSaturation, baseLightness * 1.1, 1.0); // Gebruik berekende glowColor
-      ctx.shadowColor = currentGlowColor;
-      const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8;
-      const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0);
-      ctx.shadowBlur = Math.min(20, currentGlowAmount) / viewScale;
-      ctx.fillStyle = "rgba(0,0,0,0)";
-      ctx.beginPath();
-      ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadius * 0.8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
+      const baseSaturation = scaleBase.s * 0.8; const baseLightness = scaleBase.l * (0.7 + node.size * 0.2); const hueShiftSpeed = 10; const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(node.x + wobbleX, node.y + wobbleY);
+      const numBlobs = 5; const baseRadiusNeb = NODE_RADIUS_BASE * node.size * 1.1;
+      for (let i = 0; i < numBlobs; i++) { const angleOffset = (now * (0.1 + i * 0.02) + node.id + i * 1.1); const distFactor = 0.15 + ((Math.sin(now * 0.15 + i * 0.9) + 1) / 2) * 0.25; const offsetX = Math.cos(angleOffset) * baseRadiusNeb * distFactor; const offsetY = Math.sin(angleOffset) * baseRadiusNeb * distFactor; const radiusFactor = 0.6 + ((Math.cos(now * 0.2 + i * 1.3) + 1) / 2) * 0.4; const blobRadius = baseRadiusNeb * radiusFactor * 0.7; const blobAlpha = 0.15 + ((Math.sin(now * 0.25 + i * 1.5) + 1) / 2) * 0.15; const blobLightness = baseLightness * (0.95 + ((Math.cos(now * 0.18 + i) + 1) / 2) * 0.15); const blobSaturation = baseSaturation * (0.9 + ((Math.sin(now * 0.22 + i * 0.5) + 1) / 2) * 0.15); const finalBlobAlpha = Math.min(1.0, blobAlpha * 1.5); ctx.fillStyle = hslToRgba(currentHue, blobSaturation, blobLightness, finalBlobAlpha); ctx.beginPath(); ctx.arc(offsetX, offsetY, blobRadius, 0, Math.PI * 2); ctx.fill(); }
+      const coreRadius = baseRadiusNeb * 0.3; const coreAlpha = 0.3; ctx.fillStyle = hslToRgba(currentHue, baseSaturation * 1.1, baseLightness * 1.1, coreAlpha); ctx.beginPath(); ctx.arc(0, 0, coreRadius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8; const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(20, currentGlowAmount) / viewScale; ctx.fillStyle = "rgba(0,0,0,0)"; ctx.beginPath(); ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadiusNeb * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   } else if (node.type === PORTAL_NEBULA_TYPE) {
-      const defaults = PORTAL_NEBULA_DEFAULTS;
-      const pulseSpeed = defaults.pulseSpeed;
-      const baseRadius = NODE_RADIUS_BASE * node.size;
-      const nodeBaseHue = node.baseHue ?? defaults.baseColorHue;
-      const hueShiftSpeed = 5;
-      const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360;
-      const saturation = scaleBase.s * 0.9;
-      const lightness = scaleBase.l * 1.1;
-      ctx.save();
-      const currentGlowColor = hslToRgba(currentHue, saturation, lightness * 1.2, 0.8);
-      ctx.shadowColor = currentGlowColor;
-      const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15;
-      const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0);
-      ctx.shadowBlur = Math.min(40, currentGlowAmount) / viewScale;
-      const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1;
-      const irisRadius = baseRadius * irisRadiusFactor;
-      const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2;
-      ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha);
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, Math.max(1, irisRadius), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      const numRings = 4;
-      const originalLineWidth = ctx.lineWidth; // Bewaar originele lijndikte
-      ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
-      for (let i = 1; i <= numRings; i++) {
-          const ringPulsePhase = node.pulsePhase * (pulseSpeed * (1 + i * 0.1));
-          const ringRadiusFactor = 0.6 + i * 0.25 + Math.sin(ringPulsePhase) * 0.08;
-          const ringRadius = baseRadius * ringRadiusFactor;
-          const ringAlpha = 0.1 + (1 - i / numRings) * 0.3 + Math.sin(ringPulsePhase) * 0.05;
-          const ringLightness = lightness * (1.0 - i * 0.1);
-          ctx.strokeStyle = hslToRgba(currentHue, saturation * (1.0 - i*0.05), ringLightness, ringAlpha);
-          ctx.beginPath();
-          if (ringRadius > 0) {
-              ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2);
-              ctx.stroke();
-          }
-      }
-       ctx.lineWidth = originalLineWidth; // Herstel lijndikte
-
-  } else if (isDrumType(node.type)) {
-      const icon = DRUM_ELEMENT_DEFAULTS[node.type]?.icon || "?"; const fontSize = Math.max(8, (r * 0.9) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.beginPath(); ctx.rect(node.x - r, node.y - r, r * 2, r * 2); ctx.fill(); ctx.stroke(); try { ctx.fillStyle = fillColor.replace(/[\d\.]+\)$/g, "1)"); } catch(e) { ctx.fillStyle = '#ffffff'; } ctx.fillText(icon, node.x, node.y + fontSize * 0.1);
-  } else if (node.isStartNode) {
+      const defaults = PORTAL_NEBULA_DEFAULTS; const pulseSpeed = defaults.pulseSpeed; const baseRadiusPortal = NODE_RADIUS_BASE * node.size; const nodeBaseHue = node.baseHue ?? defaults.baseColorHue; const hueShiftSpeed = 5; const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360; const saturation = scaleBase.s * 0.9; const lightness = scaleBase.l * 1.1;
+      ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15; const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(40, currentGlowAmount) / viewScale;
+      const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1; const irisRadius = baseRadiusPortal * irisRadiusFactor; const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2; ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha); ctx.beginPath(); ctx.arc(node.x, node.y, Math.max(1, irisRadius), 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      const numRings = 4; const originalLineWidth = ctx.lineWidth; ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
+      for (let i = 1; i <= numRings; i++) { const ringPulsePhase = node.pulsePhase * (pulseSpeed * (1 + i * 0.1)); const ringRadiusFactor = 0.6 + i * 0.25 + Math.sin(ringPulsePhase) * 0.08; const ringRadius = baseRadiusPortal * ringRadiusFactor; const ringAlpha = 0.1 + (1 - i / numRings) * 0.3 + Math.sin(ringPulsePhase) * 0.05; const ringLightness = lightness * (1.0 - i * 0.1); ctx.strokeStyle = hslToRgba(currentHue, saturation * (1.0 - i*0.05), ringLightness, ringAlpha); ctx.beginPath(); if (ringRadius > 0) { ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2); ctx.stroke(); } }
+      ctx.lineWidth = originalLineWidth;
+  } else if (isPulsarType(node.type)) {
       const points = node.starPoints || 6; const outerR = r; const innerR = outerR * 0.4; drawStarShape(ctx, node.x, node.y, points, outerR, innerR); ctx.fill(); ctx.stroke();
       if (node.type === "pulsar_triggerable") { const lockSize = outerR * 0.5; ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor; ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor; ctx.lineWidth = baseLineWidth * 0.5; ctx.beginPath(); ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5); ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25); ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true); ctx.stroke(); }
   } else {
@@ -4214,16 +4220,14 @@ function drawNode(node) {
       ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
       ctx.beginPath();
       const outlineRadius = NODE_RADIUS_BASE * node.size + 2 / viewScale;
-      const finalOutlineX = node.x + wobbleX; // Gebruik wobble voor nebula/portal outline
+      const finalOutlineX = node.x + wobbleX;
       const finalOutlineY = node.y + wobbleY;
       ctx.arc(finalOutlineX, finalOutlineY, outlineRadius, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
   }
 
-  if (needsRestore) {
-      ctx.restore();
-  }
+  if (needsRestore) { ctx.restore(); }
   ctx.shadowBlur = 0;
 
   if (isInfoTextVisible) {
@@ -4237,39 +4241,64 @@ function drawNode(node) {
       let labelYOffset = baseRadiusForLabel * 1.1 + fontSize / 1.5 + 2 / viewScale;
       ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
 
-      if (node.type === "sound" || node.type === "nebula") {
-          labelText = getNoteNameFromScaleIndex(currentScale, node.audioParams.scaleIndex);
-           if (node.type === "sound" && node.audioParams.waveform?.startsWith("sampler_")) {
-               labelYOffset = baseRadiusForLabel * 1.3 + fontSize / 1.5 + 2 / viewScale;
-           } else if (node.type === "nebula") {
-              labelYOffset = (baseRadiusForLabel * 1.1) * 1.2 + fontSize / 1.5 + 2 / viewScale; // Iets lager voor blob
-           }
-      } else if (node.type === PORTAL_NEBULA_TYPE) {
-           labelText = "Portal";
-           labelYOffset = (baseRadiusForLabel * 1.1) + fontSize / 1.5 + 2 / viewScale; // Onder portal
-      } else if (isPulsarType(node.type)) {
-          let typeLabel = pulsarTypes.find((pt) => pt.type === node.type)?.label || "Pulsar";
-          labelText = typeLabel; if (!node.isEnabled) labelText += " (Off)";
-          if (node.type === "pulsar_random_volume") { secondLineText = `Int: Random`; }
-          else { if (node.type === "pulsar_random_particles") { secondLineText = "Timing: Random"; } else if (isGlobalSyncEnabled) { const subdiv = subdivisionOptions[node.syncSubdivisionIndex]; secondLineText = `Sync: ${subdiv?.label ?? "?"}`; } else { secondLineText = `Intv: ${(node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`; } if (node.type !== "pulsar_random_volume") { secondLineText += ` | Int: ${(node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; } }
-          if (secondLineText) labelYOffset += fontSize * 0.5;
-      } else if (isDrumType(node.type)) {
-          labelText = DRUM_ELEMENT_DEFAULTS[node.type]?.label || "Drum";
-          labelYOffset = baseRadiusForLabel + fontSize / 1.5 + 2 / viewScale;
-      } else if (node.type === "gate") { labelText = GATE_MODES[node.gateModeIndex || 0];
-      } else if (node.type === "probabilityGate") { labelText = `${(node.audioParams.probability * 100).toFixed(0)}%`;
-      } else if (node.type === "pitchShift") { const amount = PITCH_SHIFT_AMOUNTS[node.pitchShiftIndex || 0]; labelText = (amount > 0 ? "+" : "") + amount + (node.pitchShiftAlternating ? " ⇄" : "");
-      } else if (node.type === "relay") { labelText = "Relay"; labelYOffset = (baseRadiusForLabel * 0.6) + fontSize / 1.5 + 2 / viewScale;
-      } else if (node.type === "reflector") { labelText = "Reflector";
-      } else if (node.type === "switch") { labelText = "Switch"; labelYOffset = baseRadiusForLabel * 0.9 + fontSize / 1.5 + 2 / viewScale;
-      }
+      if (node.type === "sound" || node.type === "nebula") { labelText = getNoteNameFromScaleIndex(currentScale, node.audioParams.scaleIndex); if (node.type === "sound" && node.audioParams.waveform?.startsWith("sampler_")) { labelYOffset = baseRadiusForLabel * 1.3 + fontSize / 1.5 + 2 / viewScale; } else if (node.type === "nebula") { labelYOffset = (baseRadiusForLabel * 1.1) * 1.2 + fontSize / 1.5 + 2 / viewScale; } }
+      else if (node.type === PORTAL_NEBULA_TYPE) { labelText = "Portal"; labelYOffset = (baseRadiusForLabel * 1.1) + fontSize / 1.5 + 2 / viewScale; }
+      else if (isPulsarType(node.type)) { let typeLabel = pulsarTypes.find((pt) => pt.type === node.type)?.label || "Pulsar"; labelText = typeLabel; if (!node.isEnabled) labelText += " (Off)"; if (node.type === "pulsar_random_volume") { secondLineText = `Int: Random`; } else { if (node.type === "pulsar_random_particles") { secondLineText = "Timing: Random"; } else if (isGlobalSyncEnabled) { const subdiv = subdivisionOptions[node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX]; secondLineText = `Sync: ${subdiv?.label ?? "?"}`; } else { secondLineText = `Intv: ${(node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`; } if (node.type !== "pulsar_random_volume") { secondLineText += ` | Int: ${(node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; } } if (secondLineText) labelYOffset += fontSize * 0.5; }
+      else if (isDrumType(node.type)) { labelText = DRUM_ELEMENT_DEFAULTS[node.type]?.label || "Drum"; labelYOffset = baseRadiusForLabel + fontSize / 1.5 + 2 / viewScale; }
+      else if (node.type === "gate") { labelText = GATE_MODES[node.gateModeIndex || 0]; }
+      else if (node.type === "probabilityGate") { labelText = `${(node.audioParams.probability * 100).toFixed(0)}%`; }
+      else if (node.type === "pitchShift") { const amount = PITCH_SHIFT_AMOUNTS[node.pitchShiftIndex || 0]; labelText = (amount > 0 ? "+" : "") + amount + (node.pitchShiftAlternating ? " ⇄" : ""); }
+      else if (node.type === "relay") { labelText = "Relay"; labelYOffset = (baseRadiusForLabel * 0.6) + fontSize / 1.5 + 2 / viewScale; }
+      else if (node.type === "reflector") { labelText = "Reflector"; }
+      else if (node.type === "switch") { labelText = "Switch"; labelYOffset = baseRadiusForLabel * 0.9 + fontSize / 1.5 + 2 / viewScale; }
 
       const finalLabelX = node.x + wobbleX;
       const finalLabelYBase = node.y + wobbleY;
       if (labelText) { ctx.fillText(labelText, finalLabelX, finalLabelYBase + labelYOffset); }
       if (secondLineText) { ctx.fillText(secondLineText, finalLabelX, finalLabelYBase + labelYOffset + fontSize * 1.1); }
   }
-  ctx.shadowBlur = 0;
+}
+
+// Hulpfunctie voor afgeronde rechthoek (nodig voor clap)
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+  } else {
+      radius = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+  }
+}
+
+// Hulpfunctie voor afgeronde rechthoek (nodig voor clap)
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+  } else {
+      radius = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+  }
 }
 
 
@@ -4397,18 +4426,41 @@ function draw() {
       }
   }
 
-  updateAndDrawPulses(now);
+  updateAndDrawPulses(now); // Tekent actieve pulsen
 
-  // Teken tijdelijke connectie lijn indien bezig met verbinden EN juiste tool actief
+  // Teken tijdelijke connectie lijn indien bezig met verbinden OF brushen
   if (isConnecting && (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail')) {
-       drawTemporaryConnection(); // Aanroep blijft
+       // De debug log kan hier eventueel weg als alles werkt
+       // console.log("DEBUG draw(): Condition met, calling drawTemporaryConnection...");
+       drawTemporaryConnection();
   }
+  // --- NIEUW: Teken tijdelijke lijn voor Brush tool ---
+  else if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+      ctx.save();
+      // Stijl voor de brush lijn (bijv. stippel geel)
+      const brushLineColor = 'rgba(255, 255, 100, 0.7)';
+      const brushLineWidth = Math.max(0.6, 1.2 / viewScale);
+      const brushLineDash = [5 / viewScale, 3 / viewScale]; // Stippellijn
 
-  drawSelectionRect();
+      ctx.strokeStyle = brushLineColor;
+      ctx.lineWidth = brushLineWidth;
+      ctx.setLineDash(brushLineDash);
 
-  ctx.restore();
+      ctx.beginPath();
+      ctx.moveTo(lastBrushNode.x, lastBrushNode.y); // Van laatst geplaatste node
+      ctx.lineTo(mousePos.x, mousePos.y); // Naar huidige muispositie
+      ctx.stroke();
+
+      ctx.restore(); // Herstel lijnstijl
+  }
+  // --- EINDE NIEUW ---
+
+  drawSelectionRect(); // Teken selectie rechthoek
+
+  ctx.restore(); // Herstel hoofd context
   previousFrameTime = now;
-  // ctx.setLineDash([]); // Reset hier indien nodig
+  ctx.setLineDash([]); // Reset dash na restore
+
 }
 function updateNebulaInteractionAudio() {
     // Check of audio context etc. klaar zijn (zoals voorheen)
