@@ -31,6 +31,7 @@
             <button id="connectBtn" title="Connect Tool (C)">🔗</button>
             <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
             <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
+            <button id="connectWaveTrailBtn" title="Connect with WaveTrail (W)">〰️</button>
             <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
             <button id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↩️</button>
             <button id="redoBtn" title="Redo (Ctrl/Cmd+Y)">↪️</button>
@@ -78,42 +79,32 @@
             </div>
     </div>
 
-    <div id="gridControls">
-        <button id="gridToggleBtn" title="Toggle Grid Visibility (G)">Grid: OFF</button>
-        <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button>
-        <div id="gridOptions" class="hidden">
-             <button id="gridTypeBtn" title="Switch Grid Type">Type: Lines</button>
-             <button id="gridSnapBtn" title="Toggle Snap to Grid">Snap: OFF</button>
-             <small>(Grid spacing automatic when Sync ON)</small>
-        </div>
-    </div>
-
     <div id="transportControls">
-    <button id="playPauseBtn">Play ▶</button>
-    <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
-    <div id="bpmControls" class="hidden">
-         <label for="globalBpmInput">BPM:</label>
-         <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
-    </div>
-    <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
-    <div class="transport-divider"></div>
-    <select id="scaleSelectTransport" title="Change musical scale and theme">
+        <button id="playPauseBtn">Play ▶</button>
+        <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+        <div id="bpmControls" class="hidden">
+             <label for="globalBpmInput">BPM:</label>
+             <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
+        </div>
+        <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+        <div class="transport-divider"></div>
+        <select id="scaleSelectTransport" title="Change musical scale and theme">
         </select>
-    <div class="transport-divider"></div>
+        <div class="transport-divider"></div>
+        <button id="gridToggleBtn" title="Toggle Grid Visibility (G)">Grid: OFF</button>
+        <button id="gridSnapBtn" title="Toggle Snap to Grid">Snap: OFF</button>
+        <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button>
+        <div class="transport-divider"></div>
+        <canvas id  ="pianoRollCanvas"></canvas>
+    </div>
 
-    <button id="mixerBtn" title="Open Mixer">🎚️</button>
-    <div class="transport-divider"></div> <canvas id="pianoRollCanvas"></canvas>
-
-</div>
-
-    <div id="mixerPanel" class="bottom-panel hidden">
+    <div id="mixerPanel" class="panel right-panel slide-panel hidden">
         <h3>Mixer</h3>
         <div class="panel-section">
             <label for="masterVolumeSlider">Master Volume:</label>
             <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
             <span id="masterVolumeValue">0.80</span>
         </div>
-    
         <div id="mixerGroupControlsContainer" class="panel-section">
             </div>
         <div class="panel-section">
@@ -129,10 +120,14 @@
         </div>
     </div>
 
+    <div id="mixerToggleBtn" title="Open/Close Mixer">
+        <span>Mixer</span>
+    </div>
 
     <div id="beatIndicator"></div>
     <div id="startMessage">Create musical constellations. Click or tap anywhere to start. Hover over elements for more info.</div>
     <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
-    <script src="samplers.js"></script> <script src="app.js"></script>
+    <script src="samplers.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
