@@ -742,112 +742,110 @@ function setGroupVolume(volume, sourceSliderId) {
 
 
 function identifyAndRouteAllGroups() {
-  if (!isAudioReady) return;
+  if (!isAudioReady || !audioContext) return;
+
+  // Stap 1: Sla huidige volumes van bestaande geïdentificeerde groepen op
+  const existingGroupVolumes = new Map();
+  identifiedGroups.forEach(group => {
+      if (group.gainNode && group.nodeIds && group.nodeIds.size > 0) {
+          const sortedNodeIds = Array.from(group.nodeIds).sort((a, b) => a - b);
+          const canonicalKey = sortedNodeIds.join(',');
+          existingGroupVolumes.set(canonicalKey, group.gainNode.gain.value);
+          // console.log(`Stored volume for key ${canonicalKey}: ${group.gainNode.gain.value}`);
+      }
+  });
 
   const visitedNodes = new Set();
   const newGroups = [];
   let nextGroupId = 0;
-  const oldGainNodes = identifiedGroups.map(g => g.gainNode).filter(gn => gn);
 
-  // Stap 1-3: Vind groepen, maak nieuwe gain nodes
+  // Ruim oude gain nodes op (disconnect)
+  identifiedGroups.forEach(g => {
+      if (g.gainNode) {
+          try { g.gainNode.disconnect(); } catch (e) {}
+      }
+  });
+  identifiedGroups = []; // Begin met een schone lei voor groepen
+
+  // Stap 2: Vind alle constellaties opnieuw
   nodes.forEach(node => {
       if (CONSTELLATION_NODE_TYPES.includes(node.type) && !visitedNodes.has(node.id)) {
-          const constellationNodeIds = findConstellation(node.id);
+          const constellationNodeIds = findConstellation(node.id); // Dit geeft een Set terug
           if (constellationNodeIds.size > 0) {
               constellationNodeIds.forEach(id => visitedNodes.add(id));
-              // Maak gain node alleen als group niet al bestond met gain
-               let gainNode = audioContext.createGain();
-               gainNode.gain.value = 1.0; // Default volume
-              newGroups.push({ id: nextGroupId++, nodeIds: constellationNodeIds, gainNode: gainNode });
+
+              const newGainNode = audioContext.createGain();
+              const sortedNewNodeIds = Array.from(constellationNodeIds).sort((a, b) => a - b);
+              const newCanonicalKey = sortedNewNodeIds.join(',');
+
+              const savedVolume = existingGroupVolumes.get(newCanonicalKey);
+
+              if (savedVolume !== undefined) {
+                  newGainNode.gain.value = savedVolume;
+                  // console.log(`Restored volume for key ${newCanonicalKey}: ${savedVolume}`);
+              } else {
+                  newGainNode.gain.value = 1.0; // Default volume
+                  // console.log(`No saved volume for key ${newCanonicalKey}, set to 1.0`);
+              }
+              newGroups.push({ id: nextGroupId++, nodeIds: constellationNodeIds, gainNode: newGainNode });
           }
       }
   });
 
-  // Stap 4: Ruim oude op
-  oldGainNodes.forEach(oldGain => { if (oldGain) { try { oldGain.disconnect(); } catch(e){} } });
   identifiedGroups = newGroups;
 
-  // Stap 5a: Routeer Nodes (sound/drum)
+  // Stap 3: Routeer alle audio nodes (sound, drum, strings, etc.) naar hun groeps-gain of master
   nodes.forEach(node => {
-      if (CONSTELLATION_NODE_TYPES.includes(node.type)) {
-          const outputNode = node.audioNodes?.gainNode || node.audioNodes?.mainGain; // Hoofd output van de node
-          const delaySendGain = node.audioNodes?.delaySendGain; // Specifieke send gain van de node
-          const reverbSendGain = node.audioNodes?.reverbSendGain; // Specifieke send gain van de node
+      const isRoutableAudioNode = (CONSTELLATION_NODE_TYPES.includes(node.type) ||
+                                 node.type === 'nebula' ||
+                                 node.type === PORTAL_NEBULA_TYPE) && node.audioNodes;
 
-          if (!outputNode) return; // Kan niet routeren zonder output
+      if (isRoutableAudioNode) {
+          const outputNode = node.audioNodes.gainNode || node.audioNodes.mainGain;
+          if (!outputNode) return;
 
-          const targetGroup = findGroupContainingNode(node.id);
-          const destinationNode = targetGroup ? targetGroup.gainNode : masterGain; // Eindbestemming (groep of master)
-
-          // --- Disconnect eerst alles van de output en sends ---
-          try { outputNode.disconnect(); } catch(e){}
-          if(delaySendGain) { try {delaySendGain.disconnect();} catch(e){} } // Koppel input los
-          if(reverbSendGain) { try {reverbSendGain.disconnect();} catch(e){} } // Koppel input los
-
-          // --- Verbind Hoofd Pad ---
-          outputNode.connect(destinationNode); // Verbind output naar eindbestemming
-
-          // --- Verbind Sends VANAF outputNode --- // *** CORRECTIE HIER ***
-          if (reverbSendGain && isReverbReady && reverbNode) {
-              outputNode.connect(reverbSendGain); // ALTĲD output -> send input
-              reverbSendGain.connect(reverbNode);     // Send output -> Master effect
+          let destinationNode;
+          if (CONSTELLATION_NODE_TYPES.includes(node.type)) {
+              const targetGroup = findGroupContainingNode(node.id);
+              destinationNode = targetGroup ? targetGroup.gainNode : masterGain;
+          } else if (node.type === 'nebula') {
+              destinationNode = originalNebulaGroupGain || masterGain;
+          } else if (node.type === PORTAL_NEBULA_TYPE) {
+              destinationNode = portalGroupGain || masterGain;
+          } else {
+              destinationNode = masterGain; // Fallback
           }
-          if (delaySendGain && isDelayReady && masterDelaySendGain) {
-              outputNode.connect(delaySendGain); // ALTĲD output -> send input
-              delaySendGain.connect(masterDelaySendGain); // Send output -> Master send input
-          }
-      } else if (node.type === 'nebula' || node.type === PORTAL_NEBULA_TYPE) {
-          // Nebula/Portal routing wordt afgehandeld in createAudioNodesForNode
-          // en zou direct naar hun respectievelijke group gains moeten gaan.
-          // We hoeven hier geen sends opnieuw te routeren.
+          rerouteAudioForNode(node, destinationNode);
       }
   });
 
-  // Stap 5b: String Connections
-   connections.forEach(conn => {
+  connections.forEach(conn => {
       if (conn.type === 'string_violin' && conn.audioNodes) {
-          const outputNode = conn.audioNodes.gainNode; // String's eigen output
-          const delaySendGain = conn.audioNodes.delaySendGain;
-          const reverbSendGain = conn.audioNodes.reverbSendGain;
+          const outputNode = conn.audioNodes.gainNode;
           if (!outputNode) return;
 
-          // Bepaal bestemming (groep of master)
           const nodeA = findNodeById(conn.nodeAId);
           const nodeB = findNodeById(conn.nodeBId);
           const groupA = nodeA ? findGroupContainingNode(nodeA.id) : null;
           const groupB = nodeB ? findGroupContainingNode(nodeB.id) : null;
-          const targetGroup = (groupA && groupB && groupA === groupB) ? groupA : null;
-          const destinationNode = targetGroup ? targetGroup.gainNode : masterGain;
-
-          // --- Disconnect ---
-          try { outputNode.disconnect(); } catch(e){}
-          if(delaySendGain) { try {delaySendGain.disconnect();} catch(e){} }
-          if(reverbSendGain) { try {reverbSendGain.disconnect();} catch(e){} }
-
-          // --- Verbind Hoofd Pad ---
-          outputNode.connect(destinationNode);
-
-           // --- Verbind Sends VANAF outputNode --- // *** CORRECTIE HIER ***
-          if (reverbSendGain && isReverbReady && reverbNode) {
-              outputNode.connect(reverbSendGain); // String Output -> Send Input
-              reverbSendGain.connect(reverbNode);     // Send Output -> Master Effect
+          let destinationNode = masterGain;
+          if (groupA && groupA === groupB && CONSTELLATION_NODE_TYPES.includes(nodeA.type) && CONSTELLATION_NODE_TYPES.includes(nodeB.type)) {
+               destinationNode = groupA.gainNode;
           }
-          if (delaySendGain && isDelayReady && masterDelaySendGain) {
-               outputNode.connect(delaySendGain); // String Output -> Send Input
-               delaySendGain.connect(masterDelaySendGain); // Send Output -> Master Send Input
-          }
+          rerouteAudioForNode(conn, destinationNode);
       }
   });
 
-  // Stap 5c: Verbind Group Gains met Master
-   identifiedGroups.forEach(group => {
-        if(group.gainNode) {
-             try { group.gainNode.disconnect(); } catch(e) {} // Voorkom dubbele connecties
-             group.gainNode.connect(masterGain);
-        }
-   });
+  // Stap 4: Verbind alle groeps-gains met de master gain
+  identifiedGroups.forEach(group => {
+      if (group.gainNode) {
+          // Zorg ervoor dat de group gain niet al verbonden is om dubbele verbindingen te voorkomen
+          try { group.gainNode.disconnect(masterGain); } catch(e) { /* Geen probleem als het nog niet verbonden was */ }
+          group.gainNode.connect(masterGain);
+      }
+  });
 
-  // Stap 6: Update Mixer UI
+  // Stap 5: Update de Mixer UI
   updateMixerGUI();
 }
 
@@ -1474,193 +1472,168 @@ function updateMixerGUI() {
 }
 
 function updateNodeAudioParams(node) {
-  if (!node.audioNodes || !isAudioReady) return
-  const now = audioContext.currentTime
-  const params = node.audioParams
+  if (!node.audioNodes || !isAudioReady) return;
+  const now = audioContext.currentTime;
+  const params = node.audioParams;
+  const pitchUpdateTimeConstant = 0.05; 
+  const generalUpdateTimeConstant = 0.02;
+
   try {
-    if (node.type === "sound") {
-      const {
-        oscillator,
-        lowPassFilter,
-        reverbSendGain,
-        delaySendGain,
-        modulatorOsc,
-        modulatorGain,
-        volLfoGain
-      } = node.audioNodes
-      if (!lowPassFilter) return
-      if (
-        params.waveform &&
-        !params.waveform.startsWith("sampler_") &&
-        oscillator
-      ) {
-        oscillator.frequency.setTargetAtTime(params.pitch, now, 0.02)
-        oscillator.type =
-          params.waveform === "fmBell" || params.waveform === "fmXylo"
-            ? "sine"
-            : params.waveform
-        if (
-          (params.waveform === "fmBell" || params.waveform === "fmXylo") &&
-          modulatorOsc &&
-          modulatorGain
-        ) {
-          const modRatio = params.waveform === "fmBell" ? 1.4 : 3.5
-          const modDepthFactor = params.waveform === "fmBell" ? 4 : 10
-          modulatorOsc.frequency.setTargetAtTime(
-            params.pitch * modRatio,
-            now,
-            0.02
-          )
-          const modDepth =
-            params.pitch * modDepthFactor * params.fmModDepthScale
-          modulatorGain.gain.setTargetAtTime(modDepth, now, 0.02)
-        }
+      if (node.type === "sound") {
+          const {
+              oscillator,
+              lowPassFilter,
+              reverbSendGain,
+              delaySendGain,
+              modulatorOsc,
+              modulatorGain,
+              volLfoGain
+          } = node.audioNodes;
+
+          if (lowPassFilter) {
+              const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE;
+              const freqRange = MAX_FILTER_FREQ - MIN_FILTER_FREQ;
+              const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
+              const currentFilterFreq = MIN_FILTER_FREQ + normalizedSize * freqRange;
+              params.lowPassFreq = currentFilterFreq;
+              lowPassFilter.frequency.setTargetAtTime(params.lowPassFreq, now, generalUpdateTimeConstant);
+          }
+
+          if (isReverbReady && reverbSendGain) {
+              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
+          }
+          if (isDelayReady && delaySendGain) {
+              delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
+          }
+
+          if (volLfoGain) {
+              const shouldFluctuate = fluctuatingGroupNodeIDs.has(node.id);
+              const fluctuationAmount = parseFloat(groupFluctuateAmount.value);
+              const targetLfoDepth = shouldFluctuate ? fluctuationAmount : (params.volLfoDepth || 0);
+              volLfoGain.gain.setTargetAtTime(targetLfoDepth, now, 0.1);
+          }
+
+          if (!node.isTriggered) {
+              if (params.waveform && !params.waveform.startsWith("sampler_") && oscillator) {
+                  oscillator.frequency.setTargetAtTime(params.pitch, now, pitchUpdateTimeConstant);
+                  const desiredType = (params.waveform === "fmBell" || params.waveform === "fmXylo") ? "sine" : params.waveform;
+                  if (oscillator.type !== desiredType) {
+                      oscillator.type = desiredType;
+                  }
+
+                  if ((params.waveform === "fmBell" || params.waveform === "fmXylo") && modulatorOsc && modulatorGain) {
+                      const modRatio = params.waveform === "fmBell" ? 1.4 : 3.5;
+                      modulatorOsc.frequency.setTargetAtTime(
+                          params.pitch * modRatio,
+                          now,
+                          pitchUpdateTimeConstant
+                      );
+                  }
+              }
+          }
+
+      } else if (node.type === "nebula") {
+          const {
+              gainNode, filterNode, filterLfoGain, volLfoGain, oscillators,
+              reverbSendGain, delaySendGain
+          } = node.audioNodes;
+
+          if (!gainNode || !filterNode || !oscillators || !filterLfoGain || !volLfoGain) return;
+
+          const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE;
+          const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
+          const baseFreq = params.pitch; 
+
+          const targetVol = Math.min(NEBULA_MAX_VOL, node.size * NEBULA_VOL_SCALING * 1.5);
+          gainNode.gain.setTargetAtTime(targetVol, now, 0.1);
+
+          const filterFreq = baseFreq * 2 + normalizedSize * baseFreq * (params.filterFreqFactor || 12);
+          filterNode.frequency.setTargetAtTime(filterFreq, now, 0.1);
+
+          const lfoDepth = baseFreq * NEBULA_FILTER_LFO_DEPTH_FACTOR * (params.lfoDepthFactor || 1);
+          filterLfoGain.gain.setTargetAtTime(lfoDepth, now, 0.1);
+          volLfoGain.gain.setTargetAtTime(NEBULA_VOL_LFO_DEPTH, now, 0.1);
+
+          oscillators.forEach((osc, i) => {
+              const interval = NEBULA_OSC_INTERVALS[i];
+              const freq = baseFreq * Math.pow(2, interval / 12);
+              osc.frequency.setTargetAtTime(freq, now, 0.1); 
+              const detuneAmount = params.detune || NEBULA_OSC_DETUNE || 7;
+              osc.detune.setTargetAtTime((i % 2 === 0 ? 1 : -1) * detuneAmount * (i + 1), now, 0.1);
+              const desiredWaveform = (params.waveform === "fmBell" || params.waveform === "fmXylo") ? "sine" : (params.waveform || "sawtooth");
+              if (osc.type !== desiredWaveform) { osc.type = desiredWaveform; }
+          });
+
+          if (isReverbReady && reverbSendGain) {
+              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
+          }
+          if (isDelayReady && delaySendGain) {
+              delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
+          }
+
+      } else if (isDrumType(node.type)) {
+          const { mainGain, reverbSendGain, delaySendGain } = node.audioNodes;
+          if (mainGain) mainGain.gain.setTargetAtTime(params.volume ?? 1.0, now, generalUpdateTimeConstant);
+          if (isReverbReady && reverbSendGain) {
+              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
+          }
+          if (isDelayReady && delaySendGain) {
+              delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
+          }
+
+      } else if (node.type === PHYSICAL_MODELING_TYPE) {
+          const { mainGain, reverbSendGain, delaySendGain } = node.audioNodes;
+          
+          if (isReverbReady && reverbSendGain) {
+              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? PHYSICAL_MODELING_DEFAULTS.reverbSend, now, generalUpdateTimeConstant);
+          }
+          if (isDelayReady && delaySendGain) {
+              delaySendGain.gain.setTargetAtTime(params.delaySend ?? PHYSICAL_MODELING_DEFAULTS.delaySend, now, generalUpdateTimeConstant);
+          }
+          // Pitch voor PHYSICAL_MODELING_TYPE wordt voornamelijk gebruikt bij triggerNodeEffect.
+          // Als er een continue oscillator zou zijn, zou die hier conditioneel (`!node.isTriggered`) geüpdatet moeten worden.
       }
-      const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE
-      const freqRange = MAX_FILTER_FREQ - MIN_FILTER_FREQ
-      const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1)
-      params.lowPassFreq = MIN_FILTER_FREQ + normalizedSize * freqRange
-      lowPassFilter.frequency.setTargetAtTime(params.lowPassFreq, now, 0.02)
-      if (isReverbReady && reverbSendGain) {
-        reverbSendGain.gain.setTargetAtTime(params.reverbSend, now, 0.02)
-      }
-      if (isDelayReady && delaySendGain) {
-        delaySendGain.gain.setTargetAtTime(params.delaySend, now, 0.02)
-      }
-      const shouldFluctuate = fluctuatingGroupNodeIDs.has(node.id)
-      const fluctuationAmount = parseFloat(groupFluctuateAmount.value)
-      const targetLfoDepth = shouldFluctuate
-        ? fluctuationAmount
-        : params.volLfoDepth || 0
-      if (volLfoGain) {
-        volLfoGain.gain.setTargetAtTime(targetLfoDepth, now, 0.1)
-      }
-    } else if (node.type === "nebula") {
-      const {
-        gainNode,
-        filterNode,
-        filterLfoGain,
-        volLfoGain,
-        oscillators
-      } = node.audioNodes;
-      if (!gainNode || !filterNode || !oscillators) return;
-    
-      const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE;
-      const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
-    
-      const targetVol = Math.min(NEBULA_MAX_VOL, node.size * NEBULA_VOL_SCALING * 1.5);
-      gainNode.gain.setTargetAtTime(targetVol, now, 0.1);
-    
-      const baseFreq = params.pitch;
-      const filterFreq = baseFreq * 2 + normalizedSize * baseFreq * 12;
-      filterNode.frequency.setTargetAtTime(filterFreq, now, 0.1);
-    
-      if (filterLfoGain) {
-        const lfoDepth = baseFreq * NEBULA_FILTER_LFO_DEPTH_FACTOR * (node.audioParams.lfoDepthFactor || 1);
-        filterLfoGain.gain.setTargetAtTime(lfoDepth, now, 0.1);
-      }
-    
-      if (volLfoGain) {
-        volLfoGain.gain.setTargetAtTime(NEBULA_VOL_LFO_DEPTH, now, 0.1);
-      }
-    
-      oscillators.forEach((osc, i) => {
-        const interval = NEBULA_OSC_INTERVALS[i];
-        const freq = baseFreq * Math.pow(2, interval / 12);
-        osc.frequency.setTargetAtTime(freq, now, 0.1);
-    
-        const detuneAmount = node.audioParams.detune || NEBULA_OSC_DETUNE || 7;
-        osc.detune.setTargetAtTime((i % 2 === 0 ? 1 : -1) * detuneAmount * (i + 1), now, 0.1);
-    
-        const desiredWaveform =
-          node.audioParams.waveform === "fmBell" || node.audioParams.waveform === "fmXylo"
-            ? "sine"
-            : node.audioParams.waveform || "sawtooth";
-        if (osc.type !== desiredWaveform) {
-          osc.type = desiredWaveform;
-        }
-      })
-    
-    } else if (isDrumType(node.type)) {
-      const { mainGain, reverbSendGain, delaySendGain } = node.audioNodes
-      if (mainGain) mainGain.gain.setTargetAtTime(params.volume, now, 0.01)
-      if (isReverbReady && reverbSendGain) {
-        reverbSendGain.gain.setTargetAtTime(params.reverbSend, now, 0.02)
-      }
-      if (isDelayReady && delaySendGain) {
-        delaySendGain.gain.setTargetAtTime(params.delaySend, now, 0.02)
-      }
-    }
-  } catch (e) {}
+
+  } catch (e) {
+      console.error(`Error updating audio params for node ${node.id} (${node.type}):`, e);
+  }
 }
 function updateConnectionAudioParams(connection) {
-  if (
-    !connection.audioNodes ||
-    connection.type !== "string_violin" ||
-    !isAudioReady
-  )
-    return
-  const now = audioContext.currentTime
-  const params = connection.audioParams
+  if (!connection.audioNodes || connection.type !== "string_violin" || !isAudioReady) return;
+  const now = audioContext.currentTime;
+  const params = connection.audioParams;
+  const timeConstantForPitch = 0.05; // Nieuwe, iets langere tijdconstante
+
   try {
-    const {
-      gainNode,
-      filterNode,
-      reverbSendGain,
-      delaySendGain,
-      oscillators,
-      vibratoLfo,
-      vibratoGain
-    } = connection.audioNodes
-    if (!gainNode || !filterNode || !oscillators || !vibratoLfo || !vibratoGain)
-      return
-    oscillators.forEach((osc, i) => {
-      const freq = params.pitch
-      const detuneAmount =
-        i === 0
-          ? 0
-          : (i % 2 === 1 ? 1 : -1) *
-            Math.ceil(i / 2) *
-            (params.detune ?? STRING_VIOLIN_DEFAULTS.detune)
-      osc.frequency.setTargetAtTime(freq, now, 0.02)
-      osc.detune.setTargetAtTime(detuneAmount, now, 0.02)
-    })
-    filterNode.frequency.setTargetAtTime(
-      params.pitch *
-        (params.filterFreqFactor ?? STRING_VIOLIN_DEFAULTS.filterFreqFactor),
-      now,
-      0.02
-    )
-    filterNode.Q.setTargetAtTime(
-      params.filterQ ?? STRING_VIOLIN_DEFAULTS.filterQ,
-      now,
-      0.02
-    )
-    vibratoLfo.frequency.setTargetAtTime(
-      params.vibratoRate ?? STRING_VIOLIN_DEFAULTS.vibratoRate,
-      now,
-      0.02
-    )
-    vibratoGain.gain.setTargetAtTime(
-      params.vibratoDepth ?? STRING_VIOLIN_DEFAULTS.vibratoDepth,
-      now,
-      0.02
-    )
-    if (isReverbReady && reverbSendGain) {
-      reverbSendGain.gain.setTargetAtTime(
-        params.reverbSend ?? DEFAULT_REVERB_SEND,
-        now,
-        0.02
-      )
-    }
-    if (isDelayReady && delaySendGain) {
-      delaySendGain.gain.setTargetAtTime(
-        params.delaySend ?? DEFAULT_DELAY_SEND,
-        now,
-        0.02
-      )
-    }
-  } catch (e) {}
+      const { gainNode, filterNode, reverbSendGain, delaySendGain, oscillators, vibratoLfo, vibratoGain } = connection.audioNodes;
+      if (!gainNode || !filterNode || !oscillators || !vibratoLfo || !vibratoGain) return;
+
+      oscillators.forEach((osc, i) => {
+          const freq = params.pitch;
+          const detuneAmount = i === 0 ? 0 : ((i % 2 === 1 ? 1 : -1) * Math.ceil(i / 2) * (params.detune ?? STRING_VIOLIN_DEFAULTS.detune));
+          osc.frequency.setTargetAtTime(freq, now, timeConstantForPitch); // Gebruik nieuwe constante
+          osc.detune.setTargetAtTime(detuneAmount, now, timeConstantForPitch); // Gebruik nieuwe constante
+      });
+
+      filterNode.frequency.setTargetAtTime(
+          params.pitch * (params.filterFreqFactor ?? STRING_VIOLIN_DEFAULTS.filterFreqFactor),
+          now,
+          timeConstantForPitch // Gebruik nieuwe constante
+      );
+      filterNode.Q.setTargetAtTime(params.filterQ ?? STRING_VIOLIN_DEFAULTS.filterQ, now, 0.02); // Q kan snel blijven
+
+      vibratoLfo.frequency.setTargetAtTime(params.vibratoRate ?? STRING_VIOLIN_DEFAULTS.vibratoRate, now, 0.02); // Vibrato kan snel blijven
+      vibratoGain.gain.setTargetAtTime(params.vibratoDepth ?? STRING_VIOLIN_DEFAULTS.vibratoDepth, now, 0.02); // Vibrato kan snel blijven
+
+      if (isReverbReady && reverbSendGain) {
+          reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, 0.02);
+      }
+      if (isDelayReady && delaySendGain) {
+          delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, 0.02);
+      }
+  } catch (e) {
+      console.error(`Error updating connection audio params for ${connection.id}:`, e);
+  }
 }
 function createAudioNodesForNode(node) {
   if (!audioContext || (!["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) && !isDrumType(node.type))) {
