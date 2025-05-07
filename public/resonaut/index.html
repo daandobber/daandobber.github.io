@@ -10,34 +10,55 @@
     <canvas id="mainCanvas"></canvas>
 
     <div id="toolbar">
-        <div id="toolbar-add-elements">
-            <button id="addSoundStarBtn" title="Add Sound Star (S)">★</button>
-            <button id="addSamplerBtn" title="Add Sampler Instrument">🛰️</button>
-            <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
-            <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
-            <button id="addPortalNebulaBtn" title="Add Portal Nebula (X)">🌀</button>
-            <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
-            <button id="addGateBtn" title="Add Gate">🚦</button>
-            <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
-            <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
-            <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
-            <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
-            <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
-            <button id="brushBtn" title="Brush Tool (B)">🖌️</button>
+        <div id="toolbar-column-left">
+            <p class="toolbar-column-title">Logic & Effects</p>
+            <div id="toolbar-pulsars">
+                <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-logic-nodes">
+                <button id="addGateBtn" title="Add Gate">🚦</button>
+                <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
+                <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
+                <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
+                <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
+                <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-environment-nodes">
+                <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
+                <button id="addPortalNebulaBtn" title="Add Portal Nebula (X)">🌀</button>
+            </div>
         </div>
-        <hr class="toolbar-divider">
-        <div id="toolbar-tools">
-            <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
-            <button id="connectBtn" title="Connect Tool (C)">🔗</button>
-            <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
-            <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
-            <button id="connectWaveTrailBtn" title="Connect with WaveTrail (W)">〰️</button>
-            <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
-            <button id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↩️</button>
-            <button id="redoBtn" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+
+        <div id="toolbar-column-right">
+            <p class="toolbar-column-title">Sound & Tools</p>
+            <div id="toolbar-sound-generators">
+                <button id="addAnalogSynthBtn" title="Add Analog Synth (A)">🎹</button>
+                <button id="addFmSynthBtn" title="Add FM Synth (F)">🔔</button>
+                <button id="addSamplerBtn" title="Add Sampler Instrument (S)">🛰️</button>
+                <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-connection-tools">
+                <button id="connectBtn" title="Connect Tool (C)">🔗</button>
+                <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
+                <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
+                <button id="connectWaveTrailBtn" title="Connect with WaveTrail (W)">〰️</button>
+            </div>
+             <hr class="toolbar-divider-compact">
+            <div id="toolbar-utility-tools">
+                <button id="brushBtn" title="Brush Tool (B)">🖌️</button>
+                <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
+                <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-app-tools">
+                <button id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↩️</button>
+                <button id="redoBtn" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+                <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
+            </div>
         </div>
-        <hr class="toolbar-divider">
-        <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
     </div>
 
     <div id="hamburgerMenuPanel" class="panel slide-panel hidden">
