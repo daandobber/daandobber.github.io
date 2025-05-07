@@ -62,7 +62,8 @@
     --beat-indicator-color: rgba(180, 210, 255, 0.5);
     --button-disabled-bg: #2a355a;
     --button-disabled-color: #7788aa;
-    --toolbar-width: 52px;
+    --toolbar-width: 52px; /* Bestaande verticale toolbar breedte */
+    --app-menu-bar-height: 40px; /* Nieuwe horizontale menubalk hoogte */
     --side-toolbar-width: 240px;
     --hamburger-panel-width: 240px;
     --mixer-button-width: 30px;
@@ -367,24 +368,177 @@ body {
     color: var(--text-color);
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column; /* Zorg dat menubalk en canvas onder elkaar komen */
+    justify-content: flex-start; /* Lijn bovenaan uit */
+    align-items: stretch; /* Strek items uit in de breedte */
     height: 100vh;
     transition: background 0.8s ease;
+    padding-top: var(--app-menu-bar-height); /* Ruimte voor de menubalk */
+    box-sizing: border-box;
+}
+
+#app-menu-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--app-menu-bar-height);
+    background-color: var(--panel-bg, rgba(20, 30, 55, 0.98));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 1000;
+    box-sizing: border-box;
+    color: var(--text-color, #ddeeff);
+}
+
+.app-menu-dropdown {
+    position: relative;
+    display: inline-block;
+    height: 100%;
+}
+
+.app-menu-button,
+.app-menu-bar-button {
+    background-color: transparent;
+    color: var(--text-color, #ddeeff);
+    padding: 0 12px; /* Padding aangepast voor hoogte */
+    font-size: 0.9em;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+    height: calc(var(--app-menu-bar-height) - 10px); /* Iets minder dan balkhoogte voor marge */
+    margin: 5px 0; /* Verticale marge */
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.app-menu-button:hover,
+.app-menu-bar-button:hover {
+    background-color: var(--button-hover, #405088);
+}
+
+.app-menu-bar-button.active {
+    background-color: var(--button-active, #6075b0);
+    color: white;
+}
+
+.app-menu-content {
+    display: none;
+    position: absolute;
+    background-color: var(--panel-bg, rgba(25, 35, 60, 0.98));
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.3);
+    z-index: 1001;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 5px 0;
+    top: 100%; /* Laat het direct onder de knop vallen */
+    left: 0;
+}
+
+.app-menu-content a {
+    color: var(--text-color, #ddeeff);
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.app-menu-content a:hover {
+    background-color: var(--button-hover, #405088);
+}
+
+.app-menu-dropdown:hover .app-menu-content {
+    display: block;
+}
+
+.app-menu-separator {
+    width: 1px;
+    height: calc(var(--app-menu-bar-height) - 16px);
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 0 8px;
+}
+
+.app-menu-bar-item {
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    height: 100%;
+}
+.app-menu-bar-item.hidden {
+    display: none !important;
+}
+
+#app-menu-bpm-controls {
+    gap: 5px;
+    margin-left: 5px;
+}
+
+#app-menu-bpm-controls label {
+    font-size: 0.85em;
+    opacity: 0.9;
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+}
+
+#app-menu-bpm-input {
+    background-color: rgba(0,0,0,0.2);
+    color: var(--text-color, #ddeeff);
+    border: 1px solid var(--button-hover, #405088);
+    padding: 4px;
+    border-radius: 3px;
+    width: 45px;
+    height: calc(var(--app-menu-bar-height) - 18px);
+    text-align: center;
+    font-size: 0.85em;
+    -moz-appearance: textfield;
+    box-sizing: border-box;
+}
+#app-menu-bpm-input::-webkit-inner-spin-button,
+#app-menu-bpm-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.app-menu-bar-beat-indicator {
+    width: 10px;
+    height: 10px;
+    background-color: var(--beat-indicator-color, rgba(180, 210, 255, 0.5));
+    border-radius: 50%;
+    margin-left: 8px;
+    opacity: 0;
+    transition: opacity 0.05s ease-out;
+}
+.app-menu-bar-beat-indicator.active {
+    opacity: 1;
+    transition: opacity 0.01s ease-in;
+}
+
+.app-menu-spacer {
+    flex-grow: 1;
 }
 
 #mainCanvas {
     display: block;
     width: 100%;
-    height: 100%;
+    height: 100%; /* Canvas vult nu de resterende ruimte door flexbox op body */
     cursor: crosshair;
     background: linear-gradient(135deg, var(--bg-gradient-stop-1), var(--bg-gradient-stop-2));
     touch-action: none;
+    /* top en height worden nu beheerd door de body padding-top */
 }
 
 #startMessage, #loadingIndicator {
-    position: absolute;
-    top: 50%;
+    position: fixed; /* Veranderd naar fixed om mee te scrollen met body padding */
+    top: calc(var(--app-menu-bar-height) + 50%); /* Houd rekening met menubalk */
     left: 50%;
     transform: translate(-50%, -50%);
     padding: 20px 30px;
@@ -407,18 +561,18 @@ body {
 #toolbar {
     position: fixed;
     left: 10px;
-    top: 10px;
-    z-index: 10;
+    top: calc(var(--app-menu-bar-height) + 10px); /* Onder de nieuwe menubalk */
+    z-index: 9; /* Lager dan app-menu-bar maar boven canvas */
     background-color: var(--panel-bg);
     border-radius: 5px;
-    padding: 4px; 
+    padding: 4px;
     display: flex;
     flex-direction: row;
-    gap: 4px; 
-    align-items: flex-start; 
+    gap: 4px;
+    align-items: flex-start;
     box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
-    width: auto; 
+    width: auto;
     box-sizing: border-box;
 }
 
@@ -430,16 +584,13 @@ body {
     background-color: rgba(0,0,0,0.05);
     padding: 4px;
     border-radius: 3px;
-    width: 50px; /* STARTWAARDE: Pas deze breedte aan naar wens/noodzaak */
-                 /* Als knoppen alleen iconen bevatten, kan dit smal zijn. */
-                 /* Bijvoorbeeld: 48px, 50px, 52px etc. */
-    box-sizing: border-box; /* Zorg dat padding meegerekend wordt in de width */
+    width: 50px;
+    box-sizing: border-box;
 }
 
 .toolbar-column-title {
-    display: none; /* Verborgen om ruimte te besparen; tooltips via 'title' attribuut zijn nu belangrijker */
+    display: none;
 }
-
 
 #toolbar-add-elements, #toolbar-tools {
     display: flex;
@@ -486,8 +637,14 @@ body {
     gap: 4px;
 }
 
+/* Undo/Redo knoppen zijn nu weg uit deze specifieke div, maar de div blijft voor hamburger */
+#toolbar-app-tools {
+    /* Als er alleen nog de hamburger knop in zit, kun je specifieke layout aanpassen indien nodig */
+}
+
+
 .toolbar-divider-compact,
-.toolbar-divider { /* Ook de oude class meenemen voor het geval die nog ergens gebruikt wordt */
+.toolbar-divider {
     border: none;
     height: 1px;
     background-color: var(--button-bg);
@@ -497,7 +654,7 @@ body {
 
 .panel {
     position: fixed;
-    top: 10px;
+    top: calc(var(--app-menu-bar-height) + 10px); /* Panelen beginnen ook onder de menubalk */
     background-color: var(--panel-bg);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 5px;
@@ -505,9 +662,9 @@ body {
     box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
     color: var(--text-color);
     transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0.3s;
-    height: calc(100vh - 30px);
-    overflow-y: auto; /* Allow vertical scroll */
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    height: calc(100vh - var(--app-menu-bar-height) - 20px); /* Hoogte aangepast */
+    overflow-y: auto;
+    overflow-x: hidden;
     box-sizing: border-box;
     scrollbar-width: thin;
     scrollbar-color: var(--button-active) var(--button-bg);
@@ -528,9 +685,9 @@ body {
 .panel::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
 
 #hamburgerMenuPanel {
-    left: 145px;    
+    left: calc(var(--toolbar-width) * 2 + 20px); /* Positie relatief aan de verticale toolbars */
     width: var(--hamburger-panel-width);
-    transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
+    transform: translateX(-100%); /* Start verborgen links */
     z-index: 9;
 }
 #hamburgerMenuPanel:not(.hidden) {
@@ -538,25 +695,25 @@ body {
 }
 
 #sideToolbar {
-    left: 145px;
+    left: calc(var(--toolbar-width) * 2 + 20px); /* Positie relatief aan de verticale toolbars */
     width: var(--side-toolbar-width);
-    transform: translateX(calc(-100% - 10px - var(--toolbar-width)));
+    transform: translateX(-100%);
     z-index: 8;
 }
 #sideToolbar:not(.hidden) {
      transform: translateX(0);
 }
 
-.right-panel {
+.right-panel { /* Mixer panel */
     right: 0;
     width: var(--side-toolbar-width);
-    transform: translateX(100%); /* Start hidden */
+    transform: translateX(100%);
     z-index: 7;
-    /* overflow-x: visible !important; */ /* Removed */
+    top: calc(var(--app-menu-bar-height) + 10px); /* Zorg dat mixer ook onder de menubalk start */
+    height: calc(100vh - var(--app-menu-bar-height) - 20px); /* Hoogte aangepast */
 }
 .right-panel:not(.hidden) {
-    /* Paneel schuift nu weer volledig uit */
-    transform: translateX(0); /* <-- Terug naar 0 */
+    transform: translateX(0);
 }
 
 .panel h3 {
@@ -698,10 +855,10 @@ body {
 .panel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; margin-top: -5px; cursor: pointer; }
 .panel input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var(--text-color); border-radius: 50%; border: none; cursor: pointer; }
 .panel select:focus, .panel input[type="range"]:focus, .panel input[type="number"]:focus, .panel input[type="text"]:focus, .panel input[type="color"]:focus { outline: 1px solid var(--button-active); border-color: var(--button-active); }
-.panel hr { border: none; border-top: 1px solid var(--button-bg); margin: 12px 0; opacity: 0.5; }
-.panel p { margin: 10px 0 5px 0; font-size: 0.9em; font-weight: bold; opacity: 0.9; color: var(--text-color); }
+.panel hr { border: none; border-top: 1px solid var(--button-bg); margin: 15px 0; opacity: 0.6; }
+.panel p { margin: 15px 0 5px 0; font-size: 0.9em; font-weight: bold; opacity: 0.9; color: var(--text-color); }
 .panel p:first-of-type { margin-top: 0; }
-.panel small { display: block; font-size: 0.8em; opacity: 0.7; margin-bottom: 8px; margin-top: 5px; line-height: 1.3; color: var(--button-disabled-color); }
+.panel small { display: block; font-size: 0.8em; opacity: 0.7; margin-bottom: 10px; margin-top: 2px; line-height: 1.3; color: var(--button-disabled-color); }
 .panel button {
     background-color: var(--button-bg);
     color: var(--text-color);
@@ -717,6 +874,11 @@ body {
 }
 .panel button:hover { background-color: var(--button-hover); }
 .panel button:active { background-color: var(--button-active); }
+#closeHamburgerBtn {
+    margin-top: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
 
 .panel .edit-drum-sound {
     margin-left: 15px;
@@ -733,107 +895,57 @@ body {
 #groupControls.hidden { display: none; }
 #groupControls label[for="groupFluctuateAmount"], #groupControls #groupFluctuateAmount { margin-left: 20px; width: calc(100% - 20px); }
 
-#gridControls {
-    display: none;
-}
-#gridOptions {
-    display: none;
+#gridControls, #gridOptions {
+    display: none; /* Worden niet meer direct gebruikt, logica zit in knoppen */
 }
 
 #transportControls {
-    position: absolute;
-    bottom: 15px;
+    position: fixed; /* Veranderd naar fixed */
+    bottom: 10px; /* Afstand van onderkant */
     left: 50%;
     transform: translateX(-50%);
     z-index: 6;
+    background-color: var(--panel-bg); /* Achtergrond toegevoegd voor consistentie */
     border: 1px solid rgba(100, 130, 180, 0.4);
     border-radius: 25px;
     padding: 5px 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    width: auto;
-    max-width: 95%;
+    width: auto; /* Auto breedte */
+    max-width: calc(100% - 40px); /* Zorg dat het niet te breed wordt */
     display: flex;
-    justify-content: center;
+    justify-content: center; /* Centreer de overgebleven items */
     align-items: center;
-    gap: 8px;
-    height: auto;
-    overflow-x: auto;
+    gap: 10px; /* Aangepaste gap */
+    height: 50px; /* Vaste hoogte voor de balk */
+    overflow: visible; /* Zodat piano roll er niet uitvalt als te smal */
     white-space: nowrap;
-    background: none;
 }
 
 #transportControls button,
-#transportControls .transport-label,
-#transportControls select,
-#transportControls #bpmControls,
-#transportControls .transport-divider {
+#transportControls select {
     flex-shrink: 0;
     margin: 0;
-}
-
-#transportControls button {
     background: var(--button-bg);
     color: var(--text-color);
     border: none;
-    padding: 8px 15px;
+    padding: 6px 12px;
     cursor: pointer;
-    border-radius: 20px;
-    font-size: 0.9em;
-    font-weight: bold;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    border-radius: 15px;
+    font-size: 0.85em;
+    transition: background-color 0.2s ease;
 }
 
-#transportControls button:hover {
+#transportControls button:hover,
+#transportControls select:hover {
     background-color: var(--button-hover);
 }
-
-#transportControls button:active {
-    transform: scale(0.95);
-}
-
 #transportControls button.active {
     background-color: var(--button-active);
     color: white;
 }
 
-#transportControls button#restartPulsarsBtn.hidden {
-    display: none;
-}
-
-#transportControls #bpmControls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: 5px;
-}
-
-#transportControls #bpmControls.hidden {
-    display: none;
-}
-
-#transportControls #bpmControls label {
-    margin: 0;
-    font-size: 0.9em;
-    opacity: 0.9;
-}
-
-#transportControls #bpmControls input[type="number"] {
-    background-color: var(--button-bg);
-    color: var(--text-color);
-    border: 1px solid var(--button-hover);
-    padding: 4px;
-    border-radius: 3px;
-    width: 50px;
-    text-align: right;
-    font-size: 0.9em;
-    -moz-appearance: textfield;
-     appearance: textfield;
-}
-
-#transportControls input[type=number]::-webkit-inner-spin-button,
-#transportControls input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+#transportControls select {
+    min-width: 100px; /* Iets minder breed misschien */
 }
 
 .transport-divider {
@@ -844,76 +956,27 @@ body {
     align-self: center;
 }
 
-#transportControls .transport-label {
-    margin: 0 3px 0 8px;
-    font-size: 0.9em;
-    opacity: 0.9;
-    vertical-align: middle;
-}
-
-#transportControls select {
-    background-color: var(--button-bg);
-    color: var(--text-color);
-    border: 1px solid var(--button-hover);
-    padding: 4px 6px;
-    border-radius: 3px;
-    font-size: 0.85em;
-    vertical-align: middle;
-    cursor: pointer;
-    min-width: 120px;
-}
-#transportControls select:focus {
-    outline: 1px solid var(--button-active);
-    border-color: var(--button-active);
-}
-
-#transportControls #gridToggleBtn,
-#transportControls #toggleInfoTextBtn,
-#transportControls #gridSnapBtn { /* GridSnapBtn hier toegevoegd */
-    padding: 6px 10px;
-    font-size: 0.85em;
-    border-radius: 15px;
-}
-
-
 #transportControls #pianoRollCanvas {
     display: block;
-    width: 300px;
-    height: 55px;
-    background-color: transparent;
+    width: 250px; /* Aangepaste breedte */
+    height: 40px; /* Aangepaste hoogte */
+    background-color: rgba(0,0,0,0.1); /* Lichte achtergrond voor zichtbaarheid */
     border-radius: 4px;
     cursor: pointer;
-    order: 10;
     flex-shrink: 0;
     margin-left: 5px;
 }
 
-#beatIndicator {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 5px;
-    background-color: var(--beat-indicator-color);
-    opacity: 0;
-    transition: opacity 0.05s ease-out;
-    pointer-events: none;
-    z-index: 1;
-}
-
-#beatIndicator.active {
-    opacity: 1;
-    transition: opacity 0.01s ease-in;
-}
+/* Verwijder de oude globale beatIndicator, die zit nu in de menubalk */
+/* #beatIndicator { ... } */
 
 
-/* Mixer Toggle Button (Fixed, Jumping) */
 #mixerToggleBtn {
     position: fixed;
-    top: 50%;
+    top: calc(var(--app-menu-bar-height) + 20px); /* Onder de menubalk + marge */
     right: 0px;
-    transform: translateY(-50%);
-    z-index: 11; /* Verhoogd voor zekerheid */
+    transform: translateY(0); /* Geen Y translatie meer nodig */
+    z-index: 11;
     background-color: var(--button-bg);
     color: var(--text-color);
     padding: 15px 8px;
@@ -935,21 +998,21 @@ body {
 }
 
 #mixerToggleBtn.active {
-    right: var(--side-toolbar-width); /* Verplaats naar links */
+    right: var(--side-toolbar-width);
     background-color: var(--button-active);
     color: white;
     border-color: var(--text-color);
-    border-right: 1px solid var(--button-hover); /* Rand toevoegen */
+    border-right: 1px solid var(--button-hover);
     border-left: none;
-    border-radius: 0 8px 8px 0; /* Afronding aanpassen */
+    border-radius: 0 8px 8px 0;
 }
 
 #mixerToggleBtn.active span {
-    display: none; /* Verberg tekst */
+    display: none;
 }
 
 #mixerToggleBtn.active::before {
-    content: '▶'; /* Toon pijl */
+    content: '▶';
     display: block;
     font-size: 1.1em;
     line-height: 1;
@@ -957,7 +1020,6 @@ body {
     width: 100%;
 }
 
-/* Mixer Panel Content Styles */
 #mixerPanel h3 {
     margin-top: 0;
     margin-bottom: 15px;
@@ -1002,7 +1064,6 @@ body {
      margin-right: 15px;
      min-width: 80px;
 }
-
 
 #mixerPanel span {
     display: inline-block;
@@ -1190,4 +1251,115 @@ body {
     margin-bottom: 3px;
     display: block;
     opacity: 0.9;
+}
+
+.brush-tool-section {
+    margin-bottom: 15px;
+}
+
+.brush-section-header {
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--text-color);
+    margin: 0 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--button-bg);
+}
+
+.brush-section-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    align-items: center;
+    justify-items: center;
+}
+
+.brush-option-icon-button {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.brush-option-icon-button:hover {
+    background-color: var(--button-hover);
+    border-color: var(--button-active);
+}
+
+.brush-option-icon-button.selected {
+    background-color: var(--button-active);
+    border-color: var(--text-color);
+    color: white;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+}
+
+.brush-option-icon-button.disabled {
+    background-color: var(--button-disabled-bg);
+    color: var(--button-disabled-color);
+    cursor: not-allowed;
+    border-color: var(--button-bg);
+    opacity: 0.6;
+}
+
+.brush-option-icon-button .type-icon {
+    line-height: 1;
+}
+
+.floating-panel {
+    position: fixed;
+    background-color: var(--panel-bg, rgba(25, 35, 60, 0.95));
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    color: var(--text-color, #ddeeff);
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0s 0.2s;
+    transform: scale(0.95) translateY(-10px);
+}
+.floating-panel:not(.hidden) {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1) translateY(0);
+    transition-delay: 0s, 0s, 0s;
+}
+
+#help-popup {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 300px;
+    max-width: 90%;
+}
+#help-popup:not(.hidden) {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.close-panel-button {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.6em;
+    line-height: 1;
+    padding: 0 5px;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.close-panel-button:hover {
+    opacity: 1;
 }
