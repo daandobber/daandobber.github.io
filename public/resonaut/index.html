@@ -7,6 +7,51 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-major-pentatonic">
+
+    <div id="app-menu-bar">
+        <div class="app-menu-dropdown">
+            <button class="app-menu-button">File</button>
+            <div class="app-menu-content">
+                <a href="#" id="app-menu-new">New</a>
+                <a href="#" id="app-menu-load">Load</a>
+                <a href="#" id="app-menu-save">Save</a>
+            </div>
+        </div>
+        <div class="app-menu-dropdown">
+            <button class="app-menu-button">MIDI</button>
+            <div class="app-menu-content">
+                <a href="#" id="app-menu-midi-coming-soon">Coming Soon</a>
+            </div>
+        </div>
+        <div class="app-menu-dropdown">
+            <button class="app-menu-button">Advanced</button>
+            <div class="app-menu-content">
+                <a href="#" id="app-menu-advanced-coming-soon">Coming Soon</a>
+            </div>
+        </div>
+
+        <button id="app-menu-undo-btn" class="app-menu-bar-button" title="Undo (Ctrl/Cmd+Z)">↩️</button>
+        <button id="app-menu-redo-btn" class="app-menu-bar-button" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+        <button id="app-menu-ableton-link-btn" class="app-menu-bar-button" title="Ableton Link">Link</button>
+
+        <div class="app-menu-separator"></div>
+
+        <button id="app-menu-grid-toggle-btn" class="app-menu-bar-button" title="Toggle Grid Visibility (G)">Grid: OFF</button>
+        <button id="app-menu-grid-snap-btn" class="app-menu-bar-button" title="Toggle Snap to Grid (N)">Snap: OFF</button>
+
+        <div class="app-menu-separator"></div>
+
+        <button id="app-menu-sync-toggle-btn" class="app-menu-bar-button" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+        <div id="app-menu-bpm-controls" class="app-menu-bar-item hidden">
+             <label for="app-menu-bpm-input">BPM:</label>
+             <input type="number" id="app-menu-bpm-input" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
+        </div>
+        <button id="app-menu-play-pause-btn" class="app-menu-bar-button">Play ▶</button>
+        <button id="app-menu-restart-pulsars-btn" class="app-menu-bar-button hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+        <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
+
+        <div class="app-menu-spacer"></div> <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
+    </div>
     <canvas id="mainCanvas"></canvas>
 
     <div id="toolbar">
@@ -54,8 +99,6 @@
             </div>
             <hr class="toolbar-divider-compact">
             <div id="toolbar-app-tools">
-                <button id="undoBtn" title="Undo (Ctrl/Cmd+Z)">↩️</button>
-                <button id="redoBtn" title="Redo (Ctrl/Cmd+Y)">↪️</button>
                 <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
             </div>
         </div>
@@ -73,7 +116,6 @@
              <hr>
         </div>
         <p><strong>Global Settings:</strong></p>
-        <small>(Scale is now in Transport Controls & Piano Roll)</small>
         <div id="editPanelContent">
             </div>
          <hr>
@@ -85,39 +127,22 @@
          <small>Configure MIDI Out per element in its settings.</small>
          <hr>
          <p><strong>Save/Load:</strong></p>
-         <button id="saveStateBtn">Save Constellation</button>
-         <input type="file" id="loadStateInput" accept=".json" style="display: none;">
-         <button id="loadStateBtn">Load Constellation</button>
-         <small>Saves/Loads the current state locally.</small>
+         <input type="file" id="loadStateInput" accept=".json" style="display: none;"> <small>Use File > Load/Save in the top menu bar.</small>
+         <hr>
+         <button id="closeHamburgerBtn" class="close-panel-button">Close Menu</button>
     </div>
 
     <div id="sideToolbar" class="panel slide-panel hidden">
         <h3 id="sideToolbarTitle">Elements</h3>
         <div id="sideToolbarContent">
-            <label>Select Note:</label> <div id="hexNoteSelectorContainer" class="hex-note-container">
-            </div>
-    </div>
             </div>
     </div>
 
     <div id="transportControls">
-        <button id="playPauseBtn">Play ▶</button>
-        <button id="globalSyncToggleBtn" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
-        <div id="bpmControls" class="hidden">
-             <label for="globalBpmInput">BPM:</label>
-             <input type="number" id="globalBpmInput" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
-        </div>
-        <button id="restartPulsarsBtn" class="hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
-        <div class="transport-divider"></div>
         <select id="scaleSelectTransport" title="Change musical scale and theme">
-        </select>
-        <div class="transport-divider"></div>
-        <button id="gridToggleBtn" title="Toggle Grid Visibility (G)">Grid: OFF</button>
-        <button id="gridSnapBtn" title="Toggle Snap to Grid">Snap: OFF</button>
-        <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button>
-        <div class="transport-divider"></div>
-        <canvas id  ="pianoRollCanvas"></canvas>
-    </div>
+            </select>
+        <div class="transport-divider"></div> <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button> <div class="transport-divider"></div>
+        <canvas id="pianoRollCanvas"></canvas> </div>
 
     <div id="mixerPanel" class="panel right-panel slide-panel hidden">
         <h3>Mixer</h3>
@@ -145,7 +170,11 @@
         <span>Mixer</span>
     </div>
 
-    <div id="beatIndicator"></div>
+    <div id="help-popup" class="floating-panel hidden">
+        <button id="close-help-popup-btn" class="close-panel-button">&times;</button> <h3>Help</h3>
+        <p>Coming Soon...</p>
+    </div>
+
     <div id="startMessage">Create musical constellations. Click or tap anywhere to start. Hover over elements for more info.</div>
     <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
     <script src="samplers.js"></script>
