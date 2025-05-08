@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonaut</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-major-pentatonic">
+
+    <div id="app-menu-bar">
+        <div class="app-menu-dropdown">
+            <button class="app-menu-button">File</button>
+            <div class="app-menu-content">
+                <a href="#" id="app-menu-new">New</a>
+                <a href="#" id="app-menu-load">Load</a>
+                <a href="#" id="app-menu-save">Save</a>
+            </div>
+        </div>
+        <div class="app-menu-dropdown">
+             <button class="app-menu-button">MIDI</button>
+             <div class="app-menu-content">
+                 <a href="#" id="app-menu-midi-coming-soon">Coming Soon</a>
+             </div>
+        </div>
+        <div class="app-menu-dropdown">
+            <button class="app-menu-button">Advanced</button>
+            <div class="app-menu-content">
+                <a href="#" id="app-menu-node-designer">Node Designer</a>
+            </div>
+        </div>
+
+        <button id="app-menu-undo-btn" class="app-menu-bar-button" title="Undo (Ctrl/Cmd+Z)">↩️</button>
+        <button id="app-menu-redo-btn" class="app-menu-bar-button" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+        <button id="app-menu-ableton-link-btn" class="app-menu-bar-button" title="Ableton Link">Link</button>
+
+        <div class="app-menu-separator"></div>
+
+        <button id="app-menu-grid-toggle-btn" class="app-menu-bar-button" title="Toggle Grid Visibility (G)">Grid: OFF</button>
+        <button id="app-menu-grid-snap-btn" class="app-menu-bar-button" title="Toggle Snap to Grid (N)">Snap: OFF</button>
+
+        <div class="app-menu-separator"></div>
+
+        <button id="app-menu-sync-toggle-btn" class="app-menu-bar-button" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+        <div id="app-menu-bpm-controls" class="app-menu-bar-item hidden">
+            <label for="app-menu-bpm-input">BPM:</label>
+            <input type="number" id="app-menu-bpm-input" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
+        </div>
+        <button id="app-menu-play-pause-btn" class="app-menu-bar-button">Play ▶</button>
+        <button id="app-menu-restart-pulsars-btn" class="app-menu-bar-button hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+        <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
+
+        <div class="app-menu-spacer"></div> <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
+    </div>
+    <canvas id="mainCanvas"></canvas>
+
+    <div id="toolbar">
+        <div id="toolbar-column-left">
+            <p class="toolbar-column-title">Logic & Effects</p>
+            <div id="toolbar-pulsars">
+                <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-logic-nodes">
+                <button id="addGateBtn" title="Add Gate">🚦</button>
+                <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
+                <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
+                <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
+                <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
+                <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-environment-nodes">
+                <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
+                <button id="addPortalNebulaBtn" title="Add Portal Nebula (X)">🌀</button>
+            </div>
+        </div>
+
+        <div id="toolbar-column-right">
+            <p class="toolbar-column-title">Sound & Tools</p>
+            <div id="toolbar-sound-generators">
+                <button id="addAnalogSynthBtn" title="Add Analog Synth (A)">🎹</button>
+                <button id="addFmSynthBtn" title="Add FM Synth (F)">🔔</button>
+                <button id="addSamplerBtn" title="Add Sampler Instrument (S)">🛰️</button>
+                <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-connection-tools">
+                <button id="connectBtn" title="Connect Tool (C)">🔗</button>
+                <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
+                <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
+                <button id="connectWaveTrailBtn" title="Connect with WaveTrail (W)">〰️</button>
+            </div>
+             <hr class="toolbar-divider-compact">
+            <div id="toolbar-utility-tools">
+                <button id="brushBtn" title="Brush Tool (B)">🖌️</button>
+                <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
+                <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
+            </div>
+            <hr class="toolbar-divider-compact">
+            <div id="toolbar-app-tools">
+                <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="hamburgerMenuPanel" class="panel slide-panel hidden">
+         <div id="groupControls" class="hidden">
+             <p><strong>Constellation Controls:</strong> (<span id="groupNodeCount">0</span> nodes)</p>
+             <label for="groupVolumeSlider">Group Volume:</label>
+             <input type="range" id="groupVolumeSlider" min="0" max="1.5" step="0.01" value="1.0" title="Adjust volume for the selected constellation">
+             <label for="groupFluctuateToggle">Volume Fluctuation:</label>
+             <input type="checkbox" id="groupFluctuateToggle" title="Enable/Disable slow volume fluctuation">
+             <label for="groupFluctuateAmount">Fluctuation Amount:</label>
+             <input type="range" id="groupFluctuateAmount" min="0" max="0.3" step="0.01" value="0.08" title="Adjust intensity of volume fluctuation (Requires Fluctuation Enabled)">
+             <hr>
+         </div>
+         <p><strong>Global Settings:</strong></p>
+         <div id="editPanelContent">
+             </div>
+          <hr>
+          <p><strong>MIDI Settings:</strong></p>
+          <label for="midiInSelect">MIDI Input (Transpose):</label>
+          <select id="midiInSelect" title="Select MIDI Input Device for Transposition"><option value="">None</option></select>
+          <label for="midiOutSelect">MIDI Output:</label>
+          <select id="midiOutSelect" title="Select MIDI Output Device"><option value="">None</option></select>
+          <small>Configure MIDI Out per element in its settings.</small>
+          <hr>
+          <p><strong>Save/Load:</strong></p>
+          <input type="file" id="loadStateInput" accept=".json" style="display: none;"> <small>Use File > Load/Save in the top menu bar.</small>
+          <hr>
+          <button id="closeHamburgerBtn" class="close-panel-button">Close Menu</button>
+     </div>
+
+    <div id="sideToolbar" class="panel slide-panel hidden">
+        <h3 id="sideToolbarTitle">Elements</h3>
+        <div id="sideToolbarContent">
+            </div>
+    </div>
+
+    <div id="transportControls">
+        <select id="scaleSelectTransport" title="Change musical scale and theme">
+            </select>
+        <div class="transport-divider"></div> <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button> <div class="transport-divider"></div>
+        <canvas id="pianoRollCanvas"></canvas> </div>
+
+    <div id="mixerPanel" class="panel right-panel slide-panel hidden">
+        <h3>Mixer</h3>
+        <div class="panel-section">
+            <label for="masterVolumeSlider">Master Volume:</label>
+            <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
+            <span id="masterVolumeValue">0.80</span>
+        </div>
+        <div id="mixerGroupControlsContainer" class="panel-section">
+            </div>
+        <div class="panel-section">
+            <label for="delaySendSlider">Delay Send:</label>
+            <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount">
+            <span id="delaySendValue">0.30</span>
+            <label for="delayTimeSlider">Delay Time:</label>
+            <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)">
+            <span id="delayTimeValue">0.25s</span>
+             <label for="delayFeedbackSlider">Delay Feedback:</label>
+            <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
+            <span id="delayFeedbackValue">0.40</span>
+        </div>
+    </div>
+
+    <div id="mixerToggleBtn" title="Open/Close Mixer">
+        <span>Mixer</span>
+    </div>
+
+    <div id="help-popup" class="floating-panel hidden">
+        <button id="close-help-popup-btn" class="close-panel-button">&times;</button> <h3>Help</h3>
+        <p>Coming Soon...</p>
+    </div>
+
+    <div id="startMessage">Create musical constellations. Click or tap anywhere to start. Hover over elements for more info.</div>
+    <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
+
+    <div id="tester-overlay" class="hidden">
+        <button id="closeTesterBtn" style="position: absolute; top: 10px; right: 15px; z-index: 101; padding: 5px 10px; font-size:0.9em;">Close Tester</button>
+
+        <div class="tester-controls" style="overflow-y: auto; height: 100%; width: 350px; background: #fff; padding: 15px; border-radius: 5px; flex-shrink: 0;">
+            <h2>Parameters</h2>
+             <div class="param-group">
+                 <h3>Preset Info</h3>
+                 <div class="control-row"> <label for="presetType">Type (ID):</label> <input type="text" id="presetType" placeholder="e.g., sine_pad or fm_bright"> </div>
+                 <div class="control-row"> <label for="presetLabel">Label:</label> <input type="text" id="presetLabel" placeholder="e.g., Sine Pad"> </div>
+                 <div class="control-row"> <label for="presetIcon">Icon:</label> <input type="text" id="presetIcon" placeholder="e.g., ○ or ✨"> </div>
+             </div>
+             <div class="param-group">
+                 <h3>Audio: Algemeen</h3>
+                 <div class="control-row">
+                     <label for="masterVolume">Volume:</label>
+                     <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.2">
+                     <span class="value-display" id="masterVolumeValue">0.20</span>
+                 </div>
+                  <div>
+                     <label for="scaleList">Muzikale Schaal:</label>
+                     <div id="scaleList"></div>
+                  </div>
+                  <div class="control-row" style="margin-top: 10px;">
+                     <label for="scaleIndex">Schaal Index:</label>
+                     <input type="number" id="scaleIndex" min="-24" max="36" step="1" value="0">
+                      <span class="value-display" id="noteNameDisplay">C3</span>
+                  </div>
+             </div>
+             <div class="param-group">
+                 <h3>Audio: Oscillator 1 (Carrier)</h3>
+                 <div class="control-row">
+                     <label for="osc1Type">Type:</label>
+                     <select id="osc1Type">
+                         <option value="sine" selected>Sine</option>
+                         <option value="square">Square</option>
+                         <option value="sawtooth">Sawtooth</option>
+                         <option value="triangle">Triangle</option>
+                     </select>
+                 </div>
+                 <div class="control-row">
+                     <label for="osc1Octave">Octaaf:</label>
+                     <input type="range" id="osc1Octave" min="-2" max="2" step="1" value="0">
+                     <span class="value-display" id="osc1OctaveValue">0</span>
+                 </div>
+             </div>
+             <div class="param-group">
+                 <h3>Audio: Oscillator 2 / FM</h3>
+                  <div class="control-row">
+                     <label for="osc2Type">Osc2 Type:</label>
+                     <select id="osc2Type">
+                         <option value="off" selected>Uit (Off)</option>
+                         <option value="sine">Sine</option>
+                         <option value="square">Square</option>
+                         <option value="sawtooth">Sawtooth</option>
+                         <option value="triangle">Triangle</option>
+                         <option value="noise">Noise</option>
+                     </select>
+                 </div>
+                 <div class="control-row">
+                     <label for="osc2Octave">Osc2 Octaaf:</label>
+                     <input type="range" id="osc2Octave" min="-2" max="2" step="1" value="0">
+                     <span class="value-display" id="osc2OctaveValue">0</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="osc2Detune">Osc2 Detune:</label>
+                     <input type="range" id="osc2Detune" min="-50" max="50" step="1" value="0">
+                     <span class="value-display" id="osc2DetuneValue">0</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="osc2Mix">Osc2 Mix:</label>
+                     <input type="range" id="osc2Mix" min="0" max="1" step="0.01" value="0.0">
+                     <span class="value-display" id="osc2MixValue">0.00</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="enableFM">Activeer FM:</label>
+                     <input type="checkbox" id="enableFM">
+                 </div>
+                 <div class="control-row">
+                     <label for="modulatorRatio">FM Ratio:</label>
+                     <input type="range" id="modulatorRatio" min="0.1" max="10" step="0.01" value="1.0">
+                     <span class="value-display" id="modulatorRatioValue">1.00</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="modulationIndex">FM Index:</label>
+                     <input type="range" id="modulationIndex" min="0" max="2000" step="10" value="0">
+                     <span class="value-display" id="modulationIndexValue">0</span>
+                 </div>
+             </div>
+             <div class="param-group">
+                 <h3>Audio: Filter</h3>
+                 <div class="control-row">
+                     <label for="filterType">Type:</label>
+                     <select id="filterType">
+                         <option value="lowpass" selected>Lowpass</option>
+                         <option value="highpass">Highpass</option>
+                         <option value="bandpass">Bandpass</option>
+                         <option value="notch">Notch</option>
+                     </select>
+                 </div>
+                 <div class="control-row">
+                     <label for="filterCutoff">Cutoff (Hz):</label>
+                     <input type="range" id="filterCutoff" min="20" max="20000" step="1" value="12000">
+                     <span class="value-display" id="filterCutoffValue">12000</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="filterResonance">Resonance (Q):</label>
+                     <input type="range" id="filterResonance" min="0.001" max="30" step="0.01" value="1">
+                     <span class="value-display" id="filterResonanceValue">1.00</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="filterEnvAmount">Env Amount:</label>
+                     <input type="range" id="filterEnvAmount" min="-7200" max="7200" step="100" value="0">
+                     <span class="value-display" id="filterEnvAmountValue">0</span>
+                 </div>
+             </div>
+             <div class="param-group">
+                 <h3>Audio: Amplitude Envelope</h3>
+                 <div class="control-row">
+                     <label for="ampEnvAttack">Attack (s):</label>
+                     <input type="range" id="ampEnvAttack" min="0.001" max="2" step="0.001" value="0.01">
+                     <span class="value-display" id="ampEnvAttackValue">0.010</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="ampEnvDecay">Decay (s):</label>
+                     <input type="range" id="ampEnvDecay" min="0.01" max="2" step="0.01" value="0.1">
+                     <span class="value-display" id="ampEnvDecayValue">0.10</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="ampEnvSustain">Sustain Lvl:</label>
+                     <input type="range" id="ampEnvSustain" min="0" max="1" step="0.01" value="0.5">
+                     <span class="value-display" id="ampEnvSustainValue">0.50</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="ampEnvRelease">Release (s):</label>
+                     <input type="range" id="ampEnvRelease" min="0.01" max="5" step="0.01" value="0.3">
+                     <span class="value-display" id="ampEnvReleaseValue">0.30</span>
+                 </div>
+             </div>
+             <div class="param-group">
+                 <h3>Visuals</h3>
+                  <div class="control-row">
+                      <label for="visualSource">Bron:</label>
+                      <select id="visualSource">
+                          <option value="geometric" selected>Geometrisch</option>
+                          <option value="waveform">Waveform</option>
+                      </select>
+                  </div>
+                  <div class="control-row">
+                     <label for="visualFillWaveform">Fill Waveform:</label>
+                     <input type="checkbox" id="visualFillWaveform">
+                 </div>
+                 <div class="control-row">
+                     <label for="visualShape">Basis Vorm:</label>
+                     <select id="visualShape">
+                         <option value="circle" selected>Circle</option>
+                         <option value="star">Star</option>
+                         <option value="rectangle">Rectangle</option>
+                         <option value="triangle">Triangle</option>
+                         <option value="ellipse">Ellipse</option>
+                     </select>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualPointCount">Punt Aantal:</label>
+                     <input type="range" id="visualPointCount" min="0" max="12" step="1" value="0">
+                     <span class="value-display" id="visualPointCountValue">0 (Basis)</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualDeformAmplitude">Deform Amplitude:</label>
+                     <input type="range" id="visualDeformAmplitude" min="0" max="0.5" step="0.01" value="0">
+                     <span class="value-display" id="visualDeformAmplitudeValue">0.00</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualDeformFrequency">Deform Frequency:</label>
+                     <input type="range" id="visualDeformFrequency" min="1" max="16" step="1" value="3">
+                     <span class="value-display" id="visualDeformFrequencyValue">3</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualDeformPhase">Deform Phase:</label>
+                     <input type="range" id="visualDeformPhase" min="0" max="360" step="1" value="0">
+                     <span class="value-display" id="visualDeformPhaseValue">0&deg;</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualSymmetryType">Symmetrie:</label>
+                     <select id="visualSymmetryType">
+                         <option value="none" selected>Geen</option>
+                         <option value="mirrorX">Spiegel X</option>
+                         <option value="mirrorY">Spiegel Y</option>
+                         <option value="mirrorXY">Spiegel XY</option>
+                         <option value="rotational">Rotationeel</option>
+                     </select>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualSymmetryOrder">Rotatie Orde:</label>
+                     <input type="range" id="visualSymmetryOrder" min="2" max="12" step="1" value="4">
+                     <span class="value-display" id="visualSymmetryOrderValue">4</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualPoints">Ster Punten (Basis):</label>
+                     <input type="range" id="visualPoints" min="3" max="12" step="1" value="5">
+                     <span class="value-display" id="visualPointsValue">5</span>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualInnerRadius">Ster Inner Radius (Basis):</label>
+                     <input type="range" id="visualInnerRadius" min="0.1" max="0.9" step="0.01" value="0.5">
+                     <span class="value-display" id="visualInnerRadiusValue">0.50</span>
+                 </div>
+                  <div class="control-row">
+                      <label for="visualAnimateRotation">Animate Rotation:</label>
+                     <input type="checkbox" id="visualAnimateRotation" checked>
+                 </div>
+                  <div class="control-row">
+                     <label for="visualBorderWidth">Border Width:</label>
+                     <input type="range" id="visualBorderWidth" min="0.5" max="10" step="0.1" value="2">
+                     <span class="value-display" id="visualBorderWidthValue">2.0</span>
+                 </div>
+
+                 <h4>Basiskleur (HSL) <button id="randomizeBaseColorBtn">Random</button></h4>
+                 <div class="color-sliders">
+                     <div class="control-row"><label for="visualBaseHue">Hue:</label><input type="range" id="visualBaseHue" min="0" max="360" step="1" value="220"><span class="value-display" id="visualBaseHueValue">220</span></div>
+                     <div class="control-row"><label for="visualBaseSat">Saturation:</label><input type="range" id="visualBaseSat" min="0" max="100" step="1" value="75"><span class="value-display" id="visualBaseSatValue">75%</span></div>
+                     <div class="control-row"><label for="visualBaseLight">Lightness:</label><input type="range" id="visualBaseLight" min="0" max="100" step="1" value="65"><span class="value-display" id="visualBaseLightValue">65%</span></div>
+                 </div>
+                  <h4>Randkleur (HSLA) <button id="randomizeBorderColorBtn">Random</button></h4>
+                 <div class="color-sliders">
+                     <div class="control-row"><label for="visualBorderHue">Hue:</label><input type="range" id="visualBorderHue" min="0" max="360" step="1" value="220"><span class="value-display" id="visualBorderHueValue">220</span></div>
+                     <div class="control-row"><label for="visualBorderSat">Saturation:</label><input type="range" id="visualBorderSat" min="0" max="100" step="1" value="65"><span class="value-display" id="visualBorderSatValue">65%</span></div>
+                     <div class="control-row"><label for="visualBorderLight">Lightness:</label><input type="range" id="visualBorderLight" min="0" max="100" step="1" value="50"><span class="value-display" id="visualBorderLightValue">50%</span></div>
+                     <div class="control-row"><label for="visualBorderAlpha">Alpha:</label><input type="range" id="visualBorderAlpha" min="0" max="1" step="0.01" value="1"><span class="value-display" id="visualBorderAlphaValue">1.00</span></div>
+                 </div>
+                  <h4>Gloedkleur (HSL) <button id="randomizeGlowColorBtn">Random</button></h4>
+                 <div class="color-sliders">
+                      <div class="control-row"><label for="visualGlowHue">Hue:</label><input type="range" id="visualGlowHue" min="0" max="360" step="1" value="220"><span class="value-display" id="visualGlowHueValue">220</span></div>
+                     <div class="control-row"><label for="visualGlowSat">Saturation:</label><input type="range" id="visualGlowSat" min="0" max="100" step="1" value="85"><span class="value-display" id="visualGlowSatValue">85%</span></div>
+                     <div class="control-row"><label for="visualGlowLight">Lightness:</label><input type="range" id="visualGlowLight" min="0" max="100" step="1" value="75"><span class="value-display" id="visualGlowLightValue">75%</span></div>
+                 </div>
+             </div>
+             <div class="param-group">
+                 <h3>Audio: Arpeggiator</h3>
+                 <div class="control-row">
+                     <label for="arpSpeed">Noten Snelheid:</label>
+                     <input type="range" id="arpSpeed" min="50" max="500" step="10" value="120">
+                     <span class="value-display" id="arpSpeedValue">120ms</span>
+                 </div>
+                 <div class="control-row">
+                     <label for="arpPattern">Patroon:</label>
+                     <select id="arpPattern">
+                         <option value="up" selected>Omhoog</option>
+                         <option value="down">Omlaag</option>
+                         <option value="upDown">Omhoog-Omlaag</option>
+                         <option value="random">Willekeurig</option>
+                     </select>
+                 </div>
+                  <div class="control-row">
+                     <label for="arpOctaves">Octaven:</label>
+                     <input type="range" id="arpOctaves" min="1" max="3" step="1" value="1">
+                     <span class="value-display" id="arpOctavesValue">1</span>
+                 </div>
+             </div>
+             <div class="button-row">
+                 <button id="manualTriggerButton">Test Sound</button>
+             </div>
+        </div>
+
+        <div class="tester-right-column" style="flex-grow: 1; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden;">
+            <div class="tester-preview-area" style="background: #fff; padding: 15px; border-radius: 5px; flex-shrink: 0;">
+                <h2>Live Preview</h2>
+                <canvas id="previewCanvas" width="200" height="200" style="border: 1px solid #ccc; background-color: #282c34; display: block; margin: 10px auto;"></canvas>
+                <p style="font-size: 0.85em; color: #555; text-align: center;">Node verschijning</p>
+            </div>
+            <div class="tester-output" style="background: #fff; padding: 15px; border-radius: 5px; flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <h2>Generated Preset JSON</h2>
+                <pre id="codeOutput" style="flex-grow: 1; font-family: monospace; white-space: pre; background-color: #282c34; color: #abb2bf; padding: 10px; border-radius: 4px; overflow: auto; box-sizing: border-box; font-size: 0.85em; min-height: 100px;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="samplers.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
