@@ -83,6 +83,11 @@ const GRAIN_DURATION = 0.09;
 const GRAIN_OVERLAP = 0.07;  
 const GRAIN_INTERVAL = GRAIN_DURATION - GRAIN_OVERLAP; 
 const toolbar = document.getElementById("toolbar");
+const ROCKET_DEFAULT_SPEED = 150.0; // Wereld-eenheden per seconde
+const ROCKET_DEFAULT_RANGE = 400; // Maximale afstand in wereld-eenheden
+const ROCKET_DEFAULT_GRAVITY = 50; // Wereld-eenheden per seconde^2 (voor de boog)
+const ROCKET_EXPLOSION_PARTICLES = 25;
+const ROCKET_PULSE_VISUAL_SIZE = 4; // Basisgrootte voor de raket-pulse visual
 
 
 let isAbletonLinkActive = false; 
@@ -117,6 +122,10 @@ let pianoRollHexagons = [];
 let activeNebulaInteractions = new Map(); 
 let portalGroupGain = null;
 let originalNebulaGroupGain = null;
+let activeRockets = []; // Array om actieve vuurpijlen bij te houden
+let rocketIdCounter = 0; // Aparte teller voor raket IDs
+let isRotatingRocket = null; // Houdt de node bij die geroteerd wordt, of null
+let rotationStartDetails = { screenX: 0, screenY: 0, initialAngleRad: 0 }; // Details bij start rotatie
 
 const NODE_RADIUS_BASE = 12
 const MIN_NODE_SIZE = 0.6
@@ -381,7 +390,8 @@ const pulsarTypes = [
   { type: "pulsar_random_volume", label: "Random Volume", icon: "🔀🔆" },
   { type: "pulsar_random_particles", label: "Random Timing", icon: "🎲🔆" },
   { type: "pulsar_triggerable", label: "Triggerable", icon: "⚡🔆" },
-  { type: "pulsar_manual", label: "Manual", icon: "👆" }
+  { type: "pulsar_manual", label: "Manual", icon: "👆" },
+  { type: "pulsar_rocket", label: "Rocket", icon: "🚀" } // NIEUW
 ];
 
 
@@ -2829,7 +2839,7 @@ function addNode(x, y, type, subtype = null) {
   let finalPos = applySnap ? snapToGrid(x, y) : { x: x, y: y };
 
   const isStartNodeType = isPulsarType(type);
-  let nodeType = type;
+  let nodeTypeVisual = type; // Gebruik 'type' voor visuele en logische typering
   let initialScaleIndex = 0;
   let initialPitch = 0;
   let nodeSubtypeForAudioParams = subtype;
@@ -2840,8 +2850,8 @@ function addNode(x, y, type, subtype = null) {
   let selectedPreset = null;
   if (type === "sound") {
     selectedPreset = analogWaveformPresets.find(p => p.type === subtype) || fmSynthPresets.find(p => p.type === subtype);
-  } else if (isPulsarType(type)) {
-    nodeSubtypeForAudioParams = type;
+  } else if (isPulsarType(type)) { // Hieronder valt ook "pulsar_rocket"
+    nodeSubtypeForAudioParams = type; // Voor pulsars is het type ook de 'subtype' voor audioParams
     selectedPreset = pulsarTypes.find(p => p.type === type);
   }
 
@@ -2921,7 +2931,8 @@ function addNode(x, y, type, subtype = null) {
   const newNode = {
     id: nodeIdCounter++,
     x: finalPos.x, y: finalPos.y, size: randomSize, radius: NODE_RADIUS_BASE,
-    type: nodeType, baseHue: initialBaseHue, connections: new Set(),
+    type: nodeTypeVisual, // Gebruik de 'type' parameter die binnenkomt
+    baseHue: initialBaseHue, connections: new Set(),
     isSelected: false, isInConstellation: false,
     audioParams: {
       waveform: nodeSubtypeForAudioParams,
@@ -2951,7 +2962,7 @@ function addNode(x, y, type, subtype = null) {
       gateModeIndex: type === "gate" ? (audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX) : 0,
       gateCounter: 0, lastRandomGateResult: true,
       midiOutEnabled: false, midiChannel: 1, midiNote: 60,
-      osc1Type: nodeSubtypeForAudioParams, // Zorg dat osc1Type ook gezet wordt
+      osc1Type: nodeSubtypeForAudioParams,
     },
     color: null, audioNodes: null, isStartNode: isStartNodeType,
     isTriggered: false, lastTriggerPulseId: -1, animationState: 0,
@@ -2963,13 +2974,20 @@ function addNode(x, y, type, subtype = null) {
     lastTriggerTime: -1, nextSyncTriggerTime: 0, nextRandomTriggerTime: 0,
   };
 
+  if (newNode.type === "pulsar_rocket") {
+    newNode.audioParams.rocketDirectionAngle = 0;
+    newNode.audioParams.rocketSpeed = ROCKET_DEFAULT_SPEED;
+    newNode.audioParams.rocketRange = ROCKET_DEFAULT_RANGE;
+    newNode.audioParams.rocketGravity = ROCKET_DEFAULT_GRAVITY;
+  }
+
   if (isStartNodeType && newNode.isEnabled && audioContext) {
     const nowTime = audioContext.currentTime;
     const interval = newNode.audioParams.triggerInterval;
 
-    if (nodeType === 'pulsar_random_particles') {
+    if (newNode.type === 'pulsar_random_particles') { // Gebruik newNode.type hier
       newNode.nextRandomTriggerTime = nowTime + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-    } else if (nodeType !== 'pulsar_triggerable' && nodeType !== 'pulsar_manual') {
+    } else if (newNode.type !== 'pulsar_triggerable' && newNode.type !== 'pulsar_manual') { // Gebruik newNode.type hier
       if (isGlobalSyncEnabled) {
         const secondsPerBeat = 60.0 / (globalBPM || 120);
         const subdivIndex = newNode.audioParams.syncSubdivisionIndex;
@@ -4047,7 +4065,7 @@ function drawNode(node) {
   const isSelectedAndOutlineNeeded = isSelected && currentTool === "edit";
   const flashDuration = 0.1; let preTriggerFlash = 0; let wobbleX = 0, wobbleY = 0;
   const now = audioContext ? audioContext.currentTime : performance.now() / 1000;
-  const params = node.audioParams; 
+  const params = node.audioParams;
 
   if (isPlaying && isGlobalSyncEnabled && node.isStartNode && isSelectedAndOutlineNeeded && node.nextSyncTriggerTime > 0 && node.type !== "pulsar_random_particles") {
     const timeToNext = node.nextSyncTriggerTime - (audioContext?.currentTime ?? 0);
@@ -4058,22 +4076,21 @@ function drawNode(node) {
 
   const bloomFactor = 1 + node.animationState * 0.5 + preTriggerFlash * 0.6;
   const currentRadius = NODE_RADIUS_BASE * node.size * bloomFactor;
-  const r = currentRadius; 
+  const r = currentRadius;
   let fillColor, borderColor, glowColor;
   const styles = getComputedStyle(document.documentElement);
   const scaleBase = currentScale.baseHSL || { h: 200, s: 70, l: 70 };
   const isStartNodeDisabled = node.isStartNode && !node.isEnabled;
   const disabledFillColorGeneral = styles.getPropertyValue("--start-node-disabled-color").trim();
   const disabledBorderColorGeneral = styles.getPropertyValue("--start-node-disabled-border").trim();
-  const baseAlpha = (node.type === "nebula" ? 0.5 : (node.type === PORTAL_NEBULA_TYPE ? 0.7 : 0.6)) + node.size * 0.3; 
+  const baseAlpha = (node.type === "nebula" ? 0.5 : (node.type === PORTAL_NEBULA_TYPE ? 0.7 : 0.6)) + node.size * 0.3;
 
-  
   if (isPulsarType(node.type)) {
     const cssVarBase = `--${node.type.replace("_", "-")}`;
     fillColor = isStartNodeDisabled ? disabledFillColorGeneral : node.color || styles.getPropertyValue(`${cssVarBase}-color`, styles.getPropertyValue("--start-node-color")).trim();
     borderColor = isStartNodeDisabled ? disabledBorderColorGeneral : node.color ? node.color.replace(/[\d\.]+\)$/g, "1)") : styles.getPropertyValue(`${cssVarBase}-border`, styles.getPropertyValue("--start-node-border")).trim();
     glowColor = isStartNodeDisabled ? "transparent" : borderColor;
-  } else if (isDrumType(node.type)) { 
+  } else if (isDrumType(node.type)) {
     const typeName = node.type.replace("_", "-");
     fillColor = styles.getPropertyValue(`--${typeName}-color`).trim() || 'grey';
     borderColor = styles.getPropertyValue(`--${typeName}-border`).trim() || 'darkgrey';
@@ -4085,7 +4102,6 @@ function drawNode(node) {
   else if (node.type === "reflector") { fillColor = styles.getPropertyValue("--reflector-node-color").trim(); borderColor = styles.getPropertyValue("--reflector-node-border").trim(); glowColor = borderColor; }
   else if (node.type === "switch") { fillColor = styles.getPropertyValue("--switch-node-color").trim(); borderColor = styles.getPropertyValue("--switch-node-border").trim(); glowColor = borderColor; }
   else if (node.type === "sound" || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) {
-    
     const nodeBaseHue = ((node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + (params.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
     const lightness = scaleBase.l * (0.8 + node.size * 0.2);
     const saturation = scaleBase.s * (node.type === "nebula" ? 0.7 : (node.type === PORTAL_NEBULA_TYPE ? 0.9 : 1.0));
@@ -4094,7 +4110,6 @@ function drawNode(node) {
     borderColor = hslToRgba(nodeBaseHue, saturation * 0.8, lightness * 0.6, 0.9);
     glowColor = hslToRgba(nodeBaseHue, saturation, lightness * 1.1, 1.0);
   } else { fillColor = "grey"; borderColor = "darkgrey"; glowColor = "white"; }
-
 
   ctx.fillStyle = fillColor;
   ctx.strokeStyle = borderColor;
@@ -4128,11 +4143,9 @@ function drawNode(node) {
     ctx.shadowBlur = Math.min(40, glowAmount) / viewScale;
   } else { ctx.shadowBlur = 0; }
 
-  
-  const visualStyle = params.visualStyle; 
+  const visualStyle = params.visualStyle;
 
   if (node.type === "sound" && visualStyle) {
-    
     const planetColors = {
         planet_mercury: { fill: hslToRgba(30, 10, 55, baseAlpha), border: hslToRgba(30, 10, 40, 0.9), craters: hslToRgba(30,10,35, baseAlpha) },
         planet_venus:   { fill: hslToRgba(45, 50, 70, baseAlpha), border: hslToRgba(45, 50, 55, 0.9), swirl1: hslToRgba(50, 55, 75, baseAlpha*0.7), swirl2: hslToRgba(40, 45, 65, baseAlpha*0.6)},
@@ -4165,7 +4178,6 @@ function drawNode(node) {
     ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    
     switch (visualStyle) {
       case "planet_mercury":
         for (let i = 0; i < 3; i++) { const cr = r * (0.1 + Math.random() * 0.15); const ca = Math.random() * Math.PI * 2; const cx = node.x + Math.cos(ca) * r * 0.5; const cy = node.y + Math.sin(ca) * r * 0.5; ctx.fillStyle = currentPlanetColors.craters; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill(); }
@@ -4203,7 +4215,6 @@ function drawNode(node) {
       case "planet_neptune":
         ctx.fillStyle = currentPlanetColors.darkSpot; ctx.beginPath(); ctx.ellipse(node.x - r*0.3, node.y - r*0.2, r*0.4, r*0.25, Math.PI/6,0,Math.PI*2); ctx.fill();
         break;
-      
       case "fm_galaxy": drawStarShape(ctx, node.x, node.y, 7, r, r * 0.4); ctx.fill(); break;
       case "fm_crystal":
         for(let i=0; i<5; i++){ const angle = (i/5)*Math.PI*2 + now*0.1; ctx.beginPath(); ctx.moveTo(node.x + Math.cos(angle)*r*0.3, node.y + Math.sin(angle)*r*0.3); ctx.lineTo(node.x + Math.cos(angle+Math.PI*0.15)*r, node.y + Math.sin(angle+Math.PI*0.15)*r); ctx.lineTo(node.x + Math.cos(angle-Math.PI*0.15)*r, node.y + Math.sin(angle-Math.PI*0.15)*r); ctx.closePath(); ctx.fill(); }
@@ -4212,27 +4223,26 @@ function drawNode(node) {
         for(let i=0; i<3; i++){ ctx.fillRect(node.x - r*0.1 + i*r*0.4 - r*0.4, node.y - r*0.8, r*0.2, r*1.6); }
         break;
       case "fm_glass": ctx.beginPath(); ctx.moveTo(node.x-r*0.7, node.y+r*0.7); ctx.lineTo(node.x-r*0.3, node.y-r*0.7); ctx.lineTo(node.x+r*0.3, node.y-r*0.7); ctx.lineTo(node.x+r*0.7, node.y+r*0.7); ctx.stroke(); break;
-      case "fm_organ": drawStarShape(ctx, node.x, node.y, 4, r, r*0.8); ctx.fill(); ctx.stroke(); break; 
+      case "fm_organ": drawStarShape(ctx, node.x, node.y, 4, r, r*0.8); ctx.fill(); ctx.stroke(); break;
       case "fm_epiano": ctx.beginPath(); ctx.ellipse(node.x, node.y, r, r*0.6, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke(); break;
-      case "fm_ethnic": ctx.beginPath(); ctx.arc(node.x, node.y, r, Math.PI*0.2, Math.PI*0.8); ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, r, Math.PI*1.2, Math.PI*1.8); ctx.fill(); break; 
+      case "fm_ethnic": ctx.beginPath(); ctx.arc(node.x, node.y, r, Math.PI*0.2, Math.PI*0.8); ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, r, Math.PI*1.2, Math.PI*1.8); ctx.fill(); break;
       case "fm_metallic": ctx.beginPath(); ctx.rect(node.x - r*0.7, node.y - r*0.7, r*1.4, r*1.4); ctx.fill(); ctx.stroke(); drawStarShape(ctx, node.x, node.y, 6, r*0.5, r*0.2); ctx.fillStyle=borderColor; ctx.fill(); break;
       case "fm_harmonic": ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI*2); ctx.fill(); for(let i=1; i<4; i++){ctx.beginPath(); ctx.arc(node.x,node.y,r*(1-i*0.2),0,Math.PI*2); ctx.stroke();} break;
       case "fm_void": ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke(); break;
-      default: 
+      default:
         const waveform = params.waveform;
         if (waveform === "sine" || !waveform) { ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); }
         else if (waveform === "square") { ctx.beginPath(); ctx.rect(node.x - r * 0.9, node.y - r * 0.9, r * 1.8, r * 1.8); }
         else if (waveform === "triangle" || waveform === "sawtooth") { ctx.beginPath(); ctx.moveTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.866, node.y + r * 0.5); ctx.lineTo(node.x - r * 0.866, node.y + r * 0.5); ctx.closePath(); }
         else if (waveform === "fmBell" || waveform === "fmXylo") { drawStarShape(ctx, node.x, node.y, 5, r, r * 0.5); }
         else if (waveform?.startsWith("sampler_")) { let arms = 1; if (waveform === "sampler_piano") arms = 2; else if (waveform === "sampler_flute") arms = 3; drawSatelliteShape(ctx, node.x, node.y, r, arms); }
-        else { ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); } 
+        else { ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); }
         ctx.fill(); ctx.stroke();
         break;
     }
-    ctx.stroke(); 
+    ctx.stroke();
 
   } else if (isDrumType(node.type)) {
-      
       ctx.lineWidth = Math.max(0.5, baseLineWidth); ctx.strokeStyle = borderColor; ctx.fillStyle = fillColor;
       switch (node.type) {
           case 'drum_kick': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); const innerKickR = r * (0.6 + node.animationState * 0.1); ctx.fillStyle = node.color ? hexToRgba(rgbaToHex(node.color), 0.6) : fillColor.replace(/[\d\.]+\)$/g, '0.6)'); ctx.beginPath(); ctx.arc(node.x, node.y, innerKickR, 0, Math.PI * 2); ctx.fill(); break;
@@ -4243,7 +4253,7 @@ function drawNode(node) {
           case 'drum_cowbell': const topWidth = r * 0.8; const bottomWidth = r * 1.3; const cHeight = r * 1.1; ctx.beginPath(); ctx.moveTo(node.x - topWidth / 2, node.y - cHeight / 2); ctx.lineTo(node.x + topWidth / 2, node.y - cHeight / 2); ctx.lineTo(node.x + bottomWidth / 2, node.y + cHeight / 2); ctx.lineTo(node.x - bottomWidth / 2, node.y + cHeight / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
           default: ctx.beginPath(); ctx.rect(node.x - r * 0.8, node.y - r * 0.8, r * 1.6, r * 1.6); ctx.fill(); ctx.stroke(); break;
       }
-  } else if (node.type === "gate") { /* ... gate teken logica ... */
+  } else if (node.type === "gate") {
       const innerRadius = r * 0.4; const shieldRadius = r * 0.85; const openingStartAngle = -GATE_ANGLE_SIZE / 2; const openingEndAngle = GATE_ANGLE_SIZE / 2;
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke();
       const gateBgFill = fillColor + "90"; ctx.fillStyle = gateBgFill; ctx.fill();
@@ -4256,19 +4266,19 @@ function drawNode(node) {
       ctx.closePath(); ctx.fill();
       let shouldPassVisual = false; const mode = GATE_MODES[node.gateModeIndex || 0]; if (mode === "RAND") { shouldPassVisual = node.lastRandomGateResult; } else { const counterCheck = node.gateCounter || 0; switch (mode) { case "1/2": if (counterCheck % 2 === 0) shouldPassVisual = true; break; case "1/3": if (counterCheck % 3 === 0) shouldPassVisual = true; break; case "1/4": if (counterCheck % 4 === 0) shouldPassVisual = true; break; case "2/3": if (counterCheck % 3 !== 0) shouldPassVisual = true; break; case "3/4": if (counterCheck % 4 !== 0) shouldPassVisual = true; break; } }
       if (node.animationState > 0 && shouldPassVisual) { ctx.save(); ctx.strokeStyle = styles.getPropertyValue("--pulse-visual-color").trim() || "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = Math.max(1, 2.5 / viewScale); ctx.shadowColor = glowColor; ctx.shadowBlur = 10 / viewScale; ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.9, openingStartAngle, openingEndAngle); ctx.stroke(); ctx.restore(); }
-  } else if (node.type === "probabilityGate") { /* ... prob gate ... */
+  } else if (node.type === "probabilityGate") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       const fontSize = Math.max(8, (r * 0.8) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("%", node.x, node.y + fontSize * 0.1);
-  } else if (node.type === "pitchShift") { /* ... pitch shift ... */
+  } else if (node.type === "pitchShift") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = fillColor + "90"; ctx.fill();
       if (node.animationState < 0.5) { ctx.fillStyle = borderColor; ctx.beginPath(); const arrowSize = r * 0.5; const arrowY = node.y - arrowSize * 0.3; ctx.moveTo(node.x, arrowY - arrowSize / 2); ctx.lineTo(node.x - arrowSize / 2, arrowY + arrowSize / 2); ctx.lineTo(node.x + arrowSize / 2, arrowY + arrowSize / 2); ctx.closePath(); ctx.fill(); }
   } else if (node.type === "relay") { ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-  else if (node.type === "reflector") { /* ... reflector ... */
+  else if (node.type === "reflector") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       const fontSize = Math.max(8, (r * 0.9) / viewScale); ctx.font = `${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⟲", node.x, node.y + fontSize * 0.1);
   } else if (node.type === "switch") { ctx.beginPath(); ctx.moveTo(node.x - r * 0.8, node.y + r * 0.8); ctx.lineTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.8, node.y + r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
-  else if (node.type === "nebula") { /* ... nebula teken logica (complex) ... */
+  else if (node.type === "nebula") {
       wobbleX = Math.sin(now * 0.1 + node.id) * (2 / viewScale); wobbleY = Math.cos(now * 0.07 + node.id * 2) * (2 / viewScale);
       const nodeBaseHue = (node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + (params.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
       const baseSaturation = scaleBase.s * 0.8; const baseLightness = scaleBase.l * (0.7 + node.size * 0.2); const hueShiftSpeed = 10; const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360;
@@ -4277,21 +4287,86 @@ function drawNode(node) {
       for (let i = 0; i < numBlobs; i++) { const angleOffset = (now * (0.1 + i * 0.02) + node.id + i * 1.1); const distFactor = 0.15 + ((Math.sin(now * 0.15 + i * 0.9) + 1) / 2) * 0.25; const offsetX = Math.cos(angleOffset) * baseRadiusNeb * distFactor; const offsetY = Math.sin(angleOffset) * baseRadiusNeb * distFactor; const radiusFactor = 0.6 + ((Math.cos(now * 0.2 + i * 1.3) + 1) / 2) * 0.4; const blobRadius = baseRadiusNeb * radiusFactor * 0.7; const blobAlpha = 0.15 + ((Math.sin(now * 0.25 + i * 1.5) + 1) / 2) * 0.15; const blobLightness = baseLightness * (0.95 + ((Math.cos(now * 0.18 + i) + 1) / 2) * 0.15); const blobSaturation = baseSaturation * (0.9 + ((Math.sin(now * 0.22 + i * 0.5) + 1) / 2) * 0.15); const finalBlobAlpha = Math.min(1.0, blobAlpha * 1.5); ctx.fillStyle = hslToRgba(currentHue, blobSaturation, blobLightness, finalBlobAlpha); ctx.beginPath(); ctx.arc(offsetX, offsetY, blobRadius, 0, Math.PI * 2); ctx.fill(); }
       const coreRadius = baseRadiusNeb * 0.3; const coreAlpha = 0.3; ctx.fillStyle = hslToRgba(currentHue, baseSaturation * 1.1, baseLightness * 1.1, coreAlpha); ctx.beginPath(); ctx.arc(0, 0, coreRadius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8; const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(20, currentGlowAmount) / viewScale; ctx.fillStyle = "rgba(0,0,0,0)"; ctx.beginPath(); ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadiusNeb * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  } else if (node.type === PORTAL_NEBULA_TYPE) { /* ... portal teken logica ... */
+  } else if (node.type === PORTAL_NEBULA_TYPE) {
       const defaults = PORTAL_NEBULA_DEFAULTS; const pulseSpeed = defaults.pulseSpeed; const baseRadiusPortal = NODE_RADIUS_BASE * node.size; const nodeBaseHue = node.baseHue ?? defaults.baseColorHue; const hueShiftSpeed = 5; const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360; const saturation = scaleBase.s * 0.9; const lightness = scaleBase.l * 1.1;
       ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15; const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(40, currentGlowAmount) / viewScale;
       const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1; const irisRadius = baseRadiusPortal * irisRadiusFactor; const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2; ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha); ctx.beginPath(); ctx.arc(node.x, node.y, Math.max(1, irisRadius), 0, Math.PI * 2); ctx.fill(); ctx.restore();
       const numRings = 4; const originalLineWidth = ctx.lineWidth; ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
       for (let i = 1; i <= numRings; i++) { const ringPulsePhase = node.pulsePhase * (pulseSpeed * (1 + i * 0.1)); const ringRadiusFactor = 0.6 + i * 0.25 + Math.sin(ringPulsePhase) * 0.08; const ringRadius = baseRadiusPortal * ringRadiusFactor; const ringAlpha = 0.1 + (1 - i / numRings) * 0.3 + Math.sin(ringPulsePhase) * 0.05; const ringLightness = lightness * (1.0 - i * 0.1); ctx.strokeStyle = hslToRgba(currentHue, saturation * (1.0 - i * 0.05), ringLightness, ringAlpha); ctx.beginPath(); if (ringRadius > 0) { ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2); ctx.stroke(); } }
       ctx.lineWidth = originalLineWidth;
-  } else if (isPulsarType(node.type)) { /* ... pulsar teken logica ... */
-      const points = node.starPoints || 6; const outerR = r; const innerR = outerR * 0.4; drawStarShape(ctx, node.x, node.y, points, outerR, innerR); ctx.fill(); ctx.stroke();
-      if (node.type === "pulsar_triggerable") { const lockSize = outerR * 0.5; ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor; ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor; ctx.lineWidth = baseLineWidth * 0.5; ctx.beginPath(); ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5); ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25); ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true); ctx.stroke(); }
-  } else { 
+  } else if (isPulsarType(node.type)) {
+      const outerR = r;
+      const innerR = outerR * 0.4;
+      const points = node.starPoints || 6;
+
+      if (node.type === "pulsar_rocket") {
+          ctx.save();
+          ctx.translate(node.x, node.y);
+          const drawingAngleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
+          ctx.rotate(drawingAngleRad);
+
+          ctx.beginPath();
+          ctx.arc(0, 0, outerR * 0.9, 0, Math.PI * 2);
+          ctx.fillStyle = fillColor;
+          ctx.fill();
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = Math.max(0.5, (isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 / viewScale : baseLineWidth) * 0.8);
+          ctx.stroke();
+
+          const barrelLength = outerR * 1.4;
+          const barrelWidth = outerR * 0.5;
+          const barrelTipRadius = barrelWidth / 2.5;
+          ctx.fillStyle = borderColor;
+          ctx.strokeStyle = fillColor;
+          ctx.lineWidth = Math.max(0.5, baseLineWidth * 0.5);
+          ctx.beginPath();
+          const barrelBaseOffset = outerR * 0.2;
+          if (typeof ctx.roundRect === 'function') {
+              ctx.roundRect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth, barrelWidth / 3);
+          } else { // Fallback voor ctx.roundRect
+              ctx.rect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+
+          if (isSelectedAndOutlineNeeded) {
+              const handleOrbitRadius = outerR * 1.6;
+              const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2); // Hoek voor tekenen (0=rechts)
+              const handleDisplayOffsetAngleRad = Math.PI / 4; // Hoeveel de handle gedraaid is tov de loop
+              const handleActualDisplayAngleRad = drawingAngleForHandleRad + handleDisplayOffsetAngleRad;
+
+              const handleGripX = node.x + Math.cos(handleActualDisplayAngleRad) * handleOrbitRadius;
+              const handleGripY = node.y + Math.sin(handleActualDisplayAngleRad) * handleOrbitRadius;
+              const handleGripRadius = 6 / viewScale;
+
+              ctx.beginPath();
+              ctx.arc(handleGripX, handleGripY, handleGripRadius, 0, Math.PI * 2);
+              ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
+              ctx.fill();
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+              ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.arc(node.x, node.y, handleOrbitRadius * 0.9, drawingAngleForHandleRad - 0.5, drawingAngleForHandleRad + 0.5);
+              ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
+              ctx.lineWidth = Math.max(0.5, 2 / viewScale);
+              ctx.stroke();
+          }
+      } else {
+          drawStarShape(ctx, node.x, node.y, points, outerR, innerR);
+          ctx.fill();
+          ctx.stroke();
+          if (node.type === "pulsar_triggerable") {
+               const lockSize = outerR * 0.5; ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor; ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor; ctx.lineWidth = baseLineWidth * 0.5; ctx.beginPath(); ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5); ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25); ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true); ctx.stroke();
+          }
+      }
+  } else {
     ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 
-  if (isSelectedAndOutlineNeeded) { /* ... outline tekenen ... */
+  if (isSelectedAndOutlineNeeded && node.type !== "pulsar_rocket") { // Rocket pulsar heeft al z'n eigen selectie-feedback
     ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255, 255, 0, 0.9)";
     ctx.lineWidth = Math.max(0.5, 1.5 / viewScale); ctx.beginPath();
     const outlineRadius = NODE_RADIUS_BASE * node.size + 2 / viewScale;
@@ -4301,7 +4376,7 @@ function drawNode(node) {
   if (needsRestore) { ctx.restore(); }
   ctx.shadowBlur = 0;
 
-  if (isInfoTextVisible) { /* ... info tekst tekenen ... */
+  if (isInfoTextVisible) {
     const fontSize = Math.max(8, 10 / viewScale); ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle"; let labelText = ""; let secondLineText = "";
     const baseRadiusForLabel = NODE_RADIUS_BASE * node.size;
@@ -4309,16 +4384,30 @@ function drawNode(node) {
     ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
     if (node.type === "sound" || node.type === "nebula") {
         labelText = getNoteNameFromScaleIndex(currentScale, params.scaleIndex);
-        
         const presetDef = analogWaveformPresets.find(p => p.type === params.waveform) || fmSynthPresets.find(p => p.type === params.waveform);
-        if (presetDef && presetDef.label !== labelText) { 
+        if (presetDef && presetDef.label !== labelText) {
             secondLineText = presetDef.label;
         }
         if (node.type === "sound" && params.waveform?.startsWith("sampler_")) { labelYOffset = baseRadiusForLabel * 1.3 + fontSize / 1.5 + 2 / viewScale; }
         else if (node.type === "nebula") { labelYOffset = (baseRadiusForLabel * 1.1) * 1.2 + fontSize / 1.5 + 2 / viewScale; }
     }
     else if (node.type === PORTAL_NEBULA_TYPE) { labelText = "Portal"; labelYOffset = (baseRadiusForLabel * 1.1) + fontSize / 1.5 + 2 / viewScale; }
-    else if (isPulsarType(node.type)) { let typeLabel = pulsarTypes.find((pt) => pt.type === node.type)?.label || "Pulsar"; labelText = typeLabel; if (!node.isEnabled) labelText += " (Off)"; if (node.type === "pulsar_random_volume") { secondLineText = `Int: Random`; } else { if (node.type === "pulsar_random_particles") { secondLineText = "Timing: Random"; } else if (isGlobalSyncEnabled) { const subdiv = subdivisionOptions[node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX]; secondLineText = `Sync: ${subdiv?.label ?? "?"}`; } else { secondLineText = `Intv: ${(params.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`; } if (node.type !== "pulsar_random_volume") { secondLineText += ` | Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; } } }
+    else if (isPulsarType(node.type)) {
+        let typeLabel = pulsarTypes.find((pt) => pt.type === node.type)?.label || "Pulsar";
+        labelText = typeLabel;
+        if (!node.isEnabled && node.type !== "pulsar_manual") labelText += " (Off)";
+        if (node.type === "pulsar_random_volume") { secondLineText = `Int: Random`; }
+        else if (node.type === "pulsar_manual") { secondLineText = `Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`;}
+        else if (node.type !== "pulsar_rocket") {
+            if (node.type === "pulsar_random_particles") { secondLineText = "Timing: Random"; }
+            else if (isGlobalSyncEnabled) { const subdiv = subdivisionOptions[node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX]; secondLineText = `Sync: ${subdiv?.label ?? "?"}`; }
+            else { secondLineText = `Intv: ${(params.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`; }
+            if (node.type !== "pulsar_random_volume") { secondLineText += ` | Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; }
+        } else if (node.type === "pulsar_rocket") {
+            const angleDeg = ((params.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0);
+            secondLineText = `Dir: ${angleDeg}°`;
+        }
+    }
     else if (isDrumType(node.type)) { labelText = DRUM_ELEMENT_DEFAULTS[node.type]?.label || "Drum"; labelYOffset = baseRadiusForLabel + fontSize / 1.5 + 2 / viewScale; }
     else if (node.type === "gate") { labelText = GATE_MODES[node.gateModeIndex || 0]; }
     else if (node.type === "probabilityGate") { labelText = `${(params.probability * 100).toFixed(0)}%`; }
@@ -4472,7 +4561,15 @@ function drawBackground(now) {
 
 function draw() {
   const now = audioContext ? audioContext.currentTime : performance.now() / 1000;
-  const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+  // deltaTime wordt nu berekend in animationLoop en idealiter doorgegeven aan draw,
+  // of hier opnieuw berekend als draw() direct vanuit requestAnimationFrame wordt aangeroepen
+  // en previousFrameTime globaal is. Voor nu gaan we uit van de berekening in animationLoop.
+  // Laten we aannemen dat deltaTime als parameter aan draw() wordt meegegeven of globaal beschikbaar is.
+  // Voor de zekerheid, als het niet wordt meegegeven, berekenen we het hier opnieuw.
+  // Dit is echter minder ideaal dan het één keer per frame in animationLoop te doen.
+  const localDeltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+
+
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.translate(viewOffsetX, viewOffsetY);
@@ -4480,9 +4577,13 @@ function draw() {
 
   drawBackground(now);
   drawGrid();
-  updateAndDrawParticles(deltaTime, now);
+  updateAndDrawParticles(localDeltaTime, now); // Gebruik localDeltaTime
+
+  // Rockets tekenen/updaten na achtergrond en grid, voor andere elementen
+  updateAndDrawRockets(localDeltaTime, now); // Gebruik localDeltaTime
+
   connections.forEach(drawConnection);
-  nodes.forEach((node) => drawNode(node));
+  nodes.forEach((node) => drawNode(node)); // drawNode gebruikt 'now' intern voor animaties
 
   const nebulas = nodes.filter(n => n.type === "nebula");
   for (let i = 0; i < nebulas.length; i++) {
@@ -4499,41 +4600,29 @@ function draw() {
       }
   }
 
-  updateAndDrawPulses(now); 
+  updateAndDrawPulses(now);
 
-  
+
   if (isConnecting && (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail')) {
-       
-       
-       drawTemporaryConnection();
-  }
-  
-  else if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+      drawTemporaryConnection();
+  } else if (currentTool === 'brush' && isBrushing && lastBrushNode) {
       ctx.save();
-      
       const brushLineColor = 'rgba(255, 255, 100, 0.7)';
       const brushLineWidth = Math.max(0.6, 1.2 / viewScale);
-      const brushLineDash = [5 / viewScale, 3 / viewScale]; 
-
+      const brushLineDash = [5 / viewScale, 3 / viewScale];
       ctx.strokeStyle = brushLineColor;
       ctx.lineWidth = brushLineWidth;
       ctx.setLineDash(brushLineDash);
-
       ctx.beginPath();
-      ctx.moveTo(lastBrushNode.x, lastBrushNode.y); 
-      ctx.lineTo(mousePos.x, mousePos.y); 
+      ctx.moveTo(lastBrushNode.x, lastBrushNode.y);
+      ctx.lineTo(mousePos.x, mousePos.y);
       ctx.stroke();
-
-      ctx.restore(); 
+      ctx.restore();
   }
-  
 
-  drawSelectionRect(); 
-
-  ctx.restore(); 
-  previousFrameTime = now;
-  ctx.setLineDash([]); 
-
+  drawSelectionRect();
+  ctx.restore();
+  ctx.setLineDash([]);
 }
 function updateNebulaInteractionAudio() {
     
@@ -4807,6 +4896,195 @@ function generateWaveformPath(audioBuffer, targetPointCount = 200) {
       console.error("Error generating waveform path:", error);
       return null;
   }
+}
+
+function launchRocket(pulsarNode, pulseData) {
+  console.log(`%c[launchRocket] CALLED for pulsar: ${pulsarNode.id}, Type: ${pulsarNode.type}`, 'color: #00FF00; font-weight: bold;');
+  if (!audioContext) {
+      console.warn("[launchRocket] AudioContext not ready, aborting.");
+      return;
+  }
+  const params = pulsarNode.audioParams;
+  const directionAngleFromUI_rad = params.rocketDirectionAngle || 0; // Dit is de hoek uit de UI, waarbij 0 rad = 0 graden = omhoog
+  const speed = params.rocketSpeed || ROCKET_DEFAULT_SPEED;
+
+  // Correctie: UI 0 rad (omhoog) moet wiskundig -PI/2 rad worden.
+  // UI 90 graden (PI/2 rad, rechts) moet wiskundig 0 rad worden.
+  // Dus: effectieveHoek = uiHoek - PI/2
+  const effectiveLaunchAngleRad = directionAngleFromUI_rad - (Math.PI / 2);
+
+  console.log(`%c[launchRocket] UI Angle (0=up): ${directionAngleFromUI_rad.toFixed(2)} rad (${(directionAngleFromUI_rad * 180 / Math.PI).toFixed(1)}°). Effective Math Angle (0=right): ${effectiveLaunchAngleRad.toFixed(2)} rad (${(effectiveLaunchAngleRad * 180 / Math.PI).toFixed(1)}°)`, 'color: #00AAFF;');
+
+  const rocket = {
+    id: rocketIdCounter++,
+    sourcePulsarId: pulsarNode.id,
+    startX: pulsarNode.x,
+    startY: pulsarNode.y,
+    currentX: pulsarNode.x,
+    currentY: pulsarNode.y,
+    vx: speed * Math.cos(effectiveLaunchAngleRad), // Gebruik de gecorrigeerde hoek
+    vy: speed * Math.sin(effectiveLaunchAngleRad), // Gebruik de gecorrigeerde hoek
+    gravity: params.rocketGravity || ROCKET_DEFAULT_GRAVITY,
+    speed: speed,
+    range: params.rocketRange || ROCKET_DEFAULT_RANGE,
+    creationTime: audioContext.currentTime,
+    distanceTraveled: 0,
+    pulseData: { ...pulseData, color: pulsarNode.color || pulseData.color || getComputedStyle(document.documentElement).getPropertyValue('--pulse-visual-color').trim() },
+    maxLifeTime: (params.rocketRange || ROCKET_DEFAULT_RANGE) / speed,
+    previousX: pulsarNode.x,
+    previousY: pulsarNode.y
+  };
+  activeRockets.push(rocket);
+  console.log(`%c[launchRocket] Rocket ${rocket.id} ADDED. vx: ${rocket.vx.toFixed(2)}, vy: ${rocket.vy.toFixed(2)}. Total active: ${activeRockets.length}`, 'color: #00FF00;');
+}
+
+function updateAndDrawRockets(deltaTime, now) {
+  if (activeRockets.length > 0) {
+      console.log(`%c[updateAndDrawRockets] CALLED. Active rockets: ${activeRockets.length}`, 'color: #FFA500;');
+  }
+
+  activeRockets = activeRockets.filter(rocket => {
+    rocket.previousX = rocket.currentX;
+    rocket.previousY = rocket.currentY;
+
+    rocket.currentX += rocket.vx * deltaTime;
+    rocket.currentY += rocket.vy * deltaTime;
+    rocket.vy += rocket.gravity * deltaTime;
+    rocket.distanceTraveled += Math.sqrt(Math.pow(rocket.vx * deltaTime, 2) + Math.pow(rocket.vy * deltaTime, 2));
+
+    // console.log(`%c[updateAndDrawRockets] Rocket ${rocket.id}: Pos (${rocket.currentX.toFixed(1)}, ${rocket.currentY.toFixed(1)}), Dist: ${rocket.distanceTraveled.toFixed(1)}/${rocket.range}`, 'color: #FFC0CB;');
+
+    if (rocket.distanceTraveled >= rocket.range || (now - rocket.creationTime) > rocket.maxLifeTime * 1.1) {
+      console.log(`%c[updateAndDrawRockets] Rocket ${rocket.id} EXPIRED (range/lifetime). Creating explosion.`, 'color: #FF6347;');
+      createExplosionAnimation(rocket.currentX, rocket.currentY, rocket.pulseData.color);
+      return false;
+    }
+
+    const hitNode = checkRocketNodeCollision(rocket);
+    if (hitNode) {
+      console.log(`%c[updateAndDrawRockets] Rocket ${rocket.id} HIT NODE ${hitNode.id}. Creating explosion.`, 'color: #FF6347;');
+      createExplosionAnimation(rocket.currentX, rocket.currentY, rocket.pulseData.color);
+      const uniquePulseIdForHit = currentGlobalPulseId + rocket.id + hitNode.id;
+      propagateTrigger(hitNode, 0, uniquePulseIdForHit, rocket.sourcePulsarId, Infinity, { type: 'trigger', data: rocket.pulseData }, null);
+      return false;
+    }
+
+    const hitConnection = checkRocketConnectionCollision(rocket);
+    if (hitConnection) {
+      console.log(`%c[updateAndDrawRockets] Rocket ${rocket.id} HIT CONNECTION ${hitConnection.id}. Creating explosion.`, 'color: #FF6347;');
+      createExplosionAnimation(rocket.currentX, rocket.currentY, rocket.pulseData.color);
+      const nodeA = findNodeById(hitConnection.nodeAId);
+      const nodeB = findNodeById(hitConnection.nodeBId);
+      if (nodeA && nodeB) {
+        const uniquePulseIdForConnA = currentGlobalPulseId + rocket.id + nodeA.id + hitConnection.id;
+        const uniquePulseIdForConnB = currentGlobalPulseId + rocket.id + nodeB.id + hitConnection.id;
+        createVisualPulse(hitConnection.id, hitConnection.length * DELAY_FACTOR, nodeA.id, Infinity, 'trigger', rocket.pulseData.color, rocket.pulseData.intensity);
+        propagateTrigger(nodeB, hitConnection.length * DELAY_FACTOR, uniquePulseIdForConnA, nodeA.id, Infinity, { type: 'trigger', data: rocket.pulseData }, hitConnection);
+        createVisualPulse(hitConnection.id, hitConnection.length * DELAY_FACTOR, nodeB.id, Infinity, 'trigger', rocket.pulseData.color, rocket.pulseData.intensity);
+        propagateTrigger(nodeA, hitConnection.length * DELAY_FACTOR, uniquePulseIdForConnB, nodeB.id, Infinity, { type: 'trigger', data: rocket.pulseData }, hitConnection);
+      }
+      return false;
+    }
+
+    ctx.save();
+    const rocketColor = rocket.pulseData.color || 'rgba(255, 220, 150, 0.95)';
+    const visualSize = ROCKET_PULSE_VISUAL_SIZE / viewScale;
+
+    ctx.fillStyle = rocketColor;
+    ctx.shadowColor = rocketColor;
+    ctx.shadowBlur = 8 / viewScale;
+    ctx.beginPath();
+    ctx.arc(rocket.currentX, rocket.currentY, visualSize, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const tailLength = Math.max(visualSize * 1.5, 15 / viewScale);
+    const angle = Math.atan2(rocket.vy, rocket.vx);
+    const tailGradient = ctx.createLinearGradient(
+        rocket.currentX, rocket.currentY,
+        rocket.currentX - tailLength * Math.cos(angle), rocket.currentY - tailLength * Math.sin(angle)
+    );
+    try {
+        tailGradient.addColorStop(0, rocketColor.replace(/[\d\.]+\)$/g, '0.7)'));
+        tailGradient.addColorStop(1, rocketColor.replace(/[\d\.]+\)$/g, '0)'));
+    } catch(e) {}
+
+    ctx.strokeStyle = tailGradient;
+    ctx.lineWidth = Math.max(1, visualSize * 1.2);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(rocket.currentX, rocket.currentY);
+    ctx.lineTo(
+        rocket.currentX - tailLength * Math.cos(angle) * 0.8,
+        rocket.currentY - tailLength * Math.sin(angle) * 0.8
+    );
+    ctx.stroke();
+    ctx.restore();
+
+    return true;
+  });
+}
+
+function checkRocketNodeCollision(rocket) {
+  for (const node of nodes) {
+    if (node.id === rocket.sourcePulsarId) continue;
+    if (node.type === 'nebula' || node.type === PORTAL_NEBULA_TYPE) continue;
+
+    const collisionRadius = NODE_RADIUS_BASE * node.size * 0.8;
+    const dist = distance(rocket.currentX, rocket.currentY, node.x, node.y);
+
+    // console.log(`Rocket ${rocket.id} vs Node ${node.id}: Dist ${dist.toFixed(1)}, CollisionRadius ${collisionRadius.toFixed(1)}`);
+
+    if (dist < collisionRadius) {
+      return node;
+    }
+  }
+  return null;
+}
+
+// Vereenvoudigde connector collision: check afstand tot middelpunt van de curve.
+function checkRocketConnectionCollision(rocket) {
+  const collisionThreshold = 15 / viewScale; // Hoe dichtbij de raket moet zijn
+  for (const conn of connections) {
+    const nA = findNodeById(conn.nodeAId);
+    const nB = findNodeById(conn.nodeBId);
+    if (!nA || !nB) continue;
+
+    // Middelpunt van de quadratische Bezier curve
+    const midControlX = (nA.x + nB.x) / 2 + conn.controlPointOffsetX;
+    const midControlY = (nA.y + nB.y) / 2 + conn.controlPointOffsetY;
+    // Dichtstbijzijnde punt op de curve is complex. We nemen een punt halverwege de curve.
+    const curveMidX = lerp(lerp(nA.x, midControlX, 0.5), lerp(midControlX, nB.x, 0.5), 0.5);
+    const curveMidY = lerp(lerp(nA.y, midControlY, 0.5), lerp(midControlY, nB.y, 0.5), 0.5);
+
+    const distToMid = distance(rocket.currentX, rocket.currentY, curveMidX, curveMidY);
+
+    if (distToMid < collisionThreshold + (conn.length / 15)) { // Threshold + beetje afhankelijk van lengte
+        // Optioneel: check of de raket ongeveer in de buurt van het segment is
+        // Dit is een zeer ruwe check.
+        const lineMinX = Math.min(nA.x, nB.x) - collisionThreshold;
+        const lineMaxX = Math.max(nA.x, nB.x) + collisionThreshold;
+        const lineMinY = Math.min(nA.y, nB.y) - collisionThreshold;
+        const lineMaxY = Math.max(nA.y, nB.y) + collisionThreshold;
+
+        if (rocket.currentX >= lineMinX && rocket.currentX <= lineMaxX &&
+            rocket.currentY >= lineMinY && rocket.currentY <= lineMaxY) {
+
+            // Nog een check: beweegt de raket naar de lijn toe?
+            // Dit voorkomt dat een raket die net *voorbij* is, alsnog een hit registreert.
+            // Vector van raket naar curveMid:
+            const dxToCurve = curveMidX - rocket.currentX;
+            const dyToCurve = curveMidY - rocket.currentY;
+            // Dot product met snelheidsvector van de raket
+            const dotProduct = rocket.vx * dxToCurve + rocket.vy * dyToCurve;
+
+            if (dotProduct > 0) { // Als > 0, beweegt de raket ongeveer richting het middelpunt.
+                 return conn;
+            }
+        }
+    }
+  }
+  return null;
 }
 
 function updateMousePos(event) {
@@ -5098,20 +5376,33 @@ function handlePulsarTriggerToggle(node) {
   saveState()
 }
 
+
+function createExplosionAnimation(x, y, color) {
+  const explosionColor = color || 'rgba(255, 180, 80, 0.9)'; // Default oranje-achtig
+  for (let i = 0; i < ROCKET_EXPLOSION_PARTICLES; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.0 + Math.random() * 2.5; // Iets snellere deeltjes
+    const life = 0.4 + Math.random() * 0.5;  // Kortere levensduur
+    activeParticles.push({
+      id: particleIdCounter++, x: x, y: y,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      life: life, maxLife: life, radius: 1.5 + Math.random() * 2.0, color: explosionColor
+    });
+  }
+}
+
 let _tempWasSelectedAtMouseDown = false;
 
 function handleMouseDown(event) {
-  
   console.log(`DEBUG handleMouseDown Start: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}'`);
 
   if (!isPlaying && event.target === canvas) { togglePlayPause(); return; }
   if (!isAudioReady) return;
 
-  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target)
-                              || sideToolbar.contains(event.target)
-                              
-                              || transportControlsDiv.contains(event.target)
-                              || mixerPanel.contains(event.target);
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) ||
+                             sideToolbar.contains(event.target) ||
+                             transportControlsDiv.contains(event.target) ||
+                             mixerPanel.contains(event.target);
   if (targetIsPanelControl) { return; }
 
   updateMousePos(event);
@@ -5136,6 +5427,37 @@ function handleMouseDown(event) {
 
   mouseDownPos = { ...mousePos };
   isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false; didDrag = false; selectionRect.active = false;
+  isRotatingRocket = null;
+
+  if (potentialNodeClicked && potentialNodeClicked.type === "pulsar_rocket" &&
+      isElementSelected('node', potentialNodeClicked.id) && currentTool === 'edit') {
+      const outerR = NODE_RADIUS_BASE * potentialNodeClicked.size * (1 + potentialNodeClicked.animationState * 0.5);
+      const handleOrbitRadius = outerR * 1.6;
+      const handleGripRadius = 7 / viewScale;
+      const drawingAngleRad = (potentialNodeClicked.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
+      const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
+      const handleGripX_world = potentialNodeClicked.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
+      const handleGripY_world = potentialNodeClicked.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
+      const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
+
+      if (distToHandle < handleGripRadius) {
+          isRotatingRocket = potentialNodeClicked;
+          isDragging = false;
+          const initialMouseAngleToNodeCenterRad = Math.atan2(mousePos.y - isRotatingRocket.y, mousePos.x - isRotatingRocket.x);
+          rotationStartDetails = {
+              screenX: screenMousePos.x,
+              screenY: screenMousePos.y,
+              initialNodeUIAngleRad: isRotatingRocket.audioParams.rocketDirectionAngle || 0,
+              initialMouseMathAngleRad: initialMouseAngleToNodeCenterRad
+          };
+          canvas.style.cursor = 'grabbing';
+          console.log(`%c[MouseDown] Starting rotation for Rocket Pulsar ${isRotatingRocket.id}`, 'color: orange');
+          nodeClickedAtMouseDown = null;
+          elementClickedAtMouseDown = null;
+          connectionClickedAtMouseDown = null;
+      }
+  }
+
 
   if (event.button === 1 || (isSpacebarDown && event.button === 0)) {
       isPanning = true;
@@ -5144,23 +5466,24 @@ function handleMouseDown(event) {
       nodeClickedAtMouseDown = null;
       connectionClickedAtMouseDown = null;
       elementClickedAtMouseDown = null;
+      isRotatingRocket = null; // Zorg dat rotatie niet start bij pannen
       return;
   }
 
-  
-  if (elementClickedAtMouseDown) { 
+  if (isRotatingRocket) { // Als rotatie al is gestart, doe niets anders
+      return;
+  }
+
+  if (elementClickedAtMouseDown) {
       const element = elementClickedAtMouseDown;
       const node = element.type === 'node' ? nodeClickedAtMouseDown : null;
-      const connection = element.type === 'connection' ? connectionClickedAtMouseDown : null;
 
       if (event.shiftKey && currentTool === 'edit' && node) {
-          
           isResizing = true;
           resizeStartSize = node.size;
           resizeStartY = screenMousePos.y;
           canvas.style.cursor = 'ns-resize';
       } else if (event.shiftKey && currentTool !== 'edit') {
-          
           if (isElementSelected(element.type, element.id)) {
               selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
           } else {
@@ -5171,15 +5494,11 @@ function handleMouseDown(event) {
           populateEditPanel();
           nodeClickedAtMouseDown = null;
           connectionClickedAtMouseDown = null;
-      } else if (event.altKey && currentTool === 'edit') {
-          
       } else {
-          
           if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') {
-              
-              console.log("DEBUG MouseDown: Connect tool active. Clicked on node?", !!node); 
+              console.log("DEBUG MouseDown: Connect tool active. Clicked on node?", !!node);
               if (node && !['nebula', PORTAL_NEBULA_TYPE].includes(node.type)) {
-                  console.log("DEBUG MouseDown: Starting connection from node", node.id); 
+                  console.log("DEBUG MouseDown: Starting connection from node", node.id);
                   isConnecting = true;
                   connectingNode = node;
                   if (currentTool === 'connect_string') {
@@ -5191,32 +5510,26 @@ function handleMouseDown(event) {
                   } else {
                       connectionTypeToAdd = 'standard';
                   }
-                  console.log("DEBUG MouseDown: connectionTypeToAdd =", connectionTypeToAdd); 
+                  console.log("DEBUG MouseDown: connectionTypeToAdd =", connectionTypeToAdd);
                   canvas.style.cursor = 'grabbing';
               } else if (node) {
-                   console.log("DEBUG MouseDown: Cannot start connection from node type:", node.type); 
+                   console.log("DEBUG MouseDown: Cannot start connection from node type:", node.type);
               } else {
-                   console.log("DEBUG MouseDown: Connect tool active but did not click on a node."); 
+                   console.log("DEBUG MouseDown: Connect tool active but did not click on a node.");
               }
-              
           } else if (currentTool === 'delete') {
-              
               if (node) removeNode(node);
-              else if (connection) removeConnection(connection);
+              else if (connectionClickedAtMouseDown) removeConnection(connectionClickedAtMouseDown);
               nodeClickedAtMouseDown = null;
               connectionClickedAtMouseDown = null;
           } else if (currentTool === 'edit') {
-               
                let selectionChanged = false;
                if (!isElementSelected(element.type, element.id)) {
-                   
                    selectedElements.clear();
                    selectedElements.add(element);
                    selectionChanged = true;
                }
-               
-
-               if (node) { 
+               if (node) {
                    isDragging = true;
                    dragStartPos = { ...mousePos };
                    nodeDragOffsets.clear();
@@ -5228,19 +5541,17 @@ function handleMouseDown(event) {
                    });
                    canvas.style.cursor = 'move';
                }
-
                if (selectionChanged) {
                    updateConstellationGroup();
                    populateEditPanel();
                }
           }
       }
-  } else { 
+  } else {
       if (currentTool === 'edit') {
-          
           isSelecting = true;
           selectionRect = { startX: mousePos.x, startY: mousePos.y, endX: mousePos.x, endY: mousePos.y, active: false };
-          if (!event.shiftKey) { 
+          if (!event.shiftKey) {
               if (selectedElements.size > 0) {
                   selectedElements.clear();
                   updateConstellationGroup();
@@ -5248,18 +5559,13 @@ function handleMouseDown(event) {
               }
           }
       } else if (currentTool === 'add' && nodeTypeToAdd !== null) {
-           
            console.log(`DEBUG handleMouseDown: 'add' mode detected, node will be added on mouseUp.`);
            if (!event.shiftKey && selectedElements.size > 0) {
                selectedElements.clear();
                updateConstellationGroup();
                populateEditPanel();
            }
-      } else if (currentTool === 'brush') {
-          
-           
       } else if (!['connect', 'connect_string', 'connect_glide', 'connect_wavetrail', 'delete'].includes(currentTool)) {
-          
           if (selectedElements.size > 0 && !event.shiftKey) {
               selectedElements.clear();
               updateGroupControlsUI();
@@ -5267,17 +5573,16 @@ function handleMouseDown(event) {
           }
       }
   }
-  hideOverlappingPanels(); 
+  hideOverlappingPanels();
 }
 
 function handleMouseUp(event) {
   if (!isAudioReady) return;
   const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
   if (targetIsPanelControl) {
-      
-      isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false;
+      isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false; isRotatingRocket = null;
       selectionRect.active = false; connectingNode = null; nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null;
-      canvas.style.cursor = 'crosshair'; 
+      canvas.style.cursor = 'crosshair';
       return;
   }
 
@@ -5288,58 +5593,59 @@ function handleMouseUp(event) {
   if (nodeUnderCursor) elementUnderCursor = { type: 'node', id: nodeUnderCursor.id };
   else if (connectionUnderCursor) elementUnderCursor = { type: 'connection', id: connectionUnderCursor.id };
 
-  
   const wasSelectedAtStart = _tempWasSelectedAtMouseDown;
-  _tempWasSelectedAtMouseDown = false; 
+  _tempWasSelectedAtMouseDown = false;
 
   const wasResizing = isResizing;
   const wasConnecting = isConnecting;
-  const wasDragging = isDragging; 
-  const wasSelecting = isSelecting; 
+  const wasDragging = isDragging;
+  const wasSelecting = isSelecting;
   const wasPanning = isPanning;
+  const wasRotatingARocket = isRotatingRocket;
+
   const nodeClickedStart = nodeClickedAtMouseDown;
   const connectionClickedStart = connectionClickedAtMouseDown;
   const elementClickedStart = nodeClickedStart ? { type: 'node', id: nodeClickedStart.id } : (connectionClickedStart ? { type: 'connection', id: connectionClickedStart.id } : null);
-  let stateWasChanged = false; 
+  let stateWasChanged = false;
 
-  
   isResizing = false;
   isConnecting = false;
   isDragging = false;
   isSelecting = false;
   isPanning = false;
-  selectionRect.active = false; 
-  canvas.style.cursor = 'crosshair'; 
+  isRotatingRocket = null;
+  selectionRect.active = false;
+  canvas.style.cursor = 'crosshair';
 
-  
-
-  if (wasConnecting) {
-      
+  if (wasRotatingARocket) {
+    console.log(`%c[MouseUp] Finished rotation for Rocket Pulsar ${wasRotatingARocket.id}`, 'color: orange');
+    saveState();
+    stateWasChanged = true;
+  } else if (wasConnecting) {
+      console.log(`%c[handleMouseUp - Connect] connectingNode: ${connectingNode?.id}, nodeUnderCursor: ${nodeUnderCursor?.id}, type: ${nodeUnderCursor?.type}`, 'color: orange');
       if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor.type)) {
-        connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd); 
+        console.log(`%c[handleMouseUp - Connect] Attempting to connect ${connectingNode.id} to ${nodeUnderCursor.id}`, 'color: lightgreen');
+        connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
         stateWasChanged = true;
-    }
-      connectingNode = null; 
-      connectionTypeToAdd = 'standard'; 
+      } else {
+        console.log(`%c[handleMouseUp - Connect] Conditions not met for connection. connectingNode: ${!!connectingNode}, nodeUnderCursor: ${!!nodeUnderCursor}, different: ${nodeUnderCursor !== connectingNode}, valid type: ${!['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor?.type)}`, 'color: red');
+      }
+      connectingNode = null;
+      connectionTypeToAdd = 'standard';
   }
   else if (wasResizing) {
-      
-      stateWasChanged = true; 
+      stateWasChanged = true;
   }
   else if (wasDragging) {
-       
-       stateWasChanged = true; 
-       identifyAndRouteAllGroups(); 
+       stateWasChanged = true;
+       identifyAndRouteAllGroups();
   }
   else if (wasSelecting && didDrag) {
-      
       const selX1 = Math.min(selectionRect.startX, selectionRect.endX);
       const selY1 = Math.min(selectionRect.startY, selectionRect.endY);
       const selX2 = Math.max(selectionRect.startX, selectionRect.endX);
       const selY2 = Math.max(selectionRect.startY, selectionRect.endY);
-
-      if (!event.shiftKey) selectedElements.clear(); 
-
+      if (!event.shiftKey) selectedElements.clear();
       nodes.forEach(n => {
           if (n.x >= selX1 && n.x <= selX2 && n.y >= selY1 && n.y <= selY2) {
               selectedElements.add({ type: 'node', id: n.id });
@@ -5356,45 +5662,34 @@ function handleMouseUp(event) {
               }
           }
       });
-      stateWasChanged = true; 
+      stateWasChanged = true;
       updateConstellationGroup();
       populateEditPanel();
   }
-  
-  else if (!wasDragging && !wasPanning && !wasResizing) {
+  else if (!wasDragging && !wasPanning && !wasResizing && !wasRotatingARocket) { // wasRotatingARocket toegevoegd
       if (currentTool === 'brush') {
-          if (!elementUnderCursor) { 
+          if (!elementUnderCursor) {
               let typeToPlace = brushNodeType;
               let subtypeToPlace = (brushNodeType === 'sound') ? brushWaveform : null;
-
-              
               if (!isBrushing && brushStartWithPulse) {
                   typeToPlace = 'pulsar_standard';
                   subtypeToPlace = null;
-                  console.log("Brush: Placing Pulsar as first node.");
-              } else {
-                  console.log(`Brush: Placing selected type: ${brushNodeType} / ${subtypeToPlace}`);
               }
-
               const newNode = addNode(mousePos.x, mousePos.y, typeToPlace, subtypeToPlace);
-
               if (newNode) {
                   stateWasChanged = true;
                   if (isBrushing && lastBrushNode) {
-                      
                       connectNodes(lastBrushNode, newNode, 'standard');
                   }
-                  lastBrushNode = newNode; 
-                  isBrushing = true; 
-                  selectedElements.clear(); 
-                  selectedElements.add({ type: 'node', id: newNode.id }); 
+                  lastBrushNode = newNode;
+                  isBrushing = true;
+                  selectedElements.clear();
+                  selectedElements.add({ type: 'node', id: newNode.id });
                   populateEditPanel();
               }
-          } else { 
-              console.log("Brush: Chain ended by clicking existing element.");
-              isBrushing = false; 
+          } else {
+              isBrushing = false;
               lastBrushNode = null;
-              
               if (!isElementSelected(elementUnderCursor.type, elementUnderCursor.id)) {
                    if (!event.shiftKey) selectedElements.clear();
                    selectedElements.add(elementUnderCursor);
@@ -5404,31 +5699,26 @@ function handleMouseUp(event) {
                }
           }
       } else if (currentTool === 'edit') {
-          
           if (elementClickedStart && elementUnderCursor && elementClickedStart.type === elementUnderCursor.type && elementClickedStart.id === elementUnderCursor.id) {
-              
               const targetElement = elementClickedStart;
               const node = targetElement.type === 'node' ? nodeClickedStart : null;
               const connection = targetElement.type === 'connection' ? connectionClickedStart : null;
-
-              if (event.button === 0) { 
-                  if (event.altKey) { 
+              if (event.button === 0) {
+                  if (event.altKey) {
                       if (node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) { handlePitchCycleDown(targetElement); stateWasChanged = true; }
                       else if (connection && connection.type === 'string_violin') { handlePitchCycleDown(targetElement); stateWasChanged = true; }
-                  } else if (!event.shiftKey) { 
-                      
+                  } else if (!event.shiftKey) {
                       if (wasSelectedAtStart) {
                           if (node) {
-                              if (node.type === 'pulsar_manual') { triggerManualPulsar(node); /* No state change for manual trigger */ }
-                              else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles') { if (isGlobalSyncEnabled) { handleSubdivisionCycle(node); } else { handleTapTempo(node); } stateWasChanged = true; }
+                              if (node.type === 'pulsar_manual') { triggerManualPulsar(node); }
+                              else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles' && node.type !== "pulsar_rocket") { if (isGlobalSyncEnabled) { handleSubdivisionCycle(node); } else { handleTapTempo(node); } stateWasChanged = true; }
                               else if (node.type === 'sound' || node.type === 'nebula') { handlePitchCycle(targetElement); stateWasChanged = true; }
                               else if (node.type === 'gate') { handleGateCycle(node); stateWasChanged = true; }
                               else if (node.type === 'probabilityGate') { handleProbabilityCycle(node); stateWasChanged = true; }
                               else if (node.type === 'pitchShift') { handlePitchShiftCycle(node); stateWasChanged = true; }
-                              else if (isDrumType(node.type)) { triggerNodeEffect(node); /* No state change for drum trigger */ }
+                              else if (isDrumType(node.type)) { triggerNodeEffect(node); }
                           } else if (connection && connection.type === 'string_violin') { handlePitchCycle(targetElement); stateWasChanged = true; }
                       } else {
-                          
                           if (!isElementSelected(targetElement.type, targetElement.id) || selectedElements.size > 1) {
                               selectedElements.clear();
                               selectedElements.add(targetElement);
@@ -5438,55 +5728,46 @@ function handleMouseUp(event) {
                           }
                       }
                   }
-                  
               }
           } else if (!elementClickedStart && !event.shiftKey) {
-              
                if (selectedElements.size > 0) {
                    selectedElements.clear();
                    updateConstellationGroup();
                    populateEditPanel();
                    stateWasChanged = true;
                }
-               isBrushing = false; 
+               isBrushing = false;
                lastBrushNode = null;
           }
-      } else { 
-          isBrushing = false; 
+      } else {
+          isBrushing = false;
           lastBrushNode = null;
-
           if (currentTool === 'add' && !elementClickedStart) {
-              
               const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch'];
               const canAddNode = directAddTypes.includes(nodeTypeToAdd) ||
                                  (nodeTypeToAdd === 'sound' && waveformToAdd) ||
-                                 (nodeTypeToAdd === 'nebula' && waveformToAdd) || 
+                                 (nodeTypeToAdd === 'nebula' && waveformToAdd) ||
                                  (isPulsarType(nodeTypeToAdd)) ||
                                  (isDrumType(nodeTypeToAdd)) ||
                                  (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
-
               console.log(`DEBUG handleMouseUp: 'add' tool, canAddNode=${canAddNode}`);
-
               if (canAddNode) {
                   const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
                   if (newNode) {
                       console.log(`DEBUG handleMouseUp: Node added, id=${newNode.id}`);
-                      if (!event.shiftKey) selectedElements.clear(); 
-                      selectedElements.add({type: 'node', id: newNode.id}); 
+                      if (!event.shiftKey) selectedElements.clear();
+                      selectedElements.add({type: 'node', id: newNode.id});
                       populateEditPanel();
-                      stateWasChanged = true; 
+                      stateWasChanged = true;
                   } else {
                        console.error("DEBUG handleMouseUp: addNode failed!");
                   }
               }
           } else if (currentTool === 'delete' && elementClickedStart) {
-              
-              
               if (elementClickedStart.type === 'node') removeNode(nodeClickedStart);
               else if (elementClickedStart.type === 'connection') removeConnection(connectionClickedStart);
               stateWasChanged = true;
           } else if (!elementClickedStart && !event.shiftKey) {
-               
                if (selectedElements.size > 0) {
                    selectedElements.clear();
                    updateGroupControlsUI();
@@ -5497,26 +5778,38 @@ function handleMouseUp(event) {
       }
   }
 
-  
   didDrag = false;
   nodeClickedAtMouseDown = null;
   connectionClickedAtMouseDown = null;
   nodeWasSelectedAtMouseDown = false;
   nodeDragOffsets.clear();
   panStart = { x: 0, y: 0 };
-  connectionTypeToAdd = 'standard'; 
+  connectionTypeToAdd = 'standard';
 
-  
   if (stateWasChanged && !isPerformingUndoRedo) {
       saveState();
   }
-  updateGroupControlsUI(); 
+  updateGroupControlsUI();
 }
 function handleMouseMove(event) {
   if (!isAudioReady) return;
   updateMousePos(event);
 
-  
+  if (isRotatingRocket) {
+    const dx = mousePos.x - isRotatingRocket.x;
+    const dy = mousePos.y - isRotatingRocket.y;
+    const currentMouseMathAngleRad = Math.atan2(dy, dx);
+    let newUIAngleRad = currentMouseMathAngleRad + (Math.PI / 2);
+    newUIAngleRad = (newUIAngleRad % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2);
+    isRotatingRocket.audioParams.rocketDirectionAngle = newUIAngleRad;
+    if (!hamburgerMenuPanel.classList.contains("hidden") && selectedElements.has({type: 'node', id: isRotatingRocket.id})) {
+        populateEditPanel();
+    }
+    didDrag = true;
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
   const dragThreshold = 7;
   if (!didDrag && (isDragging || isResizing || isConnecting || isSelecting || isPanning) &&
       distance(
@@ -5531,7 +5824,6 @@ function handleMouseMove(event) {
       }
   }
 
-  
   if (isPanning) {
       const dx = screenMousePos.x - panStart.x;
       const dy = screenMousePos.y - panStart.y;
@@ -5552,11 +5844,6 @@ function handleMouseMove(event) {
       }
       canvas.style.cursor = "ns-resize";
   } else if (isConnecting) {
-      
-      console.log("handleMouseMove: isConnecting =", isConnecting, "Calling drawTemporaryConnection...");
-      
-      
-      
       canvas.style.cursor = "grabbing";
   } else if (isSelecting && didDrag) {
       selectionRect.endX = mousePos.x;
@@ -5594,13 +5881,26 @@ function handleMouseMove(event) {
       });
       canvas.style.cursor = "move";
   } else {
-      
       const hN = findNodeAt(mousePos.x, mousePos.y);
       const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null;
-      
        if (currentTool === "edit" && event.altKey && hN && (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")) { canvas.style.cursor = "pointer"; }
        else if (currentTool === "edit" && event.altKey && hC && hC.type === "string_violin") { canvas.style.cursor = "pointer"; }
-       else if (currentTool === "edit" && event.shiftKey && hN) { canvas.style.cursor = "ns-resize"; }
+       else if (currentTool === "edit" && event.shiftKey && hN && hN.type !== "pulsar_rocket") { canvas.style.cursor = "ns-resize"; }
+       else if (currentTool === "edit" && hN && hN.type === "pulsar_rocket" && isElementSelected('node', hN.id)) {
+            const outerR = NODE_RADIUS_BASE * hN.size * (1 + hN.animationState * 0.5);
+            const handleOrbitRadius = outerR * 1.6;
+            const handleGripRadiusView = 7 / viewScale; // Gevoeligheid voor hover op handle
+            const drawingAngleRad = (hN.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
+            const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
+            const handleGripX_world = hN.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
+            const handleGripY_world = hN.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
+            const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
+            if (distToHandle < handleGripRadiusView * viewScale) { // Check in wereldcoördinaten
+                 canvas.style.cursor = "grab"; // Of een rotatiecursor
+            } else {
+                 canvas.style.cursor = "move";
+            }
+       }
        else if ((currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') && hN && !['nebula', PORTAL_NEBULA_TYPE].includes(hN.type)) { canvas.style.cursor = "grab"; }
        else if (currentTool === "delete" && (hN || hC)) { canvas.style.cursor = "pointer"; }
        else if (currentTool === "edit" && (hN || hC)) { canvas.style.cursor = "move"; }
@@ -5705,11 +6005,14 @@ function saveState() {
 function loadState(stateToLoad) {
   if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
       console.error("Ongeldige of incomplete state data om te laden.");
-      return;
-      unsavedChanges = false; 
-      updateAbletonLinkButton(); 
-      console.log("State loaded successfully.");
+      return; // Stop hier als de data niet goed is.
   }
+
+  // De onbereikbare code van hier is verwijderd.
+  // unsavedChanges = false; // VERPLAATS DEZE
+  // updateAbletonLinkButton(); // VERPLAATS DEZE
+  // console.log("State loaded successfully."); // VERPLAATS DEZE
+
   isPerformingUndoRedo = true;
 
   nodes.forEach((node) => stopNodeAudio(node));
@@ -5724,7 +6027,7 @@ function loadState(stateToLoad) {
   isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
   globalBPM = stateToLoad.globalBPM ?? 120;
   currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
-  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"]; 
+  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
   currentRootNote = stateToLoad.currentRootNote ?? 0;
   globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
   viewOffsetX = stateToLoad.viewOffsetX ?? 0;
@@ -5757,12 +6060,12 @@ function loadState(stateToLoad) {
       node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
       node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
       node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; 
-      node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex; 
+      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+      node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
       node.audioParams.gateModeIndex = node.gateModeIndex ?? node.audioParams.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
-      node.gateModeIndex = node.audioParams.gateModeIndex; 
+      node.gateModeIndex = node.audioParams.gateModeIndex;
       node.audioParams.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
-      node.pitchShiftIndex = node.audioParams.pitchShiftIndex; 
+      node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
       node.audioParams.volume = node.audioParams.volume ?? 1.0;
 
       if (isDrumType(node.type)) {
@@ -5797,7 +6100,7 @@ function loadState(stateToLoad) {
 
   connections.forEach((conn) => {
       conn.isSelected = isElementSelected("connection", conn.id);
-       if (!conn.audioParams) conn.audioParams = {}; 
+       if (!conn.audioParams) conn.audioParams = {};
 
       if (conn.type === "string_violin") {
          const defaults = STRING_VIOLIN_DEFAULTS;
@@ -5810,26 +6113,29 @@ function loadState(stateToLoad) {
              if (conn.audioNodes) { updateConnectionAudioParams(conn); }
          } else { conn.audioNodes = null; }
       } else if (conn.type === 'wavetrail') {
-          conn.audioParams.buffer = null; 
-          conn.audioParams.waveformPath = null; 
-          conn.audioParams.fileName = conn.audioParams.fileName || null; 
+          conn.audioParams.buffer = null;
+          conn.audioParams.waveformPath = null;
+          conn.audioParams.fileName = conn.audioParams.fileName || null;
           conn.audioNodes = null;
           console.log(`WaveTrail ${conn.id} loaded. File needed: ${conn.audioParams.fileName || 'Unknown'}`);
       } else {
-          conn.audioNodes = null; 
+          conn.audioNodes = null;
       }
   });
 
-  
   updateSyncUI();
   updateScaleAndTransposeUI();
   if(isAudioReady) updateMixerUI();
   updateConstellationGroup();
-  populateEditPanel(); 
+  populateEditPanel();
   drawPianoRoll();
-  identifyAndRouteAllGroups(); 
+  identifyAndRouteAllGroups();
 
   isPerformingUndoRedo = false;
+
+  // PLAATS DE VERPLAATSTE REGELS HIER, AAN HET EINDE VAN EEN SUCCESVOLLE LOAD:
+  unsavedChanges = false;
+  updateAbletonLinkButton(); // Als je deze functie hebt
   console.log("State loaded successfully.");
 }
 function undo() {
@@ -6270,6 +6576,665 @@ function resetSideToolbars() {
 }
 
 
+function populateEditPanel() {
+  editPanelContent.innerHTML = "";
+  if (currentTool !== "edit" || selectedElements.size === 0) {
+      if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && selectedElements.size === 0) {
+          hamburgerMenuPanel.classList.add("hidden");
+          if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+      }
+      return;
+  }
+
+  const selectedArray = Array.from(selectedElements);
+  const firstElementData = selectedArray[0];
+  const fragment = document.createDocumentFragment();
+  const title = document.createElement("p");
+
+  const nodeTypes = new Set(
+      selectedArray
+      .filter((el) => el.type === "node")
+      .map((el) => findNodeById(el.id)?.type)
+  );
+  const connectionTypesSet = new Set(
+      selectedArray
+      .filter((el) => el.type === "connection")
+      .map((el) => findConnectionById(el.id)?.type)
+  );
+
+  let titleText = "";
+  let allSameLogicalType = false;
+  let logicalType = "";
+
+  if (selectedArray.length === 1) {
+      const element = firstElementData.type === "node" ? findNodeById(firstElementData.id) : findConnectionById(firstElementData.id);
+      if (element) {
+          logicalType = element.type.replace(/_/g, " ");
+          titleText = `Edit ${logicalType} #${element.id}`;
+          allSameLogicalType = true;
+      } else {
+          titleText = "Edit Element";
+      }
+  } else {
+      const types = new Set([...nodeTypes, ...connectionTypesSet]);
+      if (types.size === 1) {
+          logicalType = [...types][0].replace(/_/g, " ");
+          titleText = `Edit ${selectedArray.length} ${logicalType}s`;
+          allSameLogicalType = true;
+      } else {
+          titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
+          allSameLogicalType = false;
+      }
+  }
+  title.innerHTML = `<strong>${titleText}</strong>`;
+  fragment.appendChild(title);
+
+  const elementsWithNote = selectedArray.filter((elData) => {
+      const el = elData.type === "node" ? findNodeById(elData.id) : findConnectionById(elData.id);
+      return (
+          el &&
+          (el.type === "sound" ||
+           el.type === "nebula" ||
+           (elData.type === "connection" && el.type === "string_violin"))
+      );
+  });
+
+  if (elementsWithNote.length > 0) {
+      const targetDataForNoteSelector = elementsWithNote.map((el) => ({ type: el.type, id: el.id }));
+      createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
+  }
+
+  if (allSameLogicalType) {
+      if (firstElementData.type === "node") {
+          const node = findNodeById(firstElementData.id);
+          if (node && isPulsarType(node.type)) {
+              const section = document.createElement("div");
+              section.classList.add("panel-section");
+              const enableLabel = document.createElement("label");
+              enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
+              enableLabel.textContent = node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
+              section.appendChild(enableLabel);
+              const enableCheckbox = document.createElement("input");
+              enableCheckbox.type = "checkbox";
+              enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
+              enableCheckbox.checked = node.isEnabled;
+              enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable";
+              enableCheckbox.addEventListener("change", () => handlePulsarTriggerToggle(node));
+              section.appendChild(enableCheckbox);
+              section.appendChild(document.createElement("br"));
+
+              if (node.type !== "pulsar_random_particles" && node.type !== "pulsar_manual") {
+                  if (isGlobalSyncEnabled) {
+                      const subdivLabel = document.createElement("label");
+                      subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
+                      subdivLabel.textContent = "Sync Subdivision:";
+                      section.appendChild(subdivLabel);
+                      const subdivSelect = document.createElement("select");
+                      subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
+                      subdivSelect.disabled = selectedArray.length > 1;
+                      subdivisionOptions.forEach((opt, index) => {
+                          const option = document.createElement("option");
+                          option.value = index;
+                          option.textContent = opt.label;
+                          if (index === (node.syncSubdivisionIndex ?? node.audioParams?.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
+                          subdivSelect.appendChild(option);
+                      });
+                      subdivSelect.addEventListener("change", (e) => {
+                         selectedArray.forEach(elData => {
+                              const n = findNodeById(elData.id);
+                              if (n && isPulsarType(n.type) && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") {
+                                  n.syncSubdivisionIndex = parseInt(e.target.value, 10);
+                                  n.nextSyncTriggerTime = 0;
+                              }
+                          });
+                          saveState();
+                      });
+                      section.appendChild(subdivSelect);
+                  } else {
+                      const currentInterval = node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+                      const intervalVal = currentInterval.toFixed(1);
+                      const intervalSliderContainer = createSlider(
+                          `edit-pulsar-interval-${node.id}`,
+                          `Interval (${intervalVal}s):`, 0.1, 10.0, 0.1, currentInterval,
+                          saveState,
+                          (e) => {
+                              const newInterval = parseFloat(e.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") n.audioParams.triggerInterval = newInterval;
+                              });
+                              e.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
+                          }
+                      );
+                      section.appendChild(intervalSliderContainer);
+                  }
+              } else if (node.type === "pulsar_random_particles") {
+                  const timingInfo = document.createElement("small");
+                  timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
+                  section.appendChild(timingInfo);
+              }
+              section.appendChild(document.createElement("br"));
+
+              if (node.type !== "pulsar_random_volume") {
+                  const currentIntensity = node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                  const intensityVal = currentIntensity.toFixed(2);
+                  const intensitySliderContainer = createSlider(
+                      `edit-pulsar-intensity-${node.id}`,
+                      `Pulse Intensity (${intensityVal}):`, MIN_PULSE_INTENSITY, MAX_PULSE_INTENSITY, 0.01, currentIntensity,
+                      saveState,
+                      (e) => {
+                          const newIntensity = parseFloat(e.target.value);
+                          selectedArray.forEach((elData) => {
+                              const n = findNodeById(elData.id);
+                              if (n?.audioParams && n.type !== "pulsar_random_volume") n.audioParams.pulseIntensity = newIntensity;
+                          });
+                          e.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
+                      }
+                  );
+                  section.appendChild(intensitySliderContainer);
+              } else {
+                  const intensityInfo = document.createElement("small");
+                  intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
+                  section.appendChild(intensityInfo);
+              }
+              section.appendChild(document.createElement("br"));
+              const colorLabel = document.createElement("label");
+              colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
+              colorLabel.textContent = "Pulsar Color:";
+              section.appendChild(colorLabel);
+              const colorInput = document.createElement("input");
+              colorInput.type = "color";
+              colorInput.id = `edit-pulsar-color-${node.id}`;
+              const styles = getComputedStyle(document.documentElement);
+              const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
+              const fallbackColorVar = "--start-node-color";
+              const defaultColorRgba = styles.getPropertyValue(defaultColorVar).trim() || styles.getPropertyValue(fallbackColorVar).trim();
+              const defaultColorHex = rgbaToHex(defaultColorRgba);
+              colorInput.value = node.color ? rgbaToHex(node.color) : defaultColorHex;
+              colorInput.addEventListener("input", (e) => {
+                  const newColor = hexToRgba(e.target.value, 0.9);
+                   selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n) n.color = newColor;
+                  });
+              });
+              colorInput.addEventListener("change", saveState);
+              section.appendChild(colorInput);
+              fragment.appendChild(section);
+
+              if (node.type === "pulsar_rocket") {
+                const rocketSection = document.createElement("div");
+                rocketSection.classList.add("panel-section");
+                const rocketTitle = document.createElement("p");
+                rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
+                rocketSection.appendChild(rocketTitle);
+
+                let currentAngleDegVal = parseFloat(((node.audioParams.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0));
+                const dirSliderContainer = createSlider(
+                  `edit-rocket-dir-${node.id}`, `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
+                  saveState,
+                  (e) => {
+                    const newAngleDeg = parseFloat(e.target.value);
+                    selectedArray.forEach(elData => {
+                      if (elData.type === 'node') {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                          n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
+                          console.log(`%c[EditPanel] Node ${n.id} rocketDirectionAngle set to: ${n.audioParams.rocketDirectionAngle}`, 'color: magenta');
+                        }
+                      }
+                    });
+                    e.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
+                  }
+                );
+                rocketSection.appendChild(dirSliderContainer);
+
+                let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
+                const speedSliderContainer = createSlider(
+                  `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 0.5, 10.0, 0.1, currentSpeedVal,
+                  saveState,
+                  (e) => {
+                    const newSpeed = parseFloat(e.target.value);
+                    selectedArray.forEach(elData => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketSpeed = newSpeed;}
+                    });
+                    e.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
+                  }
+                );
+                rocketSection.appendChild(speedSliderContainer);
+
+                let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
+                const rangeSliderContainer = createSlider(
+                  `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 1000, 10, currentRangeVal,
+                  saveState,
+                  (e) => {
+                    const newRange = parseFloat(e.target.value);
+                    selectedArray.forEach(elData => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketRange = newRange; }
+                    });
+                    e.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
+                  }
+                );
+                rocketSection.appendChild(rangeSliderContainer);
+                fragment.appendChild(rocketSection);
+              }
+
+          } else if (isDrumType(node.type)) {
+               const section = document.createElement("div");
+               section.classList.add("panel-section");
+               const params = node.audioParams;
+               const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
+               const soundDiv = document.createElement("div");
+               soundDiv.classList.add("edit-drum-sound");
+               const soundLabel = document.createElement("strong");
+               soundLabel.textContent = defaults.label;
+               soundDiv.appendChild(soundLabel);
+
+               const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
+               const tuneVal = currentBaseFreq.toFixed(0);
+               const tuneSliderContainer = createSlider(
+                   `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20,
+                   node.type === "drum_hihat" ? 15000 : node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000, 1, currentBaseFreq,
+                   saveState,
+                   (e) => {
+                       const newFreq = parseFloat(e.target.value);
+                       selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
+                       e.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
+                   }
+               );
+               soundDiv.appendChild(tuneSliderContainer);
+
+              if (params?.decay !== undefined || defaults?.decay !== undefined) {
+                  const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
+                  const decayVal = currentDecay.toFixed(2);
+                  const decaySliderContainer = createSlider(
+                      `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
+                      saveState,
+                      (e) => {
+                           const newDecay = parseFloat(e.target.value);
+                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
+                           e.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
+                      }
+                  );
+                  soundDiv.appendChild(decaySliderContainer);
+              }
+
+              if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
+                   const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
+                  const noiseDecayVal = currentNoiseDecay.toFixed(2);
+                  const noiseDecaySliderContainer = createSlider(
+                       `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
+                      saveState,
+                      (e) => {
+                          const newNoiseDecay = parseFloat(e.target.value);
+                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
+                           e.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
+                      }
+                  );
+                  soundDiv.appendChild(noiseDecaySliderContainer);
+              }
+
+               const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
+               const volVal = currentVolume.toFixed(2);
+               const volSliderContainer = createSlider(
+                   `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
+                   saveState,
+                   (e) => {
+                       const newVol = parseFloat(e.target.value);
+                       selectedArray.forEach((elData) => {
+                           const n = findNodeById(elData.id);
+                           if (n?.audioParams) {
+                               n.audioParams.volume = newVol;
+                               updateNodeAudioParams(n);
+                           }
+                       });
+                       e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                   }
+               );
+               soundDiv.appendChild(volSliderContainer);
+               section.appendChild(soundDiv);
+               fragment.appendChild(section);
+
+           } else if (node.type === "switch" && selectedArray.length === 1) {
+               const section = document.createElement("div");
+               section.classList.add("panel-section");
+               const label = document.createElement("label");
+               label.textContent = "Primary Input Connection:";
+               section.appendChild(label);
+               const select = document.createElement("select");
+               select.id = `edit-switch-primary-${node.id}`;
+               const noneOpt = document.createElement("option");
+               noneOpt.value = "null";
+               noneOpt.textContent = "None (Set on next pulse)";
+               select.appendChild(noneOpt);
+               node.connections.forEach((neighborId) => {
+                   const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                   if (conn) {
+                       const otherNode = findNodeById(neighborId);
+                       const option = document.createElement("option");
+                       option.value = conn.id;
+                       option.textContent = `From Node #${neighborId} (${otherNode?.type || "?"})`;
+                       if (conn.id === node.primaryInputConnectionId) {
+                           option.selected = true;
+                       }
+                       select.appendChild(option);
+                   }
+               });
+               select.addEventListener("change", (e) => {
+                   node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                   saveState();
+               });
+               section.appendChild(select);
+               fragment.appendChild(section);
+           }
+
+      } else if (firstElementData.type === "connection") {
+          const connection = findConnectionById(firstElementData.id);
+          if (connection) {
+               if (connection.type === "string_violin") {
+                   const section = document.createElement("div");
+                   section.classList.add("panel-section");
+                   const params = connection.audioParams;
+                   const defaults = STRING_VIOLIN_DEFAULTS;
+
+                   const currentVol = params?.volume ?? defaults.volume;
+                   const volVal = currentVol.toFixed(2);
+                   const volSliderContainer = createSlider(
+                       `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
+                       saveState,
+                       (e) => {
+                           const newVol = parseFloat(e.target.value);
+                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
+                            e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                       }
+                   );
+                   section.appendChild(volSliderContainer);
+
+                   const currentAttack = params?.attack ?? defaults.attack;
+                   const attackVal = currentAttack.toFixed(2);
+                   const attackSliderContainer = createSlider(
+                       `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
+                       saveState,
+                       (e) => {
+                            const newVal = parseFloat(e.target.value);
+                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
+                            e.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
+                       }
+                   );
+                   section.appendChild(attackSliderContainer);
+
+                   const currentRelease = params?.release ?? defaults.release;
+                   const releaseVal = currentRelease.toFixed(2);
+                   const releaseSliderContainer = createSlider(
+                       `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
+                       saveState,
+                       (e) => {
+                            const newVal = parseFloat(e.target.value);
+                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
+                            e.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
+                       }
+                   );
+                   section.appendChild(releaseSliderContainer);
+                   fragment.appendChild(section);
+
+               } else if (connection.type === 'wavetrail') {
+                  const section = document.createElement("div");
+                  section.classList.add("panel-section");
+
+                  const fileLabel = document.createElement("label");
+                  fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
+                  fileLabel.textContent = "Audio File:";
+                  section.appendChild(fileLabel);
+
+                  const fileInput = document.createElement("input");
+                  fileInput.type = "file";
+                  fileInput.id = `edit-wavetrail-file-${connection.id}`;
+                  fileInput.accept = ".wav,.mp3,audio/*";
+                  fileInput.style.marginBottom = '5px';
+                  fileInput.addEventListener('change', (e) => handleWaveTrailFileInputChange(e, connection));
+                  section.appendChild(fileInput);
+
+                  const fileNameDisplay = document.createElement("small");
+                  fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
+                  fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || 'None selected'}`;
+                  fileNameDisplay.style.display = 'block';
+                  section.appendChild(fileNameDisplay);
+
+                  if (connection.audioParams?.buffer) {
+                      const bufferDuration = connection.audioParams.buffer.duration;
+                      const currentOffset = connection.audioParams.startTimeOffset || 0;
+                      const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+                      const currentStartOffset = connection.audioParams.startTimeOffset || 0;
+                      const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
+                      const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
+                      const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
+
+                      const offsetLabel = document.createElement("label");
+                      offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
+                      offsetLabel.style.marginTop = '10px';
+                      offsetLabel.textContent = `Start Offset (${currentOffset.toFixed(2)}s):`;
+                      section.appendChild(offsetLabel);
+
+                      const offsetSlider = document.createElement("input");
+                      offsetSlider.type = "range";
+                      offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
+                      offsetSlider.min = "0";
+                      offsetSlider.max = bufferDuration.toFixed(3);
+                      offsetSlider.step = "0.01";
+                      offsetSlider.value = currentOffset;
+                      offsetSlider.title = "Scrub Start Time";
+
+                      const offsetValueDisplay = document.createElement("span");
+                      offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
+                      offsetValueDisplay.textContent = `${currentOffset.toFixed(2)}s`;
+                      offsetValueDisplay.style.fontSize = '0.8em';
+                      offsetValueDisplay.style.marginLeft = '5px';
+                      offsetValueDisplay.style.opacity = '0.8';
+
+                      const endOffsetLabel = document.createElement("label");
+                      endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
+                      endOffsetLabel.style.marginTop = '10px';
+                      endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
+
+                      const endOffsetSlider = document.createElement("input");
+                      endOffsetSlider.type = "range";
+                      endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
+                      endOffsetSlider.min = currentStartOffset.toFixed(3);
+                      endOffsetSlider.max = bufferDuration.toFixed(3);
+                      endOffsetSlider.step = "0.01";
+                      endOffsetSlider.value = currentEndOffset;
+                      endOffsetSlider.title = "Scrub End Time";
+
+                      const endOffsetValueDisplay = document.createElement("span");
+                      endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
+                      endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
+                      endOffsetValueDisplay.style.fontSize = '0.8em';
+                      endOffsetValueDisplay.style.marginLeft = '5px';
+                      endOffsetValueDisplay.style.opacity = '0.8';
+
+                      offsetSlider.addEventListener('input', (e) => {
+                          const newOffset = parseFloat(e.target.value);
+                          const maxOffset = Math.max(0, bufferDuration - 0.05);
+                          const clampedOffset = Math.min(newOffset, maxOffset);
+                          const currentEndValue = parseFloat(endOffsetSlider.value);
+
+                          if (connection.audioParams.startTimeOffset !== clampedOffset) {
+                               connection.audioParams.startTimeOffset = clampedOffset;
+                               offsetLabel.textContent = `Start Offset (${clampedOffset.toFixed(2)}s):`;
+                               offsetValueDisplay.textContent = `${clampedOffset.toFixed(2)}s`;
+                               endOffsetSlider.min = (clampedOffset + 0.05).toFixed(3);
+                                if (currentEndValue < clampedOffset + 0.05) {
+                                     const newEndValue = clampedOffset + 0.05;
+                                     endOffsetSlider.value = newEndValue;
+                                     connection.audioParams.endTimeOffset = (bufferDuration - newEndValue < 0.01) ? null : newEndValue;
+                                     const displayValue = connection.audioParams.endTimeOffset ?? bufferDuration;
+                                     endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
+                                     endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+                                }
+                          }
+                           if (newOffset > maxOffset) { e.target.value = clampedOffset; }
+                      });
+                      offsetSlider.addEventListener('change', saveState);
+
+                      endOffsetSlider.addEventListener('input', (e) => {
+                          const newEndOffset = parseFloat(e.target.value);
+                          const minEndOffset = connection.audioParams.startTimeOffset + 0.05;
+                          const clampedEndOffset = Math.max(minEndOffset, newEndOffset);
+                          const finalEndOffset = (bufferDuration - clampedEndOffset < 0.01) ? null : clampedEndOffset;
+
+                          if (connection.audioParams.endTimeOffset !== finalEndOffset) {
+                              connection.audioParams.endTimeOffset = finalEndOffset;
+                              const displayValue = finalEndOffset ?? bufferDuration;
+                              endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
+                              endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+                          }
+                           if (newEndOffset < minEndOffset) { e.target.value = minEndOffset; }
+                      });
+                      endOffsetSlider.addEventListener('change', saveState);
+
+                      section.appendChild(offsetSlider);
+                      section.appendChild(offsetValueDisplay);
+                      section.appendChild(endOffsetLabel);
+                      section.appendChild(endOffsetSlider);
+                      section.appendChild(endOffsetValueDisplay);
+
+                      const grainDurLabel = document.createElement("label");
+                      grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
+                      grainDurLabel.style.marginTop = '15px';
+                      grainDurLabel.textContent = `Grain Duration (${(currentGrainDuration * 1000).toFixed(0)}ms):`;
+                      section.appendChild(grainDurLabel);
+
+                      const grainDurSlider = document.createElement("input");
+                      grainDurSlider.type = "range"; grainDurSlider.id = `edit-wavetrail-graindur-${connection.id}`;
+                      grainDurSlider.min = "0.01"; grainDurSlider.max = "0.3"; grainDurSlider.step = "0.005";
+                      grainDurSlider.value = currentGrainDuration; grainDurSlider.title = "Grain Duration";
+
+                      const grainDurValueDisplay = document.createElement("span");
+                       grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`;
+                       grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`;
+                       grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+                      const grainOverlapSlider = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
+
+                      grainDurSlider.addEventListener('input', (e) => {
+                          const newDur = parseFloat(e.target.value);
+                          connection.audioParams.grainDuration = newDur;
+                          grainDurLabel.textContent = `Grain Duration (${(newDur * 1000).toFixed(0)}ms):`;
+                          grainDurValueDisplay.textContent = `${(newDur * 1000).toFixed(0)}ms`;
+                          if (grainOverlapSlider) {
+                              const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3);
+                              grainOverlapSlider.max = newMaxOverlap;
+                              const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
+                              const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
+                              if (parseFloat(grainOverlapSlider.value) > parseFloat(newMaxOverlap)) {
+                                   grainOverlapSlider.value = newMaxOverlap;
+                                   connection.audioParams.grainOverlap = parseFloat(newMaxOverlap);
+                                    if(overlapValueDisplay) overlapValueDisplay.textContent = `${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms`;
+                                    if(overlapLabel) overlapLabel.textContent = `Grain Overlap (${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms):`;
+                              }
+                          }
+                      });
+                      grainDurSlider.addEventListener('change', saveState);
+                      section.appendChild(grainDurSlider);
+                      section.appendChild(grainDurValueDisplay);
+
+                      const grainOverlapLabel = document.createElement("label");
+                      grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
+                      grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`;
+                      section.appendChild(grainOverlapLabel);
+
+                      const grainOverlapSliderElement = document.createElement("input");
+                      grainOverlapSliderElement.type = "range";
+                      grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`;
+                      grainOverlapSliderElement.min = "0";
+                      grainOverlapSliderElement.max = (currentGrainDuration - 0.005).toFixed(3);
+                      grainOverlapSliderElement.step = "0.005";
+                      grainOverlapSliderElement.value = Math.min(currentGrainOverlap, parseFloat(grainOverlapSliderElement.max));
+                      grainOverlapSliderElement.title = "Grain Overlap";
+
+                      const grainOverlapValueDisplay = document.createElement("span");
+                      grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`;
+                      grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`;
+                      grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+                      grainOverlapSliderElement.addEventListener('input', (e) => {
+                          const newOverlap = parseFloat(e.target.value);
+                          const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
+                          const clampedOverlap = Math.min(newOverlap, maxOverlap);
+                          connection.audioParams.grainOverlap = clampedOverlap;
+                          grainOverlapLabel.textContent = `Grain Overlap (${(clampedOverlap * 1000).toFixed(0)}ms):`;
+                          grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
+                           if (newOverlap > maxOverlap) { e.target.value = clampedOverlap; }
+                      });
+                      grainOverlapSliderElement.addEventListener('change', saveState);
+                      section.appendChild(grainOverlapSliderElement);
+                      section.appendChild(grainOverlapValueDisplay);
+
+                      const rateLabel = document.createElement("label");
+                      rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
+                      rateLabel.style.marginTop = '15px';
+                      rateLabel.textContent = `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`;
+                      section.appendChild(rateLabel);
+
+                      const rateSlider = document.createElement("input");
+                      rateSlider.type = "range"; rateSlider.id = `edit-wavetrail-rate-${connection.id}`;
+                      rateSlider.min = "0.25"; rateSlider.max = "4.0"; rateSlider.step = "0.01";
+                      rateSlider.value = currentPlaybackRate; rateSlider.title = "Playback Rate / Pitch";
+
+                      const rateValueDisplay = document.createElement("span");
+                      rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`;
+                      rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`;
+                      rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+                      rateSlider.addEventListener('input', (e) => {
+                          const newRate = parseFloat(e.target.value);
+                          connection.audioParams.playbackRate = newRate;
+                          rateLabel.textContent = `Playback Rate (${newRate.toFixed(2)}x):`;
+                          rateValueDisplay.textContent = `${newRate.toFixed(2)}x`;
+                      });
+                      rateSlider.addEventListener('change', saveState);
+
+                      const resetButton = document.createElement('button');
+                      resetButton.textContent = 'Reset Rate';
+                      resetButton.style.marginLeft = '10px'; resetButton.style.padding = '2px 6px'; resetButton.style.fontSize = '0.8em';
+                      resetButton.type = 'button';
+                      resetButton.addEventListener('click', () => {
+                            connection.audioParams.playbackRate = 1.0;
+                            rateSlider.value = 1.0;
+                            rateLabel.textContent = `Playback Rate (1.00x):`;
+                            rateValueDisplay.textContent = `1.00x`;
+                            saveState();
+                       });
+
+                      section.appendChild(rateSlider);
+                      section.appendChild(rateValueDisplay);
+                      section.appendChild(resetButton);
+                  }
+                  fragment.appendChild(section);
+               }
+          }
+      }
+  } else {
+       const multiInfo = document.createElement("small");
+       multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
+       fragment.appendChild(multiInfo);
+  }
+
+  editPanelContent.appendChild(fragment);
+
+  if (hamburgerMenuPanel && hamburgerMenuPanel.classList.contains("hidden") && currentTool === 'edit' && selectedElements.size > 0) {
+       hamburgerMenuPanel.classList.remove("hidden");
+       if (hamburgerBtn) hamburgerBtn.classList.add("active");
+  }
+  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
+      sideToolbar.classList.add("hidden");
+      const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
+       addBrushButtons.forEach(btn => btn.classList.remove("active"));
+       if(brushBtn) brushBtn.classList.remove("active");
+  }
+}
 
 function setActiveTool(toolName) {
   if (currentTool === 'brush' && toolName !== 'brush') {
@@ -6399,133 +7364,6 @@ function populateSideToolbar(contentType, title) {
      if (!currentDrumTypeValid || (nodeTypeToAdd && !drumElementTypes.find(d=>d.type === nodeTypeToAdd))) {
         if (drumElementTypes.length > 0) nodeTypeToAdd = drumElementTypes[0].type;
     }
-  } else if (contentType === "waveforms") { // Dit is voor Nebula
-    sideToolbarTitle.textContent = title || "Nebula Waveforms";
-    const nebulaWaveforms = [
-        { type: "sine", label: "Sine", icon: "○" },
-        { type: "square", label: "Square", icon: "□" },
-        { type: "sawtooth", label: "Saw", icon: "📈" },
-        { type: "triangle", label: "Triangle", icon: "△" }
-    ];
-    targetPresetArray = nebulaWaveforms;
-    showNoteSelector = true;
-    console.log(`%c[populateSideToolbar - Nebula] Initial waveformToAdd: ${waveformToAdd}`, 'color: green;'); // <-- LOG HIER
-    if (nodeTypeToAdd === "nebula" && (waveformToAdd === null || !nebulaWaveforms.some(w => w.type === waveformToAdd))) {
-        waveformToAdd = nebulaWaveforms[2].type; // Default "sawtooth" voor Nebula
-        console.log(`%c[populateSideToolbar - Nebula] waveformToAdd DEFAULTED TO: ${waveformToAdd}`, 'color: green; font-weight: bold;'); // <-- LOG HIER
-    }
-  }
-
-  if (targetPresetArray.length > 0) {
-      targetPresetArray.forEach((item) => {
-          const button = document.createElement("button");
-          let buttonClass = "type-button";
-          if (contentType === "analogWaveforms" || contentType === "fmSynths" || contentType === "waveforms") {
-              buttonClass = "waveform-button";
-          } else if (contentType === "drumElements") {
-              buttonClass = "drum-element-button";
-          }
-
-          button.classList.add(buttonClass);
-          button.dataset.type = item.type;
-          button.innerHTML = `<span class="type-icon">${item.icon || ""}</span>${item.label}`;
-
-          if ((contentType === "pulsarTypes" || contentType === "drumElements") && nodeTypeToAdd === item.type) {
-              button.classList.add("selected");
-          } else if ((contentType === "analogWaveforms" || contentType === "fmSynths") && nodeTypeToAdd === "sound" && waveformToAdd === item.type) {
-              button.classList.add("selected");
-          } else if (contentType === "waveforms" && nodeTypeToAdd === "nebula" && waveformToAdd === item.type) {
-              button.classList.add("selected");
-          }
-
-          if (contentType === "pulsarTypes" || contentType === "drumElements") {
-              button.addEventListener("click", () => handleElementTypeSelect(button, item.type));
-          } else {
-              button.addEventListener("click", () => handleWaveformSelect(button, item.type));
-          }
-          groupDiv.appendChild(button);
-      });
-  }
-
-  sideToolbarContent.appendChild(groupDiv);
-
-  if (showNoteSelector) {
-      createHexNoteSelectorDOM(sideToolbarContent, []);
-  }
-
-  sideToolbar.classList.remove("hidden");
-  if (hamburgerMenuPanel) hamburgerMenuPanel.classList.add("hidden");
-  if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-}
-  
-function populateSideToolbar(contentType, title) {
-  sideToolbarContent.innerHTML = "";
-  sideToolbarTitle.textContent = title || "Element Options";
-
-  const groupDiv = document.createElement("div");
-  groupDiv.classList.add("type-group");
-
-  let targetPresetArray = [];
-  let showNoteSelector = false;
-
-  if (contentType === "analogWaveforms") {
-    sideToolbarTitle.textContent = title || "Analog Synths";
-    targetPresetArray = analogWaveformPresets;
-    showNoteSelector = true;
-    if (nodeTypeToAdd === "sound" && (waveformToAdd === null || !analogWaveformPresets.some(w => w.type === waveformToAdd))) {
-        waveformToAdd = analogWaveformPresets[0].type; // Default naar de eerste analoge waveform
-    }
-  } else if (contentType === "fmSynths") {
-    sideToolbarTitle.textContent = title || "FM Synths";
-    targetPresetArray = fmSynthPresets;
-    showNoteSelector = true;
-    if (nodeTypeToAdd === "sound" && (waveformToAdd === null || !fmSynthPresets.some(w => w.type === waveformToAdd))) {
-        waveformToAdd = fmSynthPresets[0].type; // Default naar de eerste FM synth
-    }
-  } else if (contentType === "samplers") {
-    sideToolbarTitle.textContent = title || "Samplers";
-    if (typeof SAMPLER_DEFINITIONS !== 'undefined' && SAMPLER_DEFINITIONS.length > 0) {
-        samplerWaveformTypes.forEach((sampler) => {
-            const button = document.createElement("button");
-            button.classList.add("waveform-button", "sampler-button");
-            button.dataset.waveform = sampler.type;
-            button.innerHTML = `<span class="type-icon">${sampler.icon}</span>${sampler.label}`;
-            button.disabled = sampler.loadFailed;
-            if (sampler.loadFailed) {
-                button.title = `${sampler.label} sample failed to load`;
-                button.classList.add("disabled");
-            }
-            if (nodeTypeToAdd === "sound" && waveformToAdd === sampler.type) {
-                button.classList.add("selected");
-            }
-            button.addEventListener("click", () => {
-                if (!button.disabled) handleWaveformSelect(button, sampler.type);
-            });
-            groupDiv.appendChild(button);
-        });
-        if (nodeTypeToAdd === "sound" && (waveformToAdd === null || !samplerWaveformTypes.some(w => w.type === waveformToAdd && !w.loadFailed))) {
-            const firstAvailableSampler = samplerWaveformTypes.find(s => !s.loadFailed);
-            if (firstAvailableSampler) waveformToAdd = firstAvailableSampler.type;
-        }
-    } else {
-         const errorMsg = document.createElement('p');
-         errorMsg.textContent = (typeof SAMPLER_DEFINITIONS !== 'undefined') ? "No samplers defined." : "Error: Sampler definitions not loaded.";
-         errorMsg.style.opacity = '0.7';
-         groupDiv.appendChild(errorMsg);
-    }
-    showNoteSelector = true;
-  } else if (contentType === "pulsarTypes") {
-    sideToolbarTitle.textContent = title || "Pulsars";
-    targetPresetArray = pulsarTypes;
-    if (nodeTypeToAdd === null || !pulsarTypes.some(p => p.type === nodeTypeToAdd)) { // Als het een pulsar type is maar niet specifiek gezet
-        nodeTypeToAdd = pulsarTypes[0].type; // Default naar de eerste pulsar
-    }
-  } else if (contentType === "drumElements") {
-    sideToolbarTitle.textContent = title || "Drum Elements";
-    targetPresetArray = drumElementTypes;
-    if (nodeTypeToAdd === null || !drumElementTypes.some(d => d.type === nodeTypeToAdd)) {
-        nodeTypeToAdd = drumElementTypes[0].type; // Default naar het eerste drum element
-    }
   } else if (contentType === "waveforms") {
     sideToolbarTitle.textContent = title || "Nebula Waveforms";
     const nebulaWaveforms = [
@@ -6537,7 +7375,7 @@ function populateSideToolbar(contentType, title) {
     targetPresetArray = nebulaWaveforms;
     showNoteSelector = true;
     if (nodeTypeToAdd === "nebula" && (waveformToAdd === null || !nebulaWaveforms.some(w => w.type === waveformToAdd))) {
-        waveformToAdd = nebulaWaveforms[2].type; // Default "sawtooth" voor Nebula
+        waveformToAdd = nebulaWaveforms[2].type; // Default "sawtooth"
     }
   }
 
@@ -6582,6 +7420,7 @@ function populateSideToolbar(contentType, title) {
   if (hamburgerMenuPanel) hamburgerMenuPanel.classList.add("hidden");
   if (hamburgerBtn) hamburgerBtn.classList.remove("active");
 }
+
 function handleNewWorkspace() {
   if (unsavedChanges) {
       if (!confirm("Are you sure you want to start a new workspace? Unsaved changes will be lost.")) {
@@ -7629,189 +8468,165 @@ function handleContextMenu(event) {
 canvas.addEventListener('contextmenu', handleContextMenu);
 
 function animationLoop() {
-    animationFrameId = requestAnimationFrame(animationLoop);
-    
-    if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
-        
-        return; 
-    }
+  animationFrameId = requestAnimationFrame(animationLoop);
 
-    const now = audioContext.currentTime;
-    const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
-    const secondsPerBeat = 60.0 / (globalBPM || 120); 
+  if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
+      return;
+  }
 
-    
-    if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
-        const epsilon = 0.01; 
-        if (now >= lastBeatTime + secondsPerBeat - epsilon) {
-             if (!beatIndicatorElement.classList.contains("active")) {
-                 beatIndicatorElement.classList.add("active");
-                 setTimeout(() => { 
-                     if(beatIndicatorElement) beatIndicatorElement.classList.remove("active");
-                 }, 50);
-             }
-            
-            lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
-        }
-    } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
-        
-        beatIndicatorElement.classList.remove("active");
-        lastBeatTime = 0;
-    }
+  const now = audioContext.currentTime;
+  const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+  const secondsPerBeat = 60.0 / (globalBPM || 120);
 
+  if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
+      const epsilon = 0.01;
+      if (now >= lastBeatTime + secondsPerBeat - epsilon) {
+          if (!beatIndicatorElement.classList.contains("active")) {
+              beatIndicatorElement.classList.add("active");
+              setTimeout(() => {
+                  if (beatIndicatorElement) beatIndicatorElement.classList.remove("active");
+              }, 50);
+          }
+          lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
+      }
+  } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
+      beatIndicatorElement.classList.remove("active");
+      lastBeatTime = 0;
+  }
 
-    try { 
+  try {
+      nodes.forEach((node) => {
+          if (node.isStartNode && node.isEnabled &&
+              (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles" || node.type === "pulsar_rocket")) {
 
-        nodes.forEach((node) => {
-            
-            if (node.isStartNode && node.isEnabled &&
-                (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles")) {
+              let shouldPulse = false;
+              let pulseData = {};
 
-                let shouldPulse = false;
-                let pulseData = {};
+              if (node.type === "pulsar_random_particles") {
+                  if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) {
+                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                  }
+                  if (now >= node.nextRandomTriggerTime) {
+                      shouldPulse = true;
+                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                  }
+              } else {
+                  if (isGlobalSyncEnabled) {
+                      const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+                      if (index >= 0 && index < subdivisionOptions.length) {
+                          const subdiv = subdivisionOptions[index];
+                          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
+                              const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                              if (nodeIntervalSeconds > 0) {
+                                  if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
+                                      const currentBeat = now / secondsPerBeat;
+                                      const currentSubdivision = Math.floor(currentBeat / subdiv.value);
+                                      node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
+                                      if (node.nextSyncTriggerTime <= now + 0.005) {
+                                          node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      }
+                                  }
+                                  if (now >= node.nextSyncTriggerTime - 0.005) {
+                                      shouldPulse = true;
+                                      node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      if (node.nextSyncTriggerTime <= now) {
+                                          node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
+                                          if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      }
+                                  }
+                              } else {
+                                  console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
+                              }
+                          } else {
+                              console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
+                          }
+                      } else {
+                          console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
+                          node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX;
+                      }
+                  } else {
+                      if (node.lastTriggerTime < 0) {
+                          node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
+                      }
+                      const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                      if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
+                          shouldPulse = true;
+                          node.lastTriggerTime = now;
+                      }
+                  }
+              }
 
-                if (node.type === "pulsar_random_particles") {
-                    
-                    if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) { 
-                         node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                    }
-                    if (now >= node.nextRandomTriggerTime) {
-                        shouldPulse = true;
-                        node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                    }
-                } else { 
-                    if (isGlobalSyncEnabled) {
-                        
-                        const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; 
-                        if (index >= 0 && index < subdivisionOptions.length) { 
-                            const subdiv = subdivisionOptions[index];
-                            if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) { 
-                                const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                                if (nodeIntervalSeconds > 0) { 
-                                    
-                                    if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
-                                        const currentBeat = now / secondsPerBeat;
-                                        const currentSubdivision = Math.floor(currentBeat / subdiv.value);
-                                        node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
-                                        if (node.nextSyncTriggerTime <= now + 0.005) { 
-                                            node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                        }
-                                    }
-                                    
-                                    if (now >= node.nextSyncTriggerTime - 0.005) {
-                                        shouldPulse = true;
-                                        node.nextSyncTriggerTime += nodeIntervalSeconds; 
-                                        
-                                        if (node.nextSyncTriggerTime <= now) {
-                                            node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
-                                            if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                         }
-                                    }
-                                } else {
-                                     console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
-                                }
-                            } else {
-                                 console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
-                            }
-                        } else {
-                             console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
-                             node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX; 
-                        }
-                        
-                    } else { 
-                        if (node.lastTriggerTime < 0) {
-                            node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
-                        }
-                        const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
-                        if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
-                            shouldPulse = true;
-                            node.lastTriggerTime = now;
-                        }
-                    }
-                } 
+              if (shouldPulse) {
+                  pulseData = {
+                      intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
+                      color: node.color ?? null,
+                      particleMultiplier: 1.0,
+                  };
+                  if (node.type === "pulsar_random_volume") {
+                      pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
+                  }
 
-                if (shouldPulse) {
-                    
-                    pulseData = {
-                        intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
-                        color: node.color ?? null,
-                        particleMultiplier: 1.0,
-                    };
-                    if (node.type === "pulsar_random_volume") {
-                        pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
-                    }
+                  currentGlobalPulseId++;
+                  node.animationState = 1;
+                  setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
 
-                    currentGlobalPulseId++;
-                    node.animationState = 1;
-                    setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
+                  if (node.type === "pulsar_rocket") {
+                      console.log(`%c[AnimLoop] Pulsar ${node.id} triggering. Stored Angle: ${node.audioParams.rocketDirectionAngle} (rad), ${(node.audioParams.rocketDirectionAngle * 180 / Math.PI).toFixed(1)}°`, 'color: green;');
+                      launchRocket(node, pulseData);
+                  } else {
+                      node.connections.forEach(neighborId => {
+                          const neighborNode = findNodeById(neighborId);
+                          const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                          if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
+                              const travelTime = connection.length * DELAY_FACTOR;
+                              try {
+                                  createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
+                                  propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
+                              } catch (propError) {
+                                  console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
+                              }
+                          }
+                      });
+                  }
+              }
+          } else if (node.type === "gate") {
+              node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
+              node.currentAngle %= 2 * Math.PI;
+          } else if (node.type === "nebula") {
+              node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
+              node.currentAngle %= 2 * Math.PI;
+              node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
+              node.innerAngle %= 2 * Math.PI;
+              node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
+              node.pulsePhase %= 2 * Math.PI;
+          } else if (node.type === PORTAL_NEBULA_TYPE) {
+              node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
+              node.pulsePhase %= 2 * Math.PI;
+          }
+      });
 
-                    
-                    node.connections.forEach(neighborId => {
-                        const neighborNode = findNodeById(neighborId);
-                        const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                        if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
-                             const travelTime = connection.length * DELAY_FACTOR;
-                             try { 
-                                 createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
-                                 propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
-                             } catch (propError) {
-                                 console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
-                             }
-                        }
-                    });
-                } 
+      try {
+          updateNebulaInteractionAudio();
+      } catch (nebError) {
+          console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
+      }
 
-            } 
+      if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+          if (Math.random() < 0.3) {
+              createParticles(lastBrushNode.x, lastBrushNode.y, 1);
+          }
+      }
+      draw();
 
-            
-            else if (node.type === "gate") {
-                node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
-                node.currentAngle %= 2 * Math.PI;
-            } else if (node.type === "nebula") {
-                 node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
-                 node.currentAngle %= 2 * Math.PI;
-                 node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
-                 node.innerAngle %= 2 * Math.PI;
-                 node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
-                 node.pulsePhase %= 2 * Math.PI;
-             } else if (node.type === PORTAL_NEBULA_TYPE) {
-                 node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
-                 node.pulsePhase %= 2 * Math.PI;
-             }
-        }); 
-
-        
-        try {
-            updateNebulaInteractionAudio();
-        } catch (nebError) {
-             console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
-        }
-
-        
-        if (currentTool === 'brush' && isBrushing && lastBrushNode) {
-            if (Math.random() < 0.3) {
-                createParticles(lastBrushNode.x, lastBrushNode.y, 1);
-            }
-        }
-
-        
-        draw();
-
-    } catch (loopError) { 
-        console.error("Fout opgetreden in animationLoop:", loopError);
-        
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-            console.error("Animation loop gestopt vanwege fout.");
-            
-            
-            
-            
-        }
-    } 
-
-    previousFrameTime = now; 
+  } catch (loopError) {
+      console.error("Fout opgetreden in animationLoop:", loopError);
+      if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+          console.error("Animation loop gestopt vanwege fout.");
+      }
+  }
+  previousFrameTime = now;
 }
 function startAnimationLoop() {
   if (!animationFrameId) {
@@ -7865,8 +8680,8 @@ function populateEditPanel() {
   editPanelContent.innerHTML = "";
   if (currentTool !== "edit" || selectedElements.size === 0) {
       if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && selectedElements.size === 0) {
-           hamburgerMenuPanel.classList.add("hidden");
-           if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+          hamburgerMenuPanel.classList.add("hidden");
+          if (hamburgerBtn) hamburgerBtn.classList.remove("active");
       }
       return;
   }
@@ -7943,12 +8758,12 @@ function populateEditPanel() {
               enableCheckbox.type = "checkbox";
               enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
               enableCheckbox.checked = node.isEnabled;
-              enableCheckbox.disabled = selectedArray.length > 1;
+              enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable"; // Disable for multi-select triggerable
               enableCheckbox.addEventListener("change", () => handlePulsarTriggerToggle(node));
               section.appendChild(enableCheckbox);
               section.appendChild(document.createElement("br"));
 
-              if (node.type !== "pulsar_random_particles") {
+              if (node.type !== "pulsar_random_particles" && node.type !== "pulsar_manual") {
                   if (isGlobalSyncEnabled) {
                       const subdivLabel = document.createElement("label");
                       subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
@@ -7967,7 +8782,7 @@ function populateEditPanel() {
                       subdivSelect.addEventListener("change", (e) => {
                          selectedArray.forEach(elData => {
                               const n = findNodeById(elData.id);
-                              if (n && isPulsarType(n.type)) {
+                              if (n && isPulsarType(n.type) && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") {
                                   n.syncSubdivisionIndex = parseInt(e.target.value, 10);
                                   n.nextSyncTriggerTime = 0;
                               }
@@ -7978,7 +8793,7 @@ function populateEditPanel() {
                   } else {
                       const currentInterval = node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
                       const intervalVal = currentInterval.toFixed(1);
-                      const intervalSlider = createSlider(
+                      const intervalSliderContainer = createSlider(
                           `edit-pulsar-interval-${node.id}`,
                           `Interval (${intervalVal}s):`, 0.1, 10.0, 0.1, currentInterval,
                           saveState,
@@ -7986,14 +8801,14 @@ function populateEditPanel() {
                               const newInterval = parseFloat(e.target.value);
                               selectedArray.forEach((elData) => {
                                   const n = findNodeById(elData.id);
-                                  if (n?.audioParams) n.audioParams.triggerInterval = newInterval;
+                                  if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") n.audioParams.triggerInterval = newInterval;
                               });
                               e.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
                           }
                       );
-                      section.appendChild(intervalSlider);
+                      section.appendChild(intervalSliderContainer);
                   }
-              } else {
+              } else if (node.type === "pulsar_random_particles") {
                   const timingInfo = document.createElement("small");
                   timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
                   section.appendChild(timingInfo);
@@ -8003,7 +8818,7 @@ function populateEditPanel() {
               if (node.type !== "pulsar_random_volume") {
                   const currentIntensity = node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
                   const intensityVal = currentIntensity.toFixed(2);
-                  const intensitySlider = createSlider(
+                  const intensitySliderContainer = createSlider(
                       `edit-pulsar-intensity-${node.id}`,
                       `Pulse Intensity (${intensityVal}):`, MIN_PULSE_INTENSITY, MAX_PULSE_INTENSITY, 0.01, currentIntensity,
                       saveState,
@@ -8011,12 +8826,12 @@ function populateEditPanel() {
                           const newIntensity = parseFloat(e.target.value);
                           selectedArray.forEach((elData) => {
                               const n = findNodeById(elData.id);
-                              if (n?.audioParams) n.audioParams.pulseIntensity = newIntensity;
+                              if (n?.audioParams && n.type !== "pulsar_random_volume") n.audioParams.pulseIntensity = newIntensity;
                           });
                           e.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
                       }
                   );
-                  section.appendChild(intensitySlider);
+                  section.appendChild(intensitySliderContainer);
               } else {
                   const intensityInfo = document.createElement("small");
                   intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
@@ -8047,6 +8862,62 @@ function populateEditPanel() {
               section.appendChild(colorInput);
               fragment.appendChild(section);
 
+              if (node.type === "pulsar_rocket") {
+                const rocketSection = document.createElement("div");
+                rocketSection.classList.add("panel-section");
+                const rocketTitle = document.createElement("p");
+                rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
+                rocketSection.appendChild(rocketTitle);
+
+                let currentAngleDegVal = parseFloat(((node.audioParams.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0));
+                const dirSliderContainer = createSlider(
+                  `edit-rocket-dir-${node.id}`, `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
+                  saveState,
+                  (e) => {
+                    const newAngleDeg = parseFloat(e.target.value);
+                    selectedArray.forEach(elData => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                        n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
+                      }
+                    });
+                    e.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
+                  }
+                );
+                rocketSection.appendChild(dirSliderContainer);
+
+                let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
+                const speedSliderContainer = createSlider(
+                  `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 0.5, 10.0, 0.1, currentSpeedVal,
+                  saveState,
+                  (e) => {
+                    const newSpeed = parseFloat(e.target.value);
+                    selectedArray.forEach(elData => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketSpeed = newSpeed;}
+                    });
+                    e.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
+                  }
+                );
+                rocketSection.appendChild(speedSliderContainer);
+
+                let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
+                const rangeSliderContainer = createSlider(
+                  `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 1000, 10, currentRangeVal,
+                  saveState,
+                  (e) => {
+                    const newRange = parseFloat(e.target.value);
+                    selectedArray.forEach(elData => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketRange = newRange; }
+                    });
+                    e.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
+                  }
+                );
+                rocketSection.appendChild(rangeSliderContainer);
+                fragment.appendChild(rocketSection);
+              }
+
           } else if (isDrumType(node.type)) {
                const section = document.createElement("div");
                section.classList.add("panel-section");
@@ -8060,7 +8931,7 @@ function populateEditPanel() {
 
                const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
                const tuneVal = currentBaseFreq.toFixed(0);
-               const tuneSlider = createSlider(
+               const tuneSliderContainer = createSlider(
                    `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20,
                    node.type === "drum_hihat" ? 15000 : node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000, 1, currentBaseFreq,
                    saveState,
@@ -8070,12 +8941,12 @@ function populateEditPanel() {
                        e.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
                    }
                );
-               soundDiv.appendChild(tuneSlider);
+               soundDiv.appendChild(tuneSliderContainer);
 
               if (params?.decay !== undefined || defaults?.decay !== undefined) {
                   const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
                   const decayVal = currentDecay.toFixed(2);
-                  const decaySlider = createSlider(
+                  const decaySliderContainer = createSlider(
                       `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
                       saveState,
                       (e) => {
@@ -8084,13 +8955,13 @@ function populateEditPanel() {
                            e.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
                       }
                   );
-                  soundDiv.appendChild(decaySlider);
+                  soundDiv.appendChild(decaySliderContainer);
               }
 
               if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
                    const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
                   const noiseDecayVal = currentNoiseDecay.toFixed(2);
-                  const noiseDecaySlider = createSlider(
+                  const noiseDecaySliderContainer = createSlider(
                        `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
                       saveState,
                       (e) => {
@@ -8099,12 +8970,12 @@ function populateEditPanel() {
                            e.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
                       }
                   );
-                  soundDiv.appendChild(noiseDecaySlider);
+                  soundDiv.appendChild(noiseDecaySliderContainer);
               }
 
                const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
                const volVal = currentVolume.toFixed(2);
-               const volSlider = createSlider(
+               const volSliderContainer = createSlider(
                    `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
                    saveState,
                    (e) => {
@@ -8119,7 +8990,7 @@ function populateEditPanel() {
                        e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
                    }
                );
-               soundDiv.appendChild(volSlider);
+               soundDiv.appendChild(volSliderContainer);
                section.appendChild(soundDiv);
                fragment.appendChild(section);
 
@@ -8167,7 +9038,7 @@ function populateEditPanel() {
 
                    const currentVol = params?.volume ?? defaults.volume;
                    const volVal = currentVol.toFixed(2);
-                   const volSlider = createSlider(
+                   const volSliderContainer = createSlider(
                        `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
                        saveState,
                        (e) => {
@@ -8176,11 +9047,11 @@ function populateEditPanel() {
                             e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
                        }
                    );
-                   section.appendChild(volSlider);
+                   section.appendChild(volSliderContainer);
 
                    const currentAttack = params?.attack ?? defaults.attack;
                    const attackVal = currentAttack.toFixed(2);
-                   const attackSlider = createSlider(
+                   const attackSliderContainer = createSlider(
                        `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
                        saveState,
                        (e) => {
@@ -8189,11 +9060,11 @@ function populateEditPanel() {
                             e.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
                        }
                    );
-                   section.appendChild(attackSlider);
+                   section.appendChild(attackSliderContainer);
 
                    const currentRelease = params?.release ?? defaults.release;
                    const releaseVal = currentRelease.toFixed(2);
-                   const releaseSlider = createSlider(
+                   const releaseSliderContainer = createSlider(
                        `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
                        saveState,
                        (e) => {
@@ -8202,7 +9073,7 @@ function populateEditPanel() {
                             e.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
                        }
                    );
-                   section.appendChild(releaseSlider);
+                   section.appendChild(releaseSliderContainer);
                    fragment.appendChild(section);
 
                } else if (connection.type === 'wavetrail') {
@@ -8232,7 +9103,7 @@ function populateEditPanel() {
                       const bufferDuration = connection.audioParams.buffer.duration;
                       const currentOffset = connection.audioParams.startTimeOffset || 0;
                       const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
-                      const currentStartOffset = connection.audioParams.startTimeOffset || 0; 
+                      const currentStartOffset = connection.audioParams.startTimeOffset || 0;
                       const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
                       const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
                       const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
@@ -8267,7 +9138,7 @@ function populateEditPanel() {
                       const endOffsetSlider = document.createElement("input");
                       endOffsetSlider.type = "range";
                       endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
-                      endOffsetSlider.min = currentStartOffset.toFixed(3); 
+                      endOffsetSlider.min = currentStartOffset.toFixed(3);
                       endOffsetSlider.max = bufferDuration.toFixed(3);
                       endOffsetSlider.step = "0.01";
                       endOffsetSlider.value = currentEndOffset;
@@ -8326,7 +9197,6 @@ function populateEditPanel() {
                       section.appendChild(endOffsetSlider);
                       section.appendChild(endOffsetValueDisplay);
 
-                      
                       const grainDurLabel = document.createElement("label");
                       grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
                       grainDurLabel.style.marginTop = '15px';
@@ -8339,11 +9209,11 @@ function populateEditPanel() {
                       grainDurSlider.value = currentGrainDuration; grainDurSlider.title = "Grain Duration";
 
                       const grainDurValueDisplay = document.createElement("span");
-                       grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`; 
+                       grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`;
                        grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`;
                        grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
 
-                      const grainOverlapSlider = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`); 
+                      const grainOverlapSlider = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
 
                       grainDurSlider.addEventListener('input', (e) => {
                           const newDur = parseFloat(e.target.value);
@@ -8353,7 +9223,6 @@ function populateEditPanel() {
                           if (grainOverlapSlider) {
                               const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3);
                               grainOverlapSlider.max = newMaxOverlap;
-                              
                               const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
                               const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
                               if (parseFloat(grainOverlapSlider.value) > parseFloat(newMaxOverlap)) {
@@ -8368,13 +9237,12 @@ function populateEditPanel() {
                       section.appendChild(grainDurSlider);
                       section.appendChild(grainDurValueDisplay);
 
-                      
                       const grainOverlapLabel = document.createElement("label");
                       grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
                       grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`;
                       section.appendChild(grainOverlapLabel);
 
-                      const grainOverlapSliderElement = document.createElement("input"); 
+                      const grainOverlapSliderElement = document.createElement("input");
                       grainOverlapSliderElement.type = "range";
                       grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`;
                       grainOverlapSliderElement.min = "0";
@@ -8384,11 +9252,11 @@ function populateEditPanel() {
                       grainOverlapSliderElement.title = "Grain Overlap";
 
                       const grainOverlapValueDisplay = document.createElement("span");
-                      grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`; 
+                      grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`;
                       grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`;
                       grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
 
-                      grainOverlapSliderElement.addEventListener('input', (e) => { 
+                      grainOverlapSliderElement.addEventListener('input', (e) => {
                           const newOverlap = parseFloat(e.target.value);
                           const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
                           const clampedOverlap = Math.min(newOverlap, maxOverlap);
@@ -8397,11 +9265,10 @@ function populateEditPanel() {
                           grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
                            if (newOverlap > maxOverlap) { e.target.value = clampedOverlap; }
                       });
-                      grainOverlapSliderElement.addEventListener('change', saveState); 
-                      section.appendChild(grainOverlapSliderElement); 
+                      grainOverlapSliderElement.addEventListener('change', saveState);
+                      section.appendChild(grainOverlapSliderElement);
                       section.appendChild(grainOverlapValueDisplay);
 
-                      
                       const rateLabel = document.createElement("label");
                       rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
                       rateLabel.style.marginTop = '15px';
@@ -8414,7 +9281,7 @@ function populateEditPanel() {
                       rateSlider.value = currentPlaybackRate; rateSlider.title = "Playback Rate / Pitch";
 
                       const rateValueDisplay = document.createElement("span");
-                      rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`; 
+                      rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`;
                       rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`;
                       rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
 
@@ -8429,7 +9296,7 @@ function populateEditPanel() {
                       const resetButton = document.createElement('button');
                       resetButton.textContent = 'Reset Rate';
                       resetButton.style.marginLeft = '10px'; resetButton.style.padding = '2px 6px'; resetButton.style.fontSize = '0.8em';
-                      resetButton.type = 'button'; 
+                      resetButton.type = 'button';
                       resetButton.addEventListener('click', () => {
                             connection.audioParams.playbackRate = 1.0;
                             rateSlider.value = 1.0;
@@ -8460,7 +9327,7 @@ function populateEditPanel() {
   }
   if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
       sideToolbar.classList.add("hidden");
-      const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button");
+      const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
        addBrushButtons.forEach(btn => btn.classList.remove("active"));
        if(brushBtn) brushBtn.classList.remove("active");
   }
