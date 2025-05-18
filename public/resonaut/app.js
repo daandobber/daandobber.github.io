@@ -76,6 +76,7 @@ const editPanelContent = document.getElementById("editPanelContent")
 const sideToolbar = document.getElementById("sideToolbar")
 const sideToolbarTitle = document.getElementById("sideToolbarTitle")
 const sideToolbarContent = document.getElementById("sideToolbarContent")
+const appMenuRecordBtn = document.getElementById("app-menu-record-btn");
 const A4_FREQ = 440.0;
 const A4_MIDI_NOTE = 69;
 const PORTAL_NEBULA_TYPE = 'portal_nebula';
@@ -102,6 +103,11 @@ let masterDelaySendGain
 let isReverbReady = false
 let isDelayReady = false
 const REVERB_IR_URL = "reverb.wav"
+let mediaRecorder;
+let recordedChunks = [];
+let isRecording = false;
+let mediaStreamDestinationNode;
+let originalMasterGainDestination = null;
 
 let nodes = []
 let connections = []
@@ -815,129 +821,235 @@ async function loadSample(url, sampleName) {
 }
 
 async function setupAudio() {
-  if (audioContext) return audioContext;
-  try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      masterGain = audioContext.createGain();
-      masterGain.gain.value = parseFloat(masterVolumeSlider.value);
-      masterGain.connect(audioContext.destination);
+    if (audioContext) return audioContext;
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        originalMasterGainDestination = audioContext.destination;
 
-      portalGroupGain = audioContext.createGain();
-      portalGroupGain.gain.value = 0.7;
-      portalGroupGain.connect(masterGain);
-      console.log("DEBUG setupAudio: portalGroupGain aangemaakt:", portalGroupGain ? 'JA' : 'NEE');
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = parseFloat(masterVolumeSlider.value);
+        masterGain.connect(originalMasterGainDestination);
 
-      originalNebulaGroupGain = audioContext.createGain();
-      originalNebulaGroupGain.gain.value = 0.8;
-      originalNebulaGroupGain.connect(masterGain);
-      console.log("DEBUG setupAudio: originalNebulaGroupGain aangemaakt:", originalNebulaGroupGain ? 'JA' : 'NEE');
 
-      reverbNode = audioContext.createConvolver();
-      reverbWetGain = audioContext.createGain();
-      reverbWetGain.gain.value = 0.5;
-      reverbNode.connect(reverbWetGain);
-      reverbWetGain.connect(masterGain);
+        portalGroupGain = audioContext.createGain();
+        portalGroupGain.gain.value = 0.7;
+        portalGroupGain.connect(masterGain);
 
-      delayNode = audioContext.createDelay(1.0);
-      delayFeedbackGain = audioContext.createGain();
-      masterDelaySendGain = audioContext.createGain();
-      masterDelaySendGain.gain.value = parseFloat(delaySendSlider.value);
-      delayNode.delayTime.value = parseFloat(delayTimeSlider.value);
-      delayFeedbackGain.gain.value = parseFloat(delayFeedbackSlider.value);
-      masterDelaySendGain.connect(delayNode);
-      delayNode.connect(delayFeedbackGain);
-      delayFeedbackGain.connect(delayNode);
-      delayNode.connect(masterGain);
-      isDelayReady = true;
+        originalNebulaGroupGain = audioContext.createGain();
+        originalNebulaGroupGain.gain.value = 0.8;
+        originalNebulaGroupGain.connect(masterGain);
 
-      try {
-          const r = await fetch(REVERB_IR_URL);
-          if (!r.ok) throw new Error(`HTTP error! status: ${r.status} for ${REVERB_IR_URL}`);
-          const ab = await r.arrayBuffer();
-          if (audioContext.decodeAudioData.length === 1) {
-              await new Promise((res, rej) => {
-                  audioContext.decodeAudioData(ab, (b) => {
-                      reverbNode.buffer = b;
-                      isReverbReady = true;
-                      res();
-                  }, (e) => {
-                      isReverbReady = false;
-                      rej(e);
-                  });
-              });
-          } else {
-              const b = await audioContext.decodeAudioData(ab);
-              reverbNode.buffer = b;
-              isReverbReady = true;
-          }
-      } catch (e) {
-          console.error("Failed to load or process reverb IR:", e);
-          isReverbReady = false;
-      }
+        reverbNode = audioContext.createConvolver();
+        reverbWetGain = audioContext.createGain();
+        reverbWetGain.gain.value = 0.5;
+        reverbNode.connect(reverbWetGain);
+        reverbWetGain.connect(masterGain);
 
-      samplesLoadedCount = 0;
-      totalSamples = (typeof SAMPLER_DEFINITIONS !== 'undefined') ? SAMPLER_DEFINITIONS.length : 0;
-      updateLoadingIndicator();
+        delayNode = audioContext.createDelay(1.0);
+        delayFeedbackGain = audioContext.createGain();
+        masterDelaySendGain = audioContext.createGain();
+        masterDelaySendGain.gain.value = parseFloat(delaySendSlider.value);
+        delayNode.delayTime.value = parseFloat(delayTimeSlider.value);
+        delayFeedbackGain.gain.value = parseFloat(delayFeedbackSlider.value);
+        masterDelaySendGain.connect(delayNode);
+        delayNode.connect(delayFeedbackGain);
+        delayFeedbackGain.connect(delayNode);
+        delayNode.connect(masterGain);
+        isDelayReady = true;
 
-      const sampleLoadPromises = (typeof SAMPLER_DEFINITIONS !== 'undefined')
-          ? SAMPLER_DEFINITIONS.map(sampler =>
-              loadSample(sampler.url, sampler.id)
-            )
-          : [];
+        try {
+            const r = await fetch(REVERB_IR_URL);
+            if (!r.ok) throw new Error(`HTTP error! status: ${r.status} for ${REVERB_IR_URL}`);
+            const ab = await r.arrayBuffer();
+            if (audioContext.decodeAudioData.length === 1) {
+                await new Promise((res, rej) => {
+                    audioContext.decodeAudioData(ab, (b) => {
+                        reverbNode.buffer = b;
+                        isReverbReady = true;
+                        res();
+                    }, (e) => {
+                        isReverbReady = false;
+                        rej(e);
+                    });
+                });
+            } else {
+                const b = await audioContext.decodeAudioData(ab);
+                reverbNode.buffer = b;
+                isReverbReady = true;
+            }
+        } catch (e) {
+            console.error("Failed to load or process reverb IR:", e);
+            isReverbReady = false;
+        }
 
-      if (sampleLoadPromises.length === 0 && totalSamples > 0) {
-           console.error("Kon geen sample laad-promises maken, maar totalSamples > 0. Is samplers.js geladen?");
-      }
+        samplesLoadedCount = 0;
+        totalSamples = (typeof SAMPLER_DEFINITIONS !== 'undefined') ? SAMPLER_DEFINITIONS.length : 0;
+        updateLoadingIndicator();
 
-      const loadResults = await Promise.all(sampleLoadPromises);
+        const sampleLoadPromises = (typeof SAMPLER_DEFINITIONS !== 'undefined')
+            ? SAMPLER_DEFINITIONS.map(sampler =>
+                loadSample(sampler.url, sampler.id)
+              )
+            : [];
 
-      if (typeof SAMPLER_DEFINITIONS !== 'undefined') {
-          loadResults.forEach((result) => {
-              const definition = SAMPLER_DEFINITIONS.find(s => s.id === result.name);
-              if (!definition) {
-                  console.error(`Kon sampler definitie niet vinden voor geladen sample: ${result.name}`);
-                  return;
-              }
-              if (result.success) {
-                  definition.buffer = result.buffer;
-                  definition.isLoaded = true;
-                  definition.loadFailed = false;
-              } else {
-                  definition.buffer = null;
-                  definition.isLoaded = false;
-                  definition.loadFailed = true;
-                  const wfType = waveformTypes.find(w => w.type === `sampler_${definition.id}`);
-                  if (wfType) wfType.loadFailed = true;
-                  console.warn(`Failed to load sample: ${definition.label} from ${definition.url}`);
-              }
-          });
-      }
+        if (sampleLoadPromises.length === 0 && totalSamples > 0) {
+             console.error("Kon geen sample laad-promises maken, maar totalSamples > 0. Is samplers.js geladen?");
+        }
 
-      updateLoadingIndicator();
-      isAudioReady = true;
-      resetSideToolbars();
-      changeScale(scaleSelectTransport.value, true);
-      updateSyncUI();
-      updateGroupControlsUI();
-      updateInfoToggleUI();
-      setupMIDI();
+        const loadResults = await Promise.all(sampleLoadPromises);
 
-      if (historyStack.length === 0) {
-           saveState();
-      }
-      identifyAndRouteAllGroups();
-      updateMixerGUI();
-      drawPianoRoll();
+        if (typeof SAMPLER_DEFINITIONS !== 'undefined') {
+            loadResults.forEach((result) => {
+                const definition = SAMPLER_DEFINITIONS.find(s => s.id === result.name);
+                if (!definition) {
+                    console.error(`Kon sampler definitie niet vinden voor geladen sample: ${result.name}`);
+                    return;
+                }
+                if (result.success) {
+                    definition.buffer = result.buffer;
+                    definition.isLoaded = true;
+                    definition.loadFailed = false;
+                } else {
+                    definition.buffer = null;
+                    definition.isLoaded = false;
+                    definition.loadFailed = true;
+                    const wfType = samplerWaveformTypes.find(w => w.type === `sampler_${definition.id}`);
+                    if (wfType) wfType.loadFailed = true;
+                    console.warn(`Failed to load sample: ${definition.label} from ${definition.url}`);
+                }
+            });
+        }
 
-      return audioContext;
+        updateLoadingIndicator();
+        isAudioReady = true;
+        resetSideToolbars();
+        changeScale(scaleSelectTransport.value, true);
+        updateSyncUI();
+        updateGroupControlsUI();
+        updateInfoToggleUI();
+        setupMIDI();
 
-  } catch (e) {
-      startMessage.textContent = "Audio Context Error";
-      startMessage.style.display = "block";
-      console.error("Fout tijdens setupAudio:", e);
-      isAudioReady = false;
-      return null;
-  }
+        if (historyStack.length === 0) {
+             saveState();
+        }
+        identifyAndRouteAllGroups();
+        updateMixerGUI();
+        drawPianoRoll();
+
+        return audioContext;
+
+    } catch (e) {
+        startMessage.textContent = "Audio Context Error";
+        startMessage.style.display = "block";
+        console.error("Fout tijdens setupAudio:", e);
+        isAudioReady = false;
+        return null;
+    }
+}
+
+function startRecording() {
+    if (!audioContext || audioContext.state !== 'running' || !masterGain) {
+        alert("Audio context is niet actief. Start of hervat audio via de Play knop.");
+        return;
+    }
+
+    mediaStreamDestinationNodeForRecording = audioContext.createMediaStreamDestination();
+
+    try {
+        masterGain.connect(mediaStreamDestinationNodeForRecording);
+    } catch (e) {
+        console.error("FATALE FOUT: Kon masterGain niet verbinden met mediaStreamDestinationNodeForRecording (voor aftappen):", e);
+        alert("Opnamefout: Kon audio-aftap niet instellen.");
+        mediaStreamDestinationNodeForRecording = null;
+        return;
+    }
+
+    let streamToRecord;
+    try {
+        streamToRecord = mediaStreamDestinationNodeForRecording.stream;
+    } catch (e) {
+        console.error("FATALE FOUT: Kon .stream eigenschap niet benaderen van mediaStreamDestinationNodeForRecording:", e);
+        alert("Opnamefout: Kon audio stream niet verkrijgen na aftappen.");
+        try { masterGain.disconnect(mediaStreamDestinationNodeForRecording); } catch (e2) {}
+        mediaStreamDestinationNodeForRecording = null;
+        return;
+    }
+
+    recordedChunks = [];
+    const options = { mimeType: 'audio/wav' };
+    try {
+        mediaRecorder = new MediaRecorder(streamToRecord, options);
+    } catch (e) {
+        console.warn("Kon MediaRecorder niet initialiseren met audio/wav. Probeert standaard.", e);
+        try {
+            mediaRecorder = new MediaRecorder(streamToRecord);
+        } catch (e2) {
+            alert("MediaRecorder API wordt niet ondersteund of kon niet initialiseren: " + e2.message);
+            console.error("MediaRecorder initialisatie mislukt:", e2);
+            try { masterGain.disconnect(mediaStreamDestinationNodeForRecording); } catch (e3) {}
+            mediaStreamDestinationNodeForRecording = null;
+            return;
+        }
+    }
+
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+        }
+    };
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        document.body.appendChild(a);
+        a.style.display = 'none';
+        a.href = url;
+        const timestamp = new Date().toISOString().slice(0, 16).replace("T", "_").replace(":", "-");
+        let fileExtension = ".wav";
+        if (mediaRecorder.mimeType.includes("webm")) {
+            fileExtension = ".webm";
+        } else if (mediaRecorder.mimeType.includes("ogg")) {
+            fileExtension = ".ogg";
+        }
+        a.download = `Resonaut_Sessie_${timestamp}${fileExtension}`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        recordedChunks = [];
+
+        if (masterGain && mediaStreamDestinationNodeForRecording) {
+            try {
+                masterGain.disconnect(mediaStreamDestinationNodeForRecording);
+            } catch (e) {
+                console.warn("Fout bij loskoppelen van masterGain van opname-node na stop:", e);
+            }
+        }
+        if (mediaStreamDestinationNodeForRecording) {
+             try { mediaStreamDestinationNodeForRecording.disconnect(); } catch (e) {} // Koppel de node zelf ook los van alles
+        }
+        mediaStreamDestinationNodeForRecording = null;
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    if (appMenuRecordBtn) {
+        appMenuRecordBtn.textContent = "◼ Stop";
+        appMenuRecordBtn.classList.add("active");
+    }
+    console.log("Opname gestart (parallel tap). MimeType:", mediaRecorder.mimeType);
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+    }
+    isRecording = false;
+    if (appMenuRecordBtn) {
+        appMenuRecordBtn.textContent = "🔴 Record";
+        appMenuRecordBtn.classList.remove("active");
+    }
+    console.log("Opname gestopt (parallel tap).");
 }
 
 function setGroupVolume(volume, sourceSliderId) {
@@ -7476,6 +7588,31 @@ function handleNewWorkspace() {
   }
 
   console.log("New workspace created.");
+}
+
+if (appMenuRecordBtn) {
+    appMenuRecordBtn.addEventListener('click', () => {
+        if (!userHasInteracted && !isAudioReady) {
+             alert("Start alsjeblieft eerst de audio door op Play te klikken of de pagina te herladen als er een fout was.");
+             return;
+        }
+        if (!isAudioReady) {
+            alert("Audio is nog niet geïnitialiseerd. Probeer de pagina te vernieuwen of wacht even.");
+            return;
+        }
+        if (audioContext.state === 'suspended') {
+            alert("Audio is gepauzeerd. Hervat audio (Play) voordat je probeert op te nemen.");
+            return;
+        }
+
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    });
+} else {
+    console.error("#app-menu-record-btn niet gevonden in DOM!");
 }
 
 function clearEditPanel() {
