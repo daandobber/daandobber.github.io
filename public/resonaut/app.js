@@ -84,12 +84,23 @@ const GRAIN_DURATION = 0.09;
 const GRAIN_OVERLAP = 0.07;  
 const GRAIN_INTERVAL = GRAIN_DURATION - GRAIN_OVERLAP; 
 const toolbar = document.getElementById("toolbar");
-const ROCKET_DEFAULT_SPEED = 150.0; // Wereld-eenheden per seconde
-const ROCKET_DEFAULT_RANGE = 400; // Maximale afstand in wereld-eenheden
-const ROCKET_DEFAULT_GRAVITY = 50; // Wereld-eenheden per seconde^2 (voor de boog)
+const ROCKET_DEFAULT_SPEED = 150.0; 
+const ROCKET_DEFAULT_RANGE = 400; 
+const ROCKET_DEFAULT_GRAVITY = 50; 
 const ROCKET_EXPLOSION_PARTICLES = 25;
-const ROCKET_PULSE_VISUAL_SIZE = 4; // Basisgrootte voor de raket-pulse visual
-
+const ROCKET_PULSE_VISUAL_SIZE = 4; 
+const tapeLoopRecordBtn = document.getElementById('tapeLoopRecordBtn');
+const tapeLoopPlayBtn = document.getElementById('tapeLoopPlayBtn');
+const tapeLoopStopBtn = document.getElementById('tapeLoopStopBtn');
+const tapeLoopClearBtn = document.getElementById('tapeLoopClearBtn');
+const tapeLoopDurationInput = document.getElementById('tapeLoopDurationInput');
+const tapeLoopStatusLabel = document.getElementById('tapeLoopStatusLabel');
+const appMenuToggleTapeLooperBtn = document.getElementById('app-menu-toggle-tape-looper-btn');
+const tapeLooperPanel = document.getElementById('tapeLooperPanel');
+const closeTapeLooperPanelBtn = document.getElementById('closeTapeLooperPanelBtn');
+const tapeReelLeft = document.getElementById('tapeReelLeft');
+const tapeReelRight = document.getElementById('tapeReelRight');
+let tapeReelAngle = 0;
 
 let isAbletonLinkActive = false; 
 let unsavedChanges = false;
@@ -108,6 +119,18 @@ let recordedChunks = [];
 let isRecording = false;
 let mediaStreamDestinationNode;
 let originalMasterGainDestination = null;
+let tapeLoopBuffer = null;
+let tapeLoopSourceNode = null;
+let isTapeLoopRecording = false;
+let isTapeLoopPlaying = false;
+let scriptNodeForTapeLoop = null;
+let tapeLoopWritePosition = 0;
+let configuredTapeLoopDurationSeconds = 4;
+let tapeLoopRecordedAtBPM = 0;
+let tapeLoopInputGate = null;
+let actualTapeLoopRecordStartTime = 0;
+let scheduledTapeLoopEvents = []; 
+let tapeLoopRecordBtnClickable = true;
 
 let nodes = []
 let connections = []
@@ -128,10 +151,10 @@ let pianoRollHexagons = [];
 let activeNebulaInteractions = new Map(); 
 let portalGroupGain = null;
 let originalNebulaGroupGain = null;
-let activeRockets = []; // Array om actieve vuurpijlen bij te houden
-let rocketIdCounter = 0; // Aparte teller voor raket IDs
-let isRotatingRocket = null; // Houdt de node bij die geroteerd wordt, of null
-let rotationStartDetails = { screenX: 0, screenY: 0, initialAngleRad: 0 }; // Details bij start rotatie
+let activeRockets = []; 
+let rocketIdCounter = 0; 
+let isRotatingRocket = null; 
+let rotationStartDetails = { screenX: 0, screenY: 0, initialAngleRad: 0 }; 
 
 const NODE_RADIUS_BASE = 12
 const MIN_NODE_SIZE = 0.6
@@ -397,7 +420,7 @@ const pulsarTypes = [
   { type: "pulsar_random_particles", label: "Random Timing", icon: "🎲🔆" },
   { type: "pulsar_triggerable", label: "Triggerable", icon: "⚡🔆" },
   { type: "pulsar_manual", label: "Manual", icon: "👆" },
-  { type: "pulsar_rocket", label: "Rocket", icon: "🚀" } // NIEUW
+  { type: "pulsar_rocket", label: "Rocket", icon: "🚀" } 
 ];
 
 
@@ -1026,7 +1049,7 @@ function startRecording() {
             }
         }
         if (mediaStreamDestinationNodeForRecording) {
-             try { mediaStreamDestinationNodeForRecording.disconnect(); } catch (e) {} // Koppel de node zelf ook los van alles
+             try { mediaStreamDestinationNodeForRecording.disconnect(); } catch (e) {} 
         }
         mediaStreamDestinationNodeForRecording = null;
     };
@@ -1050,6 +1073,409 @@ function stopRecording() {
         appMenuRecordBtn.classList.remove("active");
     }
     console.log("Opname gestopt (parallel tap).");
+}
+
+function updateTapeLooperUI() {
+    if (!tapeLoopRecordBtn || !tapeLoopPlayBtn || !tapeLoopStopBtn || !tapeLoopClearBtn || !tapeLoopStatusLabel) return;
+    const recordIcon = '⏺️';
+    const stopRecIcon = '⏹️&nbsp;REC';
+    const armedIcon = '❗&nbsp;ARMED';
+    const playIcon = '▶️';
+    const stopIcon = '⏹️';
+
+    tapeLoopRecordBtn.disabled = false;
+    tapeLoopPlayBtn.disabled = true;
+    tapeLoopStopBtn.disabled = true;
+    tapeLoopClearBtn.disabled = true;
+
+    if (tapeLoopRecordBtn.dataset.isArmed === 'true') {
+        tapeLoopRecordBtn.innerHTML = armedIcon;
+        tapeLoopRecordBtn.classList.add('active');
+        tapeLoopStatusLabel.textContent = 'Armed (Wacht op tel...)';
+        tapeLoopPlayBtn.disabled = true;
+        tapeLoopStopBtn.disabled = true;
+        tapeLoopClearBtn.disabled = true;
+    } else if (isTapeLoopRecording) {
+        tapeLoopRecordBtn.innerHTML = stopRecIcon;
+        tapeLoopRecordBtn.classList.add('active');
+        const sampleRate = audioContext?.sampleRate || 44100;
+        const recordedTime = tapeLoopWritePosition / sampleRate;
+        const totalDuration = tapeLoopBuffer ? tapeLoopBuffer.duration.toFixed(1) : configuredTapeLoopDurationSeconds.toFixed(1);
+        tapeLoopStatusLabel.textContent = `REC ${recordedTime.toFixed(1)}/${totalDuration}s`;
+        tapeLoopPlayBtn.disabled = true;
+        tapeLoopStopBtn.disabled = false;
+        tapeLoopClearBtn.disabled = true;
+    } else if (isTapeLoopPlaying) {
+        tapeLoopRecordBtn.innerHTML = recordIcon;
+        tapeLoopRecordBtn.classList.remove('active');
+        tapeLoopRecordBtn.disabled = true;
+        tapeLoopPlayBtn.disabled = true;
+        tapeLoopStopBtn.disabled = false;
+        tapeLoopClearBtn.disabled = false;
+        tapeLoopStatusLabel.textContent = 'LOOPING';
+    } else {
+        tapeLoopRecordBtn.innerHTML = recordIcon;
+        tapeLoopRecordBtn.classList.remove('active');
+        tapeLoopRecordBtn.disabled = false;
+        tapeLoopRecordBtn.dataset.isArmed = 'false';
+        tapeLoopPlayBtn.disabled = !tapeLoopBuffer;
+        tapeLoopPlayBtn.innerHTML = playIcon;
+        tapeLoopStopBtn.disabled = true;
+        tapeLoopStopBtn.innerHTML = stopIcon;
+        tapeLoopClearBtn.disabled = !tapeLoopBuffer;
+        tapeLoopStatusLabel.textContent = tapeLoopBuffer ? 'READY' : 'IDLE';
+    }
+}
+
+function getNextQuantizedTime(baseTime, beatsToQuantizeTo = 1) {
+    if (!isGlobalSyncEnabled || !audioContext || globalBPM <= 0) {
+        return audioContext.currentTime;
+    }
+    const secondsPerBeat = 60.0 / globalBPM;
+    const quantizationIntervalSeconds = secondsPerBeat * beatsToQuantizeTo;
+    const currentTime = baseTime || audioContext.currentTime;
+    let nextTime = Math.ceil(currentTime / quantizationIntervalSeconds) * quantizationIntervalSeconds;
+    if (nextTime <= currentTime + 0.020) {
+        nextTime += quantizationIntervalSeconds;
+    }
+    return nextTime;
+}
+
+function startTapeLoopRecording() {
+    if (!audioContext || audioContext.state !== 'running' || !masterGain) {
+        alert("Audio context is niet actief. Start audio via Play.");
+        return;
+    }
+    if (isTapeLoopRecording || isTapeLoopPlaying || (tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true')) {
+        console.warn("Kan geen nieuwe opname starten: looper is al bezig, armed, of speelt al af.");
+        return;
+    }
+
+    configuredTapeLoopDurationSeconds = parseFloat(tapeLoopDurationInput.value) || 4;
+    let actualCalculatedBufferDurationSeconds = configuredTapeLoopDurationSeconds;
+
+    if (isGlobalSyncEnabled && globalBPM > 0) {
+        tapeLoopRecordedAtBPM = globalBPM;
+        const secondsPerBeat = 60.0 / globalBPM;
+        const durationInBeats = Math.max(1, Math.round(configuredTapeLoopDurationSeconds / secondsPerBeat));
+        actualCalculatedBufferDurationSeconds = durationInBeats * secondsPerBeat;
+        console.log(`Sync: Loop duration quantized to ${durationInBeats} beats (${actualCalculatedBufferDurationSeconds.toFixed(2)}s)`);
+    } else {
+        tapeLoopRecordedAtBPM = 0;
+    }
+
+    tapeLoopWritePosition = 0;
+    actualTapeLoopRecordStartTime = 0;
+
+    if (!tapeLoopInputGate) {
+        tapeLoopInputGate = audioContext.createGain();
+        tapeLoopInputGate.gain.value = 0;
+        masterGain.connect(tapeLoopInputGate);
+    } else {
+        tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
+        tapeLoopInputGate.gain.setValueAtTime(0, audioContext.currentTime);
+    }
+    
+    const logicToActuallyStartProcessingAndRecording = (startTime) => {
+        const currentSampleRate = audioContext.sampleRate;
+        const currentNumberOfChannels = 2;
+        const bufferLengthInSamples = Math.floor(currentSampleRate * actualCalculatedBufferDurationSeconds);
+
+        if (bufferLengthInSamples <= 0) {
+            console.error("Bufferlengte voor tape loop is nul of negatief. Opname geannuleerd.", actualCalculatedBufferDurationSeconds);
+            if (tapeLoopRecordBtn) tapeLoopRecordBtn.dataset.isArmed = 'false';
+            tapeLoopRecordBtnClickable = true;
+            updateTapeLooperUI();
+            return;
+        }
+        tapeLoopBuffer = audioContext.createBuffer(currentNumberOfChannels, bufferLengthInSamples, currentSampleRate);
+        tapeLoopWritePosition = 0;
+
+        const scriptBufferSize = 4096;
+        scriptNodeForTapeLoop = audioContext.createScriptProcessor(scriptBufferSize, currentNumberOfChannels, currentNumberOfChannels);
+
+        scriptNodeForTapeLoop.onaudioprocess = (audioProcessingEvent) => {
+            if (!isTapeLoopRecording || !tapeLoopBuffer) return;
+            if (isGlobalSyncEnabled && actualTapeLoopRecordStartTime > 0 && audioContext.currentTime < actualTapeLoopRecordStartTime - 0.005) {
+                return; 
+            }
+
+            const inputBuffer = audioProcessingEvent.inputBuffer;
+            const currentBlockSize = inputBuffer.length;
+            const localNumChannels = inputBuffer.numberOfChannels;
+            let hasAnySignalInBlockThisIteration = false;
+
+            for (let channel = 0; channel < localNumChannels; channel++) {
+                const channelInputData = inputBuffer.getChannelData(channel);
+                const tapeBufferData = tapeLoopBuffer.getChannelData(channel);
+
+                if (channel === 0 && tapeLoopWritePosition < scriptBufferSize * 20) {
+                    for(let k=0; k < currentBlockSize; k += Math.floor(currentBlockSize/8) || 1) {
+                        if (Math.abs(channelInputData[k]) > 0.0001) { 
+                            hasAnySignalInBlockThisIteration = true;
+                            break;
+                        }
+                    }
+                }
+
+                for (let i = 0; i < currentBlockSize; i++) {
+                    if (tapeLoopWritePosition + i < tapeBufferData.length) {
+                        tapeBufferData[tapeLoopWritePosition + i] = channelInputData[i];
+                    } else {
+                        break; 
+                    }
+                }
+            }
+            
+            if (tapeLoopWritePosition < scriptBufferSize * 20) { 
+                if (hasAnySignalInBlockThisIteration) {
+                    console.log(`TapeLooper ONAUDIOPROCESS: SIGNAAL in block (pos: ${tapeLoopWritePosition}, blocksize: ${currentBlockSize})`);
+                } else {
+                    console.log(`TapeLooper ONAUDIOPROCESS: STILTE in block (pos: ${tapeLoopWritePosition}, blocksize: ${currentBlockSize})`);
+                }
+            }
+
+            tapeLoopWritePosition += currentBlockSize;
+
+            const sampleRateForCalc = audioContext?.sampleRate || 44100;
+            const recordedTime = tapeLoopWritePosition / sampleRateForCalc;
+            if (tapeLoopStatusLabel && isTapeLoopRecording) {
+                const totalDuration = tapeLoopBuffer ? tapeLoopBuffer.duration.toFixed(1) : actualCalculatedBufferDurationSeconds.toFixed(1);
+                tapeLoopStatusLabel.textContent = `REC ${recordedTime.toFixed(1)}/${totalDuration}s`;
+            }
+        };
+        
+        tapeLoopInputGate.connect(scriptNodeForTapeLoop);
+        scriptNodeForTapeLoop.connect(audioContext.destination);
+
+        actualTapeLoopRecordStartTime = startTime;
+        isTapeLoopRecording = true;
+        if (tapeLoopRecordBtn) {
+            tapeLoopRecordBtn.dataset.isArmed = 'false';
+        }
+        tapeLoopRecordBtnClickable = true; 
+        
+        if (tapeLoopInputGate) {
+            tapeLoopInputGate.gain.setValueAtTime(1.0, startTime);
+            console.log(`DEBUG: TapeLoopInputGate gain gezet op 1.0 op context tijd: ${startTime.toFixed(3)}`);
+        }
+        
+        const bufferActualDuration = tapeLoopBuffer.duration;
+        console.log(`Tape loop recording daadwerkelijk gestart op context tijd: ${startTime.toFixed(3)}. Buffer duur: ${bufferActualDuration.toFixed(2)}s`);
+        updateTapeLooperUI();
+
+        const stopTime = startTime + bufferActualDuration;
+        if (tapeLoopInputGate) {
+            tapeLoopInputGate.gain.setValueAtTime(0.0, stopTime);
+            console.log(`DEBUG: TapeLoopInputGate gain gepland op 0.0 op context tijd: ${stopTime.toFixed(3)}`);
+        }
+        
+        scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'stopRecAndPlay');
+        scheduledTapeLoopEvents.push({ time: stopTime, action: 'stopRecAndPlay' });
+    };
+
+    if (isGlobalSyncEnabled && globalBPM > 0) {
+        const quantizedStartTime = getNextQuantizedTime(audioContext.currentTime, 1);
+        if (tapeLoopRecordBtn) {
+            tapeLoopRecordBtn.dataset.isArmed = 'true';
+            tapeLoopRecordBtnClickable = false;
+            setTimeout(() => { 
+                if(tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true'){
+                    tapeLoopRecordBtnClickable = true; 
+                }
+            }, 350); // Iets langere timeout voor de guard
+        }
+        updateTapeLooperUI();
+        
+        scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startRec');
+        scheduledTapeLoopEvents.push({ 
+            time: quantizedStartTime, 
+            action: 'startRec',
+            callback: logicToActuallyStartProcessingAndRecording 
+        });
+        console.log(`Tape loop armed. Zal opname starten op: ${quantizedStartTime.toFixed(3)} (geplande duur: ${actualCalculatedBufferDurationSeconds.toFixed(2)}s)`);
+    } else {
+        logicToActuallyStartProcessingAndRecording(audioContext.currentTime);
+    }
+}
+
+function processScheduledTapeEvents() {
+    const now = audioContext.currentTime;
+    let nextEvents = [];
+    for (let event of scheduledTapeLoopEvents) {
+        if (now >= event.time - 0.010) {
+            if (event.action === 'startRec') {
+                if (tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true') {
+                    if (typeof event.callback === 'function') {
+                        event.callback(event.time);
+                    }
+                } else {
+                    console.log("Geplande opname overgeslagen, arming was al geannuleerd of knop niet gevonden.");
+                }
+                tapeLoopRecordBtnClickable = true;
+            } else if (event.action === 'stopRecAndPlay') {
+                if (isTapeLoopRecording) {
+                    isTapeLoopRecording = false;
+                    if (scriptNodeForTapeLoop) {
+                        try { scriptNodeForTapeLoop.disconnect(); } catch(e){}
+                        if (tapeLoopInputGate && scriptNodeForTapeLoop) {
+                            try { tapeLoopInputGate.disconnect(scriptNodeForTapeLoop); } catch(e){}
+                        }
+                        scriptNodeForTapeLoop.onaudioprocess = null;
+                        scriptNodeForTapeLoop = null;
+                    }
+                    console.log("Tape loop recording finished (scheduled).");
+                    updateTapeLooperUI();
+                    if (tapeLoopBuffer && tapeLoopWritePosition > (audioContext.sampleRate * 0.05)) {
+                        playTapeLoop(event.time);
+                    } else {
+                         console.log("Te weinig data opgenomen in buffer, wordt niet afgespeeld, buffer gewist.");
+                         clearTapeLoop();
+                    }
+                }
+            } else if (event.action === 'startPlay') {
+                 if(tapeLoopSourceNode) {
+                    tapeLoopSourceNode.start(event.time);
+                    isTapeLoopPlaying = true;
+                    console.log("Tape loop playback started (scheduled) at: " + event.time.toFixed(3));
+                    updateTapeLooperUI();
+                 }
+            }
+        } else {
+            nextEvents.push(event);
+        }
+    }
+    scheduledTapeLoopEvents = nextEvents;
+}
+
+function playTapeLoop(scheduledPlayTime = 0) {
+    if (!audioContext || !tapeLoopBuffer || isTapeLoopPlaying) {
+        if (isTapeLoopPlaying) console.log("DEBUG: playTapeLoop aangeroepen, maar is al aan het spelen.");
+        else if (!tapeLoopBuffer) console.log("DEBUG: playTapeLoop aangeroepen, maar geen buffer.");
+        return;
+    }
+    if (isTapeLoopRecording) {
+         console.warn("PlayTapeLoop called while still recording. Aborting play.");
+         return;
+    }
+
+    if (tapeLoopSourceNode) {
+        try { tapeLoopSourceNode.stop(); tapeLoopSourceNode.disconnect(); } catch(e){}
+    }
+
+    tapeLoopSourceNode = audioContext.createBufferSource();
+    tapeLoopSourceNode.buffer = tapeLoopBuffer;
+    tapeLoopSourceNode.loop = true;
+    tapeLoopSourceNode.loopStart = 0;
+    tapeLoopSourceNode.loopEnd = tapeLoopBuffer.duration;
+
+    if (isGlobalSyncEnabled && tapeLoopRecordedAtBPM > 0 && globalBPM > 0) {
+        tapeLoopSourceNode.playbackRate.value = globalBPM / tapeLoopRecordedAtBPM;
+    } else {
+        tapeLoopSourceNode.playbackRate.value = 1.0;
+    }
+
+    tapeLoopSourceNode.connect(masterGain);
+    
+    const now = audioContext.currentTime;
+    let actualPlayTime = scheduledPlayTime > now ? scheduledPlayTime : now;
+
+    if (isGlobalSyncEnabled && globalBPM > 0) {
+        const quantizedPlayTime = getNextQuantizedTime(actualPlayTime, 1);
+        actualPlayTime = quantizedPlayTime;
+        
+        scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startPlay');
+        scheduledTapeLoopEvents.push({ time: actualPlayTime, action: 'startPlay' });
+        
+        if(tapeLoopStatusLabel) tapeLoopStatusLabel.textContent = `Armed (Wacht op tel voor play...)`;
+        if(tapeLoopPlayBtn) tapeLoopPlayBtn.disabled = true; // Wordt geactiveerd door processScheduledTapeEvents
+        console.log(`Tape loop playback armed. Will start at: ${actualPlayTime.toFixed(3)}`);
+
+    } else {
+        tapeLoopSourceNode.start(actualPlayTime);
+        isTapeLoopPlaying = true;
+        console.log("Tape loop playback started immediately at: " + actualPlayTime.toFixed(3));
+        updateTapeLooperUI();
+    }
+}
+
+function stopTapeLoopPlayback() {
+    if(tapeLoopRecordBtn) tapeLoopRecordBtn.dataset.isArmed = 'false';
+    tapeLoopRecordBtnClickable = true;
+    scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startRec' && e.action !== 'startPlay' && e.action !== 'stopRecAndPlay');
+
+    if (isTapeLoopPlaying && tapeLoopSourceNode) {
+        try {
+            tapeLoopSourceNode.stop(0);
+            tapeLoopSourceNode.disconnect();
+        } catch (e) {
+            console.warn("Fout bij stoppen/loskoppelen tapeLoopSourceNode:", e);
+        }
+    }
+    tapeLoopSourceNode = null;
+    isTapeLoopPlaying = false;
+    
+    if(isTapeLoopRecording) {
+        isTapeLoopRecording = false;
+         if (scriptNodeForTapeLoop) {
+            try { scriptNodeForTapeLoop.disconnect(); } catch(e) {}
+            if (tapeLoopInputGate && scriptNodeForTapeLoop) {
+                try { tapeLoopInputGate.disconnect(scriptNodeForTapeLoop); } catch(e) {}
+            }
+            scriptNodeForTapeLoop.onaudioprocess = null;
+            scriptNodeForTapeLoop = null;
+        }
+        if(tapeLoopInputGate) {
+            tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
+            tapeLoopInputGate.gain.setValueAtTime(0.0, audioContext.currentTime);
+        }
+    }
+    
+    console.log("Tape loop playback/recording gestopt.");
+    updateTapeLooperUI();
+}
+
+function clearTapeLoop() {
+    stopTapeLoopPlayback();
+    tapeLoopBuffer = null;
+    tapeLoopWritePosition = 0;
+    console.log("Tape loop cleared.");
+    updateTapeLooperUI();
+}
+
+function stopTapeLoopRecordingAndPlay() {
+    if (!isTapeLoopRecording) return;
+    isTapeLoopRecording = false;
+
+    if (scriptNodeForTapeLoop) {
+        scriptNodeForTapeLoop.disconnect();
+        scriptNodeForTapeLoop.onaudioprocess = null;
+        scriptNodeForTapeLoop = null;
+    }
+    console.log("Tape loop recording finished.");
+    updateTapeLooperUI();
+    playTapeLoop();
+}
+
+function playTapeLoop() {
+    if (!audioContext || !tapeLoopBuffer || isTapeLoopPlaying) return;
+    if (isTapeLoopRecording) stopTapeLoopRecordingAndPlay();
+
+    if (tapeLoopSourceNode) {
+        try { tapeLoopSourceNode.stop(); tapeLoopSourceNode.disconnect(); } catch(e){}
+    }
+
+    tapeLoopSourceNode = audioContext.createBufferSource();
+    tapeLoopSourceNode.buffer = tapeLoopBuffer;
+    tapeLoopSourceNode.loop = true;
+    tapeLoopSourceNode.loopStart = 0;
+    tapeLoopSourceNode.loopEnd = tapeLoopBuffer.duration;
+
+    tapeLoopSourceNode.connect(masterGain);
+    tapeLoopSourceNode.start(0);
+    isTapeLoopPlaying = true;
+    console.log("Tape loop playback started.");
+    updateTapeLooperUI();
 }
 
 function setGroupVolume(volume, sourceSliderId) {
@@ -1193,8 +1619,8 @@ function createAudioNodesForNode(node) {
       return null;
   }
   const now = audioContext.currentTime;
-  const startDelay = now + 0.02; // Consistente startvertraging
-  const params = node.audioParams; // Gebruik 'params' alias consistent
+  const startDelay = now + 0.02; 
+  const params = node.audioParams; 
 
   try {
       if (node.type === "sound") {
@@ -1213,37 +1639,37 @@ function createAudioNodesForNode(node) {
           };
 
           audioNodes.gainNode.gain.setValueAtTime(0, now);
-          audioNodes.lowPassFilter.type = params.filterType || "lowpass"; // Flexibel
-          audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2; // Flexibel
+          audioNodes.lowPassFilter.type = params.filterType || "lowpass"; 
+          audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2; 
 
           if (isReverbReady && reverbNode) {
               audioNodes.reverbSendGain = audioContext.createGain();
-              audioNodes.reverbSendGain.gain.value = params.reverbSend; // Gebruik params
+              audioNodes.reverbSendGain.gain.value = params.reverbSend; 
               audioNodes.reverbSendGain.connect(reverbNode);
           }
           if (isDelayReady && masterDelaySendGain) {
               audioNodes.delaySendGain = audioContext.createGain();
-              audioNodes.delaySendGain.gain.value = params.delaySend; // Gebruik params
+              audioNodes.delaySendGain.gain.value = params.delaySend; 
               audioNodes.delaySendGain.connect(masterDelaySendGain);
           }
 
-          audioNodes.volLfo.type = params.lfo1Type || "sine"; // Flexibel
-          audioNodes.volLfo.frequency.setValueAtTime(params.volLfoRate || 0.2, now); // Flexibel met fallback
+          audioNodes.volLfo.type = params.lfo1Type || "sine"; 
+          audioNodes.volLfo.frequency.setValueAtTime(params.volLfoRate || 0.2, now); 
           audioNodes.volLfoGain.gain.value = fluctuatingGroupNodeIDs.has(node.id) ? parseFloat(groupFluctuateAmount.value) : (params.volLfoDepth || 0);
           audioNodes.volLfo.connect(audioNodes.volLfoGain);
           audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
 
-          // Robuuste oscillator setup van Functie 1
+          
           const osc1Type = params.osc1Type || params.baseSoundType || params.carrierWaveform || params.actualOscillatorType || params.waveform || "sine";
-          const validOscTypes = ["sine", "square", "sawtooth", "triangle", "pulse"]; // Behandel "pulse" later indien nodig of zorg dat het direct ondersteund is
+          const validOscTypes = ["sine", "square", "sawtooth", "triangle", "pulse"]; 
 
           audioNodes.oscillator1 = audioContext.createOscillator();
-          // Pulse is geen standaard oscillator type, Web Audio API gebruikt "square" voor pulse-achtige klanken met Duty Cycle (Pulse Width) via een WaveShaper of AudioWorklet.
-          // Voor nu, als "pulse" bedoeld is als "square", is dit ok. Anders moet hier specifiekere logica komen.
+          
+          
           audioNodes.oscillator1.type = validOscTypes.includes(osc1Type) ? osc1Type : (osc1Type === "pulse" ? "square" : "sine");
 
 
-          if (params.osc2Type && !params.carrierWaveform) { // Voorkom conflict met FM carrier
+          if (params.osc2Type && !params.carrierWaveform) { 
               audioNodes.oscillator2 = audioContext.createOscillator();
               audioNodes.oscillator2.type = validOscTypes.includes(params.osc2Type) ? params.osc2Type : (params.osc2Type === "pulse" ? "square" : "sine");
               if (params.osc2Detune) audioNodes.oscillator2.detune.setValueAtTime(params.osc2Detune, now);
@@ -1255,22 +1681,22 @@ function createAudioNodesForNode(node) {
               try { audioNodes.oscillator2.start(startDelay); } catch (e) { console.error("Error starting osc2", e); }
           }
 
-          // FM Synthese deel van Functie 1
+          
           if (params.carrierWaveform || params.modulatorWaveform) {
-              audioNodes.oscillator1.type = params.carrierWaveform || "sine"; // Carrier is oscillator1
+              audioNodes.oscillator1.type = params.carrierWaveform || "sine"; 
 
               audioNodes.modulatorOsc = audioContext.createOscillator();
               audioNodes.modulatorOsc.type = params.modulatorWaveform || "sine";
-              // Stel modulator frequentie in, bijv. t.o.v. carrier: params.modulatorFreqRatio * pitch
-              // Voor nu, ga ervan uit dat de frequentie correct is ingesteld via params of elders
-              // audioNodes.modulatorOsc.frequency.setValueAtTime(params.modulatorFrequency || 220, now); // Voorbeeld
+              
+              
+              
 
               audioNodes.modulatorGain = audioContext.createGain();
-              // Stel modulation index/depth in: params.fmDepth
-              // audioNodes.modulatorGain.gain.setValueAtTime(params.fmDepth || 100, now); // Voorbeeld
+              
+              
 
               audioNodes.modulatorOsc.connect(audioNodes.modulatorGain);
-              audioNodes.modulatorGain.connect(audioNodes.oscillator1.frequency); // FM: modulator beïnvloedt frequentie van carrier
+              audioNodes.modulatorGain.connect(audioNodes.oscillator1.frequency); 
               try { audioNodes.modulatorOsc.start(startDelay); } catch (e) { console.error("Error starting modOsc", e); }
           }
 
@@ -1288,8 +1714,8 @@ function createAudioNodesForNode(node) {
       } else if (node.type === "nebula") {
           const gainNode = audioContext.createGain(); gainNode.gain.value = 0;
           const filterNode = audioContext.createBiquadFilter();
-          filterNode.type = params.filterType || "lowpass"; // Flexibel
-          filterNode.Q.value = params.filterResonance || NEBULA_FILTER_Q; // Flexibel
+          filterNode.type = params.filterType || "lowpass"; 
+          filterNode.Q.value = params.filterResonance || NEBULA_FILTER_Q; 
           const baseFreq = params.pitch;
           const filterLfo = audioContext.createOscillator(); filterLfo.type = "sine"; filterLfo.frequency.setValueAtTime(NEBULA_FILTER_LFO_RATE, now);
           const filterLfoGain = audioContext.createGain(); filterLfoGain.gain.setValueAtTime(baseFreq * NEBULA_FILTER_LFO_DEPTH_FACTOR * (params.lfoDepthFactor || 1), now); filterLfo.connect(filterLfoGain); filterLfoGain.connect(filterNode.frequency);
@@ -1297,10 +1723,10 @@ function createAudioNodesForNode(node) {
           const volLfoGain = audioContext.createGain(); volLfoGain.gain.value = NEBULA_VOL_LFO_DEPTH; volLfo.connect(volLfoGain); volLfoGain.connect(gainNode.gain);
           const oscillators = [];
 
-          const baseWaveformForNebula = params.osc1Type || params.waveform || "sawtooth"; // Meer opties uit Functie 1
+          const baseWaveformForNebula = params.osc1Type || params.waveform || "sawtooth"; 
           const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
           let waveformType = validOscTypes.includes(baseWaveformForNebula) ? baseWaveformForNebula : "sawtooth";
-           // De specifieke fmBell/fmXylo check uit Functie 2:
+           
           if (baseWaveformForNebula === "fmBell" || baseWaveformForNebula === "fmXylo") waveformType = "sine";
 
 
@@ -1314,7 +1740,7 @@ function createAudioNodesForNode(node) {
 
           const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE; const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
           const initialVol = Math.min(NEBULA_MAX_VOL, node.size * NEBULA_VOL_SCALING);
-          // Flexibele filter cutoff uit Functie 1
+          
           const initialFilterFreq = params.filterCutoff || (baseFreq * 2 + normalizedSize * baseFreq * (params.filterFreqFactor || 12));
           filterNode.frequency.setValueAtTime(initialFilterFreq, now);
           gainNode.gain.linearRampToValueAtTime(initialVol, now + 0.5);
@@ -1327,19 +1753,19 @@ function createAudioNodesForNode(node) {
               gainNode.connect(originalNebulaGroupGain);
           } else {
               gainNode.connect(masterGain);
-              console.error("Nebula: kon niet verbinden met originalNebulaGroupGain! Verbinden met masterGain."); // Log van Func2
+              console.error("Nebula: kon niet verbinden met originalNebulaGroupGain! Verbinden met masterGain."); 
           }
           return { gainNode, filterNode, filterLfo, filterLfoGain, volLfo, volLfoGain, oscillators, reverbSendGain, delaySendGain };
 
       } else if (node.type === PORTAL_NEBULA_TYPE) {
-          // params is al gedefinieerd bovenaan de functie.
-          // const portalParams = params; // Dit is niet nodig als je direct 'params' gebruikt.
+          
+          
           const defaults = PORTAL_NEBULA_DEFAULTS;
 
-          const mainGain = audioContext.createGain(); mainGain.gain.setValueAtTime(0, now); mainGain.gain.linearRampToValueAtTime(params.volume, now + 1.0); // Gebruik params
+          const mainGain = audioContext.createGain(); mainGain.gain.setValueAtTime(0, now); mainGain.gain.linearRampToValueAtTime(params.volume, now + 1.0); 
           const droneOsc = audioContext.createOscillator();
-          droneOsc.type = params.actualOscillatorType || 'triangle'; // Flexibel uit Func 1
-          droneOsc.frequency.setValueAtTime(params.pitch, now); // Gebruik params
+          droneOsc.type = params.actualOscillatorType || 'triangle'; 
+          droneOsc.frequency.setValueAtTime(params.pitch, now); 
 
           const droneFreqLfo = audioContext.createOscillator(); droneFreqLfo.type = 'sine'; droneFreqLfo.frequency.setValueAtTime(0.05 + Math.random() * 0.05, now);
           const droneFreqLfoGain = audioContext.createGain(); droneFreqLfoGain.gain.setValueAtTime(0.5 + Math.random() * 0.5, now); droneFreqLfo.connect(droneFreqLfoGain); droneFreqLfoGain.connect(droneOsc.frequency); droneOsc.connect(mainGain);
@@ -1351,15 +1777,15 @@ function createAudioNodesForNode(node) {
           for (let i = 0; i < defaults.numHarmonics; i++) {
               const harmonicOsc = audioContext.createOscillator(); harmonicOsc.type = 'sine';
               const freqMultiplier = Math.pow(2, (i + 1) * defaults.harmonicSpread * 0.5 + Math.random() * 0.1);
-              harmonicOsc.frequency.setValueAtTime(params.pitch * freqMultiplier, now); // Gebruik params
+              harmonicOsc.frequency.setValueAtTime(params.pitch * freqMultiplier, now); 
               harmonicOsc.detune.setValueAtTime((Math.random() - 0.5) * 15, now); harmonicOsc.connect(harmonicGain); harmonics.push(harmonicOsc);
           }
           harmonicGain.connect(mainGain);
 
-          let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend; mainGain.connect(reverbSendGain); reverbSendGain.connect(reverbNode); } // Gebruik params
-          let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend; mainGain.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); } // Gebruik params
+          let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend; mainGain.connect(reverbSendGain); reverbSendGain.connect(reverbNode); } 
+          let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend; mainGain.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); } 
 
-          // Consistent startDelay gebruiken
+          
           try { droneOsc.start(startDelay); } catch (e) {}
           try { droneFreqLfo.start(startDelay); } catch (e) {}
           try { shimmerLfo.start(startDelay); } catch (e) {}
@@ -1369,23 +1795,23 @@ function createAudioNodesForNode(node) {
               mainGain.connect(portalGroupGain);
           } else {
               mainGain.connect(masterGain);
-              console.error("Portal Nebula: kon niet verbinden met portalGroupGain! Verbinden met masterGain."); // Log van Func2
+              console.error("Portal Nebula: kon niet verbinden met portalGroupGain! Verbinden met masterGain."); 
           }
           return { mainGain, droneOsc, droneFreqLfo, droneFreqLfoGain, harmonics, harmonicGain, shimmerLfo, shimmerLfoGain, reverbSendGain, delaySendGain };
 
       } else if (isDrumType(node.type)) {
           const mainGain = audioContext.createGain();
-          mainGain.gain.value = params.volume; // Gebruik params
-          let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend ?? DEFAULT_REVERB_SEND; mainGain.connect(reverbSendGain); reverbSendGain.connect(reverbNode); } // Gebruik params
-          let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend ?? DEFAULT_DELAY_SEND; mainGain.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); } // Gebruik params
+          mainGain.gain.value = params.volume; 
+          let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend ?? DEFAULT_REVERB_SEND; mainGain.connect(reverbSendGain); reverbSendGain.connect(reverbNode); } 
+          let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend ?? DEFAULT_DELAY_SEND; mainGain.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); } 
           return { mainGain, reverbSendGain, delaySendGain };
       }
   } catch (e) {
-      // Error log van Functie 1 (iets uitgebreider)
+      
       console.error(`Error creating audio nodes for node ${node.id} (Type: ${node.type}, Waveform: ${params ? params.waveform : 'N/A'}):`, e);
       return null;
   }
-  return null; // Fallback, mocht er iets misgaan met de type checks
+  return null; 
 }
 
 /**
@@ -2951,7 +3377,7 @@ function addNode(x, y, type, subtype = null) {
   let finalPos = applySnap ? snapToGrid(x, y) : { x: x, y: y };
 
   const isStartNodeType = isPulsarType(type);
-  let nodeTypeVisual = type; // Gebruik 'type' voor visuele en logische typering
+  let nodeTypeVisual = type; 
   let initialScaleIndex = 0;
   let initialPitch = 0;
   let nodeSubtypeForAudioParams = subtype;
@@ -2962,8 +3388,8 @@ function addNode(x, y, type, subtype = null) {
   let selectedPreset = null;
   if (type === "sound") {
     selectedPreset = analogWaveformPresets.find(p => p.type === subtype) || fmSynthPresets.find(p => p.type === subtype);
-  } else if (isPulsarType(type)) { // Hieronder valt ook "pulsar_rocket"
-    nodeSubtypeForAudioParams = type; // Voor pulsars is het type ook de 'subtype' voor audioParams
+  } else if (isPulsarType(type)) { 
+    nodeSubtypeForAudioParams = type; 
     selectedPreset = pulsarTypes.find(p => p.type === type);
   }
 
@@ -3043,7 +3469,7 @@ function addNode(x, y, type, subtype = null) {
   const newNode = {
     id: nodeIdCounter++,
     x: finalPos.x, y: finalPos.y, size: randomSize, radius: NODE_RADIUS_BASE,
-    type: nodeTypeVisual, // Gebruik de 'type' parameter die binnenkomt
+    type: nodeTypeVisual, 
     baseHue: initialBaseHue, connections: new Set(),
     isSelected: false, isInConstellation: false,
     audioParams: {
@@ -3097,9 +3523,9 @@ function addNode(x, y, type, subtype = null) {
     const nowTime = audioContext.currentTime;
     const interval = newNode.audioParams.triggerInterval;
 
-    if (newNode.type === 'pulsar_random_particles') { // Gebruik newNode.type hier
+    if (newNode.type === 'pulsar_random_particles') { 
       newNode.nextRandomTriggerTime = nowTime + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-    } else if (newNode.type !== 'pulsar_triggerable' && newNode.type !== 'pulsar_manual') { // Gebruik newNode.type hier
+    } else if (newNode.type !== 'pulsar_triggerable' && newNode.type !== 'pulsar_manual') { 
       if (isGlobalSyncEnabled) {
         const secondsPerBeat = 60.0 / (globalBPM || 120);
         const subdivIndex = newNode.audioParams.syncSubdivisionIndex;
@@ -4435,7 +4861,7 @@ function drawNode(node) {
           const barrelBaseOffset = outerR * 0.2;
           if (typeof ctx.roundRect === 'function') {
               ctx.roundRect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth, barrelWidth / 3);
-          } else { // Fallback voor ctx.roundRect
+          } else { 
               ctx.rect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth);
           }
           ctx.fill();
@@ -4444,8 +4870,8 @@ function drawNode(node) {
 
           if (isSelectedAndOutlineNeeded) {
               const handleOrbitRadius = outerR * 1.6;
-              const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2); // Hoek voor tekenen (0=rechts)
-              const handleDisplayOffsetAngleRad = Math.PI / 4; // Hoeveel de handle gedraaid is tov de loop
+              const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2); 
+              const handleDisplayOffsetAngleRad = Math.PI / 4; 
               const handleActualDisplayAngleRad = drawingAngleForHandleRad + handleDisplayOffsetAngleRad;
 
               const handleGripX = node.x + Math.cos(handleActualDisplayAngleRad) * handleOrbitRadius;
@@ -4478,7 +4904,7 @@ function drawNode(node) {
     ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 
-  if (isSelectedAndOutlineNeeded && node.type !== "pulsar_rocket") { // Rocket pulsar heeft al z'n eigen selectie-feedback
+  if (isSelectedAndOutlineNeeded && node.type !== "pulsar_rocket") { 
     ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255, 255, 0, 0.9)";
     ctx.lineWidth = Math.max(0.5, 1.5 / viewScale); ctx.beginPath();
     const outlineRadius = NODE_RADIUS_BASE * node.size + 2 / viewScale;
@@ -4673,12 +5099,12 @@ function drawBackground(now) {
 
 function draw() {
   const now = audioContext ? audioContext.currentTime : performance.now() / 1000;
-  // deltaTime wordt nu berekend in animationLoop en idealiter doorgegeven aan draw,
-  // of hier opnieuw berekend als draw() direct vanuit requestAnimationFrame wordt aangeroepen
-  // en previousFrameTime globaal is. Voor nu gaan we uit van de berekening in animationLoop.
-  // Laten we aannemen dat deltaTime als parameter aan draw() wordt meegegeven of globaal beschikbaar is.
-  // Voor de zekerheid, als het niet wordt meegegeven, berekenen we het hier opnieuw.
-  // Dit is echter minder ideaal dan het één keer per frame in animationLoop te doen.
+  
+  
+  
+  
+  
+  
   const localDeltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
 
 
@@ -4689,13 +5115,13 @@ function draw() {
 
   drawBackground(now);
   drawGrid();
-  updateAndDrawParticles(localDeltaTime, now); // Gebruik localDeltaTime
+  updateAndDrawParticles(localDeltaTime, now); 
 
-  // Rockets tekenen/updaten na achtergrond en grid, voor andere elementen
-  updateAndDrawRockets(localDeltaTime, now); // Gebruik localDeltaTime
+  
+  updateAndDrawRockets(localDeltaTime, now); 
 
   connections.forEach(drawConnection);
-  nodes.forEach((node) => drawNode(node)); // drawNode gebruikt 'now' intern voor animaties
+  nodes.forEach((node) => drawNode(node)); 
 
   const nebulas = nodes.filter(n => n.type === "nebula");
   for (let i = 0; i < nebulas.length; i++) {
@@ -5017,12 +5443,12 @@ function launchRocket(pulsarNode, pulseData) {
       return;
   }
   const params = pulsarNode.audioParams;
-  const directionAngleFromUI_rad = params.rocketDirectionAngle || 0; // Dit is de hoek uit de UI, waarbij 0 rad = 0 graden = omhoog
+  const directionAngleFromUI_rad = params.rocketDirectionAngle || 0; 
   const speed = params.rocketSpeed || ROCKET_DEFAULT_SPEED;
 
-  // Correctie: UI 0 rad (omhoog) moet wiskundig -PI/2 rad worden.
-  // UI 90 graden (PI/2 rad, rechts) moet wiskundig 0 rad worden.
-  // Dus: effectieveHoek = uiHoek - PI/2
+  
+  
+  
   const effectiveLaunchAngleRad = directionAngleFromUI_rad - (Math.PI / 2);
 
   console.log(`%c[launchRocket] UI Angle (0=up): ${directionAngleFromUI_rad.toFixed(2)} rad (${(directionAngleFromUI_rad * 180 / Math.PI).toFixed(1)}°). Effective Math Angle (0=right): ${effectiveLaunchAngleRad.toFixed(2)} rad (${(effectiveLaunchAngleRad * 180 / Math.PI).toFixed(1)}°)`, 'color: #00AAFF;');
@@ -5034,8 +5460,8 @@ function launchRocket(pulsarNode, pulseData) {
     startY: pulsarNode.y,
     currentX: pulsarNode.x,
     currentY: pulsarNode.y,
-    vx: speed * Math.cos(effectiveLaunchAngleRad), // Gebruik de gecorrigeerde hoek
-    vy: speed * Math.sin(effectiveLaunchAngleRad), // Gebruik de gecorrigeerde hoek
+    vx: speed * Math.cos(effectiveLaunchAngleRad), 
+    vy: speed * Math.sin(effectiveLaunchAngleRad), 
     gravity: params.rocketGravity || ROCKET_DEFAULT_GRAVITY,
     speed: speed,
     range: params.rocketRange || ROCKET_DEFAULT_RANGE,
@@ -5064,7 +5490,7 @@ function updateAndDrawRockets(deltaTime, now) {
     rocket.vy += rocket.gravity * deltaTime;
     rocket.distanceTraveled += Math.sqrt(Math.pow(rocket.vx * deltaTime, 2) + Math.pow(rocket.vy * deltaTime, 2));
 
-    // console.log(`%c[updateAndDrawRockets] Rocket ${rocket.id}: Pos (${rocket.currentX.toFixed(1)}, ${rocket.currentY.toFixed(1)}), Dist: ${rocket.distanceTraveled.toFixed(1)}/${rocket.range}`, 'color: #FFC0CB;');
+    
 
     if (rocket.distanceTraveled >= rocket.range || (now - rocket.creationTime) > rocket.maxLifeTime * 1.1) {
       console.log(`%c[updateAndDrawRockets] Rocket ${rocket.id} EXPIRED (range/lifetime). Creating explosion.`, 'color: #FF6347;');
@@ -5145,7 +5571,7 @@ function checkRocketNodeCollision(rocket) {
     const collisionRadius = NODE_RADIUS_BASE * node.size * 0.8;
     const dist = distance(rocket.currentX, rocket.currentY, node.x, node.y);
 
-    // console.log(`Rocket ${rocket.id} vs Node ${node.id}: Dist ${dist.toFixed(1)}, CollisionRadius ${collisionRadius.toFixed(1)}`);
+    
 
     if (dist < collisionRadius) {
       return node;
@@ -5154,26 +5580,26 @@ function checkRocketNodeCollision(rocket) {
   return null;
 }
 
-// Vereenvoudigde connector collision: check afstand tot middelpunt van de curve.
+
 function checkRocketConnectionCollision(rocket) {
-  const collisionThreshold = 15 / viewScale; // Hoe dichtbij de raket moet zijn
+  const collisionThreshold = 15 / viewScale; 
   for (const conn of connections) {
     const nA = findNodeById(conn.nodeAId);
     const nB = findNodeById(conn.nodeBId);
     if (!nA || !nB) continue;
 
-    // Middelpunt van de quadratische Bezier curve
+    
     const midControlX = (nA.x + nB.x) / 2 + conn.controlPointOffsetX;
     const midControlY = (nA.y + nB.y) / 2 + conn.controlPointOffsetY;
-    // Dichtstbijzijnde punt op de curve is complex. We nemen een punt halverwege de curve.
+    
     const curveMidX = lerp(lerp(nA.x, midControlX, 0.5), lerp(midControlX, nB.x, 0.5), 0.5);
     const curveMidY = lerp(lerp(nA.y, midControlY, 0.5), lerp(midControlY, nB.y, 0.5), 0.5);
 
     const distToMid = distance(rocket.currentX, rocket.currentY, curveMidX, curveMidY);
 
-    if (distToMid < collisionThreshold + (conn.length / 15)) { // Threshold + beetje afhankelijk van lengte
-        // Optioneel: check of de raket ongeveer in de buurt van het segment is
-        // Dit is een zeer ruwe check.
+    if (distToMid < collisionThreshold + (conn.length / 15)) { 
+        
+        
         const lineMinX = Math.min(nA.x, nB.x) - collisionThreshold;
         const lineMaxX = Math.max(nA.x, nB.x) + collisionThreshold;
         const lineMinY = Math.min(nA.y, nB.y) - collisionThreshold;
@@ -5182,15 +5608,15 @@ function checkRocketConnectionCollision(rocket) {
         if (rocket.currentX >= lineMinX && rocket.currentX <= lineMaxX &&
             rocket.currentY >= lineMinY && rocket.currentY <= lineMaxY) {
 
-            // Nog een check: beweegt de raket naar de lijn toe?
-            // Dit voorkomt dat een raket die net *voorbij* is, alsnog een hit registreert.
-            // Vector van raket naar curveMid:
+            
+            
+            
             const dxToCurve = curveMidX - rocket.currentX;
             const dyToCurve = curveMidY - rocket.currentY;
-            // Dot product met snelheidsvector van de raket
+            
             const dotProduct = rocket.vx * dxToCurve + rocket.vy * dyToCurve;
 
-            if (dotProduct > 0) { // Als > 0, beweegt de raket ongeveer richting het middelpunt.
+            if (dotProduct > 0) { 
                  return conn;
             }
         }
@@ -5490,11 +5916,11 @@ function handlePulsarTriggerToggle(node) {
 
 
 function createExplosionAnimation(x, y, color) {
-  const explosionColor = color || 'rgba(255, 180, 80, 0.9)'; // Default oranje-achtig
+  const explosionColor = color || 'rgba(255, 180, 80, 0.9)'; 
   for (let i = 0; i < ROCKET_EXPLOSION_PARTICLES; i++) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 1.0 + Math.random() * 2.5; // Iets snellere deeltjes
-    const life = 0.4 + Math.random() * 0.5;  // Kortere levensduur
+    const speed = 1.0 + Math.random() * 2.5; 
+    const life = 0.4 + Math.random() * 0.5;  
     activeParticles.push({
       id: particleIdCounter++, x: x, y: y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
@@ -5578,11 +6004,11 @@ function handleMouseDown(event) {
       nodeClickedAtMouseDown = null;
       connectionClickedAtMouseDown = null;
       elementClickedAtMouseDown = null;
-      isRotatingRocket = null; // Zorg dat rotatie niet start bij pannen
+      isRotatingRocket = null; 
       return;
   }
 
-  if (isRotatingRocket) { // Als rotatie al is gestart, doe niets anders
+  if (isRotatingRocket) { 
       return;
   }
 
@@ -5778,7 +6204,7 @@ function handleMouseUp(event) {
       updateConstellationGroup();
       populateEditPanel();
   }
-  else if (!wasDragging && !wasPanning && !wasResizing && !wasRotatingARocket) { // wasRotatingARocket toegevoegd
+  else if (!wasDragging && !wasPanning && !wasResizing && !wasRotatingARocket) { 
       if (currentTool === 'brush') {
           if (!elementUnderCursor) {
               let typeToPlace = brushNodeType;
@@ -6001,14 +6427,14 @@ function handleMouseMove(event) {
        else if (currentTool === "edit" && hN && hN.type === "pulsar_rocket" && isElementSelected('node', hN.id)) {
             const outerR = NODE_RADIUS_BASE * hN.size * (1 + hN.animationState * 0.5);
             const handleOrbitRadius = outerR * 1.6;
-            const handleGripRadiusView = 7 / viewScale; // Gevoeligheid voor hover op handle
+            const handleGripRadiusView = 7 / viewScale; 
             const drawingAngleRad = (hN.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
             const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
             const handleGripX_world = hN.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
             const handleGripY_world = hN.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
             const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
-            if (distToHandle < handleGripRadiusView * viewScale) { // Check in wereldcoördinaten
-                 canvas.style.cursor = "grab"; // Of een rotatiecursor
+            if (distToHandle < handleGripRadiusView * viewScale) { 
+                 canvas.style.cursor = "grab"; 
             } else {
                  canvas.style.cursor = "move";
             }
@@ -6117,13 +6543,13 @@ function saveState() {
 function loadState(stateToLoad) {
   if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
       console.error("Ongeldige of incomplete state data om te laden.");
-      return; // Stop hier als de data niet goed is.
+      return; 
   }
 
-  // De onbereikbare code van hier is verwijderd.
-  // unsavedChanges = false; // VERPLAATS DEZE
-  // updateAbletonLinkButton(); // VERPLAATS DEZE
-  // console.log("State loaded successfully."); // VERPLAATS DEZE
+  
+  
+  
+  
 
   isPerformingUndoRedo = true;
 
@@ -6245,9 +6671,9 @@ function loadState(stateToLoad) {
 
   isPerformingUndoRedo = false;
 
-  // PLAATS DE VERPLAATSTE REGELS HIER, AAN HET EINDE VAN EEN SUCCESVOLLE LOAD:
+  
   unsavedChanges = false;
-  updateAbletonLinkButton(); // Als je deze functie hebt
+  updateAbletonLinkButton(); 
   console.log("State loaded successfully.");
 }
 function undo() {
@@ -7367,7 +7793,7 @@ function setActiveTool(toolName) {
   currentTool = toolName;
   connectingNode = null;
   isConnecting = false;
-  // connectionTypeToAdd wordt nu niet hier gereset, maar in handleMouseDown/Up of bij start connect tool.
+  
 
   editBtn.classList.toggle("active", toolName === "edit");
   connectBtn.classList.toggle("active", toolName === "connect");
@@ -7487,7 +7913,7 @@ function populateSideToolbar(contentType, title) {
     targetPresetArray = nebulaWaveforms;
     showNoteSelector = true;
     if (nodeTypeToAdd === "nebula" && (waveformToAdd === null || !nebulaWaveforms.some(w => w.type === waveformToAdd))) {
-        waveformToAdd = nebulaWaveforms[2].type; // Default "sawtooth"
+        waveformToAdd = nebulaWaveforms[2].type; 
     }
   }
 
@@ -7613,6 +8039,105 @@ if (appMenuRecordBtn) {
     });
 } else {
     console.error("#app-menu-record-btn niet gevonden in DOM!");
+}
+
+if (tapeLoopRecordBtn) {
+    tapeLoopRecordBtn.addEventListener('click', () => {
+        if (!tapeLoopRecordBtnClickable) {
+            console.log("DEBUG: Tape Loop Record Knop klik genegeerd (te snel).");
+            return;
+        }
+        console.log("DEBUG: Tape Loop Record Knop geklikt. Huidige staat: armed=", tapeLoopRecordBtn.dataset.isArmed, "isRecording=", isTapeLoopRecording, "isPlaying=", isTapeLoopPlaying);
+
+        if (!audioContext || audioContext.state !== 'running') {
+            alert("Audio context is nog niet klaar of is gepauzeerd. Activeer audio eerst.");
+            return;
+        }
+
+        if (tapeLoopRecordBtn.dataset.isArmed === 'true') {
+            console.log("DEBUG: Tape Looper was Armed. Annuleer arming nu.");
+            tapeLoopRecordBtn.dataset.isArmed = 'false';
+            tapeLoopRecordBtnClickable = true; // Meteen weer klikbaar maken
+            scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startRec');
+            
+            if (tapeLoopInputGate) {
+                tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
+                tapeLoopInputGate.gain.setValueAtTime(0, audioContext.currentTime);
+            }
+            isTapeLoopRecording = false; 
+            console.log("Tape loop arming geannuleerd.");
+            updateTapeLooperUI();
+
+        } else if (isTapeLoopRecording) {
+            console.log("DEBUG: Tape Looper was Recording. Stopt opname nu en start playback.");
+            if (tapeLoopInputGate) {
+                tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
+                tapeLoopInputGate.gain.setValueAtTime(0.0, audioContext.currentTime);
+            }
+            scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'stopRecAndPlay');
+            
+            isTapeLoopRecording = false;
+            if (scriptNodeForTapeLoop) {
+                try { scriptNodeForTapeLoop.disconnect(); } catch(e){}
+                if (tapeLoopInputGate && scriptNodeForTapeLoop) {
+                    try { tapeLoopInputGate.disconnect(scriptNodeForTapeLoop); } catch(e){}
+                }
+                scriptNodeForTapeLoop.onaudioprocess = null;
+                scriptNodeForTapeLoop = null;
+            }
+            console.log("Tape loop recording direct gestopt door gebruiker.");
+            updateTapeLooperUI();
+            if (tapeLoopBuffer && tapeLoopWritePosition > (audioContext.sampleRate * 0.05)) {
+                playTapeLoop(audioContext.currentTime);
+            } else {
+                console.log("DEBUG: Niet genoeg data opgenomen, buffer wordt gewist ipv afgespeeld.");
+                clearTapeLoop(); 
+            }
+        } else if (!isTapeLoopPlaying) {
+            console.log("DEBUG: Tape Looper is Idle/Ready. Start/Arm nieuwe opname.");
+            clearTapeLoop(); 
+            startTapeLoopRecording();
+        } else {
+             console.log("DEBUG: Tape loop is aan het spelen. Stop eerst playback om opnieuw op te nemen.");
+        }
+    });
+}
+
+if (tapeLoopPlayBtn) {
+    tapeLoopPlayBtn.addEventListener('click', () => {
+        if (tapeLoopBuffer && !isTapeLoopPlaying && !isTapeLoopRecording) {
+            playTapeLoop();
+        }
+    });
+}
+
+if (tapeLoopStopBtn) {
+    tapeLoopStopBtn.addEventListener('click', () => {
+        if (isTapeLoopPlaying) {
+            stopTapeLoopPlayback();
+        }
+    });
+}
+
+if (tapeLoopClearBtn) {
+    tapeLoopClearBtn.addEventListener('click', () => {
+        clearTapeLoop();
+    });
+}
+
+if (tapeLoopDurationInput) {
+    tapeLoopDurationInput.addEventListener('change', (e) => {
+        const newDuration = parseFloat(e.target.value);
+        if (!isNaN(newDuration) && newDuration > 0) {
+            configuredTapeLoopDurationSeconds = newDuration;
+            console.log(`Tape loop duration set to: ${configuredTapeLoopDurationSeconds}s`);
+            if (!isTapeLoopRecording && !isTapeLoopPlaying) {
+                updateTapeLooperUI();
+            }
+        } else {
+            e.target.value = configuredTapeLoopDurationSeconds;
+        }
+    });
 }
 
 function clearEditPanel() {
@@ -7899,7 +8424,7 @@ const fmSynthPresets = [
     }
   
     waveformToAdd = waveformType;
-    console.log(`%c[handleWaveformSelect] waveformToAdd SET TO: ${waveformToAdd} (for nodeType: ${nodeTypeToAdd})`, 'color: blue; font-weight: bold;'); // <-- LOG HIER
+    console.log(`%c[handleWaveformSelect] waveformToAdd SET TO: ${waveformToAdd} (for nodeType: ${nodeTypeToAdd})`, 'color: blue; font-weight: bold;'); 
   
     const currentWaveButtons = sideToolbarContent.querySelectorAll(
       ".waveform-button, .sampler-button"
@@ -8193,6 +8718,31 @@ if (appMenuAdvancedSoon) appMenuAdvancedSoon.addEventListener("click", showComin
 if (appMenuUndoBtn) appMenuUndoBtn.addEventListener("click", undo);
 if (appMenuRedoBtn) appMenuRedoBtn.addEventListener("click", redo);
 if (appMenuAbletonLinkBtn) appMenuAbletonLinkBtn.addEventListener("click", toggleAbletonLink);
+if (appMenuToggleTapeLooperBtn) {
+    appMenuToggleTapeLooperBtn.addEventListener('click', () => {
+        if (tapeLooperPanel) {
+            if (tapeLooperPanel.classList.contains('hidden')) {
+                hideOverlappingPanels();
+                tapeLooperPanel.classList.remove('hidden');
+                appMenuToggleTapeLooperBtn.classList.add('active');
+            } else {
+                tapeLooperPanel.classList.add('hidden');
+                appMenuToggleTapeLooperBtn.classList.remove('active');
+            }
+        }
+    });
+}
+
+if (closeTapeLooperPanelBtn) {
+    closeTapeLooperPanelBtn.addEventListener('click', () => {
+        if (tapeLooperPanel) {
+            tapeLooperPanel.classList.add('hidden');
+        }
+        if (appMenuToggleTapeLooperBtn) {
+            appMenuToggleTapeLooperBtn.classList.remove('active');
+        }
+    });
+}
 
 if (appMenuGridToggleBtn) {
     appMenuGridToggleBtn.addEventListener("click", () => {
@@ -8224,23 +8774,20 @@ if (appMenuSyncToggleBtn) {
 }
 if (appMenuBpmInput) {
   appMenuBpmInput.addEventListener("change", (e) => {
-      
-      const newBPMValue = parseInt(e.target.value, 10); 
-
-      
+      const newBPMValue = parseInt(e.target.value, 10);
       if (!isNaN(newBPMValue) && newBPMValue >= 30 && newBPMValue <= 300) {
-          globalBPM = newBPMValue; 
-          saveState(); 
+          globalBPM = newBPMValue;
+          saveState();
           console.log(`Global BPM is nu: ${globalBPM}`);
-          
-                         
-                         
-                         
-                         
+
+          if (isTapeLoopPlaying && tapeLoopSourceNode && tapeLoopRecordedAtBPM > 0 && isGlobalSyncEnabled && audioContext) {
+              const newPlaybackRate = globalBPM / tapeLoopRecordedAtBPM;
+              tapeLoopSourceNode.playbackRate.setTargetAtTime(newPlaybackRate, audioContext.currentTime, 0.05);
+              console.log(`Tape loop playbackRate aangepast naar: ${newPlaybackRate.toFixed(2)}`);
+          }
       } else {
-          
           console.warn(`Ongeldige BPM input: ${e.target.value}. Reset naar ${globalBPM}.`);
-          appMenuBpmInput.value = globalBPM; 
+          appMenuBpmInput.value = globalBPM;
       }
   });
 }
@@ -8294,7 +8841,7 @@ toggleInfoTextBtn.addEventListener("click", () => {
 
 function setupAddTool(buttonElement, type, requiresSubmenu = false, submenuType = null, submenuTitle = "") {
   setActiveTool("add");
-  console.log(`%c[setupAddTool] AFTER setActiveTool("add"): nodeTypeToAdd = ${type}, waveformToAdd = ${waveformToAdd}`, 'color: purple;'); // <-- LOG HIER
+  console.log(`%c[setupAddTool] AFTER setActiveTool("add"): nodeTypeToAdd = ${type}, waveformToAdd = ${waveformToAdd}`, 'color: purple;'); 
 
   nodeTypeToAdd = type;
 
@@ -8302,7 +8849,7 @@ function setupAddTool(buttonElement, type, requiresSubmenu = false, submenuType 
       waveformToAdd = null;
       noteIndexToAdd = -1;
   }
-  console.log(`%c[setupAddTool] BEFORE populateSideToolbar: nodeTypeToAdd = ${nodeTypeToAdd}, waveformToAdd = ${waveformToAdd}`, 'color: purple;'); // <-- LOG HIER
+  console.log(`%c[setupAddTool] BEFORE populateSideToolbar: nodeTypeToAdd = ${nodeTypeToAdd}, waveformToAdd = ${waveformToAdd}`, 'color: purple;'); 
 
 
   const addButtons = toolbar.querySelectorAll("#toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
@@ -8605,165 +9152,177 @@ function handleContextMenu(event) {
 canvas.addEventListener('contextmenu', handleContextMenu);
 
 function animationLoop() {
-  animationFrameId = requestAnimationFrame(animationLoop);
+    animationFrameId = requestAnimationFrame(animationLoop);
 
-  if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
-      return;
-  }
+    if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
+        return;
+    }
 
-  const now = audioContext.currentTime;
-  const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
-  const secondsPerBeat = 60.0 / (globalBPM || 120);
+    processScheduledTapeEvents(); // <--- DEZE REGEL IS CRUCIAAL EN WAS WAARSCHIJNLIJK WEG
 
-  if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
-      const epsilon = 0.01;
-      if (now >= lastBeatTime + secondsPerBeat - epsilon) {
-          if (!beatIndicatorElement.classList.contains("active")) {
-              beatIndicatorElement.classList.add("active");
-              setTimeout(() => {
-                  if (beatIndicatorElement) beatIndicatorElement.classList.remove("active");
-              }, 50);
-          }
-          lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
-      }
-  } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
-      beatIndicatorElement.classList.remove("active");
-      lastBeatTime = 0;
-  }
+    const now = audioContext.currentTime;
+    const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+    const secondsPerBeat = 60.0 / (globalBPM || 120);
 
-  try {
-      nodes.forEach((node) => {
-          if (node.isStartNode && node.isEnabled &&
-              (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles" || node.type === "pulsar_rocket")) {
+    if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
+        const epsilon = 0.01;
+        if (now >= lastBeatTime + secondsPerBeat - epsilon) {
+            if (!beatIndicatorElement.classList.contains("active")) {
+                beatIndicatorElement.classList.add("active");
+                setTimeout(() => {
+                    if (beatIndicatorElement) beatIndicatorElement.classList.remove("active");
+                }, 50);
+            }
+            lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
+        }
+    } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
+        beatIndicatorElement.classList.remove("active");
+        lastBeatTime = 0;
+    }
 
-              let shouldPulse = false;
-              let pulseData = {};
+    try {
+        nodes.forEach((node) => {
+            if (node.isStartNode && node.isEnabled &&
+                (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles" || node.type === "pulsar_rocket")) {
 
-              if (node.type === "pulsar_random_particles") {
-                  if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) {
-                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                  }
-                  if (now >= node.nextRandomTriggerTime) {
-                      shouldPulse = true;
-                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                  }
-              } else {
-                  if (isGlobalSyncEnabled) {
-                      const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-                      if (index >= 0 && index < subdivisionOptions.length) {
-                          const subdiv = subdivisionOptions[index];
-                          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
-                              const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                              if (nodeIntervalSeconds > 0) {
-                                  if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
-                                      const currentBeat = now / secondsPerBeat;
-                                      const currentSubdivision = Math.floor(currentBeat / subdiv.value);
-                                      node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
-                                      if (node.nextSyncTriggerTime <= now + 0.005) {
-                                          node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                      }
-                                  }
-                                  if (now >= node.nextSyncTriggerTime - 0.005) {
-                                      shouldPulse = true;
-                                      node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                      if (node.nextSyncTriggerTime <= now) {
-                                          node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
-                                          if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                      }
-                                  }
-                              } else {
-                                  console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
-                              }
-                          } else {
-                              console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
-                          }
-                      } else {
-                          console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
-                          node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX;
-                      }
-                  } else {
-                      if (node.lastTriggerTime < 0) {
-                          node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
-                      }
-                      const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
-                      if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
-                          shouldPulse = true;
-                          node.lastTriggerTime = now;
-                      }
-                  }
-              }
+                let shouldPulse = false;
+                let pulseData = {};
 
-              if (shouldPulse) {
-                  pulseData = {
-                      intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
-                      color: node.color ?? null,
-                      particleMultiplier: 1.0,
-                  };
-                  if (node.type === "pulsar_random_volume") {
-                      pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
-                  }
+                if (node.type === "pulsar_random_particles") {
+                    if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) {
+                        node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                    }
+                    if (now >= node.nextRandomTriggerTime) {
+                        shouldPulse = true;
+                        node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                    }
+                } else {
+                    if (isGlobalSyncEnabled) {
+                        const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+                        if (index >= 0 && index < subdivisionOptions.length) {
+                            const subdiv = subdivisionOptions[index];
+                            if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
+                                const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                                if (nodeIntervalSeconds > 0) {
+                                    if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
+                                        const currentBeat = now / secondsPerBeat;
+                                        const currentSubdivision = Math.floor(currentBeat / subdiv.value);
+                                        node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
+                                        if (node.nextSyncTriggerTime <= now + 0.005) {
+                                            node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                        }
+                                    }
+                                    if (now >= node.nextSyncTriggerTime - 0.005) {
+                                        shouldPulse = true;
+                                        node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                        if (node.nextSyncTriggerTime <= now) {
+                                            node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
+                                            if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                        }
+                                    }
+                                } else {
+                                    console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
+                                }
+                            } else {
+                                console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
+                            }
+                        } else {
+                            console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
+                            node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX;
+                        }
+                    } else {
+                        if (node.lastTriggerTime < 0) {
+                            node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
+                        }
+                        const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                        if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
+                            shouldPulse = true;
+                            node.lastTriggerTime = now;
+                        }
+                    }
+                }
 
-                  currentGlobalPulseId++;
-                  node.animationState = 1;
-                  setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
+                if (shouldPulse) {
+                    pulseData = {
+                        intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
+                        color: node.color ?? null,
+                        particleMultiplier: 1.0,
+                    };
+                    if (node.type === "pulsar_random_volume") {
+                        pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
+                    }
 
-                  if (node.type === "pulsar_rocket") {
-                      console.log(`%c[AnimLoop] Pulsar ${node.id} triggering. Stored Angle: ${node.audioParams.rocketDirectionAngle} (rad), ${(node.audioParams.rocketDirectionAngle * 180 / Math.PI).toFixed(1)}°`, 'color: green;');
-                      launchRocket(node, pulseData);
-                  } else {
-                      node.connections.forEach(neighborId => {
-                          const neighborNode = findNodeById(neighborId);
-                          const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                          if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
-                              const travelTime = connection.length * DELAY_FACTOR;
-                              try {
-                                  createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
-                                  propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
-                              } catch (propError) {
-                                  console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
-                              }
-                          }
-                      });
-                  }
-              }
-          } else if (node.type === "gate") {
-              node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
-              node.currentAngle %= 2 * Math.PI;
-          } else if (node.type === "nebula") {
-              node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
-              node.currentAngle %= 2 * Math.PI;
-              node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
-              node.innerAngle %= 2 * Math.PI;
-              node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
-              node.pulsePhase %= 2 * Math.PI;
-          } else if (node.type === PORTAL_NEBULA_TYPE) {
-              node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
-              node.pulsePhase %= 2 * Math.PI;
-          }
-      });
+                    currentGlobalPulseId++;
+                    node.animationState = 1;
+                    setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
 
-      try {
-          updateNebulaInteractionAudio();
-      } catch (nebError) {
-          console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
-      }
+                    if (node.type === "pulsar_rocket") {
+                        launchRocket(node, pulseData);
+                    } else {
+                        node.connections.forEach(neighborId => {
+                            const neighborNode = findNodeById(neighborId);
+                            const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                            if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
+                                const travelTime = connection.length * DELAY_FACTOR;
+                                try {
+                                    createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
+                                    propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
+                                } catch (propError) {
+                                    console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
+                                }
+                            }
+                        });
+                    }
+                }
+            } else if (node.type === "gate") {
+                node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
+                node.currentAngle %= 2 * Math.PI;
+            } else if (node.type === "nebula") {
+                node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
+                node.currentAngle %= 2 * Math.PI;
+                node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
+                node.innerAngle %= 2 * Math.PI;
+                node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
+                node.pulsePhase %= 2 * Math.PI;
+            } else if (node.type === PORTAL_NEBULA_TYPE) {
+                node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
+                node.pulsePhase %= 2 * Math.PI;
+            }
+        });
 
-      if (currentTool === 'brush' && isBrushing && lastBrushNode) {
-          if (Math.random() < 0.3) {
-              createParticles(lastBrushNode.x, lastBrushNode.y, 1);
-          }
-      }
-      draw();
+        try {
+            updateNebulaInteractionAudio();
+        } catch (nebError) {
+            console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
+        }
 
-  } catch (loopError) {
-      console.error("Fout opgetreden in animationLoop:", loopError);
-      if (animationFrameId) {
-          cancelAnimationFrame(animationFrameId);
-          animationFrameId = null;
-          console.error("Animation loop gestopt vanwege fout.");
-      }
-  }
-  previousFrameTime = now;
+        if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+            if (Math.random() < 0.3) {
+                createParticles(lastBrushNode.x, lastBrushNode.y, 1);
+            }
+        }
+
+        if (isTapeLoopPlaying || isTapeLoopRecording || (tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true')) {
+            tapeReelAngle += 2;
+            if (tapeReelLeft) {
+                tapeReelLeft.style.transform = `rotate(${tapeReelAngle}deg)`;
+            }
+            if (tapeReelRight) {
+                tapeReelRight.style.transform = `rotate(${tapeReelAngle}deg)`;
+            }
+        }
+        
+        draw();
+
+    } catch (loopError) {
+        console.error("Fout opgetreden in animationLoop:", loopError);
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            console.error("Animation loop gestopt vanwege fout.");
+        }
+    }
+    previousFrameTime = now;
 }
 function startAnimationLoop() {
   if (!animationFrameId) {
@@ -8895,7 +9454,7 @@ function populateEditPanel() {
               enableCheckbox.type = "checkbox";
               enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
               enableCheckbox.checked = node.isEnabled;
-              enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable"; // Disable for multi-select triggerable
+              enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable"; 
               enableCheckbox.addEventListener("change", () => handlePulsarTriggerToggle(node));
               section.appendChild(enableCheckbox);
               section.appendChild(document.createElement("br"));
@@ -10076,80 +10635,71 @@ window.addEventListener("resize", () => {
 }
 })
 window.addEventListener("load", () => {
-  if (canvas.clientWidth > 0 && canvas.clientHeight > 0) { 
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
-}
-  console.log("LOAD: UI setup voor setupAudio() voltooid."); 
-  
-  pianoRollCanvas = document.getElementById('pianoRollCanvas');
-  if (pianoRollCanvas) {
-      pianoRollCtx = pianoRollCanvas.getContext('2d');
-      try {
-           pianoRollCanvas.width = pianoRollCanvas.clientWidth;
-           pianoRollCanvas.height = pianoRollCanvas.clientHeight;
-      } catch (e) {
-           console.warn("Kon pianoRollCanvas dimensies niet direct instellen:", e);
-           pianoRollCanvas.width = 300; 
-           pianoRollCanvas.height = 80; 
-      }
-      pianoRollCanvas.addEventListener('mousedown', handlePianoRollClick);
-  } else {
-      console.error("#pianoRollCanvas element not found during initialization!");
-  }
-  
-
-  
-  Object.keys(scales).forEach((key) => {
-      const o = document.createElement("option");
-      o.value = key;
-      o.textContent = scales[key].name; 
-      scaleSelectTransport.appendChild(o.cloneNode(true));
-      
-  });
-  
-  scaleSelectTransport.value = currentScaleKey;
-  
-  
-  
-  
-  
-  
-
-  
-  setActiveTool("edit");
-  resetSideToolbars();
-  hideOverlappingPanels();
-  noteSelectElement = null;
-  noteSelectContainer = null;
-
-  startMessage.style.display = "block"; 
-  console.log("LOAD: Start message wordt getoond."); 
-  
-  setupAudio().then(context => {
-    console.log("LOAD: setupAudio().then() - BEGIN"); 
-    if (context) {
-      console.log("LOAD: Audio context verkregen."); 
-      isAudioReady = true;
-      updateMixerUI(); 
-      updateScaleAndTransposeUI();
-      identifyAndRouteAllGroups(); 
-      drawPianoRoll();
-      setActiveTool("edit"); 
-      resetSideToolbars();
-      hideOverlappingPanels();
-      console.log("LOAD: setupAudio().then() - VOLTOOID, isAudioReady:", isAudioReady); 
-    } else {
-      console.error("LOAD: Audio setup mislukt (context is null/undefined in .then())."); 
-      startMessage.textContent = "Error loading audio.";
-      startMessage.style.display = "block";
-      if(loadingIndicator) loadingIndicator.style.display = 'none';
+    if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
     }
-  }).catch(err => {
-    console.error("LOAD: Fout TIJDENS setupAudio() (in .catch()):", err); 
-    startMessage.textContent = "Error loading audio.";
+    console.log("LOAD: UI setup voor setupAudio() voltooid.");
+
+    pianoRollCanvas = document.getElementById('pianoRollCanvas');
+    if (pianoRollCanvas) {
+        pianoRollCtx = pianoRollCanvas.getContext('2d');
+        try {
+            pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+            pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+        } catch (e) {
+            console.warn("Kon pianoRollCanvas dimensies niet direct instellen:", e);
+            pianoRollCanvas.width = 300;
+            pianoRollCanvas.height = 80;
+        }
+        pianoRollCanvas.addEventListener('mousedown', handlePianoRollClick);
+    } else {
+        console.error("#pianoRollCanvas element not found during initialization!");
+    }
+
+    Object.keys(scales).forEach((key) => {
+        const o = document.createElement("option");
+        o.value = key;
+        o.textContent = scales[key].name;
+        scaleSelectTransport.appendChild(o.cloneNode(true));
+    });
+
+    scaleSelectTransport.value = currentScaleKey;
+
+    setActiveTool("edit");
+    resetSideToolbars();
+    hideOverlappingPanels();
+    noteSelectElement = null;
+    noteSelectContainer = null;
+
     startMessage.style.display = "block";
-    if(loadingIndicator) loadingIndicator.style.display = 'none';
-  });
-  console.log("LOAD: Einde van load event listener (setupAudio is asynchroon gestart)."); 
-}); 
+    console.log("LOAD: Start message wordt getoond.");
+
+    setupAudio().then(context => {
+        console.log("LOAD: setupAudio().then() - BEGIN");
+        if (context) {
+            console.log("LOAD: Audio context verkregen.");
+            isAudioReady = true;
+            updateMixerUI();
+            updateScaleAndTransposeUI();
+            identifyAndRouteAllGroups();
+            drawPianoRoll();
+            setActiveTool("edit");
+            resetSideToolbars();
+            hideOverlappingPanels();
+            updateTapeLooperUI();
+            console.log("LOAD: setupAudio().then() - VOLTOOID, isAudioReady:", isAudioReady);
+        } else {
+            console.error("LOAD: Audio setup mislukt (context is null/undefined in .then()).");
+            startMessage.textContent = "Error loading audio.";
+            startMessage.style.display = "block";
+            if(loadingIndicator) loadingIndicator.style.display = 'none';
+        }
+    }).catch(err => {
+        console.error("LOAD: Fout TIJDENS setupAudio() (in .catch()):", err);
+        startMessage.textContent = "Error loading audio.";
+        startMessage.style.display = "block";
+        if(loadingIndicator) loadingIndicator.style.display = 'none';
+    });
+    console.log("LOAD: Einde van load event listener (setupAudio is asynchroon gestart).");
+});

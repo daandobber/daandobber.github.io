@@ -7,7 +7,39 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-major-pentatonic">
+<div id="tapeLooperPanel" class="floating-panel cassette-panel hidden">
+    <button class="close-panel-button" id="closeTapeLooperPanelBtn">&times;</button>
+    
+    <div class="cassette-main-body">
+        <div class="cassette-top-label">
+            ResonAut Loop Tape C-90
+        </div>
+        <div class="cassette-window-area">
+            <div class="cassette-reels">
+                <div class="reel" id="tapeReelLeft">
+                    <div class="reel-inner"></div>
+                    <div class="reel-spoke"></div><div class="reel-spoke rot-1"></div><div class="reel-spoke rot-2"></div>
+                </div>
+                <div id="tapeLoopStatusLabel" class="cassette-status-display">Status: Idle</div>
+                <div class="reel" id="tapeReelRight">
+                    <div class="reel-inner"></div>
+                    <div class="reel-spoke"></div><div class="reel-spoke rot-1"></div><div class="reel-spoke rot-2"></div>
+                </div>
+            </div>
+        </div>
+        <div class="cassette-bottom-label">
+            <input type="number" id="tapeLoopDurationInput" min="1" max="60" step="0.5" value="4">
+            <span>sec loop</span>
+        </div>
+    </div>
 
+    <div id="tapeLooperControls" class="cassette-controls">
+        <button id="tapeLoopRecordBtn" title="Record/Arm Loop">⏺️</button>
+        <button id="tapeLoopPlayBtn" title="Play Loop" disabled>▶️</button>
+        <button id="tapeLoopStopBtn" title="Stop Loop" disabled>⏹️</button>
+        <button id="tapeLoopClearBtn" title="Clear Loop" disabled>🗑️</button>
+    </div>
+</div>
     <div id="app-menu-bar">
         <div class="app-menu-dropdown">
             <button class="app-menu-button">File</button>
@@ -50,7 +82,7 @@
         <button id="app-menu-restart-pulsars-btn" class="app-menu-bar-button hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
         <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
         <button id="app-menu-record-btn" class="app-menu-bar-button" title="Record Session">🔴 Record</button>
-
+        <button id="app-menu-toggle-tape-looper-btn" class="app-menu-bar-button" title="Toggle Tape Looper">📼 Tape</button>
         <div class="app-menu-spacer"></div> <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
     </div>
     <canvas id="mainCanvas"></canvas>
@@ -145,6 +177,7 @@
         <div class="transport-divider"></div> <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button> <div class="transport-divider"></div>
         <canvas id="pianoRollCanvas"></canvas> </div>
 
+    
     <div id="mixerPanel" class="panel right-panel slide-panel hidden">
         <h3>Mixer</h3>
         <div class="panel-section">

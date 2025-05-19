@@ -1363,3 +1363,166 @@ body {
 .close-panel-button:hover {
     opacity: 1;
 }
+
+/* In style.css */
+
+/* Styling voor het nieuwe paneel */
+#tapeLooperPanel.cassette-panel {
+    position: fixed;
+    bottom: 20px; /* Positie rechtsonder */
+    right: -350px; /* Start buiten beeld */
+    width: 320px; /* Breedte van het paneel */
+    padding: 15px;
+    background-color: #3c3c4c; /* Donkergrijs voor cassette look */
+    border: 2px solid #2a2a3a;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    z-index: 1050;
+    transition: right 0.4s ease-in-out; /* Slide animatie */
+    color: #ddd; /* Lichte tekstkleur */
+    font-family: 'Courier New', Courier, monospace; /* Retro font */
+}
+
+#tapeLooperPanel.cassette-panel:not(.hidden) {
+    right: 20px; /* Schuif in beeld */
+}
+
+#tapeLooperPanel .close-panel-button {
+    top: 5px;
+    right: 5px;
+    color: #888;
+    font-size: 1.4em;
+}
+#tapeLooperPanel .close-panel-button:hover {
+    color: #fff;
+}
+
+.cassette-main-body {
+    background-color: #4a4a5a;
+    border-radius: 5px;
+    padding: 10px;
+    border: 1px solid #5a5a6a;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+    margin-bottom: 10px;
+}
+
+.cassette-top-label, .cassette-bottom-label {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 3px 0;
+    color: #bbb;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 3px;
+}
+.cassette-top-label { margin-bottom: 8px; }
+.cassette-bottom-label { margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+.cassette-bottom-label input[type="number"] {
+    background-color: rgba(20,20,30,0.5);
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 3px;
+    padding: 3px;
+    width: 40px;
+    text-align: center;
+    font-size: 0.9em;
+    -moz-appearance: textfield;
+}
+.cassette-bottom-label input[type="number"]::-webkit-inner-spin-button,
+.cassette-bottom-label input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+
+
+.cassette-window-area {
+    background-color: #222;
+    border: 1px solid #111;
+    border-radius: 4px;
+    padding: 10px 5px;
+    margin: 5px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cassette-reels {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+}
+
+.reel {
+    width: 50px;
+    height: 50px;
+    background-color: #1a1a1a;
+    border-radius: 50%;
+    border: 2px solid #333;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.7);
+}
+
+.reel-inner {
+    width: 15px;
+    height: 15px;
+    background-color: #333;
+    border-radius: 50%;
+    border: 1px solid #444;
+}
+
+.reel .reel-spoke {
+    position: absolute;
+    width: 4px;
+    height: 55%; /* Maakt het iets langer dan de radius van reel-inner */
+    background-color: #282828;
+    top: 50%;
+    left: 50%;
+    transform-origin: 50% 0%; /* Roteer vanaf het midden-boven */
+    transform: translate(-50%, 0%) rotate(0deg);
+}
+.reel .reel-spoke.rot-1 { transform: translate(-50%, 0%) rotate(120deg); }
+.reel .reel-spoke.rot-2 { transform: translate(-50%, 0%) rotate(240deg); }
+
+
+#tapeLoopStatusLabel.cassette-status-display {
+    flex-grow: 1;
+    text-align: center;
+    font-size: 0.8em;
+    padding: 0 10px;
+    color: #aaccaa; /* Groenige status kleur */
+    min-width: 80px; /* Zodat het niet te smal wordt */
+}
+
+.cassette-controls {
+    display: flex;
+    justify-content: space-around;
+    padding-top: 5px;
+}
+
+.cassette-controls button {
+    background-color: var(--button-bg, #555);
+    color: var(--text-color, #fff);
+    border: 1px solid var(--button-hover, #666);
+    padding: 8px 10px; /* Iets kleiner voor compactheid */
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 1.2em; /* Grotere iconen */
+    line-height: 1;
+    transition: background-color 0.2s ease;
+}
+.cassette-controls button:hover {
+    background-color: var(--button-hover, #666);
+}
+.cassette-controls button:disabled {
+    background-color: var(--button-disabled-bg, #444);
+    color: var(--button-disabled-color, #888);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.cassette-controls button.active { /* Als een knop een 'actieve' staat heeft */
+    background-color: var(--button-active, #777);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.4);
+}
