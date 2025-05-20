@@ -235,6 +235,24 @@
       "last_achievement_icon": null
     },
     {
+      "id": 2427410,
+      "name": "S.T.A.L.K.E.R.: Shadow of Chornobyl - Enhanced Edition",
+      "image": null,
+      "thumbnail": "https://media.steampowered.com/steamcommunity/public/images/apps/2427410/2bd3b525b674984e9e89f33fd47c5ce6020beeda.jpg",
+      "release_date": null,
+      "developers": [],
+      "publishers": [],
+      "metacritic_score": null,
+      "genres": [],
+      "categories": [],
+      "achieved_count": 0,
+      "total_achievements": 0,
+      "achievement_percentage": null,
+      "last_achievement_unlock_time": 0,
+      "last_achievement_name": null,
+      "last_achievement_icon": null
+    },
+    {
       "id": 220,
       "name": "Half-Life 2",
       "image": null,
@@ -9184,7 +9202,7 @@
       "id": 239140,
       "name": "Dying Light",
       "image": null,
-      "thumbnail": "https://media.steampowered.com/steamcommunity/public/images/apps/239140/6166b5ffc81b4dbacd0f52da7f4669231f67c91a.jpg",
+      "thumbnail": "https://media.steampowered.com/steamcommunity/public/images/apps/239140/d575b4ba3480fe20aaeda8e8f498c3e47033069d.jpg",
       "release_date": null,
       "developers": [],
       "publishers": [],
