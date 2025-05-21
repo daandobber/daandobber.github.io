@@ -34,7 +34,6 @@ const toggleInfoTextBtn = document.getElementById("toggleInfoTextBtn")
 const transportControlsDiv = document.getElementById("transportControls")
 const restartPulsarsBtn = document.getElementById("restartPulsarsBtn")
 const beatIndicatorElement = document.getElementById("app-menu-beat-indicator");
-const loadStateInput = document.getElementById("loadStateInput")
 const mixerPanel = document.getElementById("mixerPanel")
 const masterVolumeSlider = document.getElementById("masterVolumeSlider")
 const masterVolumeValue = document.getElementById("masterVolumeValue")
@@ -45,8 +44,6 @@ const delayTimeValue = document.getElementById("delayTimeValue")
 const delayFeedbackSlider = document.getElementById("delayFeedbackSlider")
 const delayFeedbackValue = document.getElementById("delayFeedbackValue")
 const mixerGroupControlsContainer = document.getElementById("mixerGroupControlsContainer");
-const midiInSelect = document.getElementById("midiInSelect")
-const midiOutSelect = document.getElementById("midiOutSelect")
 const addSoundStarBtn = document.getElementById("addSoundStarBtn")
 const addSamplerBtn = document.getElementById("addSamplerBtn");
 const addNebulaBtn = document.getElementById("addNebulaBtn")
@@ -397,14 +394,25 @@ let isPerformingUndoRedo = false
 let isGlobalSyncEnabled = false
 let globalBPM = 120
 const subdivisionOptions = [
-  { label: "1/32", value: 0.125 },
-  { label: "1/16", value: 0.25 },
-  { label: "1/8", value: 0.5 },
-  { label: "1/4", value: 1 },
-  { label: "1/2", value: 2 },
-  { label: "1/1", value: 4 }
-]
-const DEFAULT_SUBDIVISION_INDEX = 3
+  { label: "1/32", value: 0.125 },    
+  { label: "1/16 Triplet", value: 1/6 }, 
+  { label: "1/16", value: 0.25 },     
+  { label: "1/8 Triplet", value: 1/3 },  
+  { label: "1/8", value: 0.5 },      
+  { label: "1/4 Triplet", value: 2/3 },  
+  { label: "1/4", value: 1 },        
+  { label: "1/3 Beat", value: 1/3 * 4},                             
+  { label: "1/2", value: 2 },        
+  { label: "1/1 (Whole)", value: 4 },
+  { label: "2/1 (2 Whole)", value: 8},
+  { label: "1/3 Note", value: 4/3 },    
+  { label: "1/5 Note", value: 4/5 },    
+  { label: "1/6 Note", value: 4/6 },    
+  { label: "1/9 Note", value: 4/9 },    
+];
+
+
+const DEFAULT_SUBDIVISION_INDEX = 8;
 
 let isPlaying = false
 let animationFrameId = null
@@ -806,40 +814,62 @@ function updateLoadingIndicator() {
   }
 }
 async function loadSample(url, sampleName) {
-  updateLoadingIndicator()
+  updateLoadingIndicator();
   try {
-    const response = await fetch(url)
+    const response = await fetch(url);
+    console.log(`[Sampler Load] Fetching ${url} - Status: ${response.status}`); // NIEUW
     if (!response.ok)
-      throw new Error(`HTTP error! status: ${response.status} for ${url}`)
-    const arrayBuffer = await response.arrayBuffer()
-    let decodedBuffer = null
+      throw new Error(`HTTP error! status: ${response.status} for ${url}`);
+    const arrayBuffer = await response.arrayBuffer();
+    let decodedBuffer = null;
     if (
       typeof audioContext.decodeAudioData === "function" &&
       audioContext.decodeAudioData.length !== 1
     ) {
-      decodedBuffer = await audioContext.decodeAudioData(arrayBuffer)
+      decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
     } else {
       decodedBuffer = await new Promise((resolve, reject) => {
         audioContext.decodeAudioData(
           arrayBuffer,
           (buffer) => {
-            resolve(buffer)
+            resolve(buffer);
           },
           (error) => {
-            reject(error)
+            console.error(`[Sampler Load] DecodeAudioData (callback) error for ${sampleName}:`, error); // NIEUW
+            reject(error);
           }
-        )
-      })
+        );
+      });
     }
-    samplesLoadedCount++
-    updateLoadingIndicator()
-    return { name: sampleName, buffer: decodedBuffer, success: true }
+    samplesLoadedCount++;
+    updateLoadingIndicator();
+    console.log(`[Sampler Load] Successfully decoded ${sampleName}, buffer length: ${decodedBuffer?.length}`); // NIEUW
+    return { name: sampleName, buffer: decodedBuffer, success: true };
   } catch (error) {
-    updateLoadingIndicator()
-    const waveformName = `sampler_${sampleName.toLowerCase()}`
-    const wfType = waveformTypes.find((w) => w.type === waveformName)
-    if (wfType) wfType.loadFailed = true
-    return { name: sampleName, buffer: null, success: false }
+    console.error(`[Sampler Load] CATCH error for sample ${sampleName} from ${url}:`, error); // AANGEPAST
+    updateLoadingIndicator();
+    const waveformName = `sampler_${sampleName.toLowerCase()}`;
+    // Assuming waveformTypes is defined globally or accessible in this scope
+    // If not, this line might need adjustment or removal depending on its actual usage.
+    // const wfType = waveformTypes.find((w) => w.type === waveformName);
+    // if (wfType) wfType.loadFailed = true;
+
+    // Fallback: Mark the sampler definition itself as failed
+    if (typeof SAMPLER_DEFINITIONS !== 'undefined') {
+        const definition = SAMPLER_DEFINITIONS.find(s => s.id === sampleName);
+        if (definition) {
+            definition.loadFailed = true;
+        }
+    }
+    // Also update samplerWaveformTypes if it's accessible and used
+     if (typeof samplerWaveformTypes !== 'undefined') {
+        const wfType = samplerWaveformTypes.find(w => w.type === `sampler_${sampleName}`);
+        if (wfType) {
+            wfType.loadFailed = true;
+        }
+    }
+
+    return { name: sampleName, buffer: null, success: false };
   }
 }
 
@@ -1283,7 +1313,7 @@ function startTapeLoopRecording() {
                 if(tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true'){
                     tapeLoopRecordBtnClickable = true; 
                 }
-            }, 350); // Iets langere timeout voor de guard
+            }, 350); 
         }
         updateTapeLooperUI();
         
@@ -1388,7 +1418,7 @@ function playTapeLoop(scheduledPlayTime = 0) {
         scheduledTapeLoopEvents.push({ time: actualPlayTime, action: 'startPlay' });
         
         if(tapeLoopStatusLabel) tapeLoopStatusLabel.textContent = `Armed (Wacht op tel voor play...)`;
-        if(tapeLoopPlayBtn) tapeLoopPlayBtn.disabled = true; // Wordt geactiveerd door processScheduledTapeEvents
+        if(tapeLoopPlayBtn) tapeLoopPlayBtn.disabled = true; 
         console.log(`Tape loop playback armed. Will start at: ${actualPlayTime.toFixed(3)}`);
 
     } else {
@@ -1619,8 +1649,8 @@ function createAudioNodesForNode(node) {
       return null;
   }
   const now = audioContext.currentTime;
-  const startDelay = now + 0.02; 
-  const params = node.audioParams; 
+  const startDelay = now + 0.02;
+  const params = node.audioParams;
 
   try {
       if (node.type === "sound") {
@@ -1632,85 +1662,121 @@ function createAudioNodesForNode(node) {
               volLfo: audioContext.createOscillator(),
               volLfoGain: audioContext.createGain(),
               oscillator1: null,
+              modulatorOsc1: null,
+              modulatorGain1: null,
               oscillator2: null,
               osc2Gain: null,
-              modulatorOsc: null,
-              modulatorGain: null
+              orbitoneOscillators: [],
+              orbitoneIndividualGains: [],
+              orbitoneModulatorOscs: [],
+              orbitoneModulatorGains: []
           };
 
           audioNodes.gainNode.gain.setValueAtTime(0, now);
-          audioNodes.lowPassFilter.type = params.filterType || "lowpass"; 
-          audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2; 
+          audioNodes.lowPassFilter.type = params.filterType || "lowpass";
+          audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2;
+          audioNodes.lowPassFilter.connect(audioNodes.gainNode);
 
           if (isReverbReady && reverbNode) {
               audioNodes.reverbSendGain = audioContext.createGain();
-              audioNodes.reverbSendGain.gain.value = params.reverbSend; 
+              audioNodes.reverbSendGain.gain.value = params.reverbSend;
+              audioNodes.gainNode.connect(audioNodes.reverbSendGain);
               audioNodes.reverbSendGain.connect(reverbNode);
           }
           if (isDelayReady && masterDelaySendGain) {
               audioNodes.delaySendGain = audioContext.createGain();
-              audioNodes.delaySendGain.gain.value = params.delaySend; 
+              audioNodes.delaySendGain.gain.value = params.delaySend;
+              audioNodes.gainNode.connect(audioNodes.delaySendGain);
               audioNodes.delaySendGain.connect(masterDelaySendGain);
           }
 
-          audioNodes.volLfo.type = params.lfo1Type || "sine"; 
-          audioNodes.volLfo.frequency.setValueAtTime(params.volLfoRate || 0.2, now); 
+          audioNodes.volLfo.type = params.lfo1Type || "sine";
+          audioNodes.volLfo.frequency.setValueAtTime(params.volLfoRate || 0.2, now);
           audioNodes.volLfoGain.gain.value = fluctuatingGroupNodeIDs.has(node.id) ? parseFloat(groupFluctuateAmount.value) : (params.volLfoDepth || 0);
           audioNodes.volLfo.connect(audioNodes.volLfoGain);
           audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
-
+          try { audioNodes.volLfo.start(startDelay); } catch (e) {}
           
-          const osc1Type = params.osc1Type || params.baseSoundType || params.carrierWaveform || params.actualOscillatorType || params.waveform || "sine";
-          const validOscTypes = ["sine", "square", "sawtooth", "triangle", "pulse"]; 
+          const osc1BaseWaveform = params.osc1Type || params.baseSoundType || params.carrierWaveform || params.actualOscillatorType || params.waveform || "sine";
+          const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
+          const finalOsc1Waveform = validOscTypes.includes(osc1BaseWaveform) ? osc1BaseWaveform : (osc1BaseWaveform === "pulse" ? "square" : "sine");
 
-          audioNodes.oscillator1 = audioContext.createOscillator();
-          
-          
-          audioNodes.oscillator1.type = validOscTypes.includes(osc1Type) ? osc1Type : (osc1Type === "pulse" ? "square" : "sine");
+          if (!(params.waveform && params.waveform.startsWith('sampler_'))) {
+            audioNodes.oscillator1 = audioContext.createOscillator();
+            audioNodes.oscillator1.type = finalOsc1Waveform;
+            audioNodes.oscillator1.frequency.setValueAtTime(params.pitch, now);
+            audioNodes.oscillator1.connect(audioNodes.lowPassFilter);
+            try { audioNodes.oscillator1.start(startDelay); } catch (e) {}
 
-
-          if (params.osc2Type && !params.carrierWaveform) { 
-              audioNodes.oscillator2 = audioContext.createOscillator();
-              audioNodes.oscillator2.type = validOscTypes.includes(params.osc2Type) ? params.osc2Type : (params.osc2Type === "pulse" ? "square" : "sine");
-              if (params.osc2Detune) audioNodes.oscillator2.detune.setValueAtTime(params.osc2Detune, now);
-
-              audioNodes.osc2Gain = audioContext.createGain();
-              audioNodes.osc2Gain.gain.value = params.osc2Mix || 0.5;
-              audioNodes.oscillator2.connect(audioNodes.osc2Gain);
-              audioNodes.osc2Gain.connect(audioNodes.lowPassFilter);
-              try { audioNodes.oscillator2.start(startDelay); } catch (e) { console.error("Error starting osc2", e); }
+            if (params.carrierWaveform && params.modulatorWaveform && audioNodes.oscillator1) { 
+                audioNodes.modulatorOsc1 = audioContext.createOscillator();
+                audioNodes.modulatorOsc1.type = params.modulatorWaveform;
+                const modRatio = params.modulatorRatio || 1.0;
+                audioNodes.modulatorOsc1.frequency.setValueAtTime(params.pitch * modRatio, now);
+                audioNodes.modulatorGain1 = audioContext.createGain();
+                audioNodes.modulatorGain1.gain.setValueAtTime(0, now);
+                audioNodes.modulatorOsc1.connect(audioNodes.modulatorGain1);
+                audioNodes.modulatorGain1.connect(audioNodes.oscillator1.frequency);
+                try { audioNodes.modulatorOsc1.start(startDelay); } catch (e) {}
+            }
+             if (!params.orbitonesEnabled && params.osc2Type && !params.carrierWaveform && audioNodes.oscillator1) {
+                 audioNodes.oscillator2 = audioContext.createOscillator();
+                 audioNodes.oscillator2.type = validOscTypes.includes(params.osc2Type) ? params.osc2Type : (params.osc2Type === "pulse" ? "square" : "sine");
+                 if (params.osc2Detune) audioNodes.oscillator2.detune.setValueAtTime(params.osc2Detune, now);
+                 const osc2BaseFreq = params.pitch * Math.pow(2, (params.osc2Octave || 0));
+                 audioNodes.oscillator2.frequency.setValueAtTime(osc2BaseFreq, now);
+                 audioNodes.osc2Gain = audioContext.createGain();
+                 audioNodes.osc2Gain.gain.value = params.osc2Mix || 0.5;
+                 audioNodes.oscillator2.connect(audioNodes.osc2Gain);
+                 audioNodes.osc2Gain.connect(audioNodes.lowPassFilter); 
+                 try { audioNodes.oscillator2.start(startDelay); } catch (e) {}
+            }
           }
 
-          
-          if (params.carrierWaveform || params.modulatorWaveform) {
-              audioNodes.oscillator1.type = params.carrierWaveform || "sine"; 
+          if (params.orbitonesEnabled && params.orbitoneCount > 0 && params.orbitoneIntervals) {
+            const allFrequenciesForCreation = getOrbitoneFrequencies(
+                params.scaleIndex, params.orbitoneCount, params.orbitoneIntervals,
+                params.orbitoneSpread, currentScale, params.pitch
+            );
+            const actualOrbitoneFrequencies = allFrequenciesForCreation.slice(1);
 
-              audioNodes.modulatorOsc = audioContext.createOscillator();
-              audioNodes.modulatorOsc.type = params.modulatorWaveform || "sine";
-              
-              
-              
+            for (let i = 0; i < actualOrbitoneFrequencies.length; i++) {
+                const freq = actualOrbitoneFrequencies[i];
+                if (isNaN(freq) || freq <= 0) continue;
 
-              audioNodes.modulatorGain = audioContext.createGain();
-              
-              
+                if (!(params.waveform && params.waveform.startsWith('sampler_'))) {
+                    const orbitOsc = audioContext.createOscillator();
+                    orbitOsc.type = finalOsc1Waveform;
+                    orbitOsc.frequency.setValueAtTime(freq, now);
+                    
+                    const orbitIndividualGainNode = audioContext.createGain();
+                    const baseOrbitoneLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+                    orbitIndividualGainNode.gain.setValueAtTime(baseOrbitoneLevel, now); 
+                    
+                    orbitOsc.connect(orbitIndividualGainNode);
+                    orbitIndividualGainNode.connect(audioNodes.lowPassFilter);
 
-              audioNodes.modulatorOsc.connect(audioNodes.modulatorGain);
-              audioNodes.modulatorGain.connect(audioNodes.oscillator1.frequency); 
-              try { audioNodes.modulatorOsc.start(startDelay); } catch (e) { console.error("Error starting modOsc", e); }
-          }
+                    try { orbitOsc.start(startDelay); } catch (e) {}
+                    audioNodes.orbitoneOscillators.push(orbitOsc);
+                    audioNodes.orbitoneIndividualGains.push(orbitIndividualGainNode);
 
-          audioNodes.oscillator1.connect(audioNodes.lowPassFilter);
-          audioNodes.lowPassFilter.connect(audioNodes.gainNode);
-
-          if (audioNodes.reverbSendGain) audioNodes.gainNode.connect(audioNodes.reverbSendGain);
-          if (audioNodes.delaySendGain) audioNodes.gainNode.connect(audioNodes.delaySendGain);
-
-          try { audioNodes.volLfo.start(startDelay); } catch (e) { /* console.error("Error starting volLfo", e); */ }
-          try { audioNodes.oscillator1.start(startDelay); } catch (e) { /* console.error("Error starting oscillator1", e); */ }
-
+                    if (params.carrierWaveform && params.modulatorWaveform) {
+                        const modOsc = audioContext.createOscillator();
+                        modOsc.type = params.modulatorWaveform;
+                        const modRatio = params.modulatorRatio || 1.0; 
+                        modOsc.frequency.setValueAtTime(freq * modRatio, now);
+                        const modGain = audioContext.createGain();
+                        modGain.gain.setValueAtTime(0, now); 
+                        modOsc.connect(modGain);
+                        modGain.connect(orbitOsc.frequency); 
+                        try { modOsc.start(startDelay); } catch (e) {}
+                        audioNodes.orbitoneModulatorOscs.push(modOsc);
+                        audioNodes.orbitoneModulatorGains.push(modGain);
+                    }
+                }
+            }
+        }
           return audioNodes;
-
       } else if (node.type === "nebula") {
           const gainNode = audioContext.createGain(); gainNode.gain.value = 0;
           const filterNode = audioContext.createBiquadFilter();
@@ -1722,58 +1788,36 @@ function createAudioNodesForNode(node) {
           const volLfo = audioContext.createOscillator(); volLfo.type = "sine"; volLfo.frequency.setValueAtTime(NEBULA_VOL_LFO_RATE, now);
           const volLfoGain = audioContext.createGain(); volLfoGain.gain.value = NEBULA_VOL_LFO_DEPTH; volLfo.connect(volLfoGain); volLfoGain.connect(gainNode.gain);
           const oscillators = [];
-
           const baseWaveformForNebula = params.osc1Type || params.waveform || "sawtooth"; 
           const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
           let waveformType = validOscTypes.includes(baseWaveformForNebula) ? baseWaveformForNebula : "sawtooth";
-           
           if (baseWaveformForNebula === "fmBell" || baseWaveformForNebula === "fmXylo") waveformType = "sine";
-
-
           NEBULA_OSC_INTERVALS.forEach((interval, i) => {
               const osc = audioContext.createOscillator(); const freq = baseFreq * Math.pow(2, interval / 12); osc.frequency.setValueAtTime(freq, now); osc.detune.setValueAtTime((i % 2 === 0 ? 1 : -1) * (params.detune || NEBULA_OSC_DETUNE) * (i + 1), now); osc.type = waveformType; osc.connect(filterNode); oscillators.push(osc);
           });
-
           filterNode.connect(gainNode);
           let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend; gainNode.connect(reverbSendGain); reverbSendGain.connect(reverbNode); }
           let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend; gainNode.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); }
-
           const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE; const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
           const initialVol = Math.min(NEBULA_MAX_VOL, node.size * NEBULA_VOL_SCALING);
-          
           const initialFilterFreq = params.filterCutoff || (baseFreq * 2 + normalizedSize * baseFreq * (params.filterFreqFactor || 12));
           filterNode.frequency.setValueAtTime(initialFilterFreq, now);
           gainNode.gain.linearRampToValueAtTime(initialVol, now + 0.5);
-
           try { filterLfo.start(startDelay); } catch (e) {}
           try { volLfo.start(startDelay); } catch (e) {}
           oscillators.forEach((osc) => { try { osc.start(startDelay); } catch (e) {} });
-
-          if (originalNebulaGroupGain) {
-              gainNode.connect(originalNebulaGroupGain);
-          } else {
-              gainNode.connect(masterGain);
-              console.error("Nebula: kon niet verbinden met originalNebulaGroupGain! Verbinden met masterGain."); 
-          }
+          if (originalNebulaGroupGain) { gainNode.connect(originalNebulaGroupGain); } else { gainNode.connect(masterGain); }
           return { gainNode, filterNode, filterLfo, filterLfoGain, volLfo, volLfoGain, oscillators, reverbSendGain, delaySendGain };
-
       } else if (node.type === PORTAL_NEBULA_TYPE) {
-          
-          
           const defaults = PORTAL_NEBULA_DEFAULTS;
-
           const mainGain = audioContext.createGain(); mainGain.gain.setValueAtTime(0, now); mainGain.gain.linearRampToValueAtTime(params.volume, now + 1.0); 
-          const droneOsc = audioContext.createOscillator();
-          droneOsc.type = params.actualOscillatorType || 'triangle'; 
+          const droneOsc = audioContext.createOscillator(); droneOsc.type = params.actualOscillatorType || 'triangle'; 
           droneOsc.frequency.setValueAtTime(params.pitch, now); 
-
           const droneFreqLfo = audioContext.createOscillator(); droneFreqLfo.type = 'sine'; droneFreqLfo.frequency.setValueAtTime(0.05 + Math.random() * 0.05, now);
           const droneFreqLfoGain = audioContext.createGain(); droneFreqLfoGain.gain.setValueAtTime(0.5 + Math.random() * 0.5, now); droneFreqLfo.connect(droneFreqLfoGain); droneFreqLfoGain.connect(droneOsc.frequency); droneOsc.connect(mainGain);
-
           const harmonics = []; const harmonicGain = audioContext.createGain(); harmonicGain.gain.setValueAtTime(defaults.harmonicBaseGain, now);
           const shimmerLfo = audioContext.createOscillator(); shimmerLfo.type = 'sine'; shimmerLfo.frequency.setValueAtTime(defaults.shimmerRate, now);
           const shimmerLfoGain = audioContext.createGain(); shimmerLfoGain.gain.setValueAtTime(defaults.shimmerDepth, now); shimmerLfo.connect(shimmerLfoGain); shimmerLfoGain.connect(harmonicGain.gain);
-
           for (let i = 0; i < defaults.numHarmonics; i++) {
               const harmonicOsc = audioContext.createOscillator(); harmonicOsc.type = 'sine';
               const freqMultiplier = Math.pow(2, (i + 1) * defaults.harmonicSpread * 0.5 + Math.random() * 0.1);
@@ -1781,34 +1825,21 @@ function createAudioNodesForNode(node) {
               harmonicOsc.detune.setValueAtTime((Math.random() - 0.5) * 15, now); harmonicOsc.connect(harmonicGain); harmonics.push(harmonicOsc);
           }
           harmonicGain.connect(mainGain);
-
           let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend; mainGain.connect(reverbSendGain); reverbSendGain.connect(reverbNode); } 
           let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend; mainGain.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); } 
-
-          
           try { droneOsc.start(startDelay); } catch (e) {}
           try { droneFreqLfo.start(startDelay); } catch (e) {}
           try { shimmerLfo.start(startDelay); } catch (e) {}
           harmonics.forEach(osc => { try { osc.start(startDelay); } catch (e) {} });
-
-          if (portalGroupGain) {
-              mainGain.connect(portalGroupGain);
-          } else {
-              mainGain.connect(masterGain);
-              console.error("Portal Nebula: kon niet verbinden met portalGroupGain! Verbinden met masterGain."); 
-          }
+          if (portalGroupGain) { mainGain.connect(portalGroupGain); } else { mainGain.connect(masterGain); }
           return { mainGain, droneOsc, droneFreqLfo, droneFreqLfoGain, harmonics, harmonicGain, shimmerLfo, shimmerLfoGain, reverbSendGain, delaySendGain };
-
       } else if (isDrumType(node.type)) {
-          const mainGain = audioContext.createGain();
-          mainGain.gain.value = params.volume; 
+          const mainGain = audioContext.createGain(); mainGain.gain.value = params.volume; 
           let reverbSendGain = null; if (isReverbReady && reverbNode) { reverbSendGain = audioContext.createGain(); reverbSendGain.gain.value = params.reverbSend ?? DEFAULT_REVERB_SEND; mainGain.connect(reverbSendGain); reverbSendGain.connect(reverbNode); } 
           let delaySendGain = null; if (isDelayReady && masterDelaySendGain) { delaySendGain = audioContext.createGain(); delaySendGain.gain.value = params.delaySend ?? DEFAULT_DELAY_SEND; mainGain.connect(delaySendGain); delaySendGain.connect(masterDelaySendGain); } 
           return { mainGain, reverbSendGain, delaySendGain };
       }
   } catch (e) {
-      
-      console.error(`Error creating audio nodes for node ${node.id} (Type: ${node.type}, Waveform: ${params ? params.waveform : 'N/A'}):`, e);
       return null;
   }
   return null; 
@@ -2241,19 +2272,16 @@ function updateNodeAudioParams(node) {
   const params = node.audioParams;
   const pitchUpdateTimeConstant = 0.05; 
   const generalUpdateTimeConstant = 0.02;
+  const { 
+      oscillator1, oscillator2, osc2Gain, 
+      lowPassFilter, reverbSendGain, delaySendGain, 
+      modulatorOsc1, modulatorGain1, 
+      volLfoGain, 
+      orbitoneOscillators, orbitoneIndividualGains, orbitoneModulatorOscs, orbitoneModulatorGains 
+    } = node.audioNodes;
 
   try {
       if (node.type === "sound") {
-          const {
-              oscillator,
-              lowPassFilter,
-              reverbSendGain,
-              delaySendGain,
-              modulatorOsc,
-              modulatorGain,
-              volLfoGain
-          } = node.audioNodes;
-
           if (lowPassFilter) {
               const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE;
               const freqRange = MAX_FILTER_FREQ - MIN_FILTER_FREQ;
@@ -2262,14 +2290,12 @@ function updateNodeAudioParams(node) {
               params.lowPassFreq = currentFilterFreq;
               lowPassFilter.frequency.setTargetAtTime(params.lowPassFreq, now, generalUpdateTimeConstant);
           }
-
           if (isReverbReady && reverbSendGain) {
               reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
           }
           if (isDelayReady && delaySendGain) {
               delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
           }
-
           if (volLfoGain) {
               const shouldFluctuate = fluctuatingGroupNodeIDs.has(node.id);
               const fluctuationAmount = parseFloat(groupFluctuateAmount.value);
@@ -2277,91 +2303,101 @@ function updateNodeAudioParams(node) {
               volLfoGain.gain.setTargetAtTime(targetLfoDepth, now, 0.1);
           }
 
-          if (!node.isTriggered) {
-              if (params.waveform && !params.waveform.startsWith("sampler_") && oscillator) {
-                  oscillator.frequency.setTargetAtTime(params.pitch, now, pitchUpdateTimeConstant);
-                  const desiredType = (params.waveform === "fmBell" || params.waveform === "fmXylo") ? "sine" : params.waveform;
-                  if (oscillator.type !== desiredType) {
-                      oscillator.type = desiredType;
-                  }
+        const allOutputFrequencies = getOrbitoneFrequencies(
+            params.scaleIndex, 
+            params.orbitonesEnabled ? params.orbitoneCount : 0,
+            params.orbitoneIntervals, 
+            params.orbitoneSpread, 
+            currentScale, 
+            params.pitch
+        );
+        const mainNoteFreq = allOutputFrequencies[0];
+        const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
 
-                  if ((params.waveform === "fmBell" || params.waveform === "fmXylo") && modulatorOsc && modulatorGain) {
-                      const modRatio = params.waveform === "fmBell" ? 1.4 : 3.5;
-                      modulatorOsc.frequency.setTargetAtTime(
-                          params.pitch * modRatio,
-                          now,
-                          pitchUpdateTimeConstant
-                      );
-                  }
-              }
-          }
 
+        if (oscillator1 && !isNaN(mainNoteFreq) && mainNoteFreq > 0) {
+             oscillator1.frequency.setTargetAtTime(mainNoteFreq, now, pitchUpdateTimeConstant);
+             if (audioNodes.oscillator1Gain) { 
+                 audioNodes.oscillator1Gain.gain.setTargetAtTime(params.orbitonesEnabled ? (1.0 - orbitoneBaseMixLevel) : 1.0, now, generalUpdateTimeConstant);
+             }
+             if (modulatorOsc1 && params.carrierWaveform) {
+                 const modRatio = params.modulatorRatio || 1.0;
+                 modulatorOsc1.frequency.setTargetAtTime(mainNoteFreq * modRatio, now, pitchUpdateTimeConstant);
+             }
+             if(oscillator2 && osc2Gain && params.osc2Type && !params.carrierWaveform && !params.orbitonesEnabled) {
+                const osc2BaseFreq = mainNoteFreq * Math.pow(2, (params.osc2Octave || 0));
+                oscillator2.frequency.setTargetAtTime(osc2BaseFreq, now, pitchUpdateTimeConstant);
+            }
+        }
+
+        if (params.orbitonesEnabled && orbitoneOscillators && orbitoneIndividualGains) {
+            for (let i = 0; i < params.orbitoneCount; i++) {
+                if ((i + 1) >= allOutputFrequencies.length || i >= orbitoneOscillators.length) continue; 
+                const freq = allOutputFrequencies[i + 1]; 
+                const orbitOsc = orbitoneOscillators[i];
+                const orbitIndGain = orbitoneIndividualGains[i];
+
+                if(orbitOsc && !isNaN(freq) && freq > 0) {
+                    orbitOsc.frequency.setTargetAtTime(freq, now, pitchUpdateTimeConstant);
+                    if (params.orbitoneDetune > 0) {
+                         orbitOsc.detune.setTargetAtTime((Math.random() - 0.5) * 2 * params.orbitoneDetune, now, pitchUpdateTimeConstant);
+                    }
+                }
+                if(orbitIndGain) {
+                    let volMultiplier = orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount);
+                     if(params.orbitoneVolumeVariation > 0){
+                        volMultiplier *= (1.0 - (Math.random() * params.orbitoneVolumeVariation));
+                    }
+                    orbitIndGain.gain.setTargetAtTime(Math.min(1.0, Math.max(0.01, volMultiplier)), now, generalUpdateTimeConstant);
+                }
+                if (orbitoneModulatorOscs && orbitoneModulatorOscs[i] && params.carrierWaveform && !isNaN(freq) && freq > 0) {
+                    const modOsc = orbitoneModulatorOscs[i];
+                    const modRatio = params.modulatorRatio || 1.0;
+                    modOsc.frequency.setTargetAtTime(freq * modRatio, now, pitchUpdateTimeConstant);
+                }
+            }
+        }
       } else if (node.type === "nebula") {
-          const {
-              gainNode, filterNode, filterLfoGain, volLfoGain, oscillators,
-              reverbSendGain, delaySendGain
-          } = node.audioNodes;
-
-          if (!gainNode || !filterNode || !oscillators || !filterLfoGain || !volLfoGain) return;
-
+          const { gainNode, filterNode, filterLfoGain, volLfoGain: nebVolLfoGain, oscillators, reverbSendGain: nebReverbSend, delaySendGain: nebDelaySend } = node.audioNodes;
+          if (!gainNode || !filterNode || !oscillators || !filterLfoGain || !nebVolLfoGain) return;
           const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE;
           const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
           const baseFreq = params.pitch; 
-
           const targetVol = Math.min(NEBULA_MAX_VOL, node.size * NEBULA_VOL_SCALING * 1.5);
           gainNode.gain.setTargetAtTime(targetVol, now, 0.1);
-
           const filterFreq = baseFreq * 2 + normalizedSize * baseFreq * (params.filterFreqFactor || 12);
-          filterNode.frequency.setTargetAtTime(filterFreq, now, 0.1);
-
+          if (!isNaN(filterFreq) && filterFreq > 0) filterNode.frequency.setTargetAtTime(filterFreq, now, 0.1);
           const lfoDepth = baseFreq * NEBULA_FILTER_LFO_DEPTH_FACTOR * (params.lfoDepthFactor || 1);
-          filterLfoGain.gain.setTargetAtTime(lfoDepth, now, 0.1);
-          volLfoGain.gain.setTargetAtTime(NEBULA_VOL_LFO_DEPTH, now, 0.1);
-
+          if (!isNaN(lfoDepth)) filterLfoGain.gain.setTargetAtTime(lfoDepth, now, 0.1);
+          nebVolLfoGain.gain.setTargetAtTime(NEBULA_VOL_LFO_DEPTH, now, 0.1);
           oscillators.forEach((osc, i) => {
               const interval = NEBULA_OSC_INTERVALS[i];
               const freq = baseFreq * Math.pow(2, interval / 12);
-              osc.frequency.setTargetAtTime(freq, now, 0.1); 
+              if (!isNaN(freq) && freq > 0) osc.frequency.setTargetAtTime(freq, now, 0.1); 
               const detuneAmount = params.detune || NEBULA_OSC_DETUNE || 7;
               osc.detune.setTargetAtTime((i % 2 === 0 ? 1 : -1) * detuneAmount * (i + 1), now, 0.1);
               const desiredWaveform = (params.waveform === "fmBell" || params.waveform === "fmXylo") ? "sine" : (params.waveform || "sawtooth");
               if (osc.type !== desiredWaveform) { osc.type = desiredWaveform; }
           });
-
-          if (isReverbReady && reverbSendGain) {
-              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
+          if (isReverbReady && nebReverbSend) {
+              nebReverbSend.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
           }
-          if (isDelayReady && delaySendGain) {
-              delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
+          if (isDelayReady && nebDelaySend) {
+              nebDelaySend.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
           }
-
       } else if (isDrumType(node.type)) {
-          const { mainGain, reverbSendGain, delaySendGain } = node.audioNodes;
+          const { mainGain, reverbSendGain: drumReverbSend, delaySendGain: drumDelaySend } = node.audioNodes;
           if (mainGain) mainGain.gain.setTargetAtTime(params.volume ?? 1.0, now, generalUpdateTimeConstant);
-          if (isReverbReady && reverbSendGain) {
-              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
+          if (isReverbReady && drumReverbSend) {
+              drumReverbSend.gain.setTargetAtTime(params.reverbSend ?? DEFAULT_REVERB_SEND, now, generalUpdateTimeConstant);
           }
-          if (isDelayReady && delaySendGain) {
-              delaySendGain.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
+          if (isDelayReady && drumDelaySend) {
+              drumDelaySend.gain.setTargetAtTime(params.delaySend ?? DEFAULT_DELAY_SEND, now, generalUpdateTimeConstant);
           }
-
-      } else if (node.type === PHYSICAL_MODELING_TYPE) {
-          const { mainGain, reverbSendGain, delaySendGain } = node.audioNodes;
-          
-          if (isReverbReady && reverbSendGain) {
-              reverbSendGain.gain.setTargetAtTime(params.reverbSend ?? PHYSICAL_MODELING_DEFAULTS.reverbSend, now, generalUpdateTimeConstant);
-          }
-          if (isDelayReady && delaySendGain) {
-              delaySendGain.gain.setTargetAtTime(params.delaySend ?? PHYSICAL_MODELING_DEFAULTS.delaySend, now, generalUpdateTimeConstant);
-          }
-          
-          
       }
-
-  } catch (e) {
-      console.error(`Error updating audio params for node ${node.id} (${node.type}):`, e);
-  }
+  } catch (e) {}
 }
+
 function updateConnectionAudioParams(connection) {
   if (!connection.audioNodes || connection.type !== "string_violin" || !isAudioReady) return;
   const now = audioContext.currentTime;
@@ -2460,149 +2496,242 @@ function createAudioNodesForConnection(connection) {
   }
 }
 function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDuration = 0.3) {
-  if (!isAudioReady || !node) return;
+  if (!isAudioReady || !node || !node.audioParams) return;
   const now = audioContext.currentTime;
   const params = node.audioParams;
   const intensity = pulseData.intensity ?? 1.0;
+  const ampEnv = params.ampEnv || { attack: 0.01, decay: 0.3, sustain: 0.7, release: 0.3 };
 
   if (node.type === 'sound') {
-    if (!node.audioNodes?.gainNode) return;
+    if (!node.audioNodes || !node.audioNodes.gainNode || !node.audioNodes.lowPassFilter) {
+        node.isTriggered = false; node.animationState = 0; return;
+    }
     node.isTriggered = true;
     node.animationState = 1;
-    const { gainNode, lowPassFilter, oscillator, modulatorOsc, modulatorGain } = node.audioNodes;
-    if (!gainNode || !lowPassFilter) {
-      node.isTriggered = false; node.animationState = 0; return;
-    }
+    const {
+        gainNode, lowPassFilter,
+        oscillator1, modulatorOsc1, modulatorGain1,
+        oscillator2, osc2Gain,
+        orbitoneOscillators, orbitoneModulatorOscs, orbitoneModulatorGains, orbitoneIndividualGains
+    } = node.audioNodes;
 
     const baseVolume = 0.6;
     const targetVolume = baseVolume * intensity;
     const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume));
-    let releaseTime = 0.3 + (node.size * 0.2);
 
-    try {
-      gainNode.gain.cancelScheduledValues(now);
-      gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(clampedVolume, now + 0.015);
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(clampedVolume, now + ampEnv.attack);
+    gainNode.gain.setTargetAtTime(clampedVolume * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3 + 0.001);
 
-      
-      if (params.waveform === 'fmBell') releaseTime = 0.8 + (node.size * 0.4);
-      else if (params.waveform === 'fmXylo') releaseTime = 0.5 + (node.size * 0.2);
-      else if (params.waveform && params.waveform.startsWith('sampler_')) {
-        releaseTime = 0.6 + (node.size * 0.3);
-      } else if (params.waveform && params.carrierEnv) { 
-        releaseTime = (params.carrierEnv.decay || 0.3) + (params.carrierEnv.release || 0.3);
+    const totalDurationForMainNodeEnvelope = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0));
+    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
+    setTimeout(() => {
+      const stillNode = findNodeById(node.id);
+      if (stillNode && stillNode.audioNodes?.gainNode) {
+        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
+        stillNode.audioNodes.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+        stillNode.audioNodes.gainNode.gain.setValueAtTime(currentGainVal, audioContext.currentTime);
+        stillNode.audioNodes.gainNode.gain.setTargetAtTime(0, audioContext.currentTime, mainNodeReleaseTimeConstant);
       }
-      gainNode.gain.setTargetAtTime(0, now + 0.015, releaseTime / 4);
-      const soundEndTime = now + 0.015 + releaseTime * 1.1;
+      if (stillNode) stillNode.isTriggered = false;
+    }, totalDurationForMainNodeEnvelope * 1000);
 
-      if (params.waveform && params.waveform.startsWith('sampler_')) {
+    if (params.waveform && params.waveform.startsWith('sampler_')) {
+        console.log(`[Sampler Trigger AANGEPAST] Attempting sampler: ${params.waveform} for node ${node.id}`);
         const samplerId = params.waveform.replace('sampler_', '');
-        const definition = (typeof SAMPLER_DEFINITIONS !== 'undefined')
-          ? SAMPLER_DEFINITIONS.find(s => s.id === samplerId) : null;
+        const definition = SAMPLER_DEFINITIONS.find(s => s.id === samplerId);
+
+        console.log(`[Sampler Trigger AANGEPAST] Definition for ${samplerId}: ${!!definition}, Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
+
         if (definition && definition.isLoaded && definition.buffer) {
-          const bufferToPlay = definition.buffer; const baseFreq = definition.baseFreq;
-          if (!bufferToPlay || !(baseFreq > 0)) { node.isTriggered = false; node.animationState = 0; return; }
-          const source = audioContext.createBufferSource(); source.buffer = bufferToPlay;
-          const targetFreq = params.pitch; let targetRate = 1;
-          if (!isNaN(targetFreq) && targetFreq > 0) { targetRate = Math.max(0.1, Math.min(4, targetFreq / baseFreq)); }
-          source.playbackRate.setValueAtTime(targetRate, now);
-          const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE; const freqRange = MAX_FILTER_FREQ - MIN_FILTER_FREQ;
-          const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
-          const cutoffFreq = MIN_FILTER_FREQ + normalizedSize * freqRange; const vol = 1.0 * intensity;
-          const triggerGain = audioContext.createGain(); triggerGain.gain.value = vol;
-          const triggerFilter = audioContext.createBiquadFilter(); triggerFilter.type = "lowpass"; triggerFilter.Q.value = 1.2; triggerFilter.frequency.setValueAtTime(cutoffFreq, now);
-          source.connect(triggerFilter); triggerFilter.connect(triggerGain); triggerGain.connect(lowPassFilter);
-          source.start(now);
-          source.onended = () => { /* Optional: stillNode.isTriggered = false; */ };
+            console.log(`[Sampler Trigger AANGEPAST] Conditions MET for playing ${samplerId}`);
+
+            const allOutputFrequencies = getOrbitoneFrequencies(
+                params.scaleIndex,
+                params.orbitonesEnabled ? params.orbitoneCount : 0,
+                params.orbitoneIntervals,
+                params.orbitoneSpread,
+                currentScale,
+                params.pitch
+            );
+
+            allOutputFrequencies.forEach((freq, index) => {
+                if (isNaN(freq) || freq <= 0) {
+                    console.warn(`[Sampler Play AANGEPAST] Invalid frequency for note ${index} of ${samplerId}: ${freq}`);
+                    return;
+                }
+                const isMainNote = index === 0;
+                const timingOffsetMs = isMainNote ? 0 : (params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[index-1] !== undefined ? params.orbitoneTimingOffsets[index-1] : 0);
+                const scheduledStartTime = now + (timingOffsetMs / 1000.0);
+
+                const source = audioContext.createBufferSource();
+                source.buffer = definition.buffer;
+                let targetRate = 1;
+                if (definition.baseFreq > 0) {
+                    targetRate = Math.max(0.1, Math.min(8, freq / definition.baseFreq));
+                }
+                source.playbackRate.setValueAtTime(targetRate, scheduledStartTime);
+
+                const perNoteSamplerGain = audioContext.createGain();
+
+                // --- AANPASSING HIER ---
+                let noteVolumeFactor;
+                if (params.orbitonesEnabled && params.orbitoneCount > 0) {
+                    // Als orbitones AAN staan, gebruik de mix logic
+                    const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+                    noteVolumeFactor = isMainNote ? (1.0 - orbitoneBaseMixLevel) : (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
+                } else {
+                    // Als orbitones UIT staan, krijgt de hoofdnoot vol volume (factor 1.0), anderen 0
+                    noteVolumeFactor = isMainNote ? 1.0 : 0;
+                }
+                // --- EINDE AANPASSING ---
+
+                const finalNoteVolume = clampedVolume * noteVolumeFactor;
+
+                console.log(`[Sampler Play AANGEPAST] Node: ${node.id}, Sampler: ${samplerId}, NoteIndex: ${index}, Freq: ${freq.toFixed(2)}, Rate: ${targetRate.toFixed(2)}, FinalVol: ${finalNoteVolume.toFixed(3)}, ClampedVol: ${clampedVolume.toFixed(3)}, Intensity: ${intensity.toFixed(3)}, NoteVolFactor: ${noteVolumeFactor.toFixed(3)}`);
+
+                if (finalNoteVolume < 0.001 && isMainNote) { // Voeg check toe voor hoofdnoot
+                    console.warn(`[Sampler Play AANGEPAST] Main note for ${samplerId} has near-zero volume. Skipping play.`);
+                    return; // Skip als hoofdnoot te zacht is
+                }
+                 if (finalNoteVolume < 0.001 && !isMainNote) { // Orbitone is te zacht, skip deze specifieke orbitone
+                    return;
+                }
+
+
+                perNoteSamplerGain.gain.setValueAtTime(0, scheduledStartTime);
+                perNoteSamplerGain.gain.linearRampToValueAtTime(finalNoteVolume, scheduledStartTime + 0.005); // 5ms attack
+
+                source.connect(perNoteSamplerGain);
+                perNoteSamplerGain.connect(lowPassFilter);
+
+                console.log(`[Sampler Play AANGEPAST] Starting source for ${samplerId} (note ${index}) at ${scheduledStartTime.toFixed(3)}`);
+                source.start(scheduledStartTime);
+
+                const estimatedEnvelopeDuration = ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0);
+                const bufferActualDuration = definition.buffer.duration / targetRate;
+                const stopTime = scheduledStartTime + Math.min(bufferActualDuration, estimatedEnvelopeDuration + ampEnv.release * 0.5);
+
+                perNoteSamplerGain.gain.setTargetAtTime(0.0001, scheduledStartTime + estimatedEnvelopeDuration, ampEnv.release / 4 + 0.001);
+                if (bufferActualDuration < (estimatedEnvelopeDuration + ampEnv.release)) {
+                     source.stop(stopTime);
+                }
+                source.onended = () => {
+                    try {
+                        perNoteSamplerGain.disconnect();
+                        source.disconnect();
+                        console.log(`[Sampler Play AANGEPAST] Sampler source ${samplerId} (note ${index}) ended and disconnected.`);
+                    } catch(e){}
+                };
+            });
         } else {
-          gainNode.gain.cancelScheduledValues(now); gainNode.gain.setValueAtTime(0, now);
-          node.isTriggered = false; node.animationState = 0; return;
-        }
-      } else if (oscillator) { 
-        const targetFreq = params.pitch;
-        oscillator.frequency.cancelScheduledValues(now);
-        oscillator.frequency.setTargetAtTime(targetFreq, now, 0.005);
-
-        
-        if (modulatorOsc && modulatorGain) { 
-            const modRatio = params.modulatorRatio || (params.waveform === 'fmBell' ? 1.4 : (params.waveform === 'fmXylo' ? 3.5 : 1.0));
-            modulatorOsc.frequency.cancelScheduledValues(now);
-            modulatorOsc.frequency.setTargetAtTime(targetFreq * modRatio, now, 0.005);
-
-            
-            
-            const fmDepthScale = params.fmModDepthScale !== undefined ? params.fmModDepthScale : 1.0;
-            const modDepthBase = params.waveform === 'fmBell' ? 4 : (params.waveform === 'fmXylo' ? 10 : 2); 
-            const modDepth = targetFreq * modDepthBase * fmDepthScale;
-
-            modulatorGain.gain.cancelScheduledValues(now);
-            modulatorGain.gain.setValueAtTime(0, now);
-            modulatorGain.gain.linearRampToValueAtTime(modDepth * 1.8, now + 0.01); 
-            
-            let modReleaseTime = 0.15;
-            if (params.modulatorEnv && params.modulatorEnv.decay) {
-                modReleaseTime = params.modulatorEnv.decay;
+            console.warn(`[Sampler Trigger AANGEPAST] Sampler conditions NOT MET for ${samplerId} AT TRIGGER TIME. Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
+            if (oscillator1) { // Fallback naar oscillator
+              const fallbackFreq = params.pitch;
+              oscillator1.frequency.cancelScheduledValues(now);
+              oscillator1.frequency.setTargetAtTime(fallbackFreq, now, 0.005);
+               if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) { /* ... FM fallback ... */ }
             }
-            modulatorGain.gain.exponentialRampToValueAtTime(0.001, now + modReleaseTime);
         }
-      }
+    } else if (oscillator1) { // Dit is voor niet-sampler 'sound' nodes (Oscillator-based)
+        const targetFreq = params.pitch;
+        oscillator1.frequency.cancelScheduledValues(now);
+        oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
 
-      setTimeout(() => {
-        const stillNode = findNodeById(node.id);
-        if (stillNode && !(params.waveform && params.waveform.startsWith('sampler_'))) {
-          stillNode.isTriggered = false;
+        if (oscillator2 && osc2Gain && params.osc2Type && !params.carrierWaveform && !params.orbitonesEnabled) {
+            const osc2BaseFreq = targetFreq * Math.pow(2, (params.osc2Octave || 0));
+            oscillator2.frequency.cancelScheduledValues(now);
+            oscillator2.frequency.setTargetAtTime(osc2BaseFreq, now, 0.005);
         }
-      }, (soundEndTime - now) * 1000);
 
-    } catch (e) {
-      node.isTriggered = false; node.animationState = 0;
-      console.error(`Error in triggerNodeEffect (sound type: ${params.waveform}):`, e);
+        if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) {
+            const modRatio = params.modulatorRatio || 1.0;
+            modulatorOsc1.frequency.cancelScheduledValues(now);
+            modulatorOsc1.frequency.setTargetAtTime(targetFreq * modRatio, now, 0.005);
+            const modEnv = params.modulatorEnv || { attack: 0.005, decay: 0.15, sustain: 0, release: 0.2 };
+            const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
+            const modDepth = targetFreq * fmDepthScale;
+            modulatorGain1.gain.cancelScheduledValues(now);
+            modulatorGain1.gain.setValueAtTime(0, now);
+            modulatorGain1.gain.linearRampToValueAtTime(modDepth, now + modEnv.attack);
+            const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
+            modulatorGain1.gain.setTargetAtTime(modSustainLevel, now + modEnv.attack, modEnv.decay / 3 + 0.001);
+            const totalModDuration = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
+             setTimeout(() => {
+                if (modulatorGain1 && audioContext && audioContext.state === 'running') {
+                    const currentModGainVal = modulatorGain1.gain.value;
+                    modulatorGain1.gain.cancelScheduledValues(audioContext.currentTime);
+                    modulatorGain1.gain.setValueAtTime(currentModGainVal, audioContext.currentTime);
+                    modulatorGain1.gain.setTargetAtTime(0.0001, audioContext.currentTime, (modEnv.release || 0.2) / 3 + 0.001);
+                }
+            }, totalModDuration * 1000);
+        }
+        // Hier zou de orbitone logic voor oscillator-based sounds ook moeten komen als je die later weer activeert
+         if (params.orbitonesEnabled && orbitoneOscillators && orbitoneIndividualGains && !(params.waveform && params.waveform.startsWith('sampler_'))) {
+            allOutputFrequencies.slice(1).forEach((freq, i) => { // Start vanaf index 1 voor orbitones
+                const orbitOsc = orbitoneOscillators[i];
+                const orbitIndGain = orbitoneIndividualGains[i];
+                const modOsc = orbitoneModulatorOscs ? orbitoneModulatorOscs[i] : null;
+                const modGain = orbitoneModulatorGains ? orbitoneModulatorGains[i] : null;
+                const timingOffsetMs = params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[i] !== undefined ? params.orbitoneTimingOffsets[i] : 0;
+                const scheduledOrbitoneStartTime = now + (timingOffsetMs / 1000.0);
+
+                if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
+                    orbitOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
+                    orbitOsc.frequency.setTargetAtTime(freq, scheduledOrbitoneStartTime, 0.005);
+
+                    const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+                    let volMultiplier = orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount);
+                    orbitIndGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
+                    orbitIndGain.gain.setTargetAtTime(Math.min(1.0, Math.max(0.01, volMultiplier * clampedVolume)), scheduledOrbitoneStartTime, 0.01);
+
+
+                    if (modOsc && modGain && params.carrierWaveform) {
+                        // Modulator logic voor orbitone
+                        const modRatio = params.modulatorRatio || 1.0;
+                        modOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
+                        modOsc.frequency.setTargetAtTime(freq * modRatio, scheduledOrbitoneStartTime, 0.005);
+                        const modEnv = params.modulatorEnv || { attack: 0.005, decay: 0.15, sustain: 0, release: 0.2 };
+                        const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
+                        const modDepth = freq * fmDepthScale;
+                        modGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
+                        modGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
+                        modGain.gain.linearRampToValueAtTime(modDepth, scheduledOrbitoneStartTime + modEnv.attack);
+                        const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
+                        modGain.gain.setTargetAtTime(modSustainLevel, scheduledOrbitoneStartTime + modEnv.attack, modEnv.decay / 3 + 0.001);
+                         const totalModDurationOrb = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
+                        setTimeout(() => {
+                            if (modGain && audioContext && audioContext.state === 'running') {
+                                 const currentModGainVal = modGain.gain.value;
+                                 modGain.gain.cancelScheduledValues(audioContext.currentTime);
+                                 modGain.gain.setValueAtTime(currentModGainVal, audioContext.currentTime);
+                                 modGain.gain.setTargetAtTime(0.0001, audioContext.currentTime, (modEnv.release || 0.2) / 3 + 0.001);
+                            }
+                        }, (totalModDurationOrb + timingOffsetMs) * 1000);
+                    }
+                }
+            });
+        }
     }
+
     const particleCount = Math.round(5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0));
     createParticles(node.x, node.y, particleCount);
 
   } else if (isDrumType(node.type)) {
-    
+    // Drum logic (neem aan dat dit werkt zoals voorheen)
     if (!node.audioNodes?.mainGain) return;
     node.isTriggered = true; node.animationState = 1;
     const soundParams = params; const mainGain = node.audioNodes.mainGain;
     const finalVol = soundParams.volume * intensity;
     const targetFreq = soundParams.baseFreq;
-
     try {
-      
-      if (node.type === 'drum_kick') {
-        const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
-        const kickStartFreq = targetFreq * 2.5;
-        osc.frequency.setValueAtTime(kickStartFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.05);
-        gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay);
-        osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + soundParams.decay + 0.05);
-      } else if (node.type === "drum_snare") {
-        const noiseDur = soundParams.noiseDecay ?? 0.15; const bodyDecay = soundParams.decay ?? 0.2;
-        const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * noiseDur, audioContext.sampleRate);
-        const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = 1500;
-        const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(finalVol * 0.8, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
-        noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + noiseDur + 0.01);
-        const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(soundParams.baseFreq, now);
-        gain.gain.setValueAtTime(finalVol * 0.7, now); gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay);
-        osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + bodyDecay + 0.01);
-      } else if (node.type === 'drum_hihat') {
-        const decay = soundParams.decay ?? 0.05; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = soundParams.baseFreq; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(finalVol, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.01);
-      } else if (node.type === 'drum_clap') {
-        const decay = soundParams.noiseDecay ?? 0.1; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay * 1.5, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = soundParams.baseFreq ?? 1500; noiseFilter.Q.value = 1.5; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(0, now); noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002); noiseGain.gain.setValueAtTime(finalVol, now + 0.002); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.05);
-      } else if (node.type === 'drum_tom1' || node.type === 'drum_tom2') {
-        const decay = soundParams.decay ?? (node.type === 'drum_tom1' ? 0.4 : 0.5);
-        const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
-        osc.type = 'sine'; const tomStartFreq = targetFreq * 1.8;
-        osc.frequency.setValueAtTime(tomStartFreq, now); osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08);
-        gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + decay + 0.01);
-      } else if (node.type === 'drum_cowbell') {
-        const decay = soundParams.decay ?? 0.3; const osc1 = audioContext.createOscillator(); const osc2 = audioContext.createOscillator(); const gain = audioContext.createGain(); osc1.type = 'square'; osc2.type = 'square'; osc1.frequency.value = soundParams.baseFreq; osc2.frequency.value = soundParams.baseFreq * 1.5; gain.gain.setValueAtTime(finalVol * 0.6, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay); osc1.connect(gain); osc2.connect(gain); gain.connect(mainGain); osc1.start(now); osc1.stop(now + decay); osc2.start(now); osc2.stop(now + decay);
-      }
+      if (node.type === 'drum_kick') { const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); const kickStartFreq = targetFreq * 2.5; osc.frequency.setValueAtTime(kickStartFreq, now); osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.05); gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay); osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + soundParams.decay + 0.05);
+      } else if (node.type === "drum_snare") { const noiseDur = soundParams.noiseDecay ?? 0.15; const bodyDecay = soundParams.decay ?? 0.2; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * noiseDur, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = 1500; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(finalVol * 0.8, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + noiseDur + 0.01); const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); osc.type = 'triangle'; osc.frequency.setValueAtTime(soundParams.baseFreq, now); gain.gain.setValueAtTime(finalVol * 0.7, now); gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay); osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + bodyDecay + 0.01);
+      } else if (node.type === 'drum_hihat') { const decay = soundParams.decay ?? 0.05; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = soundParams.baseFreq; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(finalVol, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.01);
+      } else if (node.type === 'drum_clap') { const decay = soundParams.noiseDecay ?? 0.1; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay * 1.5, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = soundParams.baseFreq ?? 1500; noiseFilter.Q.value = 1.5; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(0, now); noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002); noiseGain.gain.setValueAtTime(finalVol, now + 0.002); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.05);
+      } else if (node.type === 'drum_tom1' || node.type === 'drum_tom2') { const decay = soundParams.decay ?? (node.type === 'drum_tom1' ? 0.4 : 0.5); const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); osc.type = 'sine'; const tomStartFreq = targetFreq * 1.8; osc.frequency.setValueAtTime(tomStartFreq, now); osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08); gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay); osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + decay + 0.01);
+      } else if (node.type === 'drum_cowbell') { const decay = soundParams.decay ?? 0.3; const osc1 = audioContext.createOscillator(); const osc2 = audioContext.createOscillator(); const gain = audioContext.createGain(); osc1.type = 'square'; osc2.type = 'square'; osc1.frequency.value = soundParams.baseFreq; osc2.frequency.value = soundParams.baseFreq * 1.5; gain.gain.setValueAtTime(finalVol * 0.6, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay); osc1.connect(gain); osc2.connect(gain); gain.connect(mainGain); osc1.start(now); osc1.stop(now + decay); osc2.start(now); osc2.stop(now + decay); }
     } catch (e) {
       node.isTriggered = false; node.animationState = 0;
       console.error(`Error in triggerNodeEffect (${node.type}):`, e);
@@ -2614,145 +2743,691 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
     createParticles(node.x, node.y, 3);
   }
 }
-
-function propagateTrigger(targetNode, incomingDelay, pulseId, sourceNodeId = -1, hopsRemaining = Infinity, incomingPulse = { type: 'trigger', data: {} }, incomingConnection = null) {
-  if (!targetNode || targetNode.id === sourceNodeId) {
+function startRetriggerSequence(node, originalPulseData) {
+  if (!isAudioReady || !node || !node.audioParams || !node.audioParams.retriggerEnabled) {
       return;
   }
-  if (targetNode.lastTriggerPulseId === pulseId) {
-      if (targetNode.type !== 'reflector' || sourceNodeId === -1) {
-           return;
-      }
+  
+  if (node.activeRetriggers && node.activeRetriggers.length > 0) {
+      node.activeRetriggers.forEach(clearTimeout);
   }
-   if (hopsRemaining <= 0 && hopsRemaining !== Infinity) {
-       return;
-   }
-   if (targetNode.type === 'nebula') { 
-       return;
-   }
-   if (targetNode.type === PORTAL_NEBULA_TYPE) { 
-       const actualTriggerDelay = incomingDelay;
-       setTimeout(() => {
-           const portalNode = findNodeById(targetNode.id);
-           if (portalNode) {
-               portalNode.animationState = 1.2;
-               
-               if (incomingPulse.data?.color) {
-                    
-                    portalNode.baseHue = (portalNode.baseHue + 30) % 360;
-               }
-               setTimeout(() => {
-                   const pNodeCheck = findNodeById(portalNode.id);
-                   if (pNodeCheck) pNodeCheck.animationState = 0;
-               }, 250);
-           }
-       }, actualTriggerDelay * 1000);
-       return; 
-   }
+  node.activeRetriggers = [];
+  node.currentRetriggerVisualIndex = -1; 
 
-  const sourceNode = findNodeById(sourceNodeId);
-  targetNode.lastTriggerPulseId = pulseId;
-  const actualTriggerDelay = incomingDelay;
+  const params = node.audioParams;
+  
+  const count = params.retriggerVolumeSteps ? params.retriggerVolumeSteps.length : 0;
+  if (count === 0) return; 
 
-  setTimeout(() => {
-      const currentNode = findNodeById(targetNode.id);
-      if (!currentNode) return;
+  let baseIntervalMs;
+  const useRetriggerSync = isGlobalSyncEnabled && !params.ignoreGlobalSync;
 
-      let canPropagate = true;
-      let triggerAudioEffect = false;
-      let triggerVisualEffect = true;
-      let stateChangedForUndo = false;
-      let pulseDataForNext = { ...incomingPulse.data };
-      let isGlideArrival = false;
-
-      if (incomingConnection && incomingConnection.type === 'glide' && sourceNode && sourceNode.audioParams && (currentNode.type === 'sound' || isDrumType(currentNode.type))) {
-          isGlideArrival = true;
-          triggerAudioEffect = true;
-          canPropagate = true;
-          triggerVisualEffect = false;
-      }
-
-      if (!isGlideArrival) {
-           if (currentNode.type === 'sound' || isDrumType(currentNode.type)) {
-               triggerAudioEffect = true;
-           }
-      }
-
-      if (isPulsarType(currentNode.type)) {
-           if (currentNode.type === 'pulsar_triggerable') { if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) { currentNode.isEnabled = !currentNode.isEnabled; if (currentNode.isEnabled) { currentNode.lastTriggerTime = -1; currentNode.nextSyncTriggerTime = 0; currentNode.nextGridTriggerTime = 0; const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000; currentNode.nextRandomTriggerTime = nowTime + (Math.random() * 2 / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC); } stateChangedForUndo = true; currentNode.animationState = 1; triggerAudioEffect = false; canPropagate = false; triggerVisualEffect = false; } else { canPropagate = false; triggerVisualEffect = false; } } else { triggerAudioEffect = false; canPropagate = true; currentNode.animationState = 1; pulseDataForNext = { ...incomingPulse.data }; pulseDataForNext.color = currentNode.color ?? null; if (sourceNode && sourceNode.type === 'pulsar_random_volume') { pulseDataForNext.intensity = incomingPulse.data.intensity; } else { pulseDataForNext.intensity = currentNode.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY; } pulseDataForNext.particleMultiplier = incomingPulse.data.particleMultiplier ?? 1.0; triggerVisualEffect = false; }
-      } else if (currentNode.type === 'gate') {
-           triggerAudioEffect = false; const counterBefore = currentNode.gateCounter || 0; currentNode.gateCounter = counterBefore + 1; const modeIndex = currentNode.gateModeIndex || 0; const mode = GATE_MODES[modeIndex]; canPropagate = false; switch (mode) { case '1/2': if (currentNode.gateCounter % 2 === 0) canPropagate = true; break; case '1/3': if (currentNode.gateCounter % 3 === 0) canPropagate = true; break; case '1/4': if (currentNode.gateCounter % 4 === 0) canPropagate = true; break; case '2/3': if (currentNode.gateCounter % 3 !== 0) canPropagate = true; break; case '3/4': if (currentNode.gateCounter % 4 !== 0) canPropagate = true; break; case 'RAND': const randomCheck = Math.random() < GATE_RANDOM_THRESHOLD; currentNode.lastRandomGateResult = randomCheck; if (randomCheck) canPropagate = true; break; } currentNode.animationState = 1; triggerVisualEffect = false;
-      } else if (currentNode.type === 'probabilityGate') {
-          triggerAudioEffect = false; canPropagate = false; if (Math.random() < (currentNode.audioParams.probability ?? DEFAULT_PROBABILITY)) { canPropagate = true; } currentNode.animationState = 1; triggerVisualEffect = false;
-      } else if (currentNode.type === 'pitchShift') {
-          triggerAudioEffect = false; canPropagate = true; currentNode.animationState = 1; triggerVisualEffect = false; const shiftIndex = currentNode.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX; let shiftAmount = PITCH_SHIFT_AMOUNTS[shiftIndex]; if (currentNode.pitchShiftAlternating) { shiftAmount *= (currentNode.pitchShiftDirection || 1); currentNode.pitchShiftDirection = (currentNode.pitchShiftDirection || 1) * -1; stateChangedForUndo = true; } let pitchActuallyChanged = false; currentNode.connections.forEach(neighborId => { if (neighborId === sourceNodeId) return; const neighborNode = findNodeById(neighborId); if (neighborNode && (neighborNode.type === 'sound' || neighborNode.type === 'nebula')) { const oldIndex = neighborNode.audioParams.scaleIndex; neighborNode.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount)); neighborNode.audioParams.pitch = getFrequency(currentScale, neighborNode.audioParams.scaleIndex); updateNodeAudioParams(neighborNode); if (oldIndex !== neighborNode.audioParams.scaleIndex) { pitchActuallyChanged = true; neighborNode.animationState = 0.7; setTimeout(() => { const checkNode = findNodeById(neighborId); if (checkNode && !checkNode.isTriggered) checkNode.animationState = 0; }, 150); } } const neighborConn = connections.find(c => c.type === 'string_violin' && ((c.nodeAId === currentNode.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === currentNode.id))); if (neighborConn) { const oldIndex = neighborConn.audioParams.scaleIndex; neighborConn.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount)); neighborConn.audioParams.pitch = getFrequency(currentScale, neighborConn.audioParams.scaleIndex); updateConnectionAudioParams(neighborConn); if (oldIndex !== neighborConn.audioParams.scaleIndex) { pitchActuallyChanged = true; neighborConn.animationState = 0.7; setTimeout(() => { const checkConn = findConnectionById(neighborConn.id); if (checkConn) checkConn.animationState = 0; }, 150); } } }); if (pitchActuallyChanged) { stateChangedForUndo = true; }
-      } else if (currentNode.type === 'relay') {
-          triggerAudioEffect = false; canPropagate = true; currentNode.animationState = 1; triggerVisualEffect = false;
-      } else if (currentNode.type === 'reflector') {
-           triggerAudioEffect = false; canPropagate = false; triggerVisualEffect = true; currentNode.animationState = 1; if (sourceNode && incomingConnection) { const baseTravelTime = incomingConnection.length * DELAY_FACTOR; const outgoingTravelTime = baseTravelTime; const pulseColor = pulseDataForNext.color; createVisualPulse(incomingConnection.id, outgoingTravelTime, currentNode.id, hopsRemaining - 1, 'trigger', pulseColor, pulseDataForNext.intensity); propagateTrigger(sourceNode, outgoingTravelTime, pulseId, currentNode.id, hopsRemaining - 1, { type: 'trigger', data: pulseDataForNext }, null); }
-      } else if (currentNode.type === 'switch') {
-           triggerAudioEffect = false; canPropagate = false; triggerVisualEffect = true; currentNode.animationState = 1; if (incomingConnection) { if (currentNode.primaryInputConnectionId === null || currentNode.primaryInputConnectionId === undefined) { currentNode.primaryInputConnectionId = incomingConnection.id; stateChangedForUndo = true; } if (incomingConnection.id === currentNode.primaryInputConnectionId) { canPropagate = true; } else { canPropagate = false; triggerVisualEffect = false; } } else { canPropagate = false; }
-      } else if (currentNode.type === 'sound' || isDrumType(currentNode.type)) {
-          canPropagate = true;
-          triggerVisualEffect = false;
-          if (isDrumType(currentNode.type)) pulseDataForNext = { ...pulseDataForNext };
+  if (useRetriggerSync && params.retriggerSyncSubdivisionIndex !== undefined) {
+      const subdivOpt = subdivisionOptions[params.retriggerSyncSubdivisionIndex];
+      if (subdivOpt && typeof subdivOpt.value === 'number' && globalBPM > 0) {
+          const secondsPerBeat = 60.0 / globalBPM;
+          baseIntervalMs = Math.max(20, (secondsPerBeat * subdivOpt.value) * 1000);
       } else {
-          canPropagate = false;
-          triggerVisualEffect = false;
+          baseIntervalMs = Math.max(20, params.retriggerIntervalMs || 100);
       }
+  } else {
+      baseIntervalMs = Math.max(20, params.retriggerIntervalMs || 100);
+  }
 
-      if (triggerAudioEffect && (currentNode.type === 'sound' || isDrumType(currentNode.type))) {
-          triggerNodeEffect(currentNode, pulseDataForNext);
+  const rateMode = params.retriggerRateMode || "constant";
+  const now = audioContext.currentTime;
+  let cumulativeTimeSeconds = 0;
+
+  for (let i = 0; i < count; i++) {
+      let currentIntervalMs;
+      switch (rateMode) {
+          case "accelerate":
+              currentIntervalMs = baseIntervalMs * Math.pow(0.82, i);
+              break;
+          case "decelerate":
+              currentIntervalMs = baseIntervalMs * Math.pow(1.18, i);
+              break;
+          case "random":
+              currentIntervalMs = baseIntervalMs * (0.6 + Math.random() * 0.8);
+              break;
+          case "constant":
+          default:
+              currentIntervalMs = baseIntervalMs;
+              break;
       }
+      currentIntervalMs = Math.max(20, currentIntervalMs);
 
-      if (triggerVisualEffect) {
-           setTimeout(() => {
-               const nodeCheck = findNodeById(currentNode.id);
-               if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0;
-           }, 150);
-       }
+      const retriggerScheduledTime = now + cumulativeTimeSeconds;
+      
 
-      if (!isPulsarType(currentNode.type) && currentNode.type !== 'sound' && !isDrumType(currentNode.type) && currentNode.type !== 'relay' && currentNode.type !== 'reflector' && currentNode.type !== 'switch' && currentNode.animationState > 0) {
-          setTimeout(() => {
-              const nodeCheck = findNodeById(currentNode.id);
-              if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0;
-          }, 150);
-      }
-      if (isPulsarType(currentNode.type) && currentNode.animationState > 0) {
-          setTimeout(() => {
-              const nodeCheck = findNodeById(currentNode.id);
-              if (nodeCheck) nodeCheck.animationState = 0;
-          }, 150);
-      }
+      const retriggerId = setTimeout(() => {
+          const currentNodeForRetrigger = findNodeById(node.id); 
+          if (currentNodeForRetrigger) {
+              currentNodeForRetrigger.currentRetriggerVisualIndex = i; 
+              playSingleRetrigger(currentNodeForRetrigger, i, count, originalPulseData, retriggerScheduledTime);
 
-      if (stateChangedForUndo) {
-          populateEditPanel();
-          saveState();
-      }
-
-      if (canPropagate) {
-          const nextHops = (hopsRemaining === Infinity) ? Infinity : hopsRemaining - 1;
-          if (nextHops > 0 || nextHops === Infinity) {
-              currentNode.connections.forEach(neighborId => {
-                  if (neighborId === sourceNodeId) return;
-                  const neighborNode = findNodeById(neighborId);
-                  const connection = connections.find(c => (c.nodeAId === currentNode.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === currentNode.id));
-
-                  
-                  if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== pulseId) {
-                      const baseTravelTime = connection.length * DELAY_FACTOR;
-                      const outgoingTravelTime = baseTravelTime;
-                      const pulseColor = pulseDataForNext.color;
-                      createVisualPulse(connection.id, outgoingTravelTime, currentNode.id, nextHops, 'trigger', pulseColor, pulseDataForNext.intensity);
-                      propagateTrigger(neighborNode, outgoingTravelTime, pulseId, currentNode.id, nextHops, { type: 'trigger', data: pulseDataForNext }, connection);
+              
+              setTimeout(() => {
+                  if (currentNodeForRetrigger && currentNodeForRetrigger.currentRetriggerVisualIndex === i) {
+                       
+                      if (i === count - 1) { 
+                           currentNodeForRetrigger.currentRetriggerVisualIndex = -1;
+                      }
                   }
-              });
+              }, currentIntervalMs * 0.8); 
           }
-      }
-  }, actualTriggerDelay * 1000);
+          if (node.activeRetriggers) {
+              node.activeRetriggers = node.activeRetriggers.filter(id => id !== retriggerId);
+               if (node.activeRetriggers.length === 0 && i === count -1 ) { 
+                  node.currentRetriggerVisualIndex = -1;
+              }
+          }
+      }, cumulativeTimeSeconds * 1000);
+
+      node.activeRetriggers.push(retriggerId);
+      cumulativeTimeSeconds += (currentIntervalMs / 1000.0);
+  }
 }
 
+function propagateTrigger(targetNode, incomingDelay, pulseId, sourceNodeId = -1, hopsRemaining = Infinity, incomingPulse = { type: 'trigger', data: {} }, incomingConnection = null) {
+    if (!targetNode || targetNode.id === sourceNodeId) {
+        return;
+    }
 
+    if (targetNode.type === 'nebula' || targetNode.type === PORTAL_NEBULA_TYPE) {
+        const actualNebulaTriggerDelay = incomingDelay;
+        setTimeout(() => {
+            const nebulaNode = findNodeById(targetNode.id);
+            if (nebulaNode) {
+                nebulaNode.animationState = 1.2;
+                if (incomingPulse.data?.color && nebulaNode.type === PORTAL_NEBULA_TYPE) {
+                    nebulaNode.baseHue = (nebulaNode.baseHue + 30) % 360;
+                }
+                 setTimeout(() => {
+                    const nNodeCheck = findNodeById(nebulaNode.id);
+                    if (nNodeCheck) nNodeCheck.animationState = 0;
+                }, 250);
+            }
+        }, actualNebulaTriggerDelay * 1000);
+        return;
+    }
+
+    if (targetNode.lastTriggerPulseId === pulseId && targetNode.type !== 'reflector') {
+        return;
+    }
+    if (hopsRemaining <= 0 && hopsRemaining !== Infinity) {
+        return;
+    }
+
+    targetNode.lastTriggerPulseId = pulseId;
+    const actualTriggerDelay = incomingDelay;
+
+    setTimeout(() => {
+        const currentNode = findNodeById(targetNode.id);
+        if (!currentNode) return;
+
+        let canPropagateOriginalPulseFurther = true;
+        let playPrimaryAudioEffect = false;
+        let pulseDataForNextPropagation = { ...incomingPulse.data };
+        let isGlideArrival = false;
+
+        if (incomingConnection && incomingConnection.type === 'glide' && sourceNodeId !== -1) {
+            const sourceNodeForGlide = findNodeById(sourceNodeId);
+            if (sourceNodeForGlide && sourceNodeForGlide.audioParams && (currentNode.type === 'sound' || isDrumType(currentNode.type))) {
+                isGlideArrival = true;
+                playPrimaryAudioEffect = true;
+                canPropagateOriginalPulseFurther = true;
+            }
+        }
+
+        if (!isGlideArrival) {
+            if ((currentNode.type === 'sound' || isDrumType(currentNode.type))) {
+                if (currentNode.audioParams && currentNode.audioParams.retriggerEnabled) {
+                    startRetriggerSequence(currentNode, { ...incomingPulse.data });
+                    playPrimaryAudioEffect = false;
+                } else {
+                    playPrimaryAudioEffect = true;
+                }
+            }
+        }
+
+        if (isPulsarType(currentNode.type)) {
+            if (currentNode.type === 'pulsar_triggerable') {
+                if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) {
+                    currentNode.isEnabled = !currentNode.isEnabled;
+                    if (currentNode.isEnabled) {
+                        currentNode.lastTriggerTime = -1;
+                        currentNode.nextSyncTriggerTime = 0;
+                        const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000;
+                        currentNode.nextRandomTriggerTime = nowTime + (Math.random() * 2 / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC);
+                    }
+                    currentNode.animationState = 1;
+                }
+                canPropagateOriginalPulseFurther = false;
+            } else {
+                currentNode.animationState = 1;
+                pulseDataForNextPropagation.color = currentNode.color ?? pulseDataForNextPropagation.color;
+                const sourceNodeForIntensity = findNodeById(sourceNodeId);
+                if (sourceNodeForIntensity && sourceNodeForIntensity.type === 'pulsar_random_volume') {
+                    pulseDataForNextPropagation.intensity = incomingPulse.data.intensity;
+                } else {
+                    pulseDataForNextPropagation.intensity = currentNode.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                }
+                pulseDataForNextPropagation.particleMultiplier = incomingPulse.data.particleMultiplier ?? 1.0;
+            }
+            playPrimaryAudioEffect = false;
+        } else if (currentNode.type === 'gate') {
+            const counterBefore = currentNode.gateCounter || 0;
+            currentNode.gateCounter = counterBefore + 1;
+            const modeIndex = currentNode.gateModeIndex || 0;
+            const mode = GATE_MODES[modeIndex];
+            canPropagateOriginalPulseFurther = false;
+            switch (mode) {
+                case '1/2': if (currentNode.gateCounter % 2 === 0) canPropagateOriginalPulseFurther = true; break;
+                case '1/3': if (currentNode.gateCounter % 3 === 0) canPropagateOriginalPulseFurther = true; break;
+                case '1/4': if (currentNode.gateCounter % 4 === 0) canPropagateOriginalPulseFurther = true; break;
+                case '2/3': if (currentNode.gateCounter % 3 !== 0) canPropagateOriginalPulseFurther = true; break;
+                case '3/4': if (currentNode.gateCounter % 4 !== 0) canPropagateOriginalPulseFurther = true; break;
+                case 'RAND': const randomCheck = Math.random() < GATE_RANDOM_THRESHOLD; currentNode.lastRandomGateResult = randomCheck; if (randomCheck) canPropagateOriginalPulseFurther = true; break;
+            }
+            currentNode.animationState = 1;
+            playPrimaryAudioEffect = false;
+        } else if (currentNode.type === 'probabilityGate') {
+            canPropagateOriginalPulseFurther = false;
+            if (Math.random() < (currentNode.audioParams.probability ?? DEFAULT_PROBABILITY)) {
+                canPropagateOriginalPulseFurther = true;
+            }
+            currentNode.animationState = 1;
+            playPrimaryAudioEffect = false;
+        } else if (currentNode.type === 'pitchShift') {
+            currentNode.animationState = 1;
+            playPrimaryAudioEffect = false;
+            const shiftIndex = currentNode.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
+            let shiftAmount = PITCH_SHIFT_AMOUNTS[shiftIndex];
+            if (currentNode.pitchShiftAlternating) {
+                shiftAmount *= (currentNode.pitchShiftDirection || 1);
+                currentNode.pitchShiftDirection = (currentNode.pitchShiftDirection || 1) * -1;
+            }
+            currentNode.connections.forEach(neighborId => {
+                if (neighborId === sourceNodeId) return;
+                const neighborNode = findNodeById(neighborId);
+                if (neighborNode && (neighborNode.type === 'sound' || neighborNode.type === 'nebula')) {
+                    const oldIndex = neighborNode.audioParams.scaleIndex;
+                    neighborNode.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount));
+                    neighborNode.audioParams.pitch = getFrequency(currentScale, neighborNode.audioParams.scaleIndex);
+                    updateNodeAudioParams(neighborNode);
+                    if (oldIndex !== neighborNode.audioParams.scaleIndex) {
+                         neighborNode.animationState = 0.7;
+                         setTimeout(() => { const checkNode = findNodeById(neighborId); if (checkNode && !checkNode.isTriggered) checkNode.animationState = 0; }, 150);
+                    }
+                }
+                const neighborConn = connections.find(c => c.type === 'string_violin' && ((c.nodeAId === currentNode.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === currentNode.id)));
+                if (neighborConn) {
+                    const oldIndex = neighborConn.audioParams.scaleIndex;
+                    neighborConn.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, oldIndex + shiftAmount));
+                    neighborConn.audioParams.pitch = getFrequency(currentScale, neighborConn.audioParams.scaleIndex);
+                    updateConnectionAudioParams(neighborConn);
+                    if (oldIndex !== neighborConn.audioParams.scaleIndex) {
+                        neighborConn.animationState = 0.7;
+                        setTimeout(() => { const checkConn = findConnectionById(neighborConn.id); if (checkConn) checkConn.animationState = 0; }, 150);
+                    }
+                }
+            });
+        } else if (currentNode.type === 'relay') {
+            currentNode.animationState = 1;
+            playPrimaryAudioEffect = false;
+        } else if (currentNode.type === 'reflector') {
+            playPrimaryAudioEffect = false;
+            canPropagateOriginalPulseFurther = false;
+            currentNode.animationState = 1;
+            const sourceNodeForReflector = findNodeById(sourceNodeId);
+            if (sourceNodeForReflector && incomingConnection) {
+                const baseTravelTime = incomingConnection.length * DELAY_FACTOR;
+                const outgoingTravelTime = baseTravelTime;
+                const pulseColor = pulseDataForNextPropagation.color;
+                createVisualPulse(incomingConnection.id, outgoingTravelTime, currentNode.id, hopsRemaining -1, 'trigger', pulseColor, pulseDataForNextPropagation.intensity);
+                propagateTrigger(sourceNodeForReflector, outgoingTravelTime, pulseId + Math.random(), currentNode.id, hopsRemaining - 1, { type: 'trigger', data: pulseDataForNextPropagation }, null);
+            }
+        } else if (currentNode.type === 'switch') {
+            playPrimaryAudioEffect = false;
+            canPropagateOriginalPulseFurther = false;
+            currentNode.animationState = 1;
+            if (incomingConnection) {
+                if (currentNode.primaryInputConnectionId === null || currentNode.primaryInputConnectionId === undefined) {
+                    currentNode.primaryInputConnectionId = incomingConnection.id;
+                }
+                if (incomingConnection.id === currentNode.primaryInputConnectionId) {
+                    canPropagateOriginalPulseFurther = true;
+                }
+            }
+        } else if (isDrumType(currentNode.type)) {
+            if (!(currentNode.audioParams && currentNode.audioParams.retriggerEnabled)) playPrimaryAudioEffect = true;
+        }
+
+
+        if (playPrimaryAudioEffect) {
+            triggerNodeEffect(currentNode, pulseDataForNextPropagation);
+        }
+
+        if (currentNode.animationState > 0 && !currentNode.isTriggered) {
+             setTimeout(() => {
+                const nodeCheck = findNodeById(currentNode.id);
+                if (nodeCheck && !nodeCheck.isTriggered) nodeCheck.animationState = 0;
+            }, 150);
+        }
+
+        if (canPropagateOriginalPulseFurther) {
+            const nextHops = (hopsRemaining === Infinity) ? Infinity : hopsRemaining - 1;
+            if (nextHops >= 0) {
+                currentNode.connections.forEach(neighborId => {
+                    if (neighborId === sourceNodeId) return;
+                    const neighborNode = findNodeById(neighborId);
+                    const connection = connections.find(c => (c.nodeAId === currentNode.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === currentNode.id));
+
+                    if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection) {
+                        const travelTime = connection.length * DELAY_FACTOR;
+                        createVisualPulse(connection.id, travelTime, currentNode.id, nextHops, 'trigger', pulseDataForNextPropagation.color, pulseDataForNextPropagation.intensity);
+                        propagateTrigger(neighborNode, travelTime, pulseId, currentNode.id, nextHops, { type: 'trigger', data: pulseDataForNextPropagation }, connection);
+                    }
+                });
+            }
+        }
+    }, actualTriggerDelay * 1000);
+}
+
+function playSingleRetrigger(node, retriggerIndex, totalRetriggers, basePulseData, scheduledPlayTime) {
+  if (!audioContext || !node || !node.audioParams) return;
+
+  const params = node.audioParams;
+  const audioNodes = node.audioNodes;
+  const isMuted = params.retriggerMuteSteps && params.retriggerMuteSteps[retriggerIndex] === true;
+  const activeTabButton = document.querySelector('#hamburgerMenuPanel .retrigger-tab-button.active');
+  const activeParamTypeForHighlight = activeTabButton ? activeTabButton.dataset.paramType : "volume";
+  const editorBarToHighlight = document.getElementById(`retrigger-bar-node${node.id}-param${activeParamTypeForHighlight}-step${retriggerIndex}`);
+
+  if (editorBarToHighlight) {
+      editorBarToHighlight.classList.add('playing');
+      if (isMuted) {
+          editorBarToHighlight.classList.add('muted-playing'); 
+      }
+      setTimeout(() => {
+          editorBarToHighlight.classList.remove('playing');
+          if (isMuted) {
+              editorBarToHighlight.classList.remove('muted-playing');
+          }
+      }, Math.min(150, (params.retriggerIntervalMs || 100) * 0.8));
+  }
+
+
+  node.currentRetriggerVisualIndex = retriggerIndex; 
+
+  if (isMuted) {
+      
+      node.animationState = 0.3; 
+      setTimeout(() => {
+          const stillNode = findNodeById(node.id);
+          if (stillNode && stillNode.animationState > 0) {
+              if (!stillNode.isTriggered && (!stillNode.activeRetriggers || stillNode.activeRetriggers.length === 0)) {
+                   stillNode.animationState = 0;
+              }
+          }
+           
+          if (retriggerIndex === totalRetriggers - 1 && stillNode) {
+              setTimeout(() => { 
+                  if (stillNode.currentRetriggerVisualIndex === retriggerIndex) {
+                      stillNode.currentRetriggerVisualIndex = -1;
+                  }
+              }, (params.retriggerIntervalMs || 100) * 0.9);
+          }
+      }, 120);
+      return; 
+  }
+
+  
+  let currentVolume = (params.retriggerVolumeSteps && params.retriggerVolumeSteps[retriggerIndex] !== undefined)
+                        ? params.retriggerVolumeSteps[retriggerIndex]
+                        : (basePulseData.intensity ?? 1.0);
+  currentVolume *= 0.9;
+  currentVolume = Math.max(0.005, currentVolume);
+
+  let currentPitch = params.pitch;
+  let pitchStepOffset = (params.retriggerPitchSteps && params.retriggerPitchSteps[retriggerIndex] !== undefined)
+                          ? params.retriggerPitchSteps[retriggerIndex]
+                          : 0;
+  currentPitch = getFrequency(currentScale, params.scaleIndex + pitchStepOffset);
+  currentPitch = Math.max(20, currentPitch);
+
+  let currentFilterCutoff = params.lowPassFreq;
+  if (audioNodes && audioNodes.lowPassFilter && audioNodes.lowPassFilter.frequency) {
+       currentFilterCutoff = audioNodes.lowPassFilter.frequency.value;
+  }
+  let filterStepFactor = (params.retriggerFilterSteps && params.retriggerFilterSteps[retriggerIndex] !== undefined)
+                          ? params.retriggerFilterSteps[retriggerIndex]
+                          : 0;
+
+  if (filterStepFactor !== 0) {
+      const baseCutoffForArc = params.lowPassFreq;
+      if (filterStepFactor > 0) {
+          currentFilterCutoff = baseCutoffForArc + (MAX_FILTER_FREQ - baseCutoffForArc) * filterStepFactor;
+      } else {
+          currentFilterCutoff = baseCutoffForArc + (baseCutoffForArc - MIN_FILTER_FREQ) * filterStepFactor;
+      }
+  }
+  currentFilterCutoff = Math.max(MIN_FILTER_FREQ, Math.min(MAX_FILTER_FREQ, currentFilterCutoff));
+
+  const tempAudioParamsForRetrigger = { ...params, pitch: currentPitch, volume: currentVolume, lowPassFreq: currentFilterCutoff };
+
+  if (node.type === 'sound' && audioNodes && audioNodes.oscillator1 && audioNodes.gainNode) {
+      const { oscillator1, oscillator2, osc2Gain, gainNode, lowPassFilter, modulatorOsc, modulatorGain } = audioNodes;
+      const nodeSpecificAmpEnv = tempAudioParamsForRetrigger.ampEnv;
+      const generalAudibleDefaultEnv = { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.25 };
+      const percussiveRetriggerEnv = { attack: 0.005, decay: 0.08, sustain: 0.0, release: 0.05 };
+      let envToUse = (retriggerIndex === 0) ? (nodeSpecificAmpEnv || generalAudibleDefaultEnv) : percussiveRetriggerEnv;
+
+      gainNode.gain.cancelScheduledValues(scheduledPlayTime);
+      gainNode.gain.setValueAtTime(0, scheduledPlayTime);
+      gainNode.gain.linearRampToValueAtTime(currentVolume, scheduledPlayTime + envToUse.attack);
+      if (envToUse.sustain > 0.01 && envToUse.decay > 0.001) {
+          gainNode.gain.setTargetAtTime(currentVolume * envToUse.sustain, scheduledPlayTime + envToUse.attack, envToUse.decay / 4 + 0.001);
+          const sustainDurationForRetrigger = (retriggerIndex === 0 && envToUse.sustain > 0.1) ? (envToUse.sustain * 0.3 + envToUse.decay) : 0.05;
+          const noteOffTime = scheduledPlayTime + envToUse.attack + envToUse.decay + sustainDurationForRetrigger;
+          gainNode.gain.setTargetAtTime(0.0001, noteOffTime, envToUse.release / 4 + 0.001);
+      } else {
+          gainNode.gain.setTargetAtTime(0.0001, scheduledPlayTime + envToUse.attack, envToUse.decay / 3 + 0.001);
+      }
+      oscillator1.frequency.setValueAtTime(currentPitch, scheduledPlayTime);
+      if (oscillator2 && osc2Gain) {
+           const osc2Freq = currentPitch * Math.pow(2, (tempAudioParamsForRetrigger.osc2Octave || 0));
+           oscillator2.frequency.setValueAtTime(osc2Freq, scheduledPlayTime);
+      }
+      if (modulatorOsc && modulatorGain && tempAudioParamsForRetrigger.carrierWaveform) {
+          const modRatio = tempAudioParamsForRetrigger.modulatorRatio || 1.0;
+          modulatorOsc.frequency.setValueAtTime(currentPitch * modRatio, scheduledPlayTime);
+          const modEnv = tempAudioParamsForRetrigger.modulatorEnv || { attack: 0.002, decay: 0.03, sustain: 0, release: 0.03};
+          const modDepthBaseFactor = tempAudioParamsForRetrigger.fmModDepthScale !== undefined ? tempAudioParamsForRetrigger.fmModDepthScale : (tempAudioParamsForRetrigger.waveform === 'fmBell' ? 4 : (tempAudioParamsForRetrigger.waveform === 'fmXylo' ? 10 : 3));
+          const modDepth = currentPitch * modDepthBaseFactor;
+          modulatorGain.gain.cancelScheduledValues(scheduledPlayTime);
+          modulatorGain.gain.setValueAtTime(0, scheduledPlayTime);
+          modulatorGain.gain.linearRampToValueAtTime(modDepth, scheduledPlayTime + modEnv.attack);
+          modulatorGain.gain.setTargetAtTime(0.0001, scheduledPlayTime + modEnv.attack, modEnv.decay / 3 || 0.01);
+      }
+      if (lowPassFilter && lowPassFilter.frequency) {
+          lowPassFilter.frequency.setValueAtTime(currentFilterCutoff, scheduledPlayTime);
+      }
+  } else if (node.type === 'sound' && tempAudioParamsForRetrigger.waveform && tempAudioParamsForRetrigger.waveform.startsWith('sampler_')) {
+      const samplerId = tempAudioParamsForRetrigger.waveform.replace('sampler_', '');
+      const definition = SAMPLER_DEFINITIONS.find(s => s.id === samplerId);
+      if (definition && definition.isLoaded && definition.buffer) {
+          const source = audioContext.createBufferSource();
+          source.buffer = definition.buffer;
+          let targetRate = 1.0;
+          if (definition.baseFreq > 0 && currentPitch > 0) {
+              targetRate = Math.max(0.1, Math.min(8, currentPitch / definition.baseFreq));
+          }
+          source.playbackRate.setValueAtTime(targetRate, scheduledPlayTime);
+          const retriggerGain = audioContext.createGain();
+          retriggerGain.gain.setValueAtTime(0, scheduledPlayTime);
+          retriggerGain.gain.linearRampToValueAtTime(currentVolume, scheduledPlayTime + 0.005);
+          retriggerGain.gain.setTargetAtTime(0.0001, scheduledPlayTime + 0.005, 0.05);
+          source.connect(retriggerGain);
+          const mainOutputTarget = audioNodes && (audioNodes.lowPassFilter || audioNodes.gainNode) ? (audioNodes.lowPassFilter || audioNodes.gainNode) : masterGain;
+          retriggerGain.connect(mainOutputTarget);
+          source.start(scheduledPlayTime);
+          const sampleDuration = definition.buffer.duration / targetRate;
+          const retriggerSoundDuration = Math.min(sampleDuration, 0.25);
+          source.stop(scheduledPlayTime + retriggerSoundDuration);
+          source.onended = () => { try { source.disconnect(); retriggerGain.disconnect(); } catch(e){} };
+      }
+  } else if (isDrumType(node.type)) {
+      const tempNodeForDrumHit = { ...node, audioParams: { ...node.audioParams, ...tempAudioParamsForRetrigger }, audioNodes: node.audioNodes };
+      triggerNodeEffect(tempNodeForDrumHit, { intensity: currentVolume, isRetrigger: true });
+  }
+
+  node.animationState = 0.6; 
+  const finalRetriggerCleanup = () => {
+      const stillNode = findNodeById(node.id);
+      if (stillNode) {
+          if (stillNode.animationState > 0 && !stillNode.isTriggered && (!stillNode.activeRetriggers || stillNode.activeRetriggers.length === 0)) {
+              stillNode.animationState = 0;
+          }
+          if (retriggerIndex === totalRetriggers - 1 && stillNode.currentRetriggerVisualIndex === retriggerIndex) {
+               
+               setTimeout(() => {
+                  if (stillNode.currentRetriggerVisualIndex === retriggerIndex) { 
+                      stillNode.currentRetriggerVisualIndex = -1;
+                  }
+              }, (params.retriggerIntervalMs || 100) * 0.5); 
+          }
+      }
+  };
+  setTimeout(finalRetriggerCleanup, 120); 
+}
+
+function createRetriggerVisualEditor(node, selectedArray, paramType = "volume") {
+  const editorContainer = document.createElement("div");
+  editorContainer.classList.add("retrigger-editor-container");
+  editorContainer.dataset.activeParamType = paramType;
+
+  const barsArea = document.createElement("div");
+  barsArea.classList.add("retrigger-bars-area");
+
+  let currentDisplayNode = node;
+  if (selectedArray && selectedArray.length > 0) {
+      const firstNode = findNodeById(selectedArray[0].id);
+      if (firstNode) currentDisplayNode = firstNode;
+  }
+  if (!currentDisplayNode.audioParams) currentDisplayNode.audioParams = {};
+
+  let stepsArrayRef; 
+  let muteStepsArrayRef = currentDisplayNode.audioParams.retriggerMuteSteps; 
+
+  let valueMin, valueMax, valueStepInput, defaultValue, unit, barColorClass, tooltipSuffix;
+
+  switch (paramType) {
+      case "pitch":
+          stepsArrayRef = currentDisplayNode.audioParams.retriggerPitchSteps;
+          valueMin = -12; valueMax = 12; valueStepInput = 1; defaultValue = 0; unit = "semi";
+          barColorClass = "retrigger-bar-pitch"; tooltipSuffix = " semitones";
+          break;
+      case "filter":
+          stepsArrayRef = currentDisplayNode.audioParams.retriggerFilterSteps;
+          valueMin = -1; valueMax = 1; valueStepInput = 0.01; defaultValue = 0; unit = "factor";
+          barColorClass = "retrigger-bar-filter"; tooltipSuffix = "";
+          break;
+      case "volume":
+      default:
+          stepsArrayRef = currentDisplayNode.audioParams.retriggerVolumeSteps;
+          valueMin = 0; valueMax = 1; valueStepInput = 0.01; defaultValue = 0.5; unit = "";
+          barColorClass = "retrigger-bar-volume"; tooltipSuffix = "";
+          break;
+  }
+
+  const referenceStepCount = (currentDisplayNode.audioParams.retriggerVolumeSteps || []).length;
+
+  const ensureArraySync = (arrayName, currentArray, defaultVal, isBoolean = false) => {
+      let targetArray = currentDisplayNode.audioParams[arrayName];
+      if (!targetArray || !Array.isArray(targetArray) || targetArray.length !== referenceStepCount) {
+          const newArr = Array(referenceStepCount).fill(null).map((_, i) => {
+              
+              if (targetArray && i < targetArray.length) {
+                  return targetArray[i];
+              }
+              return isBoolean ? false : defaultVal; 
+          });
+          currentDisplayNode.audioParams[arrayName] = newArr; 
+          
+          
+          selectedArray.forEach(elData => {
+              const n = findNodeById(elData.id);
+              if (n && n.audioParams && n.id !== currentDisplayNode.id) {
+                  let otherNodeArray = n.audioParams[arrayName];
+                  const newOtherNodeArray = Array(referenceStepCount).fill(null).map((_, i) => {
+                       if (otherNodeArray && i < otherNodeArray.length) return otherNodeArray[i];
+                       return isBoolean ? false : defaultVal;
+                  });
+                  n.audioParams[arrayName] = newOtherNodeArray;
+              }
+          });
+          return newArr; 
+      }
+      return targetArray; 
+  };
+
+  stepsArrayRef = ensureArraySync(paramType === "volume" ? "retriggerVolumeSteps" : (paramType === "pitch" ? "retriggerPitchSteps" : "retriggerFilterSteps"), stepsArrayRef, defaultValue);
+  muteStepsArrayRef = ensureArraySync("retriggerMuteSteps", muteStepsArrayRef, false, true);
+
+
+  function renderBars() {
+      barsArea.innerHTML = "";
+      if (!stepsArrayRef || stepsArrayRef.length === 0) {
+           barsArea.textContent = "Pas aantal stappen aan.";
+           return;
+      }
+
+      stepsArrayRef.forEach((currentValue, index) => {
+          const barWrapper = document.createElement("div");
+          barWrapper.classList.add("retrigger-bar-wrapper");
+          let displayValue = currentValue.toFixed(valueStepInput >= 1 ? 0 : 2);
+          if(paramType === "pitch" && currentValue > 0) displayValue = "+" + displayValue;
+          barWrapper.title = `Step ${index + 1}: ${paramType.charAt(0).toUpperCase() + paramType.slice(1)} ${displayValue}${tooltipSuffix}`;
+
+          const barVisualContainer = document.createElement("div");
+          barVisualContainer.classList.add("retrigger-bar-visual-container");
+
+          const bar = document.createElement("div");
+          bar.classList.add("retrigger-bar", barColorClass);
+          bar.id = `retrigger-bar-node${currentDisplayNode.id}-param${paramType}-step${index}`;
+          bar.dataset.index = index;
+
+          let heightPercent;
+          if (valueMin < 0) {
+              heightPercent = ((currentValue - valueMin) / (valueMax - valueMin)) * 100;
+          } else {
+              heightPercent = (currentValue / valueMax) * 100;
+          }
+          bar.style.height = `${Math.max(2, Math.min(100, heightPercent))}%`;
+          bar.style.opacity = (muteStepsArrayRef[index] || false) ? "0.3" : "1";
+
+          barVisualContainer.appendChild(bar);
+          barWrapper.appendChild(barVisualContainer);
+
+          const muteToggleLabel = document.createElement("label");
+          muteToggleLabel.classList.add("retrigger-step-mute-toggle-label");
+          muteToggleLabel.title = `Mute step ${index + 1}`;
+          muteToggleLabel.htmlFor = `retrigger-mute-node${currentDisplayNode.id}-param${paramType}-step${index}`;
+          
+          const muteToggleInput = document.createElement("input");
+          muteToggleInput.type = "checkbox";
+          muteToggleInput.classList.add("retrigger-step-mute-toggle-input"); 
+          muteToggleInput.id = `retrigger-mute-node${currentDisplayNode.id}-param${paramType}-step${index}`;
+          muteToggleInput.checked = !(muteStepsArrayRef[index] || false);
+          muteToggleInput.dataset.index = index;
+
+          muteToggleLabel.appendChild(muteToggleInput); 
+          muteToggleLabel.appendChild(document.createElement("span")); 
+
+          muteToggleLabel.addEventListener("click", (e) => {
+              e.stopPropagation(); 
+              const stepIndex = parseInt(muteToggleInput.dataset.index);
+              const isNowChecked = muteToggleInput.checked; 
+              const isMuted = !isNowChecked;
+
+              selectedArray.forEach(elData => {
+                  const n = findNodeById(elData.id);
+                  if (n && n.audioParams && n.audioParams.retriggerMuteSteps && n.audioParams.retriggerMuteSteps[stepIndex] !== undefined) {
+                      n.audioParams.retriggerMuteSteps[stepIndex] = isMuted;
+                  }
+              });
+               if (muteStepsArrayRef[stepIndex] !== undefined) {
+                  muteStepsArrayRef[stepIndex] = isMuted;
+              }
+              saveState();
+              bar.style.opacity = isMuted ? "0.3" : "1";
+              
+          });
+          
+          barWrapper.appendChild(muteToggleLabel);
+          barsArea.appendChild(barWrapper);
+      });
+  }
+
+  renderBars();
+
+  let activeDraggedBarIndex = -1;
+  let initialMouseYForDrag;
+  let initialValueForDrag;
+
+  barsArea.addEventListener("mousedown", (e_down) => {
+      const target = e_down.target;
+      const barElement = target.classList.contains('retrigger-bar') ? target : null;
+
+      if (barElement) {
+          e_down.preventDefault();
+          e_down.stopPropagation();
+          activeDraggedBarIndex = parseInt(barElement.dataset.index);
+          initialMouseYForDrag = e_down.clientY;
+          initialValueForDrag = stepsArrayRef[activeDraggedBarIndex];
+
+          document.addEventListener("mousemove", onBarDragMouseMove);
+          document.addEventListener("mouseup", onBarDragMouseUp);
+      }
+  });
+
+  function onBarDragMouseMove(e_move) {
+      if (activeDraggedBarIndex === -1) return;
+      e_move.preventDefault();
+
+      const dy = e_move.clientY - initialMouseYForDrag;
+      const barsAreaHeightPx = barsArea.querySelector('.retrigger-bar-visual-container').clientHeight; 
+      
+      let valueChangeRatio = -(dy / barsAreaHeightPx);
+      let newValue = initialValueForDrag + valueChangeRatio * (valueMax - valueMin);
+      
+      newValue = parseFloat(newValue.toFixed(valueStepInput >= 1 ? 0 : 2));
+      newValue = Math.max(valueMin, Math.min(valueMax, newValue));
+
+      selectedArray.forEach(elData => {
+          const n = findNodeById(elData.id);
+          if (n && n.audioParams) {
+              let targetStepsArrayToUpdate;
+              if (paramType === "volume") targetStepsArrayToUpdate = n.audioParams.retriggerVolumeSteps;
+              else if (paramType === "pitch") targetStepsArrayToUpdate = n.audioParams.retriggerPitchSteps;
+              else if (paramType === "filter") targetStepsArrayToUpdate = n.audioParams.retriggerFilterSteps;
+
+              if (targetStepsArrayToUpdate && targetStepsArrayToUpdate[activeDraggedBarIndex] !== undefined) {
+                  targetStepsArrayToUpdate[activeDraggedBarIndex] = newValue;
+              }
+          }
+      });
+      if (stepsArrayRef && stepsArrayRef[activeDraggedBarIndex] !== undefined) {
+          stepsArrayRef[activeDraggedBarIndex] = newValue;
+      }
+
+      const barToUpdate = barsArea.querySelector(`.retrigger-bar[data-index="${activeDraggedBarIndex}"]`);
+      if (barToUpdate) {
+          let heightPercent;
+          if (valueMin < 0) { heightPercent = ((newValue - valueMin) / (valueMax - valueMin)) * 100; }
+          else { heightPercent = (newValue / valueMax) * 100; }
+          barToUpdate.style.height = `${Math.max(2, Math.min(100, heightPercent))}%`;
+          
+          let displayValue = newValue.toFixed(unit === "factor" || unit === "" ? 2 : 0);
+          if(paramType === "pitch" && newValue > 0) displayValue = "+" + displayValue;
+          barToUpdate.parentElement.parentElement.title = `Step ${activeDraggedBarIndex + 1}: ${paramType.charAt(0).toUpperCase() + paramType.slice(1)} ${displayValue}${tooltipSuffix}`;
+      }
+  }
+
+  function onBarDragMouseUp() {
+      if (activeDraggedBarIndex !== -1) {
+          activeDraggedBarIndex = -1;
+          saveState();
+      }
+      document.removeEventListener("mousemove", onBarDragMouseMove);
+      document.removeEventListener("mouseup", onBarDragMouseUp);
+  }
+
+  editorContainer.appendChild(barsArea);
+  return editorContainer;
+}
 
 function createParticles(x, y, count) {
   const baseColor =
@@ -3269,7 +3944,7 @@ function deepCopyState(stateToCopy) {
           if (value instanceof Set) {
               return Array.from(value);
           }
-          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer)) {
+          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer) || key === "activeRetriggers") {
               return undefined;
           }
           return value;
@@ -3279,7 +3954,9 @@ function deepCopyState(stateToCopy) {
       if (parsed.nodes) {
           parsed.nodes.forEach((node) => {
               node.connections = node.connections ? new Set(node.connections) : new Set();
-               if (!node.audioParams) node.audioParams = {}; 
+               if (!node.audioParams) node.audioParams = {};
+               node.activeRetriggers = [];
+               node.currentRetriggerVisualIndex = -1;
           });
       }
       parsed.selectedElements = parsed.selectedElements ? new Set(parsed.selectedElements.map(el => ({...el}))) : new Set();
@@ -3287,19 +3964,277 @@ function deepCopyState(stateToCopy) {
 
       if(parsed.connections) {
           parsed.connections.forEach(conn => {
-               if (!conn.audioParams) conn.audioParams = {}; 
+               if (!conn.audioParams) conn.audioParams = {};
                if (conn.type === 'wavetrail' && conn.audioParams) {
                   conn.audioParams.buffer = null;
-                  conn.audioParams.waveformPath = null;
                }
           });
       }
-
       return parsed;
   } catch (e) {
       console.error("Error during deep copy/parse state:", e);
       return null;
   }
+}
+
+function saveState() {
+  if (isPerformingUndoRedo) return;
+  unsavedChanges = true;
+  const currentState = {
+      nodes: nodes,
+      connections: connections,
+      selectedElements: Array.from(selectedElements),
+      fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
+      nodeIdCounter: nodeIdCounter,
+      connectionIdCounter: connectionIdCounter,
+      isGlobalSyncEnabled: isGlobalSyncEnabled,
+      globalBPM: globalBPM,
+      viewOffsetX: viewOffsetX,
+      viewOffsetY: viewOffsetY,
+      viewScale: viewScale,
+      currentScaleKey: currentScaleKey,
+      currentRootNote: currentRootNote,
+      globalTransposeOffset: globalTransposeOffset,
+      masterVolume: masterGain?.gain.value ?? 0.8,
+      delaySend: masterDelaySendGain?.gain.value ?? 0.3,
+      delayTime: delayNode?.delayTime.value ?? 0.25,
+      delayFeedback: delayFeedbackGain?.gain.value ?? 0.4,
+      portalVolume: portalGroupGain?.gain.value ?? 0.7,
+      originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8
+  };
+  const copiedState = deepCopyState(currentState);
+  if (!copiedState) return;
+  if (historyIndex < historyStack.length - 1) {
+      historyStack = historyStack.slice(0, historyIndex + 1);
+  }
+  historyStack.push(copiedState);
+  if (historyStack.length > MAX_HISTORY_SIZE) {
+      historyStack.shift();
+  }
+  historyIndex = historyStack.length - 1;
+}
+
+function loadState(stateToLoad) {
+  if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
+    console.error("Ongeldige of incomplete state data om te laden.");
+    return;
+  }
+
+  isPerformingUndoRedo = true;
+
+  nodes.forEach((node) => stopNodeAudio(node));
+  connections.forEach((conn) => stopConnectionAudio(conn));
+  activeRockets.forEach(rocket => {
+    if (rocket.audioNodes && rocket.audioNodes.engineSound) {
+        try { rocket.audioNodes.engineSound.stop(); rocket.audioNodes.engineSound.disconnect(); } catch(e){}
+    }
+  });
+  activeRockets = [];
+
+  nodes = stateToLoad.nodes;
+  connections = stateToLoad.connections;
+  selectedElements = stateToLoad.selectedElements ? new Set(stateToLoad.selectedElements.map(el => ({...el}))) : new Set();
+  fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ? new Set(stateToLoad.fluctuatingGroupNodeIDs) : new Set();
+  nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
+  connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
+  isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
+  globalBPM = stateToLoad.globalBPM ?? 120;
+  currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
+  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
+  currentRootNote = stateToLoad.currentRootNote ?? 0;
+  globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
+  viewOffsetX = stateToLoad.viewOffsetX ?? 0;
+  viewOffsetY = stateToLoad.viewOffsetY ?? 0;
+  viewScale = stateToLoad.viewScale ?? 1.0;
+
+  if (isAudioReady) {
+    const now = audioContext.currentTime;
+    const loadTimeConstant = 0.01;
+    if (masterGain) masterGain.gain.setTargetAtTime(stateToLoad.masterVolume ?? 0.8, now, loadTimeConstant);
+    if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(stateToLoad.delaySend ?? 0.3, now, loadTimeConstant);
+    if (delayNode) delayNode.delayTime.setTargetAtTime(stateToLoad.delayTime ?? 0.25, now, loadTimeConstant);
+    if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(stateToLoad.delayFeedback ?? 0.4, now, loadTimeConstant);
+    if (portalGroupGain) portalGroupGain.gain.setTargetAtTime(stateToLoad.portalVolume ?? 0.7, now, loadTimeConstant);
+    if (originalNebulaGroupGain) originalNebulaGroupGain.gain.setTargetAtTime(stateToLoad.originalNebulaVolume ?? 0.8, now, loadTimeConstant);
+  }
+
+  nodes.forEach((node) => {
+    node.audioNodes = null;
+    node.connections = node.connections ? new Set(node.connections) : new Set();
+    node.isSelected = isElementSelected("node", node.id);
+    node.isStartNode = isPulsarType(node.type);
+    node.isEnabled = node.isEnabled !== undefined ? node.isEnabled : node.type !== "pulsar_triggerable";
+    if (node.type === 'pulsar_manual') node.isEnabled = true;
+    node.primaryInputConnectionId = node.primaryInputConnectionId ?? (node.type === "switch" ? null : undefined);
+    node.baseHue = node.baseHue ?? null;
+    node.activeRetriggers = [];
+    node.currentRetriggerVisualIndex = -1;
+
+    if (!node.audioParams) node.audioParams = {};
+
+    const defaultVolumeSteps = [0.8, 0.65, 0.5];
+    const numDefaultSteps = defaultVolumeSteps.length;
+
+    const defaultRetriggerParams = {
+      retriggerEnabled: false,
+      retriggerVolumeSteps: [...defaultVolumeSteps],
+      retriggerPitchSteps: Array(numDefaultSteps).fill(0),
+      retriggerFilterSteps: Array(numDefaultSteps).fill(0),
+      retriggerMuteSteps: Array(numDefaultSteps).fill(false),
+      retriggerIntervalMs: 100,
+      retriggerRateMode: "constant",
+    };
+
+    for (const key in defaultRetriggerParams) {
+      if (node.audioParams[key] === undefined) {
+        node.audioParams[key] = defaultRetriggerParams[key];
+      }
+    }
+
+    if (node.audioParams.retriggerRate !== undefined) {
+      if (node.audioParams.retriggerIntervalMs === defaultRetriggerParams.retriggerIntervalMs) {
+        node.audioParams.retriggerIntervalMs = Math.max(20, Math.round(1000 / node.audioParams.retriggerRate));
+      }
+      delete node.audioParams.retriggerRate;
+    }
+    
+    let currentStepCount = (node.audioParams.retriggerVolumeSteps || defaultRetriggerParams.retriggerVolumeSteps).length;
+
+    if (node.audioParams.retriggerCount !== undefined || node.audioParams.retriggerVolumeDecay !== undefined) {
+        const countFromOldParam = node.audioParams.retriggerCount || currentStepCount;
+        const decayType = node.audioParams.retriggerVolumeDecay || "linear";
+        const baseVol = 0.8;
+        const newVolumeSteps = [];
+        for (let i = 0; i < countFromOldParam; i++) {
+            let vol = baseVol;
+            if (decayType === "linear") vol *= Math.max(0, 1 - (i / Math.max(1, countFromOldParam -1)));
+            else if (decayType === "exponential") vol *= Math.pow(0.75, i);
+            newVolumeSteps.push(parseFloat(vol.toFixed(2)));
+        }
+        node.audioParams.retriggerVolumeSteps = newVolumeSteps.length > 0 ? newVolumeSteps : [...defaultRetriggerParams.retriggerVolumeSteps];
+        currentStepCount = node.audioParams.retriggerVolumeSteps.length;
+
+        delete node.audioParams.retriggerCount;
+        delete node.audioParams.retriggerVolumeDecay;
+    }
+    
+    const ensureStepArrayLength = (arrayName, defaultValue) => {
+        if (!node.audioParams[arrayName] || !Array.isArray(node.audioParams[arrayName]) || node.audioParams[arrayName].length !== currentStepCount) {
+            node.audioParams[arrayName] = Array(currentStepCount).fill(defaultValue);
+        }
+    };
+
+    ensureStepArrayLength("retriggerPitchSteps", 0);
+    ensureStepArrayLength("retriggerFilterSteps", 0);
+    ensureStepArrayLength("retriggerMuteSteps", false);
+
+
+    if (node.audioParams.retriggerFilterArcType !== undefined) {
+      const oldType = node.audioParams.retriggerFilterArcType;
+      const oldFactor = node.audioParams.retriggerFilterArcFactor;
+      if (oldType === "open") {
+        node.audioParams.retriggerFilterArcAmount = oldFactor !== undefined ? oldFactor : 0.5;
+      } else if (oldType === "close") {
+        node.audioParams.retriggerFilterArcAmount = oldFactor !== undefined ? -oldFactor : -0.5;
+      } else {
+        node.audioParams.retriggerFilterArcAmount = 0;
+      }
+      delete node.audioParams.retriggerFilterArcType;
+      delete node.audioParams.retriggerFilterArcFactor;
+    }
+
+    if (node.audioParams.retriggerPitchArcType !== undefined) {
+        if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
+            const oldStepFactor = node.audioParams.retriggerPitchArcStep === undefined ? 0.03 : node.audioParams.retriggerPitchArcStep;
+            const newType = "relative_factor";
+            const newStep = node.audioParams.retriggerPitchArcType === "down" ? -Math.abs(oldStepFactor) : Math.abs(oldStepFactor);
+            node.audioParams.retriggerPitchArcType = newType; 
+            node.audioParams.retriggerPitchArcStep = newStep;
+        } else if (node.audioParams.retriggerPitchArcType === "step") {
+            node.audioParams.retriggerPitchArcType = "semitone_step";
+        } else if (node.audioParams.retriggerPitchArcType === "none" && node.audioParams.retriggerPitchArcStep === undefined) {
+             node.audioParams.retriggerPitchArcStep = 0;
+        }
+    }
+
+    node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+    node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+    node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
+    node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+    node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+    node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+    node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
+    node.audioParams.gateModeIndex = node.gateModeIndex ?? node.audioParams.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
+    node.gateModeIndex = node.audioParams.gateModeIndex;
+    node.audioParams.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
+    node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
+    node.audioParams.volume = node.audioParams.volume ?? 1.0;
+
+    if (isDrumType(node.type)) {
+      const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
+      node.audioParams.baseFreq = node.audioParams.baseFreq ?? defaults?.baseFreq;
+      node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
+      node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
+      if (node.type === "drum_snare" || node.type === "drum_clap") {
+        node.audioParams.noiseDecay = node.audioParams.noiseDecay ?? defaults?.noiseDecay;
+      }
+    }
+    if (["sound", "nebula"].includes(node.type)) {
+      node.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0));
+      node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
+      if (isNaN(node.audioParams.pitch)) {
+        node.audioParams.scaleIndex = 0;
+        node.audioParams.pitch = getFrequency(currentScale, 0);
+      }
+    }
+    if (node.type === PORTAL_NEBULA_TYPE) {
+      node.audioParams.pitch = node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
+      node.audioParams.volume = node.audioParams.volume ?? 0.6;
+    }
+
+    if (isAudioReady) {
+      node.audioNodes = createAudioNodesForNode(node);
+      if (node.audioNodes) {
+        updateNodeAudioParams(node);
+      }
+    }
+  });
+
+  connections.forEach((conn) => {
+    conn.isSelected = isElementSelected("connection", conn.id);
+    if (!conn.audioParams) conn.audioParams = {};
+
+    if (conn.type === "string_violin") {
+      const defaults = STRING_VIOLIN_DEFAULTS;
+      Object.keys(defaults).forEach((key) => { conn.audioParams[key] = conn.audioParams[key] ?? defaults[key]; });
+      conn.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0));
+      conn.audioParams.pitch = getFrequency(currentScale, conn.audioParams.scaleIndex);
+      if (isNaN(conn.audioParams.pitch)) { conn.audioParams.scaleIndex = 0; conn.audioParams.pitch = getFrequency(currentScale, 0); }
+      if (isAudioReady) {
+        conn.audioNodes = createAudioNodesForConnection(conn);
+        if (conn.audioNodes) { updateConnectionAudioParams(conn); }
+      } else { conn.audioNodes = null; }
+    } else if (conn.type === 'wavetrail') {
+      conn.audioParams.buffer = null;
+      conn.audioParams.waveformPath = null;
+      conn.audioParams.fileName = conn.audioParams.fileName || null;
+      conn.audioNodes = null;
+    } else {
+      conn.audioNodes = null;
+    }
+  });
+
+  updateSyncUI();
+  updateScaleAndTransposeUI();
+  if(isAudioReady) updateMixerUI();
+  updateConstellationGroup();
+  populateEditPanel();
+  drawPianoRoll();
+  identifyAndRouteAllGroups();
+
+  isPerformingUndoRedo = false;
+  unsavedChanges = false;
+  updateAbletonLinkButton();
 }
 
 function startSamplerGlide_Granular(sourceNode, targetFreq, duration, grainDuration = 0.15, overlap = 0.05, intensity = 1.0) {
@@ -3368,339 +4303,257 @@ function stopStringSound(connection) {
   } catch (e) {}
 }
 
-function addNode(x, y, type, subtype = null) {
-  console.log(`%c[addNode START] type: ${type}, subtype: ${subtype}, current waveformToAdd: ${waveformToAdd}`, 'color: red; font-weight: bold;');
-
-  if (!isAudioReady) return null;
-  let currentEvent = window.event;
-  let applySnap = isSnapEnabled && !(currentEvent && currentEvent.shiftKey);
-  let finalPos = applySnap ? snapToGrid(x, y) : { x: x, y: y };
-
-  const isStartNodeType = isPulsarType(type);
-  let nodeTypeVisual = type; 
-  let initialScaleIndex = 0;
-  let initialPitch = 0;
-  let nodeSubtypeForAudioParams = subtype;
-  let initialBaseHue = null;
-  let visualStyle = null;
-  let audioDetails = {};
-
-  let selectedPreset = null;
-  if (type === "sound") {
-    selectedPreset = analogWaveformPresets.find(p => p.type === subtype) || fmSynthPresets.find(p => p.type === subtype);
-  } else if (isPulsarType(type)) { 
-    nodeSubtypeForAudioParams = type; 
-    selectedPreset = pulsarTypes.find(p => p.type === type);
-  }
-
-  if (selectedPreset && selectedPreset.details) {
-    visualStyle = selectedPreset.details.visualStyle || null;
-    Object.keys(selectedPreset.details).forEach(key => {
-        if (key !== 'visualStyle') {
-            audioDetails[key] = selectedPreset.details[key];
-        }
-    });
-  }
-
-  if (type === "sound") {
-    if (noteIndexToAdd !== -1 && noteIndexToAdd !== null && noteIndexToAdd >= MIN_SCALE_INDEX && noteIndexToAdd <= MAX_SCALE_INDEX) {
-      initialScaleIndex = noteIndexToAdd;
-    } else {
-      initialScaleIndex = Math.floor(Math.random() * currentScale.notes.length * 2);
-    }
-    initialScaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, initialScaleIndex));
-    initialPitch = getFrequency(currentScale, initialScaleIndex);
-    if (isNaN(initialPitch)) { initialScaleIndex = 0; initialPitch = getFrequency(currentScale, 0); }
-
-    if (!nodeSubtypeForAudioParams) {
-      nodeSubtypeForAudioParams = 'sine';
-      selectedPreset = analogWaveformPresets.find(p => p.type === 'sine');
-      if (selectedPreset && selectedPreset.details) {
-          visualStyle = selectedPreset.details.visualStyle || 'analog_sine';
-          audioDetails = {};
-          Object.keys(selectedPreset.details).forEach(key => {
-              if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
-          });
-      }
-    } else if (nodeSubtypeForAudioParams.startsWith('sampler_')) {
-      const samplerId = nodeSubtypeForAudioParams.replace('sampler_', '');
-      const definition = typeof SAMPLER_DEFINITIONS !== 'undefined' ? SAMPLER_DEFINITIONS.find(s => s.id === samplerId) : null;
-      if (!definition || definition.loadFailed) {
-        console.warn(`Sampler ${samplerId} not loaded, defaulting to sine.`);
-        nodeSubtypeForAudioParams = 'sine';
-        selectedPreset = analogWaveformPresets.find(p => p.type === 'sine');
-        if (selectedPreset && selectedPreset.details) {
-            visualStyle = selectedPreset.details.visualStyle || 'analog_sine';
-            audioDetails = {};
-            Object.keys(selectedPreset.details).forEach(key => {
-              if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
-            });
-        }
-      } else {
-        visualStyle = visualStyle || `sampler_${samplerId}`;
-      }
-    }
-  } else if (type === "nebula") {
-    initialBaseHue = Math.random() * 360;
-    console.log(`%c[addNode - NEBULA block] Current waveformToAdd: ${waveformToAdd}, audioDetails.osc1Type: ${audioDetails.osc1Type}`, 'color: orange; font-weight: bold;');
-    nodeSubtypeForAudioParams = waveformToAdd || audioDetails.osc1Type || "sawtooth";
-    console.log(`%c[addNode - NEBULA block] nodeSubtypeForAudioParams CHOSEN: ${nodeSubtypeForAudioParams}`, 'color: orange; font-weight: bold;');
-    visualStyle = visualStyle || "nebula_default";
-    initialPitch = getFrequency(currentScale, initialScaleIndex);
-  } else if (type === PORTAL_NEBULA_TYPE) {
-    initialBaseHue = PORTAL_NEBULA_DEFAULTS.baseColorHue + (Math.random() - 0.5) * 40;
-    initialPitch = PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
-    nodeSubtypeForAudioParams = null;
-    visualStyle = visualStyle || "portal_default";
-    audioDetails.actualOscillatorType = "triangle";
-  }
-
-  const drumDefaults = isDrumType(type) ? DRUM_ELEMENT_DEFAULTS[type] : {};
-  if (isDrumType(type) && !visualStyle) {
-    visualStyle = type;
-  }
-
-  const randomSize = (isStartNodeType || isDrumType(type) || type === PORTAL_NEBULA_TYPE)
-    ? MIN_NODE_SIZE + Math.random() * (MAX_NODE_SIZE - MIN_NODE_SIZE) * 0.7
-    : (type === "relay" || type === "reflector" || type === "switch" ? 0.7 : 1.0);
-  const starPoints = isStartNodeType ? 6 : 5;
-  let defaultIsEnabled = true;
-
-  const newNode = {
-    id: nodeIdCounter++,
-    x: finalPos.x, y: finalPos.y, size: randomSize, radius: NODE_RADIUS_BASE,
-    type: nodeTypeVisual, 
-    baseHue: initialBaseHue, connections: new Set(),
-    isSelected: false, isInConstellation: false,
-    audioParams: {
-      waveform: nodeSubtypeForAudioParams,
-      visualStyle: visualStyle,
-      pitch: initialPitch,
-      scaleIndex: initialScaleIndex,
-      volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0),
-      reverbSend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_REVERB_SEND * 1.5) : DEFAULT_REVERB_SEND,
-      delaySend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_DELAY_SEND * 1.2) : DEFAULT_DELAY_SEND,
-      lowPassFreq: MAX_FILTER_FREQ,
-      ...audioDetails,
-      triggerInterval: audioDetails.triggerInterval || DEFAULT_TRIGGER_INTERVAL,
-      syncSubdivisionIndex: audioDetails.syncSubdivisionIndex || DEFAULT_SUBDIVISION_INDEX,
-      probability: audioDetails.probability || DEFAULT_PROBABILITY,
-      pulseIntensity: audioDetails.pulseIntensity || DEFAULT_PULSE_INTENSITY,
-      volLfoRate: audioDetails.volLfoRate || (0.1 + Math.random() * 0.2),
-      volLfoDepth: audioDetails.volLfoDepth || 0,
-      detune: audioDetails.detune || 7,
-      lfoDepthFactor: audioDetails.lfoDepthFactor || 1,
-      baseFreq: audioDetails.baseFreq || drumDefaults?.baseFreq,
-      decay: audioDetails.decay || drumDefaults?.decay,
-      noiseDecay: audioDetails.noiseDecay || drumDefaults?.noiseDecay,
-      pitchShiftIndex: type === "pitchShift" ? (audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX) : 0,
-      pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX] : 0,
-      pitchShiftAlternating: type === "pitchShift" ? (audioDetails.pitchShiftAlternating || false) : false,
-      pitchShiftDirection: type === "pitchShift" ? (audioDetails.pitchShiftDirection || 1) : 1,
-      gateModeIndex: type === "gate" ? (audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX) : 0,
-      gateCounter: 0, lastRandomGateResult: true,
-      midiOutEnabled: false, midiChannel: 1, midiNote: 60,
-      osc1Type: nodeSubtypeForAudioParams,
-    },
-    color: null, audioNodes: null, isStartNode: isStartNodeType,
-    isTriggered: false, lastTriggerPulseId: -1, animationState: 0,
-    isEnabled: defaultIsEnabled,
-    starPoints: starPoints,
-    currentAngle: (type === "gate" || (type === "sound" && nodeSubtypeForAudioParams?.startsWith("sampler_"))) ? Math.random() * Math.PI * 2 : 0,
-    innerAngle: 0, pulsePhase: type === "nebula" || type === PORTAL_NEBULA_TYPE ? Math.random() * Math.PI * 2 : 0,
-    primaryInputConnectionId: type === "switch" ? null : undefined,
-    lastTriggerTime: -1, nextSyncTriggerTime: 0, nextRandomTriggerTime: 0,
-  };
-
-  if (newNode.type === "pulsar_rocket") {
-    newNode.audioParams.rocketDirectionAngle = 0;
-    newNode.audioParams.rocketSpeed = ROCKET_DEFAULT_SPEED;
-    newNode.audioParams.rocketRange = ROCKET_DEFAULT_RANGE;
-    newNode.audioParams.rocketGravity = ROCKET_DEFAULT_GRAVITY;
-  }
-
-  if (isStartNodeType && newNode.isEnabled && audioContext) {
-    const nowTime = audioContext.currentTime;
-    const interval = newNode.audioParams.triggerInterval;
-
-    if (newNode.type === 'pulsar_random_particles') { 
-      newNode.nextRandomTriggerTime = nowTime + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-    } else if (newNode.type !== 'pulsar_triggerable' && newNode.type !== 'pulsar_manual') { 
-      if (isGlobalSyncEnabled) {
-        const secondsPerBeat = 60.0 / (globalBPM || 120);
-        const subdivIndex = newNode.audioParams.syncSubdivisionIndex;
-        if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
-          const subdiv = subdivisionOptions[subdivIndex];
-          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
-            const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-            if (nodeIntervalSeconds > 0) {
-              newNode.nextSyncTriggerTime = Math.ceil(nowTime / nodeIntervalSeconds) * nodeIntervalSeconds;
-              if (newNode.nextSyncTriggerTime <= nowTime + 0.01) {
-                newNode.nextSyncTriggerTime += nodeIntervalSeconds;
-              }
-            }
-          }
-        }
-      } else {
-        newNode.lastTriggerTime = nowTime - interval * (0.8 + Math.random() * 0.19);
-      }
-    }
-  }
-
-  if (isAudioReady) {
-    newNode.audioNodes = createAudioNodesForNode(newNode);
-    if (newNode.audioNodes) {
-      updateNodeAudioParams(newNode);
-    } else if (!isPulsarType(newNode.type) && !['relay', 'reflector', 'switch', 'gate', 'probabilityGate', 'pitchShift'].includes(newNode.type)) {
-      console.warn(`Failed to create audio nodes for new node: Type=${newNode.type}, WaveformParam=${newNode.audioParams.waveform}`);
-    }
-  }
-
-  nodes.push(newNode);
-  console.log(`Node added: ID=${newNode.id}, Type=${newNode.type}, WaveformParam=${newNode.audioParams.waveform}, VisualStyle=${newNode.audioParams.visualStyle}, Enabled=${newNode.isEnabled}`);
-  saveState();
-  identifyAndRouteAllGroups();
-  return newNode;
-}
 
 function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDuration = 0.3) {
-  if (!isAudioReady || !node) return;
+  if (!isAudioReady || !node || !node.audioParams) return;
   const now = audioContext.currentTime;
-  const params = node.audioParams; 
+  const params = node.audioParams;
   const intensity = pulseData.intensity ?? 1.0;
+  const ampEnv = params.ampEnv || { attack: 0.01, decay: 0.3, sustain: 0.7, release: 0.3 };
 
   if (node.type === 'sound') {
-    if (!node.audioNodes?.gainNode) return;
+    if (!node.audioNodes || !node.audioNodes.gainNode || !node.audioNodes.lowPassFilter) {
+        console.warn(`[Sampler Trigger V6 Final] Node ${node.id} mist audioNodes.gainNode of lowPassFilter.`);
+        node.isTriggered = false; node.animationState = 0; return;
+    }
     node.isTriggered = true;
     node.animationState = 1;
-    const { gainNode, lowPassFilter, oscillator1, oscillator2, osc2Gain, modulatorOsc, modulatorGain } = node.audioNodes;
+    const {
+        gainNode, lowPassFilter,
+        oscillator1, modulatorOsc1, modulatorGain1,
+        oscillator2, osc2Gain,
+        orbitoneOscillators, orbitoneModulatorOscs, orbitoneModulatorGains, orbitoneIndividualGains
+    } = node.audioNodes;
 
-    if (!gainNode || !lowPassFilter || !oscillator1) { 
-      node.isTriggered = false; node.animationState = 0; return;
-    }
+    // *** PAS DEZE WAARDE AAN OM OSCILLATORS ZACHTER TE MAKEN RELATIEF TOT SAMPLERS ***
+    const baseVolume = 0.2; // Was 0.6. Probeer waarden tussen 0.4 en 0.55
+    // *** EINDE AANPASSING baseVolume ***
 
-    const baseVolume = 0.6; 
     const targetVolume = baseVolume * intensity;
+    // clampedVolume is het piekniveau voor de *hoofd* gainNode van deze 'sound' node
     const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume));
 
-    
-    const ampEnv = params.ampEnv || { attack: 0.01, decay: 0.3, sustain: 0.7, release: 0.3 }; 
+    // Envelope voor de HOOFD gainNode. Alle audio (osc of sampler) gaat hierdoorheen.
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(0, now);
     gainNode.gain.linearRampToValueAtTime(clampedVolume, now + ampEnv.attack);
-    
-    gainNode.gain.setTargetAtTime(clampedVolume * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3); 
-    
+    gainNode.gain.setTargetAtTime(clampedVolume * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3 + 0.001);
 
-    const totalDurationEstimate = ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 1.0 : 0) + ampEnv.release; 
-
-    
-    const targetFreq = params.pitch;
-    oscillator1.frequency.cancelScheduledValues(now);
-    oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
-
-    if (oscillator2 && osc2Gain) { 
-        const osc2Freq = targetFreq * Math.pow(2, (params.osc2Octave || 0)); 
-        oscillator2.frequency.cancelScheduledValues(now);
-        oscillator2.frequency.setTargetAtTime(osc2Freq, now, 0.005);
-        
-        osc2Gain.gain.setValueAtTime(params.osc2Mix || 0, now); 
-    }
-
-    
-    const baseFilterFreq = params.filterCutoff || MAX_FILTER_FREQ;
-    const filterEnvAmount = params.filterEnvAmount || 0;
-    if (filterEnvAmount !== 0 && lowPassFilter) {
-        lowPassFilter.frequency.cancelScheduledValues(now);
-        lowPassFilter.frequency.setValueAtTime(baseFilterFreq, now); 
-        lowPassFilter.frequency.linearRampToValueAtTime(Math.max(20, baseFilterFreq + filterEnvAmount), now + (ampEnv.attack * 0.8)); 
-        lowPassFilter.frequency.setTargetAtTime(baseFilterFreq, now + ampEnv.attack, (ampEnv.decay + ampEnv.sustain) / 3 || 0.1); 
-    } else if (lowPassFilter) {
-        lowPassFilter.frequency.setTargetAtTime(baseFilterFreq, now, 0.01); 
-    }
-
-
-    
-    if (modulatorOsc && modulatorGain) {
-      const modRatio = params.modulatorRatio || 1.0;
-      modulatorOsc.frequency.cancelScheduledValues(now);
-      modulatorOsc.frequency.setTargetAtTime(targetFreq * modRatio, now, 0.005);
-
-      const fmDepthScale = params.fmModDepthScale !== undefined ? params.fmModDepthScale : 1.0;
-      const modDepthBaseFactor = params.waveform === 'fmBell' ? 4 : (params.waveform === 'fmXylo' ? 10 : 3); 
-      const modDepth = targetFreq * modDepthBaseFactor * fmDepthScale;
-
-      const modEnv = params.modulatorEnv || { attack: 0.01, decay: 0.15, sustain: 0, release: 0.2 }; 
-
-      modulatorGain.gain.cancelScheduledValues(now);
-      modulatorGain.gain.setValueAtTime(0, now);
-      modulatorGain.gain.linearRampToValueAtTime(modDepth, now + modEnv.attack);
-      
-      const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.001;
-      modulatorGain.gain.setTargetAtTime(modSustainLevel, now + modEnv.attack, modEnv.decay / 3);
-    }
-
-
-    
-    if (params.waveform && params.waveform.startsWith('sampler_')) {
-        const samplerId = params.waveform.replace('sampler_', '');
-        const definition = (typeof SAMPLER_DEFINITIONS !== 'undefined') ? SAMPLER_DEFINITIONS.find(s => s.id === samplerId) : null;
-        if (definition && definition.isLoaded && definition.buffer) {
-            
-            const source = audioContext.createBufferSource(); source.buffer = definition.buffer;
-            let targetRate = 1;
-            if (!isNaN(targetFreq) && targetFreq > 0 && definition.baseFreq > 0) {
-                 targetRate = Math.max(0.1, Math.min(4, targetFreq / definition.baseFreq));
-            }
-            source.playbackRate.setValueAtTime(targetRate, now);
-            
-            
-            
-            
-            
-            source.connect(lowPassFilter);
-            source.start(now);
-            
-            
-            source.onended = () => { /* cleanup als nodig */ };
-        } else {
-            console.warn(`Sampler ${params.waveform} not loaded or buffer missing.`);
-            
-            gainNode.gain.cancelScheduledValues(now); gainNode.gain.setValueAtTime(0, now);
-            node.isTriggered = false; node.animationState = 0; return;
-        }
-    }
-
-    
+    const totalDurationForMainNodeEnvelope = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0));
+    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
     setTimeout(() => {
       const stillNode = findNodeById(node.id);
       if (stillNode && stillNode.audioNodes?.gainNode) {
-        
-        const currentGain = stillNode.audioNodes.gainNode.gain.value;
+        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
         stillNode.audioNodes.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
-        stillNode.audioNodes.gainNode.gain.setValueAtTime(currentGain, audioContext.currentTime); 
-        stillNode.audioNodes.gainNode.gain.setTargetAtTime(0, audioContext.currentTime, ampEnv.release / 3 || 0.1);
-
-        if (stillNode.audioNodes.modulatorGain) { 
-            const modEnv = params.modulatorEnv || { attack: 0.01, decay: 0.15, sustain: 0, release: 0.2 };
-            const currentModGain = stillNode.audioNodes.modulatorGain.gain.value;
-            stillNode.audioNodes.modulatorGain.gain.cancelScheduledValues(audioContext.currentTime);
-            stillNode.audioNodes.modulatorGain.gain.setValueAtTime(currentModGain, audioContext.currentTime);
-            stillNode.audioNodes.modulatorGain.gain.setTargetAtTime(0.0001, audioContext.currentTime, modEnv.release / 3 || 0.05);
-        }
+        stillNode.audioNodes.gainNode.gain.setValueAtTime(currentGainVal, audioContext.currentTime);
+        stillNode.audioNodes.gainNode.gain.setTargetAtTime(0, audioContext.currentTime, mainNodeReleaseTimeConstant);
       }
-      if (stillNode) stillNode.isTriggered = false; 
-    }, (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0)) * 1000); 
+      if (stillNode) stillNode.isTriggered = false;
+    }, totalDurationForMainNodeEnvelope * 1000);
+
+
+    if (params.waveform && params.waveform.startsWith('sampler_')) {
+        console.log(`[Sampler Trigger - V6 Final] Node: ${node.id}, Sampler: ${params.waveform}, Orbitones Enabled: ${params.orbitonesEnabled}, Count: ${params.orbitoneCount}, Mix: ${params.orbitoneMix}`);
+        const samplerId = params.waveform.replace('sampler_', '');
+        const definition = SAMPLER_DEFINITIONS.find(s => s.id === samplerId);
+
+        console.log(`[Sampler Trigger - V6 Final] Definition for ${samplerId}: ${!!definition}, Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
+
+        if (definition && definition.isLoaded && definition.buffer) {
+            console.log(`[Sampler Trigger - V6 Final] Conditions MET for playing ${samplerId}`);
+
+            const allOutputFrequencies = getOrbitoneFrequencies(
+                params.scaleIndex,
+                params.orbitonesEnabled ? params.orbitoneCount : 0,
+                params.orbitoneIntervals,
+                params.orbitoneSpread,
+                currentScale,
+                params.pitch
+            );
+
+            allOutputFrequencies.forEach((freq, index) => {
+                if (isNaN(freq) || freq <= 0) {
+                    console.warn(`[Sampler Play - V6 Final] Invalid frequency for note ${index} of ${samplerId}: ${freq}`);
+                    return;
+                }
+                const isMainNote = index === 0;
+                const timingOffsetMs = isMainNote ? 0 : (params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[index-1] !== undefined ? params.orbitoneTimingOffsets[index-1] : 0);
+                const scheduledStartTime = now + (timingOffsetMs / 1000.0);
+
+                const source = audioContext.createBufferSource();
+                source.buffer = definition.buffer;
+                let targetRate = 1;
+                if (definition.baseFreq > 0) {
+                    targetRate = Math.max(0.1, Math.min(8, freq / definition.baseFreq));
+                }
+                source.playbackRate.setValueAtTime(targetRate, scheduledStartTime);
+
+                const perNoteSamplerGain = audioContext.createGain();
+
+                let noteVolumeFactor;
+                const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+
+                if (!params.orbitonesEnabled || params.orbitoneCount === 0) {
+                    noteVolumeFactor = isMainNote ? 1.0 : 0;
+                } else {
+                    const mainNoteVolWhenMixedOut = (orbitoneBaseMixLevel >= 0.99) ? 0.0 : (1.0 - orbitoneBaseMixLevel);
+                    noteVolumeFactor = isMainNote ?
+                        mainNoteVolWhenMixedOut :
+                        (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
+                }
+
+                let finalSamplerSpecificVolume = clampedVolume * noteVolumeFactor;
+
+                // *** VERHOOG DEZE WAARDE OM SAMPLERS LUİDER TE MAKEN ***
+                const SAMPLER_GENERAL_BOOST = 5; // Stond op 1.8 of 2.0, probeer 2.2, 2.5 etc.
+                finalSamplerSpecificVolume *= SAMPLER_GENERAL_BOOST;
+                // Begrens het volume om clipping te voorkomen
+                finalSamplerSpecificVolume = Math.min(finalSamplerSpecificVolume, 5); // Maximaal 1.5 bijvoorbeeld
+                // *** EINDE AANPASSING SAMPLER BOOST ***
+
+                console.log(`[Sampler Play - V6 Final] Node: ${node.id}, Sampler: ${samplerId}, NoteIdx: ${index}, FinalVol: ${finalSamplerSpecificVolume.toFixed(3)}, clampedVol: ${clampedVolume.toFixed(3)}, noteVolFactor: ${noteVolumeFactor.toFixed(3)}, BOOST: ${SAMPLER_GENERAL_BOOST}`);
+
+                if (finalSamplerSpecificVolume < 0.001) {
+                    if (isMainNote) console.warn(`[Sampler Play - V6 Final] Hoofdnoot ${samplerId} volume te laag (${finalSamplerSpecificVolume}). Overgeslagen.`);
+                    return;
+                }
+
+                perNoteSamplerGain.gain.setValueAtTime(0, scheduledStartTime);
+                perNoteSamplerGain.gain.linearRampToValueAtTime(finalSamplerSpecificVolume, scheduledStartTime + 0.005);
+
+                source.connect(perNoteSamplerGain);
+                perNoteSamplerGain.connect(lowPassFilter);
+
+                console.log(`[Sampler Play - V6 Final] Starting source ${samplerId} (note ${index}) at ${scheduledStartTime.toFixed(3)}, gain: ${finalSamplerSpecificVolume.toFixed(3)}`);
+                source.start(scheduledStartTime);
+
+                // Parameters voor sampler-specifieke envelope (standaards als niet gedefinieerd op node)
+                const samplerReleaseFactor = params.samplerReleaseFactor !== undefined ? params.samplerReleaseFactor : 0.5;
+                const samplerSustainFactor = params.samplerSustainFactor !== undefined ? params.samplerSustainFactor : 0.8;
+
+                const samplerSpecificReleaseTimeConstant = samplerReleaseFactor * (ampEnv.release / 4 + 0.001) ;
+                const samplerEstimatedDuration = samplerSustainFactor * (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
+
+                perNoteSamplerGain.gain.setTargetAtTime(0.0001, scheduledStartTime + samplerEstimatedDuration, samplerSpecificReleaseTimeConstant);
+
+                const bufferActualDuration = definition.buffer.duration / targetRate;
+                const stopTime = scheduledStartTime + Math.min(bufferActualDuration, samplerEstimatedDuration + (ampEnv.release * samplerReleaseFactor * 1.5) );
+                if (bufferActualDuration < (samplerEstimatedDuration + (ampEnv.release * samplerReleaseFactor)) ) {
+                     source.stop(stopTime);
+                }
+
+                source.onended = () => {
+                    try {
+                        perNoteSamplerGain.disconnect();
+                        source.disconnect();
+                    } catch(e){}
+                };
+            });
+        } else {
+            console.warn(`[Sampler Trigger - V6 Final] Sampler conditions NOT MET for ${samplerId} AT TRIGGER TIME. Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
+            if (oscillator1) { /* Fallback logic kan hier blijven als je dat wilt */ }
+        }
+    } else if (oscillator1) { // Dit is voor niet-sampler 'sound' nodes (Oscillator-based)
+        console.log(`[Oscillator Trigger - V6 Final] Node: ${node.id}, Waveform: ${params.waveform}, Clamped Main Volume: ${clampedVolume.toFixed(3)}`);
+
+        const targetFreq = params.pitch;
+        oscillator1.frequency.cancelScheduledValues(now);
+        oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
+
+        if (oscillator2 && osc2Gain && params.osc2Type && !params.carrierWaveform && !params.orbitonesEnabled) {
+            const osc2BaseFreq = targetFreq * Math.pow(2, (params.osc2Octave || 0));
+            oscillator2.frequency.cancelScheduledValues(now);
+            oscillator2.frequency.setTargetAtTime(osc2BaseFreq, now, 0.005);
+            // De gain van osc2Gain (params.osc2Mix) is al ingesteld bij creatie en wordt meegeschaald door hoofd gainNode
+        }
+
+        if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) { // FM Synthese
+            const modRatio = params.modulatorRatio || 1.0;
+            modulatorOsc1.frequency.cancelScheduledValues(now);
+            modulatorOsc1.frequency.setTargetAtTime(targetFreq * modRatio, now, 0.005);
+            const modEnv = params.modulatorEnv || { attack: 0.005, decay: 0.15, sustain: 0, release: 0.2 };
+            const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
+            const modDepth = targetFreq * fmDepthScale;
+            modulatorGain1.gain.cancelScheduledValues(now);
+            modulatorGain1.gain.setValueAtTime(0, now);
+            modulatorGain1.gain.linearRampToValueAtTime(modDepth, now + modEnv.attack);
+            const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
+            modulatorGain1.gain.setTargetAtTime(modSustainLevel, now + modEnv.attack, modEnv.decay / 3 + 0.001);
+            const totalModDuration = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
+             setTimeout(() => {
+                if (modulatorGain1 && audioContext && audioContext.state === 'running') {
+                    const currentModGainVal = modulatorGain1.gain.value;
+                    modulatorGain1.gain.cancelScheduledValues(audioContext.currentTime);
+                    modulatorGain1.gain.setValueAtTime(currentModGainVal, audioContext.currentTime);
+                    modulatorGain1.gain.setTargetAtTime(0.0001, audioContext.currentTime, (modEnv.release || 0.2) / 3 + 0.001);
+                }
+            }, totalModDuration * 1000);
+        }
+         if (params.orbitonesEnabled && orbitoneOscillators && orbitoneIndividualGains && !(params.waveform && params.waveform.startsWith('sampler_'))) {
+             const allOutputFrequencies = getOrbitoneFrequencies(
+                params.scaleIndex,
+                params.orbitoneCount,
+                params.orbitoneIntervals,
+                params.orbitoneSpread,
+                currentScale,
+                params.pitch
+            );
+            allOutputFrequencies.slice(1).forEach((freq, i) => {
+                const orbitOsc = orbitoneOscillators[i];
+                const orbitIndGain = orbitoneIndividualGains[i];
+                const modOsc = orbitoneModulatorOscs ? orbitoneModulatorOscs[i] : null;
+                const modGain = orbitoneModulatorGains ? orbitoneModulatorGains[i] : null;
+                const timingOffsetMs = (params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[i] !== undefined) ? params.orbitoneTimingOffsets[i] : 0;
+                const scheduledOrbitoneStartTime = now + (timingOffsetMs / 1000.0);
+
+                if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
+                    orbitOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
+                    orbitOsc.frequency.setTargetAtTime(freq, scheduledOrbitoneStartTime, 0.005);
+
+                    const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+                    let volMultiplier = (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
+                    // Deze volMultiplier wordt ook geschaald door de hoofd `clampedVolume`
+                    orbitIndGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
+                    orbitIndGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
+                    orbitIndGain.gain.linearRampToValueAtTime(Math.min(1.0, Math.max(0.01, volMultiplier * clampedVolume)), scheduledOrbitoneStartTime + ampEnv.attack);
+                    orbitIndGain.gain.setTargetAtTime(0.0001, scheduledOrbitoneStartTime + totalDurationForMainNodeEnvelope - mainNodeReleaseTimeConstant, mainNodeReleaseTimeConstant);
+
+                    if (modOsc && modGain && params.carrierWaveform) { // Modulator logica voor oscillator orbitonen
+                        const modRatio = params.modulatorRatio || 1.0;
+                        modOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
+                        modOsc.frequency.setTargetAtTime(freq * modRatio, scheduledOrbitoneStartTime, 0.005);
+                        const modEnv = params.modulatorEnv || { attack: 0.005, decay: 0.15, sustain: 0, release: 0.2 };
+                        const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
+                        const modDepth = freq * fmDepthScale;
+                        modGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
+                        modGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
+                        modGain.gain.linearRampToValueAtTime(modDepth, scheduledOrbitoneStartTime + modEnv.attack);
+                        const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
+                        modGain.gain.setTargetAtTime(modSustainLevel, scheduledOrbitoneStartTime + modEnv.attack, modEnv.decay / 3 + 0.001);
+                        const totalModDurationOrb = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
+                        setTimeout(() => {
+                            if (modGain && audioContext && audioContext.state === 'running') {
+                                 const currentModGainVal = modGain.gain.value;
+                                 modGain.gain.cancelScheduledValues(audioContext.currentTime);
+                                 modGain.gain.setValueAtTime(currentModGainVal, audioContext.currentTime);
+                                 modGain.gain.setTargetAtTime(0.0001, audioContext.currentTime, (modEnv.release || 0.2) / 3 + 0.001);
+                            }
+                        }, (totalModDurationOrb + timingOffsetMs) * 1000);
+                    }
+                }
+            });
+        }
+    }
 
     const particleCount = Math.round(5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0));
     createParticles(node.x, node.y, particleCount);
 
   } else if (isDrumType(node.type)) {
-    
     if (!node.audioNodes?.mainGain) return;
     node.isTriggered = true; node.animationState = 1;
     const soundParams = params; const mainGain = node.audioNodes.mainGain;
-    const finalVol = soundParams.volume * intensity;
+    const finalVol = (soundParams.volume || 1.0) * intensity; // Drums gebruiken hun eigen volume param + intensity
     const targetFreq = soundParams.baseFreq;
     try {
       if (node.type === 'drum_kick') { const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); const kickStartFreq = targetFreq * 2.5; osc.frequency.setValueAtTime(kickStartFreq, now); osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.05); gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay); osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + soundParams.decay + 0.05);
@@ -3709,31 +4562,56 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
       } else if (node.type === 'drum_clap') { const decay = soundParams.noiseDecay ?? 0.1; const noise = audioContext.createBufferSource(); const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay * 1.5, audioContext.sampleRate); const output = noiseBuffer.getChannelData(0); for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; } noise.buffer = noiseBuffer; const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = soundParams.baseFreq ?? 1500; noiseFilter.Q.value = 1.5; const noiseGain = audioContext.createGain(); noiseGain.gain.setValueAtTime(0, now); noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002); noiseGain.gain.setValueAtTime(finalVol, now + 0.002); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay); noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain); noise.start(now); noise.stop(now + decay + 0.05);
       } else if (node.type === 'drum_tom1' || node.type === 'drum_tom2') { const decay = soundParams.decay ?? (node.type === 'drum_tom1' ? 0.4 : 0.5); const osc = audioContext.createOscillator(); const gain = audioContext.createGain(); osc.type = 'sine'; const tomStartFreq = targetFreq * 1.8; osc.frequency.setValueAtTime(tomStartFreq, now); osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08); gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay); osc.connect(gain); gain.connect(mainGain); osc.start(now); osc.stop(now + decay + 0.01);
       } else if (node.type === 'drum_cowbell') { const decay = soundParams.decay ?? 0.3; const osc1 = audioContext.createOscillator(); const osc2 = audioContext.createOscillator(); const gain = audioContext.createGain(); osc1.type = 'square'; osc2.type = 'square'; osc1.frequency.value = soundParams.baseFreq; osc2.frequency.value = soundParams.baseFreq * 1.5; gain.gain.setValueAtTime(finalVol * 0.6, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay); osc1.connect(gain); osc2.connect(gain); gain.connect(mainGain); osc1.start(now); osc1.stop(now + decay); osc2.start(now); osc2.stop(now + decay); }
-    } catch (e) { node.isTriggered = false; node.animationState = 0; console.error(`Error in triggerNodeEffect (${node.type}):`, e); }
-    setTimeout(() => { const stillNode = findNodeById(node.id); if (stillNode) stillNode.isTriggered = false; }, 150);
+    } catch (e) {
+      node.isTriggered = false; node.animationState = 0;
+      console.error(`Error in triggerNodeEffect (${node.type}):`, e);
+    }
+    setTimeout(() => {
+      const stillNode = findNodeById(node.id);
+      if (stillNode) stillNode.isTriggered = false;
+    }, 150);
     createParticles(node.x, node.y, 3);
   }
 }
+
 function stopNodeAudio(node) {
   if (!node || !node.audioNodes) return;
   try {
       if (node.type === "sound") {
-          node.audioNodes.oscillator?.stop();
-          node.audioNodes.modulatorOsc?.stop();
-          node.audioNodes.volLfo?.stop();
+          try { node.audioNodes.oscillator1?.stop(); node.audioNodes.oscillator1?.disconnect(); } catch(e){}
+          try { node.audioNodes.modulatorOsc1?.stop(); node.audioNodes.modulatorOsc1?.disconnect(); } catch(e){}
+          try { node.audioNodes.modulatorGain1?.disconnect(); } catch(e){}
+          try { node.audioNodes.oscillator2?.stop(); node.audioNodes.oscillator2?.disconnect(); } catch(e){}
+          try { node.audioNodes.osc2Gain?.disconnect(); } catch(e){}
+
+          if (node.audioNodes.orbitoneOscillators) {
+              node.audioNodes.orbitoneOscillators.forEach(osc => { try { osc.stop(); osc.disconnect(); } catch(e){} });
+          }
+          if (node.audioNodes.orbitoneIndividualGains) {
+              node.audioNodes.orbitoneIndividualGains.forEach(g => { try { g.disconnect(); } catch(e){} });
+          }
+          if (node.audioNodes.orbitoneModulatorOscs) {
+              node.audioNodes.orbitoneModulatorOscs.forEach(modOsc => { try { modOsc.stop(); modOsc.disconnect(); } catch(e){} });
+          }
+          if (node.audioNodes.orbitoneModulatorGains) {
+              node.audioNodes.orbitoneModulatorGains.forEach(modGain => { try { modGain.disconnect(); } catch(e){} });
+          }
+           if (node.audioNodes.chordSamplerSources) { 
+              node.audioNodes.chordSamplerSources.forEach(src => { try { src.stop(); src.disconnect(); } catch(e){} });
+          }
+          
           node.audioNodes.reverbSendGain?.disconnect();
           node.audioNodes.delaySendGain?.disconnect();
-          node.audioNodes.volLfoGain?.disconnect();
+          try { node.audioNodes.volLfo?.stop(); } catch(e){}
           node.audioNodes.volLfo?.disconnect();
-          node.audioNodes.gainNode?.disconnect();
+          node.audioNodes.volLfoGain?.disconnect();
           node.audioNodes.lowPassFilter?.disconnect();
-          node.audioNodes.modulatorGain?.disconnect();
-          node.audioNodes.modulatorOsc?.disconnect();
-          node.audioNodes.oscillator?.disconnect();
+          node.audioNodes.gainNode?.disconnect();
+
       } else if (node.type === "nebula") {
-          node.audioNodes.filterLfo?.stop();
-          node.audioNodes.volLfo?.stop();
-          node.audioNodes.oscillators?.forEach((osc) => { try { osc.stop(); } catch(e){} });
+          try { node.audioNodes.filterLfo?.stop(); } catch(e){}
+          try { node.audioNodes.volLfo?.stop(); } catch(e){}
+          node.audioNodes.oscillators?.forEach((osc) => { try { osc.stop(); osc.disconnect(); } catch(e){} });
           node.audioNodes.reverbSendGain?.disconnect();
           node.audioNodes.delaySendGain?.disconnect();
           node.audioNodes.filterLfoGain?.disconnect();
@@ -3742,21 +4620,16 @@ function stopNodeAudio(node) {
           node.audioNodes.volLfo?.disconnect();
           node.audioNodes.gainNode?.disconnect();
           node.audioNodes.filterNode?.disconnect();
-          node.audioNodes.oscillators?.forEach((osc) => { try { osc.disconnect(); } catch(e){} });
       } else if (node.type === PORTAL_NEBULA_TYPE) {
-           
            try { node.audioNodes.droneOsc?.stop(); } catch(e){}
            try { node.audioNodes.droneFreqLfo?.stop(); } catch(e){}
            try { node.audioNodes.shimmerLfo?.stop(); } catch(e){}
-           node.audioNodes.harmonics?.forEach(osc => { try { osc.stop(); } catch(e){} });
-
-           
+           node.audioNodes.harmonics?.forEach(osc => { try { osc.stop(); osc.disconnect(); } catch(e){} });
            node.audioNodes.reverbSendGain?.disconnect();
            node.audioNodes.delaySendGain?.disconnect();
            node.audioNodes.shimmerLfoGain?.disconnect();
            node.audioNodes.shimmerLfo?.disconnect();
            node.audioNodes.harmonicGain?.disconnect();
-           node.audioNodes.harmonics?.forEach(osc => { try { osc.disconnect(); } catch(e){} });
            node.audioNodes.droneFreqLfoGain?.disconnect();
            node.audioNodes.droneFreqLfo?.disconnect();
            node.audioNodes.droneOsc?.disconnect();
@@ -3766,9 +4639,7 @@ function stopNodeAudio(node) {
           node.audioNodes.delaySendGain?.disconnect();
           node.audioNodes.mainGain?.disconnect();
       }
-  } catch (e) {
-       console.error(`Error stopping audio for node ${node.id}:`, e);
-  }
+  } catch (e) {}
   node.audioNodes = null;
 }
 function stopConnectionAudio(connection) {
@@ -3898,156 +4769,6 @@ function connectNodes(nodeA, nodeB, type = 'standard') {
   saveState();
 }
 
-
-
-
-function deepCopyState(stateToCopy) {
-  if (!stateToCopy) return null;
-  try {
-      const stringified = JSON.stringify(stateToCopy, (key, value) => {
-          if (value instanceof Set) {
-              return Array.from(value);
-          }
-          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer)) {
-              return undefined;
-          }
-          return value;
-      });
-      const parsed = JSON.parse(stringified);
-
-      if (parsed.nodes) {
-          parsed.nodes.forEach((node) => {
-              node.connections = node.connections ? new Set(node.connections) : new Set();
-               if (!node.audioParams) node.audioParams = {};
-          });
-      }
-      parsed.selectedElements = parsed.selectedElements ? new Set(parsed.selectedElements.map(el => ({...el}))) : new Set();
-      parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs ? new Set(parsed.fluctuatingGroupNodeIDs) : new Set();
-
-      if(parsed.connections) {
-          parsed.connections.forEach(conn => {
-               if (!conn.audioParams) conn.audioParams = {};
-               if (conn.type === 'wavetrail' && conn.audioParams) {
-                  conn.audioParams.buffer = null;
-               }
-          });
-      }
-       if(parsed.nodes) {
-           parsed.nodes.forEach(node => {
-                if (!node.audioParams) node.audioParams = {};
-           });
-       }
-      return parsed;
-  } catch (e) {
-      console.error("Error during deep copy/parse state:", e);
-      return null;
-  }
-}
-
-
-function loadState(stateToLoad) {
-  if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
-      console.error("Ongeldige of incomplete state data om te laden.");
-      return;
-  }
-  isPerformingUndoRedo = true;
-
-  nodes.forEach((node) => stopNodeAudio(node));
-  connections.forEach((conn) => stopConnectionAudio(conn));
-
-  nodes = stateToLoad.nodes;
-  connections = stateToLoad.connections;
-  selectedElements = stateToLoad.selectedElements ? new Set(stateToLoad.selectedElements.map(el => ({...el}))) : new Set();
-  fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ? new Set(stateToLoad.fluctuatingGroupNodeIDs) : new Set();
-  nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
-  connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
-  isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
-  globalBPM = stateToLoad.globalBPM ?? 120;
-  currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
-  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
-  currentRootNote = stateToLoad.currentRootNote ?? 0;
-  globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
-  viewOffsetX = stateToLoad.viewOffsetX ?? 0;
-  viewOffsetY = stateToLoad.viewOffsetY ?? 0;
-  viewScale = stateToLoad.viewScale ?? 1.0;
-
-  if (isAudioReady) {
-      const now = audioContext.currentTime;
-      const loadTimeConstant = 0.01;
-      if (masterGain) masterGain.gain.setTargetAtTime(stateToLoad.masterVolume ?? 0.8, now, loadTimeConstant);
-      if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(stateToLoad.delaySend ?? 0.3, now, loadTimeConstant);
-      if (delayNode) delayNode.delayTime.setTargetAtTime(stateToLoad.delayTime ?? 0.25, now, loadTimeConstant);
-      if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(stateToLoad.delayFeedback ?? 0.4, now, loadTimeConstant);
-      if (portalGroupGain) portalGroupGain.gain.setTargetAtTime(stateToLoad.portalVolume ?? 0.7, now, loadTimeConstant);
-      if (originalNebulaGroupGain) originalNebulaGroupGain.gain.setTargetAtTime(stateToLoad.originalNebulaVolume ?? 0.8, now, loadTimeConstant);
-  }
-
-  nodes.forEach((node) => {
-      node.audioNodes = null;
-      node.connections = node.connections ? new Set(node.connections) : new Set();
-      node.isSelected = isElementSelected("node", node.id);
-      node.isStartNode = isPulsarType(node.type);
-      node.isEnabled = node.isEnabled !== undefined ? node.isEnabled : node.type !== "pulsar_triggerable";
-      if (node.type === 'pulsar_manual') node.isEnabled = true;
-      node.primaryInputConnectionId = node.primaryInputConnectionId ?? (node.type === "switch" ? null : undefined);
-      node.baseHue = node.baseHue ?? null;
-      if (!node.audioParams) node.audioParams = {};
-      node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-      node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-      node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
-      node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-      node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-      node.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams?.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex;
-      node.gateModeIndex = node.gateModeIndex ?? node.audioParams?.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
-      node.audioParams.gateModeIndex = node.gateModeIndex;
-      node.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams?.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
-      node.audioParams.pitchShiftIndex = node.pitchShiftIndex;
-      node.audioParams.volume = node.audioParams.volume ?? 1.0;
-
-      if (isDrumType(node.type)) { /* ... drum defaults ... */ }
-      if (["sound", "nebula"].includes(node.type)) { /* ... scale/pitch ... */ }
-      if (node.type === PORTAL_NEBULA_TYPE) { /* ... portal defaults ... */ }
-
-      if (isAudioReady) {
-          node.audioNodes = createAudioNodesForNode(node);
-          if (node.audioNodes) { updateNodeAudioParams(node); }
-      }
-  });
-
-  connections.forEach((conn) => {
-      conn.isSelected = isElementSelected("connection", conn.id);
-       if (!conn.audioParams) conn.audioParams = {};
-
-      if (conn.type === "string_violin") {
-          /* ... string violin load ... */
-      } else if (conn.type === 'wavetrail') {
-          conn.audioParams.buffer = null;
-          conn.audioParams.waveformPath = conn.audioParams.waveformPath || null; 
-          conn.audioParams.fileName = conn.audioParams.fileName || null;
-          
-          conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
-          conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset === undefined ? null : conn.audioParams.endTimeOffset; 
-          conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
-          conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
-          conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
-          
-          conn.audioNodes = null;
-      } else {
-          conn.audioNodes = null;
-      }
-  });
-
-  updateSyncUI();
-  updateScaleAndTransposeUI();
-  if(isAudioReady) updateMixerUI();
-  updateConstellationGroup();
-  populateEditPanel();
-  drawPianoRoll();
-  identifyAndRouteAllGroups();
-  isPerformingUndoRedo = false;
-  console.log("State loaded successfully.");
-}
 function removeConnection(connToRemove, updateGroup = true) {
   if (!connToRemove) return
   stopConnectionAudio(connToRemove)
@@ -4168,46 +4889,37 @@ function updateConstellationGroup() {
   
 }
 function rerouteAudioForNode(node, destinationNode) {
-  if (!node || !node.audioNodes || !isAudioReady || !destinationNode) return;
+  if (!node || !node.audioNodes || !isAudioReady || !destinationNode) {
+    return;
+  }
 
-  
   const outputNode = node.audioNodes.gainNode || node.audioNodes.mainGain;
-  if (!outputNode) return;
+  if (!outputNode) {
+    return;
+  }
 
   const reverbSendGain = node.audioNodes.reverbSendGain;
   const delaySendGain = node.audioNodes.delaySendGain;
 
   try {
-      
-      outputNode.disconnect();
+    outputNode.disconnect();
+    outputNode.connect(destinationNode);
 
-      
-      outputNode.connect(destinationNode);
-
-      
-      if (reverbSendGain && isReverbReady && reverbNode) {
-          outputNode.connect(reverbSendGain); 
-          try { reverbSendGain.disconnect(); } catch(e) {} 
-          reverbSendGain.connect(reverbNode); 
-      }
-      if (delaySendGain && isDelayReady && masterDelaySendGain) {
-          outputNode.connect(delaySendGain); 
-          try { delaySendGain.disconnect(); } catch(e) {} 
-          delaySendGain.connect(masterDelaySendGain); 
-      }
-       
-
+    if (reverbSendGain && isReverbReady && reverbNode) {
+      outputNode.connect(reverbSendGain);
+    }
+    if (delaySendGain && isDelayReady && masterDelaySendGain) {
+      outputNode.connect(delaySendGain);
+    }
   } catch (e) {
-      console.error(`Error rerouting node ${node.id}:`, e);
-      
-      try {
-           outputNode.disconnect();
-           outputNode.connect(masterGain);
-           if (reverbSendGain && isReverbReady && reverbNode) outputNode.connect(reverbSendGain);
-           if (delaySendGain && isDelayReady && masterDelaySendGain) outputNode.connect(delaySendGain);
-      } catch (e2) {
-           console.error(`Fallback rerouting for node ${node.id} also failed:`, e2);
-      }
+    try {
+      outputNode.disconnect();
+      outputNode.connect(masterGain);
+      if (reverbSendGain && isReverbReady && reverbNode) outputNode.connect(reverbSendGain);
+      if (delaySendGain && isDelayReady && masterDelaySendGain) outputNode.connect(delaySendGain);
+    } catch (e2) {
+      // Fallback failed
+    }
   }
 }
 function updateGroupControlsUI() {
@@ -4609,11 +5321,16 @@ function drawNode(node) {
     const timeToNext = node.nextSyncTriggerTime - (audioContext?.currentTime ?? 0);
     if (timeToNext > 0 && timeToNext < flashDuration) { preTriggerFlash = (1.0 - timeToNext / flashDuration) * 0.6; }
   }
-  if (node.animationState > 0 && !node.isTriggered) { node.animationState -= (["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) || isDrumType(node.type)) ? 0.03 : 0.08; }
+
+  let isActiveRetriggerVisual = node.activeRetriggers && node.activeRetriggers.length > 0 && node.currentRetriggerVisualIndex !== -1;
+
+  if (node.animationState > 0 && !node.isTriggered && !isActiveRetriggerVisual) {
+     node.animationState -= (["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) || isDrumType(node.type)) ? 0.03 : 0.08;
+  }
   node.animationState = Math.max(0, node.animationState);
 
   const bloomFactor = 1 + node.animationState * 0.5 + preTriggerFlash * 0.6;
-  const currentRadius = NODE_RADIUS_BASE * node.size * bloomFactor;
+  const currentRadius = NODE_RADIUS_BASE * node.size * bloomFactor; 
   const r = currentRadius;
   let fillColor, borderColor, glowColor;
   const styles = getComputedStyle(document.documentElement);
@@ -4651,8 +5368,8 @@ function drawNode(node) {
 
   ctx.fillStyle = fillColor;
   ctx.strokeStyle = borderColor;
-  const baseLineWidth = (node.isStartNode ? 2.5 : node.type === "relay" || node.type === "reflector" || node.type === "switch" ? 1.0 : 1.5) / viewScale;
-  ctx.lineWidth = Math.max(0.5, isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 / viewScale : baseLineWidth);
+  const baseLineWidth = (node.isStartNode ? 2.5 : node.type === "relay" || node.type === "reflector" || node.type === "switch" ? 1.0 : 1.5);
+  ctx.lineWidth = Math.max(0.5 / viewScale, (isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 : baseLineWidth) / viewScale);
 
   let needsRestore = false;
   if ((node.type === "gate" || (node.type === "sound" && params.waveform?.startsWith("sampler_"))) && node.currentAngle !== undefined) {
@@ -4663,7 +5380,7 @@ function drawNode(node) {
   }
 
   if (node.isInConstellation && currentTool === "edit") {
-    const highlightRadius = NODE_RADIUS_BASE * node.size + 5 / viewScale;
+    const highlightRadius = (NODE_RADIUS_BASE * node.size + 5); 
     ctx.fillStyle = styles.getPropertyValue("--constellation-highlight").trim() || "rgba(255, 255, 150, 0.15)";
     ctx.beginPath(); ctx.arc(node.x, node.y, highlightRadius, 0, Math.PI * 2); ctx.fill();
   }
@@ -4745,9 +5462,9 @@ function drawNode(node) {
         ctx.restore();
         break;
       case "planet_saturn":
-        ctx.strokeStyle = currentPlanetColors.ringOuter; ctx.lineWidth = r * 0.25 / viewScale;
+        ctx.strokeStyle = currentPlanetColors.ringOuter; ctx.lineWidth = (r * 0.25) / viewScale;
         ctx.beginPath(); ctx.ellipse(node.x, node.y, r * 1.6, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.strokeStyle = currentPlanetColors.ringInner; ctx.lineWidth = r * 0.15 / viewScale;
+        ctx.strokeStyle = currentPlanetColors.ringInner; ctx.lineWidth = (r * 0.15) / viewScale;
         ctx.beginPath(); ctx.ellipse(node.x, node.y, r * 1.25, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
         break;
       case "planet_neptune":
@@ -4773,7 +5490,17 @@ function drawNode(node) {
         else if (waveform === "square") { ctx.beginPath(); ctx.rect(node.x - r * 0.9, node.y - r * 0.9, r * 1.8, r * 1.8); }
         else if (waveform === "triangle" || waveform === "sawtooth") { ctx.beginPath(); ctx.moveTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.866, node.y + r * 0.5); ctx.lineTo(node.x - r * 0.866, node.y + r * 0.5); ctx.closePath(); }
         else if (waveform === "fmBell" || waveform === "fmXylo") { drawStarShape(ctx, node.x, node.y, 5, r, r * 0.5); }
-        else if (waveform?.startsWith("sampler_")) { let arms = 1; if (waveform === "sampler_piano") arms = 2; else if (waveform === "sampler_flute") arms = 3; drawSatelliteShape(ctx, node.x, node.y, r, arms); }
+        else if (waveform?.startsWith("sampler_")) {
+            let arms = 1;
+            const samplerType = waveform.replace("sampler_", "");
+            const samplerDef = SAMPLER_DEFINITIONS.find(s => s.id === samplerType);
+            if (samplerDef && samplerDef.icon) {
+                if (samplerDef.icon === "🎹") arms = 2;
+                else if (samplerDef.icon === "🌬️") arms = 3;
+                else if (samplerDef.icon === "🪵") arms = 4;
+            }
+            drawSatelliteShape(ctx, node.x, node.y, r, arms);
+        }
         else { ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); }
         ctx.fill(); ctx.stroke();
         break;
@@ -4781,13 +5508,13 @@ function drawNode(node) {
     ctx.stroke();
 
   } else if (isDrumType(node.type)) {
-      ctx.lineWidth = Math.max(0.5, baseLineWidth); ctx.strokeStyle = borderColor; ctx.fillStyle = fillColor;
+      ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth / viewScale); ctx.strokeStyle = borderColor; ctx.fillStyle = fillColor;
       switch (node.type) {
           case 'drum_kick': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); const innerKickR = r * (0.6 + node.animationState * 0.1); ctx.fillStyle = node.color ? hexToRgba(rgbaToHex(node.color), 0.6) : fillColor.replace(/[\d\.]+\)$/g, '0.6)'); ctx.beginPath(); ctx.arc(node.x, node.y, innerKickR, 0, Math.PI * 2); ctx.fill(); break;
-          case 'drum_snare': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.save(); ctx.strokeStyle = borderColor + '80'; ctx.lineWidth = Math.max(0.5, 1 / viewScale); const numWires = 3; for (let i = 0; i < numWires; i++) { const offset = (i - (numWires - 1) / 2) * (r * 0.4); ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y + offset); ctx.lineTo(node.x + r * 0.7, node.y + offset); ctx.stroke(); } ctx.restore(); break;
-          case 'drum_hihat': const cymbalYOffset = r * 0.2; const cymbalWidth = r * 1.4; const cymbalControlY = r * 0.3; ctx.lineWidth = Math.max(0.5, baseLineWidth * 0.8); ctx.beginPath(); ctx.moveTo(node.x - cymbalWidth / 2, node.y - cymbalYOffset); ctx.quadraticCurveTo(node.x, node.y - cymbalYOffset - cymbalControlY, node.x + cymbalWidth / 2, node.y - cymbalYOffset); ctx.stroke(); const bottomY = node.y + cymbalYOffset + node.animationState * (r * 0.35); ctx.beginPath(); ctx.moveTo(node.x - cymbalWidth / 2, bottomY); ctx.quadraticCurveTo(node.x, bottomY + cymbalControlY, node.x + cymbalWidth / 2, bottomY); ctx.stroke(); const stickBaseY = node.y - r * 1.3; const stickTipY = node.y - r * 0.3 + node.animationState * (r * 0.7); const stickX = node.x + r * 0.6; ctx.save(); ctx.strokeStyle = borderColor; ctx.lineWidth = Math.max(1, 2.5 / viewScale); ctx.beginPath(); ctx.moveTo(stickX, stickBaseY); ctx.lineTo(stickX + r * 0.1, stickTipY); ctx.stroke(); ctx.restore(); break;
-          case 'drum_clap': const handWidth = r * 0.8; const handHeight = r * 1.0; const minGap = r * 0.1; const maxGap = r * 0.7; const currentGap = minGap + (1 - node.animationState) * (maxGap - minGap); const yPos = node.y - handHeight / 2; const borderRadius = r * 0.25; ctx.lineWidth = Math.max(0.5, baseLineWidth); drawRoundedRect(ctx, node.x - handWidth - currentGap / 2, yPos, handWidth, handHeight, borderRadius); ctx.fill(); ctx.stroke(); drawRoundedRect(ctx, node.x + currentGap / 2, yPos, handWidth, handHeight, borderRadius); ctx.fill(); ctx.stroke(); break;
-          case 'drum_tom1': case 'drum_tom2': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.save(); ctx.strokeStyle = borderColor + '90'; ctx.lineWidth = Math.max(0.5, 1 / viewScale); ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y); ctx.lineTo(node.x + r * 0.7, node.y); ctx.stroke(); ctx.restore(); break;
+          case 'drum_snare': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.save(); ctx.strokeStyle = borderColor + '80'; ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale); const numWires = 3; for (let i = 0; i < numWires; i++) { const offset = (i - (numWires - 1) / 2) * (r * 0.4); ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y + offset); ctx.lineTo(node.x + r * 0.7, node.y + offset); ctx.stroke(); } ctx.restore(); break;
+          case 'drum_hihat': const cymbalYOffset = r * 0.2; const cymbalWidth = r * 1.4; const cymbalControlY = r * 0.3; ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth * 0.8 / viewScale); ctx.beginPath(); ctx.moveTo(node.x - cymbalWidth / 2, node.y - cymbalYOffset); ctx.quadraticCurveTo(node.x, node.y - cymbalYOffset - cymbalControlY, node.x + cymbalWidth / 2, node.y - cymbalYOffset); ctx.stroke(); const bottomY = node.y + cymbalYOffset + node.animationState * (r * 0.35); ctx.beginPath(); ctx.moveTo(node.x - cymbalWidth / 2, bottomY); ctx.quadraticCurveTo(node.x, bottomY + cymbalControlY, node.x + cymbalWidth / 2, bottomY); ctx.stroke(); const stickBaseY = node.y - r * 1.3; const stickTipY = node.y - r * 0.3 + node.animationState * (r * 0.7); const stickX = node.x + r * 0.6; ctx.save(); ctx.strokeStyle = borderColor; ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale); ctx.beginPath(); ctx.moveTo(stickX, stickBaseY); ctx.lineTo(stickX + r * 0.1, stickTipY); ctx.stroke(); ctx.restore(); break;
+          case 'drum_clap': const handWidth = r * 0.8; const handHeight = r * 1.0; const minGap = r * 0.1; const maxGap = r * 0.7; const currentGap = minGap + (1 - node.animationState) * (maxGap - minGap); const yPos = node.y - handHeight / 2; const borderRadius = r * 0.25; ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth / viewScale); drawRoundedRect(ctx, node.x - handWidth - currentGap / 2, yPos, handWidth, handHeight, borderRadius); ctx.fill(); ctx.stroke(); drawRoundedRect(ctx, node.x + currentGap / 2, yPos, handWidth, handHeight, borderRadius); ctx.fill(); ctx.stroke(); break;
+          case 'drum_tom1': case 'drum_tom2': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.save(); ctx.strokeStyle = borderColor + '90'; ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale); ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y); ctx.lineTo(node.x + r * 0.7, node.y); ctx.stroke(); ctx.restore(); break;
           case 'drum_cowbell': const topWidth = r * 0.8; const bottomWidth = r * 1.3; const cHeight = r * 1.1; ctx.beginPath(); ctx.moveTo(node.x - topWidth / 2, node.y - cHeight / 2); ctx.lineTo(node.x + topWidth / 2, node.y - cHeight / 2); ctx.lineTo(node.x + bottomWidth / 2, node.y + cHeight / 2); ctx.lineTo(node.x - bottomWidth / 2, node.y + cHeight / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
           default: ctx.beginPath(); ctx.rect(node.x - r * 0.8, node.y - r * 0.8, r * 1.6, r * 1.6); ctx.fill(); ctx.stroke(); break;
       }
@@ -4803,10 +5530,10 @@ function drawNode(node) {
       ctx.arc(node.x, node.y, innerRadius, openingStartAngle + Math.PI * 2, openingEndAngle, true);
       ctx.closePath(); ctx.fill();
       let shouldPassVisual = false; const mode = GATE_MODES[node.gateModeIndex || 0]; if (mode === "RAND") { shouldPassVisual = node.lastRandomGateResult; } else { const counterCheck = node.gateCounter || 0; switch (mode) { case "1/2": if (counterCheck % 2 === 0) shouldPassVisual = true; break; case "1/3": if (counterCheck % 3 === 0) shouldPassVisual = true; break; case "1/4": if (counterCheck % 4 === 0) shouldPassVisual = true; break; case "2/3": if (counterCheck % 3 !== 0) shouldPassVisual = true; break; case "3/4": if (counterCheck % 4 !== 0) shouldPassVisual = true; break; } }
-      if (node.animationState > 0 && shouldPassVisual) { ctx.save(); ctx.strokeStyle = styles.getPropertyValue("--pulse-visual-color").trim() || "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = Math.max(1, 2.5 / viewScale); ctx.shadowColor = glowColor; ctx.shadowBlur = 10 / viewScale; ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.9, openingStartAngle, openingEndAngle); ctx.stroke(); ctx.restore(); }
+      if (node.animationState > 0 && shouldPassVisual) { ctx.save(); ctx.strokeStyle = styles.getPropertyValue("--pulse-visual-color").trim() || "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale); ctx.shadowColor = glowColor; ctx.shadowBlur = 10 / viewScale; ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.9, openingStartAngle, openingEndAngle); ctx.stroke(); ctx.restore(); }
   } else if (node.type === "probabilityGate") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      const fontSize = Math.max(8, (r * 0.8) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("%", node.x, node.y + fontSize * 0.1);
+      const fontSize = Math.max(8 / viewScale, (r * 0.8) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("%", node.x, node.y + fontSize * 0.1);
   } else if (node.type === "pitchShift") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke();
       ctx.fillStyle = fillColor + "90"; ctx.fill();
@@ -4814,7 +5541,7 @@ function drawNode(node) {
   } else if (node.type === "relay") { ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   else if (node.type === "reflector") {
       ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      const fontSize = Math.max(8, (r * 0.9) / viewScale); ctx.font = `${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⟲", node.x, node.y + fontSize * 0.1);
+      const fontSize = Math.max(8 / viewScale, (r * 0.9) / viewScale); ctx.font = `${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⟲", node.x, node.y + fontSize * 0.1);
   } else if (node.type === "switch") { ctx.beginPath(); ctx.moveTo(node.x - r * 0.8, node.y + r * 0.8); ctx.lineTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.8, node.y + r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke(); }
   else if (node.type === "nebula") {
       wobbleX = Math.sin(now * 0.1 + node.id) * (2 / viewScale); wobbleY = Math.cos(now * 0.07 + node.id * 2) * (2 / viewScale);
@@ -4824,12 +5551,12 @@ function drawNode(node) {
       const numBlobs = 5; const baseRadiusNeb = NODE_RADIUS_BASE * node.size * 1.1;
       for (let i = 0; i < numBlobs; i++) { const angleOffset = (now * (0.1 + i * 0.02) + node.id + i * 1.1); const distFactor = 0.15 + ((Math.sin(now * 0.15 + i * 0.9) + 1) / 2) * 0.25; const offsetX = Math.cos(angleOffset) * baseRadiusNeb * distFactor; const offsetY = Math.sin(angleOffset) * baseRadiusNeb * distFactor; const radiusFactor = 0.6 + ((Math.cos(now * 0.2 + i * 1.3) + 1) / 2) * 0.4; const blobRadius = baseRadiusNeb * radiusFactor * 0.7; const blobAlpha = 0.15 + ((Math.sin(now * 0.25 + i * 1.5) + 1) / 2) * 0.15; const blobLightness = baseLightness * (0.95 + ((Math.cos(now * 0.18 + i) + 1) / 2) * 0.15); const blobSaturation = baseSaturation * (0.9 + ((Math.sin(now * 0.22 + i * 0.5) + 1) / 2) * 0.15); const finalBlobAlpha = Math.min(1.0, blobAlpha * 1.5); ctx.fillStyle = hslToRgba(currentHue, blobSaturation, blobLightness, finalBlobAlpha); ctx.beginPath(); ctx.arc(offsetX, offsetY, blobRadius, 0, Math.PI * 2); ctx.fill(); }
       const coreRadius = baseRadiusNeb * 0.3; const coreAlpha = 0.3; ctx.fillStyle = hslToRgba(currentHue, baseSaturation * 1.1, baseLightness * 1.1, coreAlpha); ctx.beginPath(); ctx.arc(0, 0, coreRadius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-      ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8; const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(20, currentGlowAmount) / viewScale; ctx.fillStyle = "rgba(0,0,0,0)"; ctx.beginPath(); ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadiusNeb * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8; const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(20 / viewScale, currentGlowAmount / viewScale); ctx.fillStyle = "rgba(0,0,0,0)"; ctx.beginPath(); ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadiusNeb * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   } else if (node.type === PORTAL_NEBULA_TYPE) {
       const defaults = PORTAL_NEBULA_DEFAULTS; const pulseSpeed = defaults.pulseSpeed; const baseRadiusPortal = NODE_RADIUS_BASE * node.size; const nodeBaseHue = node.baseHue ?? defaults.baseColorHue; const hueShiftSpeed = 5; const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360; const saturation = scaleBase.s * 0.9; const lightness = scaleBase.l * 1.1;
-      ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15; const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(40, currentGlowAmount) / viewScale;
-      const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1; const irisRadius = baseRadiusPortal * irisRadiusFactor; const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2; ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha); ctx.beginPath(); ctx.arc(node.x, node.y, Math.max(1, irisRadius), 0, Math.PI * 2); ctx.fill(); ctx.restore();
-      const numRings = 4; const originalLineWidth = ctx.lineWidth; ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
+      ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15; const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(40 / viewScale, currentGlowAmount / viewScale);
+      const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1; const irisRadius = baseRadiusPortal * irisRadiusFactor; const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2; ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha); ctx.beginPath(); ctx.arc(node.x, node.y, Math.max(1 / viewScale, irisRadius), 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      const numRings = 4; const originalLineWidth = ctx.lineWidth; ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
       for (let i = 1; i <= numRings; i++) { const ringPulsePhase = node.pulsePhase * (pulseSpeed * (1 + i * 0.1)); const ringRadiusFactor = 0.6 + i * 0.25 + Math.sin(ringPulsePhase) * 0.08; const ringRadius = baseRadiusPortal * ringRadiusFactor; const ringAlpha = 0.1 + (1 - i / numRings) * 0.3 + Math.sin(ringPulsePhase) * 0.05; const ringLightness = lightness * (1.0 - i * 0.1); ctx.strokeStyle = hslToRgba(currentHue, saturation * (1.0 - i * 0.05), ringLightness, ringAlpha); ctx.beginPath(); if (ringRadius > 0) { ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2); ctx.stroke(); } }
       ctx.lineWidth = originalLineWidth;
   } else if (isPulsarType(node.type)) {
@@ -4842,26 +5569,23 @@ function drawNode(node) {
           ctx.translate(node.x, node.y);
           const drawingAngleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
           ctx.rotate(drawingAngleRad);
-
           ctx.beginPath();
           ctx.arc(0, 0, outerR * 0.9, 0, Math.PI * 2);
           ctx.fillStyle = fillColor;
           ctx.fill();
           ctx.strokeStyle = borderColor;
-          ctx.lineWidth = Math.max(0.5, (isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 / viewScale : baseLineWidth) * 0.8);
+          ctx.lineWidth = Math.max(0.5 / viewScale, (isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 / viewScale : baseLineWidth) * 0.8);
           ctx.stroke();
-
           const barrelLength = outerR * 1.4;
           const barrelWidth = outerR * 0.5;
-          const barrelTipRadius = barrelWidth / 2.5;
           ctx.fillStyle = borderColor;
           ctx.strokeStyle = fillColor;
-          ctx.lineWidth = Math.max(0.5, baseLineWidth * 0.5);
+          ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth * 0.5 / viewScale);
           ctx.beginPath();
           const barrelBaseOffset = outerR * 0.2;
           if (typeof ctx.roundRect === 'function') {
               ctx.roundRect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth, barrelWidth / 3);
-          } else { 
+          } else {
               ctx.rect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth);
           }
           ctx.fill();
@@ -4870,26 +5594,23 @@ function drawNode(node) {
 
           if (isSelectedAndOutlineNeeded) {
               const handleOrbitRadius = outerR * 1.6;
-              const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2); 
-              const handleDisplayOffsetAngleRad = Math.PI / 4; 
+              const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
+              const handleDisplayOffsetAngleRad = Math.PI / 4;
               const handleActualDisplayAngleRad = drawingAngleForHandleRad + handleDisplayOffsetAngleRad;
-
               const handleGripX = node.x + Math.cos(handleActualDisplayAngleRad) * handleOrbitRadius;
               const handleGripY = node.y + Math.sin(handleActualDisplayAngleRad) * handleOrbitRadius;
               const handleGripRadius = 6 / viewScale;
-
               ctx.beginPath();
               ctx.arc(handleGripX, handleGripY, handleGripRadius, 0, Math.PI * 2);
               ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
               ctx.fill();
               ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-              ctx.lineWidth = Math.max(0.5, 1.5 / viewScale);
+              ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
               ctx.stroke();
-
               ctx.beginPath();
               ctx.arc(node.x, node.y, handleOrbitRadius * 0.9, drawingAngleForHandleRad - 0.5, drawingAngleForHandleRad + 0.5);
               ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
-              ctx.lineWidth = Math.max(0.5, 2 / viewScale);
+              ctx.lineWidth = Math.max(0.5 / viewScale, 2 / viewScale);
               ctx.stroke();
           }
       } else {
@@ -4897,25 +5618,110 @@ function drawNode(node) {
           ctx.fill();
           ctx.stroke();
           if (node.type === "pulsar_triggerable") {
-               const lockSize = outerR * 0.5; ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor; ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor; ctx.lineWidth = baseLineWidth * 0.5; ctx.beginPath(); ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5); ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25); ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true); ctx.stroke();
+               const lockSize = outerR * 0.5; ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor; ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor; ctx.lineWidth = baseLineWidth * 0.5 / viewScale; ctx.beginPath(); ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5); ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25); ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true); ctx.stroke();
           }
       }
   } else {
     ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 
-  if (isSelectedAndOutlineNeeded && node.type !== "pulsar_rocket") { 
+  if (isSelectedAndOutlineNeeded && node.type !== "pulsar_rocket") {
     ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255, 255, 0, 0.9)";
-    ctx.lineWidth = Math.max(0.5, 1.5 / viewScale); ctx.beginPath();
-    const outlineRadius = NODE_RADIUS_BASE * node.size + 2 / viewScale;
+    ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale); ctx.beginPath();
+    const outlineRadius = (NODE_RADIUS_BASE * node.size + 2 ); 
     const finalOutlineX = node.x + wobbleX; const finalOutlineY = node.y + wobbleY;
     ctx.arc(finalOutlineX, finalOutlineY, outlineRadius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
   if (needsRestore) { ctx.restore(); }
   ctx.shadowBlur = 0;
 
+  if (params && params.retriggerEnabled && params.retriggerVolumeSteps && params.retriggerVolumeSteps.length > 0) {
+    const steps = params.retriggerVolumeSteps;
+    const count = steps.length;
+    const activeVisualIndex = node.currentRetriggerVisualIndex;
+    const nodeBaseDrawRadiusForVisuals = (NODE_RADIUS_BASE * node.size) ;
+    const visualOffsetFromNodeEdgeScaled = nodeBaseDrawRadiusForVisuals * 0.35;
+    const visualStartRadiusScaled = nodeBaseDrawRadiusForVisuals + visualOffsetFromNodeEdgeScaled;
+    const totalAngleSpan = Math.PI * 1.9;
+    const segmentAngle = count > 1 ? totalAngleSpan / Math.max(1, count -1) : 0;
+    let nodeCanvasRotation = 0;
+    if (node.type === "gate" && node.currentAngle !== undefined) {
+        nodeCanvasRotation = node.currentAngle;
+    }
+    const startAngleRad = -Math.PI / 2 - (count > 1 ? totalAngleSpan / 2 : 0) + nodeCanvasRotation;
+    for (let i = 0; i < count; i++) {
+        const volumeFactor = steps[i] || 0;
+        const isActive = (i === activeVisualIndex);
+        const angle = startAngleRad + i * segmentAngle;
+        const gasBaseLength = (6 / viewScale);
+        const gasVolumeLength = (volumeFactor * 12 / viewScale);
+        const totalVisualLength = gasBaseLength + gasVolumeLength;
+        const gasWidth = Math.max(1 / viewScale, (3 / viewScale) + (volumeFactor * 6 / viewScale));
+        const radialStartX = node.x + Math.cos(angle) * visualStartRadiusScaled;
+        const radialStartY = node.y + Math.sin(angle) * visualStartRadiusScaled;
+        const radialEndX = node.x + Math.cos(angle) * (visualStartRadiusScaled + totalVisualLength);
+        const radialEndY = node.y + Math.sin(angle) * (visualStartRadiusScaled + totalVisualLength);
+        ctx.save(); ctx.beginPath(); ctx.moveTo(radialStartX, radialStartY); ctx.lineTo(radialEndX, radialEndY);
+        let Rval = 160, Gval = 190, Bval = 230; let nodeFillColor = fillColor;
+        try {
+            const rgbaMatch = nodeFillColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d\.]+)?\)/);
+            if(rgbaMatch) { Rval = parseInt(rgbaMatch[1]); Gval = parseInt(rgbaMatch[2]); Bval = parseInt(rgbaMatch[3]); }
+        } catch(e){}
+        if (isActive) { Rval = Math.min(255, Rval + 80); Gval = Math.min(255, Gval + 60); Bval = Math.max(30, Bval - 60); }
+        const alphaVal = 0.25 + volumeFactor * 0.5 + (isActive ? 0.35 : 0);
+        ctx.strokeStyle = `rgba(${Rval},${Gval},${Bval},${Math.min(0.9, alphaVal)})`;
+        ctx.lineWidth = gasWidth; ctx.lineCap = 'round';
+        ctx.shadowColor = `rgba(${Rval},${Gval},${Bval},${Math.min(0.7, alphaVal * 0.8)})`;
+        ctx.shadowBlur = (isActive ? 10 : 5) / viewScale;
+        ctx.stroke(); ctx.restore();
+    }
+  }
+
+  if (node.type === 'sound' && params.orbitonesEnabled && params.orbitoneCount > 0 && node.audioNodes?.orbitoneOscillators) {
+    const orbitBaseRadius = NODE_RADIUS_BASE * node.size * 1.5; 
+    const orbitoneVisualSize = NODE_RADIUS_BASE * node.size * 0.25; 
+    const numVisualOrbitones = params.orbitoneCount; 
+    const mainNodeFillColor = fillColor; 
+    const mainNodeBorderColor = borderColor;
+
+    for (let i = 0; i < numVisualOrbitones; i++) {
+        const angleIncrement = (Math.PI * 2) / numVisualOrbitones;
+        const baseAngle = i * angleIncrement;
+        const orbitSpeedFactor = 0.15 + (i * 0.03); 
+        const currentAngle = baseAngle + (now * orbitSpeedFactor + node.id * 0.3); 
+        const orbitRadiusVariation = Math.sin(now * 0.4 + i * 0.7) * (orbitBaseRadius * 0.1);
+        const currentOrbitRadius = orbitBaseRadius + orbitRadiusVariation;
+        const ox = node.x + Math.cos(currentAngle) * currentOrbitRadius;
+        const oy = node.y + Math.sin(currentAngle) * currentOrbitRadius;
+        let orbitFill = 'rgba(200, 220, 255, 0.3)';
+        let orbitStroke = 'rgba(230, 240, 255, 0.5)';
+        try {
+            const mainRgbMatch = mainNodeFillColor.match(/\d+/g);
+            if (mainRgbMatch && mainRgbMatch.length >=3) {
+                const mainRgb = mainRgbMatch.map(Number);
+                const baseAlphaOrbitone = 0.3 + params.orbitoneVolumeVariation * 0.2;
+                orbitFill = `rgba(${Math.min(255, mainRgb[0] + i*5 + 10)}, ${Math.min(255, mainRgb[1] - i*3 + 5)}, ${Math.max(0, mainRgb[2] - i*8 + 15)}, ${baseAlphaOrbitone})`;
+                orbitStroke = `rgba(${Math.min(255, mainRgb[0] + i*3 + 30)}, ${Math.min(255, mainRgb[1] + 15)}, ${Math.max(0, mainRgb[2] + 5)}, ${baseAlphaOrbitone + 0.2})`;
+            }
+        } catch(e) {}
+        ctx.fillStyle = orbitFill; ctx.strokeStyle = orbitStroke;
+        ctx.lineWidth = Math.max(0.5 / viewScale, 0.8 / viewScale); 
+        ctx.beginPath();
+        ctx.arc(ox, oy, Math.max(1 / viewScale, orbitoneVisualSize), 0, Math.PI * 2);
+        ctx.fill();
+        if (isSelectedAndOutlineNeeded || node.animationState > 0.05) { 
+            ctx.shadowColor = orbitStroke;
+            ctx.shadowBlur = (3 + node.animationState * 5) / viewScale;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        } else {
+            ctx.stroke();
+        }
+    }
+}
+
   if (isInfoTextVisible) {
-    const fontSize = Math.max(8, 10 / viewScale); ctx.font = `bold ${fontSize}px sans-serif`;
+    const fontSize = Math.max(8 / viewScale, 10 / viewScale); ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle"; let labelText = ""; let secondLineText = "";
     const baseRadiusForLabel = NODE_RADIUS_BASE * node.size;
     let labelYOffset = baseRadiusForLabel * 1.1 + fontSize / 1.5 + 2 / viewScale;
@@ -4925,6 +5731,9 @@ function drawNode(node) {
         const presetDef = analogWaveformPresets.find(p => p.type === params.waveform) || fmSynthPresets.find(p => p.type === params.waveform);
         if (presetDef && presetDef.label !== labelText) {
             secondLineText = presetDef.label;
+        }
+        if (node.type === "sound" && params.orbitonesEnabled && params.orbitoneCount > 0) {
+            secondLineText = (secondLineText ? secondLineText + " " : "") + `(+${params.orbitoneCount} Orb)`;
         }
         if (node.type === "sound" && params.waveform?.startsWith("sampler_")) { labelYOffset = baseRadiusForLabel * 1.3 + fontSize / 1.5 + 2 / viewScale; }
         else if (node.type === "nebula") { labelYOffset = (baseRadiusForLabel * 1.1) * 1.2 + fontSize / 1.5 + 2 / viewScale; }
@@ -4938,7 +5747,11 @@ function drawNode(node) {
         else if (node.type === "pulsar_manual") { secondLineText = `Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`;}
         else if (node.type !== "pulsar_rocket") {
             if (node.type === "pulsar_random_particles") { secondLineText = "Timing: Random"; }
-            else if (isGlobalSyncEnabled) { const subdiv = subdivisionOptions[node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX]; secondLineText = `Sync: ${subdiv?.label ?? "?"}`; }
+            else if (isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync) {
+                 const subdivIndexToUse = node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+                 const subdiv = subdivisionOptions[subdivIndexToUse];
+                 secondLineText = `Sync: ${subdiv?.label ?? "?"}`;
+            }
             else { secondLineText = `Intv: ${(params.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`; }
             if (node.type !== "pulsar_random_volume") { secondLineText += ` | Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; }
         } else if (node.type === "pulsar_rocket") {
@@ -4959,7 +5772,6 @@ function drawNode(node) {
   }
 }
 
-
 function drawRoundedRect(ctx, x, y, width, height, radius) {
   if (typeof ctx.roundRect === 'function') {
       ctx.beginPath();
@@ -4979,32 +5791,6 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
       ctx.closePath();
   }
 }
-
-
-function drawRoundedRect(ctx, x, y, width, height, radius) {
-  if (typeof ctx.roundRect === 'function') {
-      ctx.beginPath();
-      ctx.roundRect(x, y, width, height, radius);
-  } else {
-      radius = Math.min(radius, width / 2, height / 2);
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + width - radius, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-      ctx.lineTo(x + width, y + height - radius);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-      ctx.lineTo(x + radius, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-  }
-}
-
-
-
-
-
 
 function drawTemporaryConnection() {
   if (isConnecting && connectingNode) {
@@ -6459,223 +7245,6 @@ function handleWheel(event) {
   }
 }
 
-function deepCopyState(stateToCopy) {
-  if (!stateToCopy) return null;
-  try {
-      const stringified = JSON.stringify(stateToCopy, (key, value) => {
-          if (value instanceof Set) {
-              return Array.from(value);
-          }
-          
-          if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer)) {
-              return undefined;
-          }
-          return value;
-      });
-      const parsed = JSON.parse(stringified);
-
-      if (parsed.nodes) {
-          parsed.nodes.forEach((node) => {
-              node.connections = node.connections ? new Set(node.connections) : new Set();
-               if (!node.audioParams) node.audioParams = {};
-          });
-      }
-      parsed.selectedElements = parsed.selectedElements ? new Set(parsed.selectedElements.map(el => ({...el}))) : new Set();
-      parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs ? new Set(parsed.fluctuatingGroupNodeIDs) : new Set();
-
-      if(parsed.connections) {
-          parsed.connections.forEach(conn => {
-               if (!conn.audioParams) conn.audioParams = {};
-               if (conn.type === 'wavetrail' && conn.audioParams) {
-                  conn.audioParams.buffer = null; 
-                  
-               }
-               
-          });
-      }
-       if(parsed.nodes) {
-           parsed.nodes.forEach(node => {
-                if (!node.audioParams) node.audioParams = {};
-           });
-       }
-      return parsed;
-  } catch (e) {
-      console.error("Error during deep copy/parse state:", e);
-      return null;
-  }
-}
-function saveState() {
-  if (isPerformingUndoRedo) return;
-  unsavedChanges = true;
-  const currentState = {
-      nodes: nodes,
-      connections: connections,
-      selectedElements: Array.from(selectedElements),
-      fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
-      nodeIdCounter: nodeIdCounter,
-      connectionIdCounter: connectionIdCounter,
-      isGlobalSyncEnabled: isGlobalSyncEnabled,
-      globalBPM: globalBPM,
-      viewOffsetX: viewOffsetX,
-      viewOffsetY: viewOffsetY,
-      viewScale: viewScale,
-      currentScaleKey: currentScaleKey,
-      currentRootNote: currentRootNote,
-      globalTransposeOffset: globalTransposeOffset,
-      masterVolume: masterGain?.gain.value ?? 0.8,
-      delaySend: masterDelaySendGain?.gain.value ?? 0.3,
-      delayTime: delayNode?.delayTime.value ?? 0.25,
-      delayFeedback: delayFeedbackGain?.gain.value ?? 0.4,
-      portalVolume: portalGroupGain?.gain.value ?? 0.7,
-      originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8
-  };
-  const copiedState = deepCopyState(currentState); 
-  if (!copiedState) return;
-  if (historyIndex < historyStack.length - 1) {
-      historyStack = historyStack.slice(0, historyIndex + 1);
-  }
-  historyStack.push(copiedState);
-  if (historyStack.length > MAX_HISTORY_SIZE) {
-      historyStack.shift();
-  }
-  historyIndex = historyStack.length - 1;
-}
-function loadState(stateToLoad) {
-  if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
-      console.error("Ongeldige of incomplete state data om te laden.");
-      return; 
-  }
-
-  
-  
-  
-  
-
-  isPerformingUndoRedo = true;
-
-  nodes.forEach((node) => stopNodeAudio(node));
-  connections.forEach((conn) => stopConnectionAudio(conn));
-
-  nodes = stateToLoad.nodes;
-  connections = stateToLoad.connections;
-  selectedElements = stateToLoad.selectedElements ? new Set(stateToLoad.selectedElements.map(el => ({...el}))) : new Set();
-  fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ? new Set(stateToLoad.fluctuatingGroupNodeIDs) : new Set();
-  nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
-  connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
-  isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
-  globalBPM = stateToLoad.globalBPM ?? 120;
-  currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
-  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
-  currentRootNote = stateToLoad.currentRootNote ?? 0;
-  globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
-  viewOffsetX = stateToLoad.viewOffsetX ?? 0;
-  viewOffsetY = stateToLoad.viewOffsetY ?? 0;
-  viewScale = stateToLoad.viewScale ?? 1.0;
-
-  if (isAudioReady) {
-      const now = audioContext.currentTime;
-      const loadTimeConstant = 0.01;
-      if (masterGain) masterGain.gain.setTargetAtTime(stateToLoad.masterVolume ?? 0.8, now, loadTimeConstant);
-      if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(stateToLoad.delaySend ?? 0.3, now, loadTimeConstant);
-      if (delayNode) delayNode.delayTime.setTargetAtTime(stateToLoad.delayTime ?? 0.25, now, loadTimeConstant);
-      if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(stateToLoad.delayFeedback ?? 0.4, now, loadTimeConstant);
-      if (portalGroupGain) portalGroupGain.gain.setTargetAtTime(stateToLoad.portalVolume ?? 0.7, now, loadTimeConstant);
-      if (originalNebulaGroupGain) originalNebulaGroupGain.gain.setTargetAtTime(stateToLoad.originalNebulaVolume ?? 0.8, now, loadTimeConstant);
-  }
-
-  nodes.forEach((node) => {
-      node.audioNodes = null;
-      node.connections = node.connections ? new Set(node.connections) : new Set();
-      node.isSelected = isElementSelected("node", node.id);
-      node.isStartNode = isPulsarType(node.type);
-      node.isEnabled = node.isEnabled !== undefined ? node.isEnabled : node.type !== "pulsar_triggerable";
-      if (node.type === 'pulsar_manual') node.isEnabled = true;
-      node.primaryInputConnectionId = node.primaryInputConnectionId ?? (node.type === "switch" ? null : undefined);
-      node.baseHue = node.baseHue ?? null;
-      if (!node.audioParams) node.audioParams = {};
-      node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-      node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-      node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
-      node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-      node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-      node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
-      node.audioParams.gateModeIndex = node.gateModeIndex ?? node.audioParams.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
-      node.gateModeIndex = node.audioParams.gateModeIndex;
-      node.audioParams.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
-      node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
-      node.audioParams.volume = node.audioParams.volume ?? 1.0;
-
-      if (isDrumType(node.type)) {
-          const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
-          node.audioParams.baseFreq = node.audioParams.baseFreq ?? defaults?.baseFreq;
-          node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
-          node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
-          if (node.type === "drum_snare" || node.type === "drum_clap") {
-               node.audioParams.noiseDecay = node.audioParams.noiseDecay ?? defaults?.noiseDecay;
-           }
-      }
-      if (["sound", "nebula"].includes(node.type)) {
-          node.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0));
-          node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
-          if (isNaN(node.audioParams.pitch)) {
-              node.audioParams.scaleIndex = 0;
-              node.audioParams.pitch = getFrequency(currentScale, 0);
-          }
-      }
-      if (node.type === PORTAL_NEBULA_TYPE) {
-           node.audioParams.pitch = node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
-           node.audioParams.volume = node.audioParams.volume ?? 0.6;
-      }
-
-      if (isAudioReady) {
-          node.audioNodes = createAudioNodesForNode(node);
-          if (node.audioNodes) {
-              updateNodeAudioParams(node);
-          }
-      }
-  });
-
-  connections.forEach((conn) => {
-      conn.isSelected = isElementSelected("connection", conn.id);
-       if (!conn.audioParams) conn.audioParams = {};
-
-      if (conn.type === "string_violin") {
-         const defaults = STRING_VIOLIN_DEFAULTS;
-         Object.keys(defaults).forEach((key) => { conn.audioParams[key] = conn.audioParams[key] ?? defaults[key]; });
-         conn.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0));
-         conn.audioParams.pitch = getFrequency(currentScale, conn.audioParams.scaleIndex);
-         if (isNaN(conn.audioParams.pitch)) { conn.audioParams.scaleIndex = 0; conn.audioParams.pitch = getFrequency(currentScale, 0); }
-         if (isAudioReady) {
-             conn.audioNodes = createAudioNodesForConnection(conn);
-             if (conn.audioNodes) { updateConnectionAudioParams(conn); }
-         } else { conn.audioNodes = null; }
-      } else if (conn.type === 'wavetrail') {
-          conn.audioParams.buffer = null;
-          conn.audioParams.waveformPath = null;
-          conn.audioParams.fileName = conn.audioParams.fileName || null;
-          conn.audioNodes = null;
-          console.log(`WaveTrail ${conn.id} loaded. File needed: ${conn.audioParams.fileName || 'Unknown'}`);
-      } else {
-          conn.audioNodes = null;
-      }
-  });
-
-  updateSyncUI();
-  updateScaleAndTransposeUI();
-  if(isAudioReady) updateMixerUI();
-  updateConstellationGroup();
-  populateEditPanel();
-  drawPianoRoll();
-  identifyAndRouteAllGroups();
-
-  isPerformingUndoRedo = false;
-
-  
-  unsavedChanges = false;
-  updateAbletonLinkButton(); 
-  console.log("State loaded successfully.");
-}
 function undo() {
   if (historyIndex > 0) {
     historyIndex--
@@ -7114,665 +7683,7 @@ function resetSideToolbars() {
 }
 
 
-function populateEditPanel() {
-  editPanelContent.innerHTML = "";
-  if (currentTool !== "edit" || selectedElements.size === 0) {
-      if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && selectedElements.size === 0) {
-          hamburgerMenuPanel.classList.add("hidden");
-          if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-      }
-      return;
-  }
 
-  const selectedArray = Array.from(selectedElements);
-  const firstElementData = selectedArray[0];
-  const fragment = document.createDocumentFragment();
-  const title = document.createElement("p");
-
-  const nodeTypes = new Set(
-      selectedArray
-      .filter((el) => el.type === "node")
-      .map((el) => findNodeById(el.id)?.type)
-  );
-  const connectionTypesSet = new Set(
-      selectedArray
-      .filter((el) => el.type === "connection")
-      .map((el) => findConnectionById(el.id)?.type)
-  );
-
-  let titleText = "";
-  let allSameLogicalType = false;
-  let logicalType = "";
-
-  if (selectedArray.length === 1) {
-      const element = firstElementData.type === "node" ? findNodeById(firstElementData.id) : findConnectionById(firstElementData.id);
-      if (element) {
-          logicalType = element.type.replace(/_/g, " ");
-          titleText = `Edit ${logicalType} #${element.id}`;
-          allSameLogicalType = true;
-      } else {
-          titleText = "Edit Element";
-      }
-  } else {
-      const types = new Set([...nodeTypes, ...connectionTypesSet]);
-      if (types.size === 1) {
-          logicalType = [...types][0].replace(/_/g, " ");
-          titleText = `Edit ${selectedArray.length} ${logicalType}s`;
-          allSameLogicalType = true;
-      } else {
-          titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
-          allSameLogicalType = false;
-      }
-  }
-  title.innerHTML = `<strong>${titleText}</strong>`;
-  fragment.appendChild(title);
-
-  const elementsWithNote = selectedArray.filter((elData) => {
-      const el = elData.type === "node" ? findNodeById(elData.id) : findConnectionById(elData.id);
-      return (
-          el &&
-          (el.type === "sound" ||
-           el.type === "nebula" ||
-           (elData.type === "connection" && el.type === "string_violin"))
-      );
-  });
-
-  if (elementsWithNote.length > 0) {
-      const targetDataForNoteSelector = elementsWithNote.map((el) => ({ type: el.type, id: el.id }));
-      createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
-  }
-
-  if (allSameLogicalType) {
-      if (firstElementData.type === "node") {
-          const node = findNodeById(firstElementData.id);
-          if (node && isPulsarType(node.type)) {
-              const section = document.createElement("div");
-              section.classList.add("panel-section");
-              const enableLabel = document.createElement("label");
-              enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
-              enableLabel.textContent = node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
-              section.appendChild(enableLabel);
-              const enableCheckbox = document.createElement("input");
-              enableCheckbox.type = "checkbox";
-              enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
-              enableCheckbox.checked = node.isEnabled;
-              enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable";
-              enableCheckbox.addEventListener("change", () => handlePulsarTriggerToggle(node));
-              section.appendChild(enableCheckbox);
-              section.appendChild(document.createElement("br"));
-
-              if (node.type !== "pulsar_random_particles" && node.type !== "pulsar_manual") {
-                  if (isGlobalSyncEnabled) {
-                      const subdivLabel = document.createElement("label");
-                      subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
-                      subdivLabel.textContent = "Sync Subdivision:";
-                      section.appendChild(subdivLabel);
-                      const subdivSelect = document.createElement("select");
-                      subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
-                      subdivSelect.disabled = selectedArray.length > 1;
-                      subdivisionOptions.forEach((opt, index) => {
-                          const option = document.createElement("option");
-                          option.value = index;
-                          option.textContent = opt.label;
-                          if (index === (node.syncSubdivisionIndex ?? node.audioParams?.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
-                          subdivSelect.appendChild(option);
-                      });
-                      subdivSelect.addEventListener("change", (e) => {
-                         selectedArray.forEach(elData => {
-                              const n = findNodeById(elData.id);
-                              if (n && isPulsarType(n.type) && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") {
-                                  n.syncSubdivisionIndex = parseInt(e.target.value, 10);
-                                  n.nextSyncTriggerTime = 0;
-                              }
-                          });
-                          saveState();
-                      });
-                      section.appendChild(subdivSelect);
-                  } else {
-                      const currentInterval = node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-                      const intervalVal = currentInterval.toFixed(1);
-                      const intervalSliderContainer = createSlider(
-                          `edit-pulsar-interval-${node.id}`,
-                          `Interval (${intervalVal}s):`, 0.1, 10.0, 0.1, currentInterval,
-                          saveState,
-                          (e) => {
-                              const newInterval = parseFloat(e.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") n.audioParams.triggerInterval = newInterval;
-                              });
-                              e.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
-                          }
-                      );
-                      section.appendChild(intervalSliderContainer);
-                  }
-              } else if (node.type === "pulsar_random_particles") {
-                  const timingInfo = document.createElement("small");
-                  timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
-                  section.appendChild(timingInfo);
-              }
-              section.appendChild(document.createElement("br"));
-
-              if (node.type !== "pulsar_random_volume") {
-                  const currentIntensity = node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-                  const intensityVal = currentIntensity.toFixed(2);
-                  const intensitySliderContainer = createSlider(
-                      `edit-pulsar-intensity-${node.id}`,
-                      `Pulse Intensity (${intensityVal}):`, MIN_PULSE_INTENSITY, MAX_PULSE_INTENSITY, 0.01, currentIntensity,
-                      saveState,
-                      (e) => {
-                          const newIntensity = parseFloat(e.target.value);
-                          selectedArray.forEach((elData) => {
-                              const n = findNodeById(elData.id);
-                              if (n?.audioParams && n.type !== "pulsar_random_volume") n.audioParams.pulseIntensity = newIntensity;
-                          });
-                          e.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
-                      }
-                  );
-                  section.appendChild(intensitySliderContainer);
-              } else {
-                  const intensityInfo = document.createElement("small");
-                  intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
-                  section.appendChild(intensityInfo);
-              }
-              section.appendChild(document.createElement("br"));
-              const colorLabel = document.createElement("label");
-              colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
-              colorLabel.textContent = "Pulsar Color:";
-              section.appendChild(colorLabel);
-              const colorInput = document.createElement("input");
-              colorInput.type = "color";
-              colorInput.id = `edit-pulsar-color-${node.id}`;
-              const styles = getComputedStyle(document.documentElement);
-              const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
-              const fallbackColorVar = "--start-node-color";
-              const defaultColorRgba = styles.getPropertyValue(defaultColorVar).trim() || styles.getPropertyValue(fallbackColorVar).trim();
-              const defaultColorHex = rgbaToHex(defaultColorRgba);
-              colorInput.value = node.color ? rgbaToHex(node.color) : defaultColorHex;
-              colorInput.addEventListener("input", (e) => {
-                  const newColor = hexToRgba(e.target.value, 0.9);
-                   selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n) n.color = newColor;
-                  });
-              });
-              colorInput.addEventListener("change", saveState);
-              section.appendChild(colorInput);
-              fragment.appendChild(section);
-
-              if (node.type === "pulsar_rocket") {
-                const rocketSection = document.createElement("div");
-                rocketSection.classList.add("panel-section");
-                const rocketTitle = document.createElement("p");
-                rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
-                rocketSection.appendChild(rocketTitle);
-
-                let currentAngleDegVal = parseFloat(((node.audioParams.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0));
-                const dirSliderContainer = createSlider(
-                  `edit-rocket-dir-${node.id}`, `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
-                  saveState,
-                  (e) => {
-                    const newAngleDeg = parseFloat(e.target.value);
-                    selectedArray.forEach(elData => {
-                      if (elData.type === 'node') {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                          n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
-                          console.log(`%c[EditPanel] Node ${n.id} rocketDirectionAngle set to: ${n.audioParams.rocketDirectionAngle}`, 'color: magenta');
-                        }
-                      }
-                    });
-                    e.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
-                  }
-                );
-                rocketSection.appendChild(dirSliderContainer);
-
-                let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
-                const speedSliderContainer = createSlider(
-                  `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 0.5, 10.0, 0.1, currentSpeedVal,
-                  saveState,
-                  (e) => {
-                    const newSpeed = parseFloat(e.target.value);
-                    selectedArray.forEach(elData => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketSpeed = newSpeed;}
-                    });
-                    e.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
-                  }
-                );
-                rocketSection.appendChild(speedSliderContainer);
-
-                let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
-                const rangeSliderContainer = createSlider(
-                  `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 1000, 10, currentRangeVal,
-                  saveState,
-                  (e) => {
-                    const newRange = parseFloat(e.target.value);
-                    selectedArray.forEach(elData => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketRange = newRange; }
-                    });
-                    e.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
-                  }
-                );
-                rocketSection.appendChild(rangeSliderContainer);
-                fragment.appendChild(rocketSection);
-              }
-
-          } else if (isDrumType(node.type)) {
-               const section = document.createElement("div");
-               section.classList.add("panel-section");
-               const params = node.audioParams;
-               const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
-               const soundDiv = document.createElement("div");
-               soundDiv.classList.add("edit-drum-sound");
-               const soundLabel = document.createElement("strong");
-               soundLabel.textContent = defaults.label;
-               soundDiv.appendChild(soundLabel);
-
-               const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
-               const tuneVal = currentBaseFreq.toFixed(0);
-               const tuneSliderContainer = createSlider(
-                   `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20,
-                   node.type === "drum_hihat" ? 15000 : node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000, 1, currentBaseFreq,
-                   saveState,
-                   (e) => {
-                       const newFreq = parseFloat(e.target.value);
-                       selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
-                       e.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
-                   }
-               );
-               soundDiv.appendChild(tuneSliderContainer);
-
-              if (params?.decay !== undefined || defaults?.decay !== undefined) {
-                  const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
-                  const decayVal = currentDecay.toFixed(2);
-                  const decaySliderContainer = createSlider(
-                      `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
-                      saveState,
-                      (e) => {
-                           const newDecay = parseFloat(e.target.value);
-                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
-                           e.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
-                      }
-                  );
-                  soundDiv.appendChild(decaySliderContainer);
-              }
-
-              if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
-                   const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
-                  const noiseDecayVal = currentNoiseDecay.toFixed(2);
-                  const noiseDecaySliderContainer = createSlider(
-                       `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
-                      saveState,
-                      (e) => {
-                          const newNoiseDecay = parseFloat(e.target.value);
-                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
-                           e.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
-                      }
-                  );
-                  soundDiv.appendChild(noiseDecaySliderContainer);
-              }
-
-               const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
-               const volVal = currentVolume.toFixed(2);
-               const volSliderContainer = createSlider(
-                   `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
-                   saveState,
-                   (e) => {
-                       const newVol = parseFloat(e.target.value);
-                       selectedArray.forEach((elData) => {
-                           const n = findNodeById(elData.id);
-                           if (n?.audioParams) {
-                               n.audioParams.volume = newVol;
-                               updateNodeAudioParams(n);
-                           }
-                       });
-                       e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                   }
-               );
-               soundDiv.appendChild(volSliderContainer);
-               section.appendChild(soundDiv);
-               fragment.appendChild(section);
-
-           } else if (node.type === "switch" && selectedArray.length === 1) {
-               const section = document.createElement("div");
-               section.classList.add("panel-section");
-               const label = document.createElement("label");
-               label.textContent = "Primary Input Connection:";
-               section.appendChild(label);
-               const select = document.createElement("select");
-               select.id = `edit-switch-primary-${node.id}`;
-               const noneOpt = document.createElement("option");
-               noneOpt.value = "null";
-               noneOpt.textContent = "None (Set on next pulse)";
-               select.appendChild(noneOpt);
-               node.connections.forEach((neighborId) => {
-                   const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                   if (conn) {
-                       const otherNode = findNodeById(neighborId);
-                       const option = document.createElement("option");
-                       option.value = conn.id;
-                       option.textContent = `From Node #${neighborId} (${otherNode?.type || "?"})`;
-                       if (conn.id === node.primaryInputConnectionId) {
-                           option.selected = true;
-                       }
-                       select.appendChild(option);
-                   }
-               });
-               select.addEventListener("change", (e) => {
-                   node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
-                   saveState();
-               });
-               section.appendChild(select);
-               fragment.appendChild(section);
-           }
-
-      } else if (firstElementData.type === "connection") {
-          const connection = findConnectionById(firstElementData.id);
-          if (connection) {
-               if (connection.type === "string_violin") {
-                   const section = document.createElement("div");
-                   section.classList.add("panel-section");
-                   const params = connection.audioParams;
-                   const defaults = STRING_VIOLIN_DEFAULTS;
-
-                   const currentVol = params?.volume ?? defaults.volume;
-                   const volVal = currentVol.toFixed(2);
-                   const volSliderContainer = createSlider(
-                       `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
-                       saveState,
-                       (e) => {
-                           const newVol = parseFloat(e.target.value);
-                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
-                            e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                       }
-                   );
-                   section.appendChild(volSliderContainer);
-
-                   const currentAttack = params?.attack ?? defaults.attack;
-                   const attackVal = currentAttack.toFixed(2);
-                   const attackSliderContainer = createSlider(
-                       `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
-                       saveState,
-                       (e) => {
-                            const newVal = parseFloat(e.target.value);
-                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
-                            e.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
-                       }
-                   );
-                   section.appendChild(attackSliderContainer);
-
-                   const currentRelease = params?.release ?? defaults.release;
-                   const releaseVal = currentRelease.toFixed(2);
-                   const releaseSliderContainer = createSlider(
-                       `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
-                       saveState,
-                       (e) => {
-                            const newVal = parseFloat(e.target.value);
-                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
-                            e.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
-                       }
-                   );
-                   section.appendChild(releaseSliderContainer);
-                   fragment.appendChild(section);
-
-               } else if (connection.type === 'wavetrail') {
-                  const section = document.createElement("div");
-                  section.classList.add("panel-section");
-
-                  const fileLabel = document.createElement("label");
-                  fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
-                  fileLabel.textContent = "Audio File:";
-                  section.appendChild(fileLabel);
-
-                  const fileInput = document.createElement("input");
-                  fileInput.type = "file";
-                  fileInput.id = `edit-wavetrail-file-${connection.id}`;
-                  fileInput.accept = ".wav,.mp3,audio/*";
-                  fileInput.style.marginBottom = '5px';
-                  fileInput.addEventListener('change', (e) => handleWaveTrailFileInputChange(e, connection));
-                  section.appendChild(fileInput);
-
-                  const fileNameDisplay = document.createElement("small");
-                  fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
-                  fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || 'None selected'}`;
-                  fileNameDisplay.style.display = 'block';
-                  section.appendChild(fileNameDisplay);
-
-                  if (connection.audioParams?.buffer) {
-                      const bufferDuration = connection.audioParams.buffer.duration;
-                      const currentOffset = connection.audioParams.startTimeOffset || 0;
-                      const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
-                      const currentStartOffset = connection.audioParams.startTimeOffset || 0;
-                      const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
-                      const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
-                      const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
-
-                      const offsetLabel = document.createElement("label");
-                      offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
-                      offsetLabel.style.marginTop = '10px';
-                      offsetLabel.textContent = `Start Offset (${currentOffset.toFixed(2)}s):`;
-                      section.appendChild(offsetLabel);
-
-                      const offsetSlider = document.createElement("input");
-                      offsetSlider.type = "range";
-                      offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
-                      offsetSlider.min = "0";
-                      offsetSlider.max = bufferDuration.toFixed(3);
-                      offsetSlider.step = "0.01";
-                      offsetSlider.value = currentOffset;
-                      offsetSlider.title = "Scrub Start Time";
-
-                      const offsetValueDisplay = document.createElement("span");
-                      offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
-                      offsetValueDisplay.textContent = `${currentOffset.toFixed(2)}s`;
-                      offsetValueDisplay.style.fontSize = '0.8em';
-                      offsetValueDisplay.style.marginLeft = '5px';
-                      offsetValueDisplay.style.opacity = '0.8';
-
-                      const endOffsetLabel = document.createElement("label");
-                      endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
-                      endOffsetLabel.style.marginTop = '10px';
-                      endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
-
-                      const endOffsetSlider = document.createElement("input");
-                      endOffsetSlider.type = "range";
-                      endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
-                      endOffsetSlider.min = currentStartOffset.toFixed(3);
-                      endOffsetSlider.max = bufferDuration.toFixed(3);
-                      endOffsetSlider.step = "0.01";
-                      endOffsetSlider.value = currentEndOffset;
-                      endOffsetSlider.title = "Scrub End Time";
-
-                      const endOffsetValueDisplay = document.createElement("span");
-                      endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
-                      endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
-                      endOffsetValueDisplay.style.fontSize = '0.8em';
-                      endOffsetValueDisplay.style.marginLeft = '5px';
-                      endOffsetValueDisplay.style.opacity = '0.8';
-
-                      offsetSlider.addEventListener('input', (e) => {
-                          const newOffset = parseFloat(e.target.value);
-                          const maxOffset = Math.max(0, bufferDuration - 0.05);
-                          const clampedOffset = Math.min(newOffset, maxOffset);
-                          const currentEndValue = parseFloat(endOffsetSlider.value);
-
-                          if (connection.audioParams.startTimeOffset !== clampedOffset) {
-                               connection.audioParams.startTimeOffset = clampedOffset;
-                               offsetLabel.textContent = `Start Offset (${clampedOffset.toFixed(2)}s):`;
-                               offsetValueDisplay.textContent = `${clampedOffset.toFixed(2)}s`;
-                               endOffsetSlider.min = (clampedOffset + 0.05).toFixed(3);
-                                if (currentEndValue < clampedOffset + 0.05) {
-                                     const newEndValue = clampedOffset + 0.05;
-                                     endOffsetSlider.value = newEndValue;
-                                     connection.audioParams.endTimeOffset = (bufferDuration - newEndValue < 0.01) ? null : newEndValue;
-                                     const displayValue = connection.audioParams.endTimeOffset ?? bufferDuration;
-                                     endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
-                                     endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
-                                }
-                          }
-                           if (newOffset > maxOffset) { e.target.value = clampedOffset; }
-                      });
-                      offsetSlider.addEventListener('change', saveState);
-
-                      endOffsetSlider.addEventListener('input', (e) => {
-                          const newEndOffset = parseFloat(e.target.value);
-                          const minEndOffset = connection.audioParams.startTimeOffset + 0.05;
-                          const clampedEndOffset = Math.max(minEndOffset, newEndOffset);
-                          const finalEndOffset = (bufferDuration - clampedEndOffset < 0.01) ? null : clampedEndOffset;
-
-                          if (connection.audioParams.endTimeOffset !== finalEndOffset) {
-                              connection.audioParams.endTimeOffset = finalEndOffset;
-                              const displayValue = finalEndOffset ?? bufferDuration;
-                              endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
-                              endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
-                          }
-                           if (newEndOffset < minEndOffset) { e.target.value = minEndOffset; }
-                      });
-                      endOffsetSlider.addEventListener('change', saveState);
-
-                      section.appendChild(offsetSlider);
-                      section.appendChild(offsetValueDisplay);
-                      section.appendChild(endOffsetLabel);
-                      section.appendChild(endOffsetSlider);
-                      section.appendChild(endOffsetValueDisplay);
-
-                      const grainDurLabel = document.createElement("label");
-                      grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
-                      grainDurLabel.style.marginTop = '15px';
-                      grainDurLabel.textContent = `Grain Duration (${(currentGrainDuration * 1000).toFixed(0)}ms):`;
-                      section.appendChild(grainDurLabel);
-
-                      const grainDurSlider = document.createElement("input");
-                      grainDurSlider.type = "range"; grainDurSlider.id = `edit-wavetrail-graindur-${connection.id}`;
-                      grainDurSlider.min = "0.01"; grainDurSlider.max = "0.3"; grainDurSlider.step = "0.005";
-                      grainDurSlider.value = currentGrainDuration; grainDurSlider.title = "Grain Duration";
-
-                      const grainDurValueDisplay = document.createElement("span");
-                       grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`;
-                       grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`;
-                       grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-
-                      const grainOverlapSlider = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
-
-                      grainDurSlider.addEventListener('input', (e) => {
-                          const newDur = parseFloat(e.target.value);
-                          connection.audioParams.grainDuration = newDur;
-                          grainDurLabel.textContent = `Grain Duration (${(newDur * 1000).toFixed(0)}ms):`;
-                          grainDurValueDisplay.textContent = `${(newDur * 1000).toFixed(0)}ms`;
-                          if (grainOverlapSlider) {
-                              const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3);
-                              grainOverlapSlider.max = newMaxOverlap;
-                              const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
-                              const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
-                              if (parseFloat(grainOverlapSlider.value) > parseFloat(newMaxOverlap)) {
-                                   grainOverlapSlider.value = newMaxOverlap;
-                                   connection.audioParams.grainOverlap = parseFloat(newMaxOverlap);
-                                    if(overlapValueDisplay) overlapValueDisplay.textContent = `${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms`;
-                                    if(overlapLabel) overlapLabel.textContent = `Grain Overlap (${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms):`;
-                              }
-                          }
-                      });
-                      grainDurSlider.addEventListener('change', saveState);
-                      section.appendChild(grainDurSlider);
-                      section.appendChild(grainDurValueDisplay);
-
-                      const grainOverlapLabel = document.createElement("label");
-                      grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
-                      grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`;
-                      section.appendChild(grainOverlapLabel);
-
-                      const grainOverlapSliderElement = document.createElement("input");
-                      grainOverlapSliderElement.type = "range";
-                      grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`;
-                      grainOverlapSliderElement.min = "0";
-                      grainOverlapSliderElement.max = (currentGrainDuration - 0.005).toFixed(3);
-                      grainOverlapSliderElement.step = "0.005";
-                      grainOverlapSliderElement.value = Math.min(currentGrainOverlap, parseFloat(grainOverlapSliderElement.max));
-                      grainOverlapSliderElement.title = "Grain Overlap";
-
-                      const grainOverlapValueDisplay = document.createElement("span");
-                      grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`;
-                      grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`;
-                      grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-
-                      grainOverlapSliderElement.addEventListener('input', (e) => {
-                          const newOverlap = parseFloat(e.target.value);
-                          const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
-                          const clampedOverlap = Math.min(newOverlap, maxOverlap);
-                          connection.audioParams.grainOverlap = clampedOverlap;
-                          grainOverlapLabel.textContent = `Grain Overlap (${(clampedOverlap * 1000).toFixed(0)}ms):`;
-                          grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
-                           if (newOverlap > maxOverlap) { e.target.value = clampedOverlap; }
-                      });
-                      grainOverlapSliderElement.addEventListener('change', saveState);
-                      section.appendChild(grainOverlapSliderElement);
-                      section.appendChild(grainOverlapValueDisplay);
-
-                      const rateLabel = document.createElement("label");
-                      rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
-                      rateLabel.style.marginTop = '15px';
-                      rateLabel.textContent = `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`;
-                      section.appendChild(rateLabel);
-
-                      const rateSlider = document.createElement("input");
-                      rateSlider.type = "range"; rateSlider.id = `edit-wavetrail-rate-${connection.id}`;
-                      rateSlider.min = "0.25"; rateSlider.max = "4.0"; rateSlider.step = "0.01";
-                      rateSlider.value = currentPlaybackRate; rateSlider.title = "Playback Rate / Pitch";
-
-                      const rateValueDisplay = document.createElement("span");
-                      rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`;
-                      rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`;
-                      rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-
-                      rateSlider.addEventListener('input', (e) => {
-                          const newRate = parseFloat(e.target.value);
-                          connection.audioParams.playbackRate = newRate;
-                          rateLabel.textContent = `Playback Rate (${newRate.toFixed(2)}x):`;
-                          rateValueDisplay.textContent = `${newRate.toFixed(2)}x`;
-                      });
-                      rateSlider.addEventListener('change', saveState);
-
-                      const resetButton = document.createElement('button');
-                      resetButton.textContent = 'Reset Rate';
-                      resetButton.style.marginLeft = '10px'; resetButton.style.padding = '2px 6px'; resetButton.style.fontSize = '0.8em';
-                      resetButton.type = 'button';
-                      resetButton.addEventListener('click', () => {
-                            connection.audioParams.playbackRate = 1.0;
-                            rateSlider.value = 1.0;
-                            rateLabel.textContent = `Playback Rate (1.00x):`;
-                            rateValueDisplay.textContent = `1.00x`;
-                            saveState();
-                       });
-
-                      section.appendChild(rateSlider);
-                      section.appendChild(rateValueDisplay);
-                      section.appendChild(resetButton);
-                  }
-                  fragment.appendChild(section);
-               }
-          }
-      }
-  } else {
-       const multiInfo = document.createElement("small");
-       multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
-       fragment.appendChild(multiInfo);
-  }
-
-  editPanelContent.appendChild(fragment);
-
-  if (hamburgerMenuPanel && hamburgerMenuPanel.classList.contains("hidden") && currentTool === 'edit' && selectedElements.size > 0) {
-       hamburgerMenuPanel.classList.remove("hidden");
-       if (hamburgerBtn) hamburgerBtn.classList.add("active");
-  }
-  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
-      sideToolbar.classList.add("hidden");
-      const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
-       addBrushButtons.forEach(btn => btn.classList.remove("active"));
-       if(brushBtn) brushBtn.classList.remove("active");
-  }
-}
 
 function setActiveTool(toolName) {
   if (currentTool === 'brush' && toolName !== 'brush') {
@@ -7832,7 +7743,712 @@ function setActiveTool(toolName) {
   }
 }
 
+function populateEditPanel() {
+  editPanelContent.innerHTML = "";
+  if (currentTool !== "edit" || selectedElements.size === 0) {
+    if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && selectedElements.size === 0) {
+      hamburgerMenuPanel.classList.add("hidden");
+      if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+    }
+    return;
+  }
+
+  const selectedArray = Array.from(selectedElements);
+  const firstElementData = selectedArray[0];
+  const fragment = document.createDocumentFragment();
+  const title = document.createElement("p");
+  const nodeTypes = new Set(selectedArray.filter((el) => el.type === "node").map((el) => findNodeById(el.id)?.type));
+  const connectionTypesSet = new Set(selectedArray.filter((el) => el.type === "connection").map((el) => findConnectionById(el.id)?.type));
+  let titleText = ""; let allSameLogicalType = false; let logicalType = "";
+
+  if (selectedArray.length === 1) {
+    const element = firstElementData.type === "node" ? findNodeById(firstElementData.id) : findConnectionById(firstElementData.id);
+    if (element) {
+      logicalType = element.type.replace(/_/g, " ");
+      titleText = `Edit ${logicalType} #${element.id}`;
+      allSameLogicalType = true;
+    } else {
+      titleText = "Edit Element";
+    }
+  } else {
+    const types = new Set([...nodeTypes, ...connectionTypesSet]);
+    if (types.size === 1) {
+      logicalType = [...types][0].replace(/_/g, " ");
+      titleText = `Edit ${selectedArray.length} ${logicalType}s`;
+      allSameLogicalType = true;
+    } else {
+      titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
+      allSameLogicalType = false;
+    }
+  }
+  title.innerHTML = `<strong>${titleText}</strong>`;
+  fragment.appendChild(title);
+
+  const elementsWithNote = selectedArray.filter((elData) => {
+    const el = elData.type === "node" ? findNodeById(elData.id) : findConnectionById(elData.id);
+    return (el && (el.type === "sound" || el.type === "nebula" || (elData.type === "connection" && el.type === "string_violin")));
+  });
+
+  if (elementsWithNote.length > 0) {
+    const targetDataForNoteSelector = elementsWithNote.map((el) => ({ type: el.type, id: el.id }));
+    createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
+  }
+
+  if (allSameLogicalType) {
+    if (firstElementData.type === "node") {
+      const node = findNodeById(firstElementData.id);
+      if (node && node.audioParams) {
+        if (isPulsarType(node.type) || node.type === 'sound' || isDrumType(node.type)) {
+            const syncIgnoreSection = document.createElement("div"); syncIgnoreSection.classList.add("panel-section");
+            const ignoreSyncLabel = document.createElement("label"); ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
+            ignoreSyncLabel.textContent = "Ignore Global Sync:"; ignoreSyncLabel.style.marginRight = "5px";
+            syncIgnoreSection.appendChild(ignoreSyncLabel);
+            const ignoreSyncCheckbox = document.createElement("input"); ignoreSyncCheckbox.type = "checkbox";
+            ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`; ignoreSyncCheckbox.checked = node.audioParams.ignoreGlobalSync || false;
+            ignoreSyncCheckbox.addEventListener("change", (e) => {
+                selectedArray.forEach(elData => {
+                    const n = findNodeById(elData.id);
+                    if (n && n.audioParams) {
+                        n.audioParams.ignoreGlobalSync = e.target.checked;
+                         if (isPulsarType(n.type)) { n.lastTriggerTime = -1; n.nextSyncTriggerTime = 0; }
+                    }
+                });
+                identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+            });
+            syncIgnoreSection.appendChild(ignoreSyncCheckbox); fragment.appendChild(syncIgnoreSection);
+        }
+        if (isPulsarType(node.type)) {
+            const section = document.createElement("div"); section.classList.add("panel-section");
+            const enableLabel = document.createElement("label"); enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
+            enableLabel.textContent = node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
+            section.appendChild(enableLabel);
+            const enableCheckbox = document.createElement("input"); enableCheckbox.type = "checkbox";
+            enableCheckbox.id = `edit-pulsar-enable-${node.id}`; enableCheckbox.checked = node.isEnabled;
+            enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable";
+            enableCheckbox.addEventListener("change", () => {handlePulsarTriggerToggle(node); identifyAndRouteAllGroups();});
+            section.appendChild(enableCheckbox); section.appendChild(document.createElement("br"));
+            const showSyncControls = isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
+            if (node.type !== "pulsar_random_particles" && node.type !== "pulsar_manual") {
+                if (showSyncControls) {
+                    const subdivLabel = document.createElement("label"); subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
+                    subdivLabel.textContent = "Sync Subdivision:"; section.appendChild(subdivLabel);
+                    const subdivSelect = document.createElement("select"); subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
+                    subdivSelect.disabled = selectedArray.length > 1;
+                    subdivisionOptions.forEach((opt, index) => {
+                        const option = document.createElement("option"); option.value = index; option.textContent = opt.label;
+                        if (index === (node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
+                        subdivSelect.appendChild(option);
+                    });
+                    subdivSelect.addEventListener("change", (e) => {
+                        const newIndex = parseInt(e.target.value, 10);
+                        selectedArray.forEach(elData => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams && isPulsarType(n.type) && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") {
+                                n.audioParams.syncSubdivisionIndex = newIndex;
+                                if(n.syncSubdivisionIndex !== undefined) n.syncSubdivisionIndex = newIndex;
+                                n.nextSyncTriggerTime = 0;
+                            }
+                        });
+                        identifyAndRouteAllGroups(); saveState();
+                    });
+                    section.appendChild(subdivSelect);
+                } else {
+                    const currentInterval = node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+                    const intervalVal = currentInterval.toFixed(1);
+                    const intervalSliderContainer = createSlider(`edit-pulsar-interval-${node.id}`, `Interval (${intervalVal}s):`, 0.1, 10.0, 0.1, currentInterval, 
+                    () => { identifyAndRouteAllGroups(); saveState(); }, 
+                    (e_input) => {
+                        const newInterval = parseFloat(e_input.target.value);
+                        selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") n.audioParams.triggerInterval = newInterval; });
+                        e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
+                    });
+                    section.appendChild(intervalSliderContainer);
+                }
+            } else if (node.type === "pulsar_random_particles") {
+                const timingInfo = document.createElement("small");
+                timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
+                section.appendChild(timingInfo);
+            }
+            section.appendChild(document.createElement("br"));
+            if (node.type !== "pulsar_random_volume") {
+                const currentIntensity = node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                const intensityVal = currentIntensity.toFixed(2);
+                const intensitySliderContainer = createSlider(`edit-pulsar-intensity-${node.id}`, `Pulse Intensity (${intensityVal}):`, MIN_PULSE_INTENSITY, MAX_PULSE_INTENSITY, 0.01, currentIntensity, 
+                () => { identifyAndRouteAllGroups(); saveState(); }, 
+                (e_input) => {
+                    const newIntensity = parseFloat(e_input.target.value);
+                    selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams && n.type !== "pulsar_random_volume") n.audioParams.pulseIntensity = newIntensity; });
+                    e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
+                });
+                section.appendChild(intensitySliderContainer);
+            } else {
+                const intensityInfo = document.createElement("small");
+                intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
+                section.appendChild(intensityInfo);
+            }
+            section.appendChild(document.createElement("br"));
+            const colorLabel = document.createElement("label"); colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
+            colorLabel.textContent = "Pulsar Color:"; section.appendChild(colorLabel);
+            const colorInput = document.createElement("input"); colorInput.type = "color"; colorInput.id = `edit-pulsar-color-${node.id}`;
+            const styles = getComputedStyle(document.documentElement);
+            const defaultColorVar = `--${node.type.replace("_", "-")}-color`; const fallbackColorVar = "--start-node-color";
+            const defaultColorRgba = styles.getPropertyValue(defaultColorVar).trim() || styles.getPropertyValue(fallbackColorVar).trim();
+            const defaultColorHex = rgbaToHex(defaultColorRgba);
+            colorInput.value = node.color ? rgbaToHex(node.color) : defaultColorHex;
+            colorInput.addEventListener("input", (e) => {
+                const newColor = hexToRgba(e.target.value, 0.9);
+                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n) n.color = newColor; });
+            });
+            colorInput.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); }); 
+            section.appendChild(colorInput); fragment.appendChild(section);
+            if (node.type === "pulsar_rocket") {
+              const rocketSection = document.createElement("div"); rocketSection.classList.add("panel-section");
+              const rocketTitle = document.createElement("p"); rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
+              rocketSection.appendChild(rocketTitle);
+              let currentAngleDegVal = parseFloat(((node.audioParams.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0));
+              const dirSliderContainer = createSlider( `edit-rocket-dir-${node.id}`, `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal, 
+              () => { identifyAndRouteAllGroups(); saveState(); }, 
+              (e_input) => {
+                  const newAngleDeg = parseFloat(e_input.target.value);
+                  selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI; } });
+                  e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
+              });
+              rocketSection.appendChild(dirSliderContainer);
+              let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
+              const speedSliderContainer = createSlider( `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal, 
+              () => { identifyAndRouteAllGroups(); saveState(); }, 
+              (e_input) => {
+                  const newSpeed = parseFloat(e_input.target.value);
+                  selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketSpeed = newSpeed;} });
+                  e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
+              });
+              rocketSection.appendChild(speedSliderContainer);
+              let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
+              const rangeSliderContainer = createSlider( `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal, 
+              () => { identifyAndRouteAllGroups(); saveState(); }, 
+              (e_input) => {
+                  const newRange = parseFloat(e_input.target.value);
+                  selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketRange = newRange; } });
+                  e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
+              });
+              rocketSection.appendChild(rangeSliderContainer);
+              let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
+              const gravitySliderContainer = createSlider( `edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal, 
+              () => { identifyAndRouteAllGroups(); saveState(); }, 
+              (e_input) => {
+                  const newGravity = parseFloat(e_input.target.value);
+                  selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.type === "pulsar_rocket" && n.audioParams) {n.audioParams.rocketGravity = newGravity;} });
+                  e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
+              });
+              rocketSection.appendChild(gravitySliderContainer); fragment.appendChild(rocketSection);
+            }
+        } else if (node && node.type === 'sound' && node.audioParams) {
+            const orbitoneMainSection = document.createElement("div");
+            orbitoneMainSection.classList.add("panel-section");
+            orbitoneMainSection.innerHTML = "<p><strong>Orbitone Settings:</strong></p>"; 
+            
+            const enableOrbitonesLabel = document.createElement("label");
+            enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
+            enableOrbitonesLabel.textContent = "Enable Orbitones:";
+            enableOrbitonesLabel.style.marginRight = "8px";
+            orbitoneMainSection.appendChild(enableOrbitonesLabel);
+        
+            const enableOrbitonesCheckbox = document.createElement("input");
+            enableOrbitonesCheckbox.type = "checkbox";
+            enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
+            enableOrbitonesCheckbox.checked = node.audioParams.orbitonesEnabled || false; 
+            enableOrbitonesCheckbox.addEventListener("change", (e) => {
+                const isEnabled = e.target.checked;
+                selectedArray.forEach(elData => {
+                    const n = findNodeById(elData.id);
+                    if (n && n.audioParams && n.type === 'sound') {
+                        n.audioParams.orbitonesEnabled = isEnabled; 
+                        stopNodeAudio(n); 
+                        n.audioNodes = createAudioNodesForNode(n);
+                        if(n.audioNodes) updateNodeAudioParams(n); 
+                    }
+                });
+                identifyAndRouteAllGroups(); saveState(); populateEditPanel(); 
+            });
+            orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
+            fragment.appendChild(orbitoneMainSection);
+        
+            if (node.audioParams.orbitonesEnabled) { 
+                const orbitoneSettingsSection = document.createElement("div");
+                orbitoneSettingsSection.classList.add("panel-section");
+                orbitoneSettingsSection.style.paddingLeft = "15px";
+                orbitoneSettingsSection.style.borderLeft = "2px solid var(--button-bg)";
+                orbitoneSettingsSection.style.marginTop = "5px";
+                
+                const visualControllerPlaceholder = document.createElement("div");
+                visualControllerPlaceholder.id = `orbitone-visual-controller-${node.id}`;
+                visualControllerPlaceholder.innerHTML = "<em>Visual Orbitone Controller (Future)</em>";
+                visualControllerPlaceholder.style.height = "auto"; 
+                visualControllerPlaceholder.style.padding = "10px";
+                visualControllerPlaceholder.style.border = "1px dashed var(--button-hover)";
+                visualControllerPlaceholder.style.display = "flex";
+                visualControllerPlaceholder.style.flexDirection = "column";
+                visualControllerPlaceholder.style.alignItems = "center";
+                visualControllerPlaceholder.style.justifyContent = "center";
+                visualControllerPlaceholder.style.marginBottom = "15px";
+                visualControllerPlaceholder.style.textAlign = "center";
+                orbitoneSettingsSection.appendChild(visualControllerPlaceholder);
+
+                const currentOrbitoneCount = node.audioParams.orbitoneCount || 0; 
+                const orbitoneCountSliderContainer = createSlider(`edit-node-orbitone-count-${node.id}`, 
+                    `Number of extra Orbitones (${currentOrbitoneCount}):`, 0, 5, 1, currentOrbitoneCount, 
+                    (e_change_event) => { 
+                        const newCount = parseInt(e_change_event.target.value);
+                         selectedArray.forEach(elData => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams && n.type === 'sound') {
+                                n.audioParams.orbitoneCount = newCount; 
+                                applyOrbitoneVoicingFromPhase(n); 
+                                applyOrbitoneTimingFromPhase(n);
+                                stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); 
+                                if(n.audioNodes) updateNodeAudioParams(n);
+                            }
+                        });
+                        identifyAndRouteAllGroups(); saveState(); populateEditPanel(); 
+                    },
+                    (e_input) => { 
+                        e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`; 
+                    }
+                );
+                orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
+        
+                if (node.audioParams.orbitoneCount > 0) {
+                    const currentVoicingPhase = node.audioParams.orbitoneVoicingPhase || 0;
+                    const voicingPhaseSlider = createSlider(`edit-orbitone-voicing-phase-${node.id}`,
+                        `Orbitone Voicing Style (${currentVoicingPhase}):`, 0, 100, 1, currentVoicingPhase,
+                        (e_change) => {
+                            const val = parseInt(e_change.target.value);
+                            selectedArray.forEach(el => { 
+                                const n = findNodeById(el.id); 
+                                if(n && n.audioParams && n.type === 'sound') {
+                                    n.audioParams.orbitoneVoicingPhase = val;
+                                    applyOrbitoneVoicingFromPhase(n);
+                                    stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n);
+                                    if(n.audioNodes) updateNodeAudioParams(n);
+                                }
+                            });
+                            identifyAndRouteAllGroups(); saveState();
+                            populateEditPanel(); // Kan nodig zijn als spread verandert door preset
+                        },
+                        (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; }
+                    );
+                    orbitoneSettingsSection.appendChild(voicingPhaseSlider);
+
+                    const currentTimingPhase = node.audioParams.orbitoneTimingPhase || 0;
+                    const timingPhaseSlider = createSlider(`edit-orbitone-timing-phase-${node.id}`,
+                        `Orbitone Timing Style (${currentTimingPhase}):`, 0, 100, 1, currentTimingPhase,
+                        (e_change) => {
+                             const val = parseInt(e_change.target.value);
+                             selectedArray.forEach(el => { 
+                                 const n = findNodeById(el.id); 
+                                 if(n && n.audioParams && n.type === 'sound') {
+                                     n.audioParams.orbitoneTimingPhase = val;
+                                     applyOrbitoneTimingFromPhase(n);
+                                     updateNodeAudioParams(n); 
+                                 }
+                             });
+                             identifyAndRouteAllGroups(); saveState();
+                        },
+                        (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; }
+                    );
+                    orbitoneSettingsSection.appendChild(timingPhaseSlider);
+                    
+                    const currentMix = node.audioParams.orbitoneMix !== undefined ? node.audioParams.orbitoneMix : 0.5;
+                    const mixSliderContainer = createSlider(`edit-node-orbitone-mix-${node.id}`,
+                        `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`, 0, 1, 0.05, currentMix,
+                        (e_change_event) => {
+                            const newMix = parseFloat(e_change_event.target.value);
+                            selectedArray.forEach(elData => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.audioParams && n.type === 'sound') {
+                                    n.audioParams.orbitoneMix = newMix;
+                                    updateNodeAudioParams(n);
+                                }
+                            });
+                            identifyAndRouteAllGroups(); saveState();
+                        },
+                        (e_input) => {
+                            e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`;
+                        }
+                    );
+                    orbitoneSettingsSection.appendChild(mixSliderContainer);
+                }
+                fragment.appendChild(orbitoneSettingsSection);
+            }
+        } else if (node && isDrumType(node.type)) {
+             const section = document.createElement("div"); section.classList.add("panel-section");
+            const params = node.audioParams; const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
+            const soundDiv = document.createElement("div"); soundDiv.classList.add("edit-drum-sound");
+            const soundLabel = document.createElement("strong"); soundLabel.textContent = defaults.label; soundDiv.appendChild(soundLabel);
+            const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60; const tuneVal = currentBaseFreq.toFixed(0);
+            const tuneSliderContainer = createSlider( `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20, node.type === "drum_hihat" ? 15000 : node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000, 1, currentBaseFreq, 
+            () => { identifyAndRouteAllGroups(); saveState(); }, 
+            (e_input) => {
+                const newFreq = parseFloat(e_input.target.value);
+                selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
+                e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
+            });
+            soundDiv.appendChild(tuneSliderContainer);
+            if (params?.decay !== undefined || defaults?.decay !== undefined) {
+                const currentDecay = params?.decay ?? defaults?.decay ?? 0.5; const decayVal = currentDecay.toFixed(2);
+                const decaySliderContainer = createSlider( `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay, 
+                () => { identifyAndRouteAllGroups(); saveState(); }, 
+                (e_input) => {
+                    const newDecay = parseFloat(e_input.target.value);
+                    selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
+                    e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
+                });
+                soundDiv.appendChild(decaySliderContainer);
+            }
+            if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
+                const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1; const noiseDecayVal = currentNoiseDecay.toFixed(2);
+                const noiseDecaySliderContainer = createSlider( `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay, 
+                () => { identifyAndRouteAllGroups(); saveState(); }, 
+                (e_input) => {
+                    const newNoiseDecay = parseFloat(e_input.target.value);
+                    selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
+                    e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
+                });
+                soundDiv.appendChild(noiseDecaySliderContainer);
+            }
+            const currentVolume = params?.volume ?? defaults?.volume ?? 1.0; const volVal = currentVolume.toFixed(2);
+            const volSliderContainer = createSlider( `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume, 
+            () => { identifyAndRouteAllGroups(); saveState(); }, 
+            (e_input) => {
+                const newVol = parseFloat(e_input.target.value);
+                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) { n.audioParams.volume = newVol; updateNodeAudioParams(n); } });
+                e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+            });
+            soundDiv.appendChild(volSliderContainer); section.appendChild(soundDiv); fragment.appendChild(section);
+        }
+        else if (node && node.type === "switch" && selectedArray.length === 1) {
+            const section = document.createElement("div"); section.classList.add("panel-section");
+            const label = document.createElement("label"); label.textContent = "Primary Input Connection:"; section.appendChild(label);
+            const select = document.createElement("select"); select.id = `edit-switch-primary-${node.id}`;
+            const noneOpt = document.createElement("option"); noneOpt.value = "null"; noneOpt.textContent = "None (Set on next pulse)"; select.appendChild(noneOpt);
+            node.connections.forEach((neighborId) => {
+                const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                if (conn) {
+                    const otherNode = findNodeById(neighborId);
+                    const option = document.createElement("option"); option.value = conn.id;
+                    option.textContent = `From Node #${neighborId} (${otherNode?.type || "?"})`;
+                    if (conn.id === node.primaryInputConnectionId) { option.selected = true; }
+                    select.appendChild(option);
+                }
+            });
+            select.addEventListener("change", (e) => {
+                node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                identifyAndRouteAllGroups(); saveState();
+            });
+            section.appendChild(select); fragment.appendChild(section);
+        }
+        if (node && node.audioParams && (node.type === 'sound' || isDrumType(node.type))) {
+            const retriggerSection = document.createElement("div"); retriggerSection.classList.add("panel-section");
+            retriggerSection.style.borderTop = "1px solid var(--button-bg)"; retriggerSection.style.paddingTop = "10px"; retriggerSection.style.marginTop = "10px";
+            const retriggerToggleContainer = document.createElement("div"); retriggerToggleContainer.style.display = "flex";
+            retriggerToggleContainer.style.alignItems = "center"; retriggerToggleContainer.style.marginBottom = "10px";
+            const enabledCheckbox = document.createElement("input"); enabledCheckbox.type = "checkbox";
+            enabledCheckbox.id = `edit-retrigger-enabled-${node.id}`; enabledCheckbox.checked = node.audioParams.retriggerEnabled || false;
+            enabledCheckbox.style.marginRight = "8px";
+            enabledCheckbox.addEventListener("change", (e) => {
+              selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id); if (n && n.audioParams) n.audioParams.retriggerEnabled = e.target.checked;
+              });
+              identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+            });
+            retriggerToggleContainer.appendChild(enabledCheckbox);
+            const enabledLabel = document.createElement("label"); enabledLabel.htmlFor = `edit-retrigger-enabled-${node.id}`;
+            enabledLabel.innerHTML = "<strong>Retrigger</strong>"; enabledLabel.style.cursor = "pointer";
+            retriggerToggleContainer.appendChild(enabledLabel); retriggerSection.appendChild(retriggerToggleContainer);
+            if (node.audioParams.retriggerEnabled) {
+              const currentStepsArray = node.audioParams.retriggerVolumeSteps || []; const countVal = currentStepsArray.length;
+              const countSliderContainer = createSlider( `edit-retrigger-count-${node.id}`, `Steps (${countVal}):`, 1, 16, 1, countVal, null, (e_input) => {
+                  const newCount = parseInt(e_input.target.value); e_input.target.previousElementSibling.textContent = `Steps (${newCount}):`;
+              });
+              const countSliderInput = countSliderContainer.querySelector('input');
+              countSliderInput.addEventListener('change', (e_change) => {
+                  const newCount = parseInt(e_change.target.value);
+                  selectedArray.forEach(elData => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.audioParams) {
+                          const arraysToSync = ["retriggerVolumeSteps", "retriggerPitchSteps", "retriggerFilterSteps", "retriggerMuteSteps"];
+                          const defaultValues = { "retriggerVolumeSteps": 0.5, "retriggerPitchSteps": 0, "retriggerFilterSteps": 0, "retriggerMuteSteps": false };
+                          arraysToSync.forEach(arrayName => {
+                              let currentLocalSteps = n.audioParams[arrayName] || [];
+                              const lastKnownValue = currentLocalSteps.length > 0 ? currentLocalSteps[currentLocalSteps.length -1] : defaultValues[arrayName];
+                              if (newCount > currentLocalSteps.length) {
+                                  for (let i = currentLocalSteps.length; i < newCount; i++) {
+                                      let valToPush = defaultValues[arrayName];
+                                      if (arrayName === "retriggerVolumeSteps" && i > 0 && currentLocalSteps.length > 0) valToPush = parseFloat((currentLocalSteps[currentLocalSteps.length -1 ] * 0.85).toFixed(2));
+                                      else if (arrayName === "retriggerVolumeSteps") valToPush = 0.6;
+                                      currentLocalSteps.push(valToPush);
+                                  }
+                              } else if (newCount < currentLocalSteps.length) {
+                                  currentLocalSteps = currentLocalSteps.slice(0, newCount);
+                              }
+                              n.audioParams[arrayName] = currentLocalSteps;
+                          });
+                      }
+                  });
+                  identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+              });
+              retriggerSection.appendChild(countSliderContainer);
+              const retriggerEditorTabsContainer = document.createElement("div"); retriggerEditorTabsContainer.classList.add("retrigger-editor-tabs");
+              const editorDisplayArea = document.createElement("div"); editorDisplayArea.classList.add("retrigger-editor-display-area");
+              const createTabButton = (paramType, labelText) => {
+                  const button = document.createElement("button"); button.textContent = labelText;
+                  button.classList.add("retrigger-tab-button", "panel-button-like"); button.dataset.paramType = paramType;
+                  button.addEventListener("click", () => {
+                      retriggerEditorTabsContainer.querySelectorAll('.retrigger-tab-button').forEach(btn => btn.classList.remove('active'));
+                      button.classList.add('active');
+                      const visualEditor = createRetriggerVisualEditor(node, selectedArray, paramType);
+                      editorDisplayArea.innerHTML = ""; editorDisplayArea.appendChild(visualEditor);
+                  });
+                  return button;
+              };
+              const volumeTab = createTabButton("volume", "Volume"); const pitchTab = createTabButton("pitch", "Pitch");
+              const filterTab = createTabButton("filter", "Filter");
+              retriggerEditorTabsContainer.appendChild(volumeTab); retriggerEditorTabsContainer.appendChild(pitchTab);
+              retriggerEditorTabsContainer.appendChild(filterTab); retriggerSection.appendChild(retriggerEditorTabsContainer);
+              retriggerSection.appendChild(editorDisplayArea); volumeTab.classList.add('active');
+              const initialVisualEditor = createRetriggerVisualEditor(node, selectedArray, "volume");
+              editorDisplayArea.appendChild(initialVisualEditor);
+              const showRetriggerSyncControls = isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
+              if (showRetriggerSyncControls) {
+                const subdivRetriggerLabel = document.createElement("label"); subdivRetriggerLabel.htmlFor = `edit-retrigger-subdiv-${node.id}`;
+                subdivRetriggerLabel.textContent = "Retrigger Sync:"; retriggerSection.appendChild(subdivRetriggerLabel);
+                const subdivRetriggerSelect = document.createElement("select"); subdivRetriggerSelect.id = `edit-retrigger-subdiv-${node.id}`;
+                subdivisionOptions.forEach((opt, index) => {
+                    const option = document.createElement("option"); option.value = index; option.textContent = opt.label;
+                    if (index === (node.audioParams.retriggerSyncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
+                    subdivRetriggerSelect.appendChild(option);
+                });
+                subdivRetriggerSelect.addEventListener("change", (e) => {
+                    const newIndex = parseInt(e.target.value, 10);
+                    selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.retriggerSyncSubdivisionIndex = newIndex; });
+                    identifyAndRouteAllGroups(); saveState();
+                });
+                retriggerSection.appendChild(subdivRetriggerSelect);
+              } else {
+                const intervalValMs = node.audioParams.retriggerIntervalMs || 100;
+                const intervalSliderContainer = createSlider( `edit-retrigger-interval-${node.id}`, `Interval (${intervalValMs} ms):`, 20, 1000, 5, intervalValMs, 
+                () => { identifyAndRouteAllGroups(); saveState(); }, 
+                (e_input) => {
+                    const newValMs = parseInt(e_input.target.value);
+                    selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.retriggerIntervalMs = newValMs; });
+                    e_input.target.previousElementSibling.textContent = `Interval (${newValMs} ms):`;
+                });
+                retriggerSection.appendChild(intervalSliderContainer);
+              }
+              const rateModeLabel = document.createElement("label"); rateModeLabel.htmlFor = `edit-retrigger-ratemode-${node.id}`;
+              rateModeLabel.textContent = "Rate Mode:"; retriggerSection.appendChild(rateModeLabel);
+              const rateModeSelect = document.createElement("select"); rateModeSelect.id = `edit-retrigger-ratemode-${node.id}`;
+              ["constant", "accelerate", "decelerate", "random"].forEach(opt => {
+                const option = document.createElement("option"); option.value = opt; option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+                if ((node.audioParams.retriggerRateMode || "constant") === opt) option.selected = true;
+                rateModeSelect.appendChild(option);
+              });
+              rateModeSelect.addEventListener("change", (e) => {
+                selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.retriggerRateMode = e.target.value; });
+                identifyAndRouteAllGroups(); saveState();
+              });
+              retriggerSection.appendChild(rateModeSelect);
+            }
+            fragment.appendChild(retriggerSection);
+        }
+      }
+    } else if (firstElementData.type === "connection") {
+      const connection = findConnectionById(firstElementData.id);
+      if (connection) {
+        if (connection.type === "string_violin") {
+          const section = document.createElement("div"); section.classList.add("panel-section");
+          const params = connection.audioParams; const defaults = STRING_VIOLIN_DEFAULTS;
+          const currentVol = params?.volume ?? defaults.volume; const volVal = currentVol.toFixed(2);
+          const volSliderContainer = createSlider( `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol, 
+          () => { identifyAndRouteAllGroups(); saveState(); }, 
+          (e_input) => {
+              const newVol = parseFloat(e_input.target.value);
+              selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
+              e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+          });
+          section.appendChild(volSliderContainer);
+          const currentAttack = params?.attack ?? defaults.attack; const attackVal = currentAttack.toFixed(2);
+          const attackSliderContainer = createSlider( `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack, 
+          () => { identifyAndRouteAllGroups(); saveState(); }, 
+          (e_input) => {
+              const newVal = parseFloat(e_input.target.value);
+              selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
+              e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
+          });
+          section.appendChild(attackSliderContainer);
+          const currentRelease = params?.release ?? defaults.release; const releaseVal = currentRelease.toFixed(2);
+          const releaseSliderContainer = createSlider( `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease, 
+          () => { identifyAndRouteAllGroups(); saveState(); }, 
+          (e_input) => {
+              const newVal = parseFloat(e_input.target.value);
+              selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
+              e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
+          });
+          section.appendChild(releaseSliderContainer); fragment.appendChild(section);
+        } else if (connection.type === 'wavetrail') {
+          const section = document.createElement("div"); section.classList.add("panel-section");
+          const fileLabel = document.createElement("label"); fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
+          fileLabel.textContent = "Audio File:"; section.appendChild(fileLabel);
+          const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.id = `edit-wavetrail-file-${connection.id}`;
+          fileInput.accept = ".wav,.mp3,audio/*"; fileInput.style.marginBottom = '5px';
+          fileInput.addEventListener('change', (e) => handleWaveTrailFileInputChange(e, connection)); section.appendChild(fileInput);
+          const fileNameDisplay = document.createElement("small"); fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
+          fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || 'None selected'}`;
+          fileNameDisplay.style.display = 'block'; section.appendChild(fileNameDisplay);
+          if (connection.audioParams?.buffer) {
+              const bufferDuration = connection.audioParams.buffer.duration;
+              const currentOffset = connection.audioParams.startTimeOffset || 0;
+              const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+              const currentStartOffset = connection.audioParams.startTimeOffset || 0;
+              const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
+              const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
+              const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
+              const offsetLabel = document.createElement("label"); offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
+              offsetLabel.style.marginTop = '10px'; offsetLabel.textContent = `Start Offset (${currentOffset.toFixed(2)}s):`; section.appendChild(offsetLabel);
+              const offsetSlider = document.createElement("input"); offsetSlider.type = "range"; offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
+              offsetSlider.min = "0"; offsetSlider.max = bufferDuration.toFixed(3); offsetSlider.step = "0.01"; offsetSlider.value = currentOffset;
+              offsetSlider.title = "Scrub Start Time";
+              const offsetValueDisplay = document.createElement("span"); offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
+              offsetValueDisplay.textContent = `${currentOffset.toFixed(2)}s`; offsetValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+              section.appendChild(offsetSlider); section.appendChild(offsetValueDisplay);
+              const endOffsetLabel = document.createElement("label"); endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
+              endOffsetLabel.style.marginTop = '10px'; endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`; section.appendChild(endOffsetLabel);
+              const endOffsetSlider = document.createElement("input"); endOffsetSlider.type = "range"; endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
+              endOffsetSlider.min = currentStartOffset.toFixed(3); endOffsetSlider.max = bufferDuration.toFixed(3); endOffsetSlider.step = "0.01"; endOffsetSlider.value = currentEndOffset;
+              endOffsetSlider.title = "Scrub End Time";
+              const endOffsetValueDisplay = document.createElement("span"); endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
+              endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`; endOffsetValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+              section.appendChild(endOffsetSlider); section.appendChild(endOffsetValueDisplay);
+              offsetSlider.addEventListener('input', (e_input) => {
+                  const newOffset = parseFloat(e_input.target.value); const maxOffset = Math.max(0, bufferDuration - 0.05);
+                  const clampedOffset = Math.min(newOffset, maxOffset); const currentEndValue = parseFloat(endOffsetSlider.value);
+                  if (connection.audioParams.startTimeOffset !== clampedOffset) {
+                       connection.audioParams.startTimeOffset = clampedOffset;
+                       offsetLabel.textContent = `Start Offset (${clampedOffset.toFixed(2)}s):`; offsetValueDisplay.textContent = `${clampedOffset.toFixed(2)}s`;
+                       endOffsetSlider.min = (clampedOffset + 0.05).toFixed(3);
+                        if (currentEndValue < clampedOffset + 0.05) {
+                             const newEndValue = clampedOffset + 0.05; endOffsetSlider.value = newEndValue;
+                             connection.audioParams.endTimeOffset = (bufferDuration - newEndValue < 0.01) ? null : newEndValue;
+                             const displayValue = connection.audioParams.endTimeOffset ?? bufferDuration;
+                             endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`; endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+                        }
+                  }
+                   if (newOffset > maxOffset) { e_input.target.value = clampedOffset; }
+              });
+              offsetSlider.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
+              endOffsetSlider.addEventListener('input', (e_input) => {
+                  const newEndOffset = parseFloat(e_input.target.value); const minEndOffset = (connection.audioParams.startTimeOffset || 0) + 0.05;
+                  const clampedEndOffset = Math.max(minEndOffset, newEndOffset);
+                  const finalEndOffset = (bufferDuration - clampedEndOffset < 0.01) ? null : clampedEndOffset;
+                  if (connection.audioParams.endTimeOffset !== finalEndOffset) {
+                      connection.audioParams.endTimeOffset = finalEndOffset; const displayValue = finalEndOffset ?? bufferDuration;
+                      endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`; endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+                  }
+                   if (newEndOffset < minEndOffset) { e_input.target.value = minEndOffset; }
+              });
+              endOffsetSlider.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
+              const grainDurLabel = document.createElement("label"); grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
+              grainDurLabel.style.marginTop = '15px'; grainDurLabel.textContent = `Grain Duration (${(currentGrainDuration * 1000).toFixed(0)}ms):`; section.appendChild(grainDurLabel);
+              const grainDurSlider = document.createElement("input"); grainDurSlider.type = "range"; grainDurSlider.id = `edit-wavetrail-graindur-${connection.id}`;
+              grainDurSlider.min = "0.01"; grainDurSlider.max = "0.3"; grainDurSlider.step = "0.005";
+              grainDurSlider.value = currentGrainDuration; grainDurSlider.title = "Grain Duration";
+              const grainDurValueDisplay = document.createElement("span"); grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`;
+              grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`; grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+              section.appendChild(grainDurSlider); section.appendChild(grainDurValueDisplay);
+              let grainOverlapSliderRefForDur = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
+              grainDurSlider.addEventListener('input', (e_input) => {
+                  const newDur = parseFloat(e_input.target.value); connection.audioParams.grainDuration = newDur;
+                  grainDurLabel.textContent = `Grain Duration (${(newDur * 1000).toFixed(0)}ms):`; grainDurValueDisplay.textContent = `${(newDur * 1000).toFixed(0)}ms`;
+                  grainOverlapSliderRefForDur = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
+                  if (grainOverlapSliderRefForDur) {
+                      const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3); grainOverlapSliderRefForDur.max = newMaxOverlap;
+                      const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
+                      const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
+                      if (parseFloat(grainOverlapSliderRefForDur.value) > parseFloat(newMaxOverlap)) {
+                           grainOverlapSliderRefForDur.value = newMaxOverlap; connection.audioParams.grainOverlap = parseFloat(newMaxOverlap);
+                            if(overlapValueDisplay) overlapValueDisplay.textContent = `${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms`;
+                            if(overlapLabel) overlapLabel.textContent = `Grain Overlap (${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms):`;
+                      }
+                  }
+              });
+              grainDurSlider.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
+              const grainOverlapLabel = document.createElement("label"); grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
+              grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`; section.appendChild(grainOverlapLabel);
+              const grainOverlapSliderElement = document.createElement("input"); grainOverlapSliderElement.type = "range";
+              grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`; grainOverlapSliderElement.min = "0";
+              grainOverlapSliderElement.max = (currentGrainDuration - 0.005).toFixed(3); grainOverlapSliderElement.step = "0.005";
+              grainOverlapSliderElement.value = Math.min(currentGrainOverlap, parseFloat(grainOverlapSliderElement.max));
+              grainOverlapSliderElement.title = "Grain Overlap";
+              const grainOverlapValueDisplay = document.createElement("span"); grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`;
+              grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`; grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+              section.appendChild(grainOverlapSliderElement); section.appendChild(grainOverlapValueDisplay);
+              grainOverlapSliderElement.addEventListener('input', (e_input) => {
+                  const newOverlap = parseFloat(e_input.target.value); const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
+                  const clampedOverlap = Math.min(newOverlap, maxOverlap); connection.audioParams.grainOverlap = clampedOverlap;
+                  grainOverlapLabel.textContent = `Grain Overlap (${(clampedOverlap * 1000).toFixed(0)}ms):`; grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
+                   if (newOverlap > maxOverlap) { e_input.target.value = clampedOverlap; }
+              });
+              grainOverlapSliderElement.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
+              const rateLabel = document.createElement("label"); rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
+              rateLabel.style.marginTop = '15px'; rateLabel.textContent = `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`; section.appendChild(rateLabel);
+              const rateSlider = document.createElement("input"); rateSlider.type = "range"; rateSlider.id = `edit-wavetrail-rate-${connection.id}`;
+              rateSlider.min = "0.25"; rateSlider.max = "4.0"; rateSlider.step = "0.01";
+              rateSlider.value = currentPlaybackRate; rateSlider.title = "Playback Rate / Pitch";
+              const rateValueDisplay = document.createElement("span"); rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`;
+              rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`; rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+              section.appendChild(rateSlider); section.appendChild(rateValueDisplay);
+              rateSlider.addEventListener('input', (e_input) => {
+                  const newRate = parseFloat(e_input.target.value); connection.audioParams.playbackRate = newRate;
+                  rateLabel.textContent = `Playback Rate (${newRate.toFixed(2)}x):`; rateValueDisplay.textContent = `${newRate.toFixed(2)}x`;
+              });
+              rateSlider.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
+              const resetButton = document.createElement('button'); resetButton.textContent = 'Reset Rate';
+              resetButton.style.marginLeft = '10px'; resetButton.style.padding = '2px 6px'; resetButton.style.fontSize = '0.8em';
+              resetButton.type = 'button';
+              resetButton.addEventListener('click', () => {
+                    connection.audioParams.playbackRate = 1.0; rateSlider.value = 1.0;
+                    rateLabel.textContent = `Playback Rate (1.00x):`; rateValueDisplay.textContent = `1.00x`; 
+                    identifyAndRouteAllGroups(); saveState();
+               });
+              section.appendChild(resetButton);
+          }
+          fragment.appendChild(section);
+        }
+      }
+    }
+  } else {
+    const multiInfo = document.createElement("small");
+    multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
+    fragment.appendChild(multiInfo);
+  }
+
+  editPanelContent.appendChild(fragment);
+
+  if (hamburgerMenuPanel && hamburgerMenuPanel.classList.contains("hidden") && currentTool === 'edit' && selectedElements.size > 0) {
+    hamburgerMenuPanel.classList.remove("hidden");
+    if (hamburgerBtn) hamburgerBtn.classList.add("active");
+  }
+  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
+    sideToolbar.classList.add("hidden");
+    const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
+    addBrushButtons.forEach(btn => btn.classList.remove("active"));
+    if (brushBtn) brushBtn.classList.remove("active");
+  }
+}
+
 function populateSideToolbar(contentType, title) {
+  if (!sideToolbarContent || !sideToolbarTitle || !sideToolbar) return; 
+
   sideToolbarContent.innerHTML = "";
   sideToolbarTitle.textContent = title || "Element Options";
 
@@ -7841,28 +8457,35 @@ function populateSideToolbar(contentType, title) {
 
   let targetPresetArray = [];
   let showNoteSelector = false;
+  let currentSelectionKey = waveformToAdd; 
+  if (contentType === "pulsarTypes" || contentType === "drumElements") {
+    currentSelectionKey = nodeTypeToAdd;
+  }
 
-  if (contentType === "analogWaveforms") {
-    sideToolbarTitle.textContent = title || "Analog Synths";
-    targetPresetArray = analogWaveformPresets;
-    showNoteSelector = true;
-    if (nodeTypeToAdd === "sound" && (waveformToAdd === null || !analogWaveformPresets.some(w => w.type === waveformToAdd))) {
-        if (analogWaveformPresets.length > 0) waveformToAdd = analogWaveformPresets[0].type;
-    }
-  } else if (contentType === "fmSynths") {
-    sideToolbarTitle.textContent = title || "FM Synths";
-    targetPresetArray = fmSynthPresets;
-    showNoteSelector = true;
-    if (nodeTypeToAdd === "sound" && (waveformToAdd === null || !fmSynthPresets.some(w => w.type === waveformToAdd))) {
-        if (fmSynthPresets.length > 0) waveformToAdd = fmSynthPresets[0].type;
-    }
-  } else if (contentType === "samplers") {
-    sideToolbarTitle.textContent = title || "Samplers";
-    if (typeof SAMPLER_DEFINITIONS !== 'undefined' && SAMPLER_DEFINITIONS.length > 0) {
+
+  switch (contentType) {
+    case "analogWaveforms":
+      targetPresetArray = analogWaveformPresets;
+      showNoteSelector = true;
+      if (nodeTypeToAdd !== "sound" || !analogWaveformPresets.some(w => w.type === waveformToAdd)) {
+        waveformToAdd = analogWaveformPresets.length > 0 ? analogWaveformPresets[0].type : null;
+        currentSelectionKey = waveformToAdd;
+      }
+      break;
+    case "fmSynths":
+      targetPresetArray = fmSynthPresets;
+      showNoteSelector = true;
+      if (nodeTypeToAdd !== "sound" || !fmSynthPresets.some(w => w.type === waveformToAdd)) {
+        waveformToAdd = fmSynthPresets.length > 0 ? fmSynthPresets[0].type : null;
+        currentSelectionKey = waveformToAdd;
+      }
+      break;
+    case "samplers":
+      if (typeof SAMPLER_DEFINITIONS !== 'undefined' && SAMPLER_DEFINITIONS.length > 0) {
         samplerWaveformTypes.forEach((sampler) => {
             const button = document.createElement("button");
             button.classList.add("waveform-button", "sampler-button");
-            button.dataset.waveform = sampler.type;
+            button.dataset.type = sampler.type; 
             button.innerHTML = `<span class="type-icon">${sampler.icon}</span>${sampler.label}`;
             button.disabled = sampler.loadFailed;
             if (sampler.loadFailed) {
@@ -7879,42 +8502,47 @@ function populateSideToolbar(contentType, title) {
         });
         if (nodeTypeToAdd === "sound" && (waveformToAdd === null || !samplerWaveformTypes.some(w => w.type === waveformToAdd && !w.loadFailed))) {
             const firstAvailableSampler = samplerWaveformTypes.find(s => !s.loadFailed);
-            if (firstAvailableSampler) waveformToAdd = firstAvailableSampler.type;
+            if (firstAvailableSampler) {
+                 waveformToAdd = firstAvailableSampler.type;
+                 currentSelectionKey = waveformToAdd;
+            }
         }
-    } else {
+      } else {
          const errorMsg = document.createElement('p');
          errorMsg.textContent = (typeof SAMPLER_DEFINITIONS !== 'undefined') ? "No samplers defined." : "Error: Sampler definitions not loaded.";
          errorMsg.style.opacity = '0.7';
          groupDiv.appendChild(errorMsg);
-    }
-    showNoteSelector = true;
-  } else if (contentType === "pulsarTypes") {
-    sideToolbarTitle.textContent = title || "Pulsars";
-    targetPresetArray = pulsarTypes;
-    let currentPulsarTypeValid = pulsarTypes.some(p => p.type === nodeTypeToAdd);
-    if (!currentPulsarTypeValid || (nodeTypeToAdd && !pulsarTypes.find(p=>p.type === nodeTypeToAdd))) {
-        if(pulsarTypes.length > 0) nodeTypeToAdd = pulsarTypes[0].type;
-    }
-  } else if (contentType === "drumElements") {
-    sideToolbarTitle.textContent = title || "Drum Elements";
-    targetPresetArray = drumElementTypes;
-    let currentDrumTypeValid = drumElementTypes.some(d => d.type === nodeTypeToAdd);
-     if (!currentDrumTypeValid || (nodeTypeToAdd && !drumElementTypes.find(d=>d.type === nodeTypeToAdd))) {
-        if (drumElementTypes.length > 0) nodeTypeToAdd = drumElementTypes[0].type;
-    }
-  } else if (contentType === "waveforms") {
-    sideToolbarTitle.textContent = title || "Nebula Waveforms";
-    const nebulaWaveforms = [
-        { type: "sine", label: "Sine", icon: "○" },
-        { type: "square", label: "Square", icon: "□" },
-        { type: "sawtooth", label: "Saw", icon: "📈" },
-        { type: "triangle", label: "Triangle", icon: "△" }
-    ];
-    targetPresetArray = nebulaWaveforms;
-    showNoteSelector = true;
-    if (nodeTypeToAdd === "nebula" && (waveformToAdd === null || !nebulaWaveforms.some(w => w.type === waveformToAdd))) {
-        waveformToAdd = nebulaWaveforms[2].type; 
-    }
+      }
+      showNoteSelector = true;
+      break;
+    case "pulsarTypes":
+      targetPresetArray = pulsarTypes;
+      if (!pulsarTypes.some(p => p.type === nodeTypeToAdd)) {
+        nodeTypeToAdd = pulsarTypes.length > 0 ? pulsarTypes[0].type : null;
+        currentSelectionKey = nodeTypeToAdd;
+      }
+      break;
+    case "drumElements":
+      targetPresetArray = drumElementTypes;
+      if (!drumElementTypes.some(d => d.type === nodeTypeToAdd)) {
+        nodeTypeToAdd = drumElementTypes.length > 0 ? drumElementTypes[0].type : null;
+        currentSelectionKey = nodeTypeToAdd;
+      }
+      break;
+    case "waveforms": 
+      const nebulaWaveforms = [
+          { type: "sine", label: "Sine", icon: "○" },
+          { type: "square", label: "Square", icon: "□" },
+          { type: "sawtooth", label: "Saw", icon: "📈" },
+          { type: "triangle", label: "Triangle", icon: "△" }
+      ];
+      targetPresetArray = nebulaWaveforms;
+      showNoteSelector = true; 
+      if (nodeTypeToAdd !== "nebula" || !nebulaWaveforms.some(w => w.type === waveformToAdd)) {
+        waveformToAdd = nebulaWaveforms.length > 0 ? nebulaWaveforms[2].type : null; 
+        currentSelectionKey = waveformToAdd;
+      }
+      break;
   }
 
   if (targetPresetArray.length > 0) {
@@ -7931,17 +8559,13 @@ function populateSideToolbar(contentType, title) {
           button.dataset.type = item.type;
           button.innerHTML = `<span class="type-icon">${item.icon || ""}</span>${item.label}`;
 
-          if ((contentType === "pulsarTypes" || contentType === "drumElements") && nodeTypeToAdd === item.type) {
-              button.classList.add("selected");
-          } else if ((contentType === "analogWaveforms" || contentType === "fmSynths") && nodeTypeToAdd === "sound" && waveformToAdd === item.type) {
-              button.classList.add("selected");
-          } else if (contentType === "waveforms" && nodeTypeToAdd === "nebula" && waveformToAdd === item.type) {
+          if (item.type === currentSelectionKey) {
               button.classList.add("selected");
           }
 
           if (contentType === "pulsarTypes" || contentType === "drumElements") {
               button.addEventListener("click", () => handleElementTypeSelect(button, item.type));
-          } else {
+          } else { 
               button.addEventListener("click", () => handleWaveformSelect(button, item.type));
           }
           groupDiv.appendChild(button);
@@ -8057,7 +8681,7 @@ if (tapeLoopRecordBtn) {
         if (tapeLoopRecordBtn.dataset.isArmed === 'true') {
             console.log("DEBUG: Tape Looper was Armed. Annuleer arming nu.");
             tapeLoopRecordBtn.dataset.isArmed = 'false';
-            tapeLoopRecordBtnClickable = true; // Meteen weer klikbaar maken
+            tapeLoopRecordBtnClickable = true; 
             scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startRec');
             
             if (tapeLoopInputGate) {
@@ -8632,6 +9256,315 @@ function togglePlayPause() {
   console.log("TOGGLEPLAYPAUSE: Einde functie. isPlaying:", isPlaying); 
 }
 
+function recalculateOrbitoneArrays(node, selectedArray) {
+  selectedArray.forEach(elData => {
+      const n = findNodeById(elData.id);
+      if (n && n.audioParams && n.type === 'sound' && n.audioParams.orbitonesEnabled && n.audioParams.orbitoneCount > 0) {
+          const count = n.audioParams.orbitoneCount;
+          const intervalBase = n.audioParams.orbitoneIntervalBase || 2;
+          const intervalStep = n.audioParams.orbitoneIntervalStep || 2;
+          const timingBase = n.audioParams.orbitoneTimingOffsetBase || 0;
+          const timingStep = n.audioParams.orbitoneTimingOffsetStep || 50;
+
+          n.audioParams.orbitoneIntervals = [];
+          n.audioParams.orbitoneTimingOffsets = [];
+
+          for (let i = 0; i < count; i++) {
+              n.audioParams.orbitoneIntervals.push(intervalBase + (i * intervalStep));
+              n.audioParams.orbitoneTimingOffsets.push(timingBase + (i * timingStep));
+          }
+          stopNodeAudio(n);
+          n.audioNodes = createAudioNodesForNode(n);
+          if (n.audioNodes) updateNodeAudioParams(n);
+      }
+  });
+}
+
+function getOrbitoneFrequencies(baseScaleIndex, orbitoneCount, orbitoneIntervals, orbitoneSpread, scaleDef, mainNodePitch) {
+  const frequencies = [mainNodePitch]; // Start met de frequentie van de hoofdnoot
+  const numNotesInScale = scaleDef.notes.length;
+
+  if (orbitoneCount <= 0) {
+      return [mainNodePitch];
+  }
+
+  for (let i = 0; i < orbitoneCount; i++) { 
+      let currentIntervalOffsetInScaleSteps = orbitoneIntervals[i] !== undefined ? orbitoneIntervals[i] : ((i + 1) * 2);
+      let noteOctaveOffsetFromSpread = 0;
+      if (orbitoneSpread > 0) {
+          noteOctaveOffsetFromSpread = orbitoneSpread; 
+      }
+      const targetScaleIndexForOrbitone = baseScaleIndex + currentIntervalOffsetInScaleSteps;
+      const freq = getFrequency(scaleDef, targetScaleIndexForOrbitone, noteOctaveOffsetFromSpread);
+      
+      if (!isNaN(freq) && freq > 0) {
+          frequencies.push(freq);
+      } else {
+          const fallbackSemitoneOffset = (i + 1) * 3; // bijv. kleine terts hoger als fallback
+          frequencies.push(mainNodePitch * Math.pow(2, fallbackSemitoneOffset / 12));
+      }
+  }
+  return frequencies.slice(0, 1 + orbitoneCount); // Hoofdnoot + aantal extra orbitones
+}
+
+function applyOrbitoneVoicingFromPhase(node) {
+  if (!node || !node.audioParams || node.type !== 'sound') return;
+  const phase = node.audioParams.orbitoneVoicingPhase || 0;
+  const count = node.audioParams.orbitoneCount || 0;
+  let intervals = []; 
+  let calculatedSpread = 0; 
+
+  if (count > 0) {
+      if (phase <= 20) { 
+          intervals = count > 0 ? [2] : []; 
+          if (count > 1) intervals.push(3); 
+          if (count > 2) intervals.push(1); 
+          if (count > 3) intervals.push(4);
+          if (count > 4) intervals.push(5);
+          calculatedSpread = 0;
+      } else if (phase <= 40) { 
+          intervals = count > 0 ? [4] : []; 
+          if (count > 1) intervals.push(count > 2 ? 3 : 2); 
+          if (count > 2) intervals.push(1);
+          if (count > 3) intervals.push(5);
+          if (count > 4) intervals.push(2);
+          calculatedSpread = 0;
+      } else if (phase <= 60) { 
+          intervals = count > 0 ? [2] : []; 
+          if (count > 1) intervals.push(4); 
+          if (count > 2) intervals.push(6); 
+          if (count > 3) intervals.push(1);
+          if (count > 4) intervals.push(3);
+          calculatedSpread = 0;
+      } else if (phase <= 80) { 
+          intervals = count > 0 ? [0] : []; 
+          if (count > 1) intervals.push(2); 
+          if (count > 2) intervals.push(-2);
+          if (count > 3) intervals.push(4);
+          if (count > 4) intervals.push(-4);
+          calculatedSpread = 1; 
+      } else { 
+          intervals = count > 0 ? [1 + Math.floor(Math.random()*2)] : [];
+          if (count > 1) intervals.push(4 + Math.floor(Math.random()*3-1));
+          if (count > 2) intervals.push(-1 + Math.floor(Math.random()*3-1));
+          if (count > 3) intervals.push(5 + Math.floor(Math.random()*2-1));
+          if (count > 4) intervals.push(-3 + Math.floor(Math.random()*3-1));
+          calculatedSpread = Math.random() > 0.4 ? 1 : 0;
+      }
+  }
+  node.audioParams.orbitoneIntervals = intervals.slice(0, count);
+  node.audioParams.orbitoneSpread = calculatedSpread;
+}
+
+function applyOrbitoneTimingFromPhase(node) {
+  if (!node || !node.audioParams || node.type !== 'sound') return;
+  const phase = node.audioParams.orbitoneTimingPhase || 0;
+  const count = node.audioParams.orbitoneCount || 0;
+  let offsets = [];
+
+  if (count > 0) {
+      if (phase <= 10) { 
+          for (let i = 0; i < count; i++) offsets.push(0);
+      } else if (phase <= 30) { 
+          for (let i = 0; i < count; i++) offsets.push(Math.floor(Math.random() * 25) + i * 5);
+      } else if (phase <= 50) { 
+          for (let i = 0; i < count; i++) offsets.push((i) * 30 + Math.floor(Math.random() * 20));
+      } else if (phase <= 70) { 
+          for (let i = 0; i < count; i++) offsets.push((i) * 80 + Math.floor(Math.random() * 40));
+      } else if (phase <= 90) { 
+          for (let i = 0; i < count; i++) offsets.push((i) * 150 + Math.floor(Math.random() * 50));
+      } else { 
+          for (let i = 0; i < count; i++) offsets.push(Math.floor(Math.random() * 200) + i * 15);
+      }
+  }
+  node.audioParams.orbitoneTimingOffsets = offsets.slice(0, count);
+}
+
+function addNode(x, y, type, subtype = null) {
+  if (!isAudioReady) return null;
+  let currentEvent = window.event;
+  let applySnap = isSnapEnabled && !(currentEvent && currentEvent.shiftKey);
+  let finalPos = applySnap ? snapToGrid(x, y) : { x: x, y: y };
+  const isStartNodeType = isPulsarType(type);
+  let nodeTypeVisual = type;
+  let initialScaleIndex = 0;
+  let initialPitch = 0;
+  let nodeSubtypeForAudioParams = subtype;
+  let initialBaseHue = null;
+  let visualStyle = null;
+  let audioDetails = {};
+  let selectedPreset = null;
+
+  if (type === "sound") {
+    selectedPreset = analogWaveformPresets.find(p => p.type === subtype) || fmSynthPresets.find(p => p.type === subtype);
+  } else if (isPulsarType(type)) {
+    nodeSubtypeForAudioParams = type;
+    selectedPreset = pulsarTypes.find(p => p.type === type);
+  }
+
+  if (selectedPreset && selectedPreset.details) {
+    visualStyle = selectedPreset.details.visualStyle || null;
+    Object.keys(selectedPreset.details).forEach(key => {
+        if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
+    });
+  }
+
+  if (type === "sound") {
+    if (noteIndexToAdd !== -1 && noteIndexToAdd !== null && noteIndexToAdd >= MIN_SCALE_INDEX && noteIndexToAdd <= MAX_SCALE_INDEX) {
+      initialScaleIndex = noteIndexToAdd;
+    } else {
+      initialScaleIndex = Math.floor(Math.random() * currentScale.notes.length * 2);
+    }
+    initialScaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, initialScaleIndex));
+    initialPitch = getFrequency(currentScale, initialScaleIndex);
+    if (isNaN(initialPitch) || initialPitch <= 0) { 
+        initialScaleIndex = 0; 
+        initialPitch = getFrequency(currentScale, 0); 
+        if (isNaN(initialPitch) || initialPitch <= 0) initialPitch = 261.63;
+    }
+
+    if (!nodeSubtypeForAudioParams) {
+      nodeSubtypeForAudioParams = 'sine';
+      selectedPreset = analogWaveformPresets.find(p => p.type === 'sine');
+      if (selectedPreset && selectedPreset.details) {
+          visualStyle = selectedPreset.details.visualStyle || 'analog_sine';
+          audioDetails = {};
+          Object.keys(selectedPreset.details).forEach(key => {
+              if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
+          });
+      }
+    } else if (nodeSubtypeForAudioParams.startsWith('sampler_')) {
+      const samplerId = nodeSubtypeForAudioParams.replace('sampler_', '');
+      const definition = typeof SAMPLER_DEFINITIONS !== 'undefined' ? SAMPLER_DEFINITIONS.find(s => s.id === samplerId) : null;
+      if (!definition || definition.loadFailed) {
+        nodeSubtypeForAudioParams = 'sine';
+        selectedPreset = analogWaveformPresets.find(p => p.type === 'sine');
+        if (selectedPreset && selectedPreset.details) {
+            visualStyle = selectedPreset.details.visualStyle || 'analog_sine';
+            audioDetails = {};
+            Object.keys(selectedPreset.details).forEach(key => {
+              if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
+            });
+        }
+      } else {
+        visualStyle = visualStyle || `sampler_${samplerId}`;
+      }
+    }
+  } else if (type === "nebula") {
+    initialBaseHue = Math.random() * 360;
+    nodeSubtypeForAudioParams = waveformToAdd || audioDetails.osc1Type || "sawtooth";
+    visualStyle = visualStyle || "nebula_default";
+    initialPitch = getFrequency(currentScale, initialScaleIndex);
+    if (isNaN(initialPitch) || initialPitch <= 0) initialPitch = getFrequency(scales.major_pentatonic, 0);
+  } else if (type === PORTAL_NEBULA_TYPE) {
+    initialBaseHue = PORTAL_NEBULA_DEFAULTS.baseColorHue + (Math.random() - 0.5) * 40;
+    initialPitch = PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
+    nodeSubtypeForAudioParams = null;
+    visualStyle = visualStyle || "portal_default";
+    audioDetails.actualOscillatorType = "triangle";
+  }
+
+  const drumDefaults = isDrumType(type) ? DRUM_ELEMENT_DEFAULTS[type] : {};
+  if (isDrumType(type) && !visualStyle) visualStyle = type;
+
+  const randomSize = (isStartNodeType || isDrumType(type) || type === PORTAL_NEBULA_TYPE)
+    ? MIN_NODE_SIZE + Math.random() * (MAX_NODE_SIZE - MIN_NODE_SIZE) * 0.7
+    : (type === "relay" || type === "reflector" || type === "switch" ? 0.7 : 1.0);
+  const starPoints = isStartNodeType ? 6 : 5;
+  let defaultIsEnabled = true;
+  const defaultVolumeSteps = [0.8, 0.65, 0.5];
+  const numDefaultSteps = defaultVolumeSteps.length;
+  const defaultOrbitoneCount = 0; // Default geen *extra* orbitones
+
+  const newNode = {
+    id: nodeIdCounter++, x: finalPos.x, y: finalPos.y, size: randomSize, radius: NODE_RADIUS_BASE,
+    type: nodeTypeVisual, baseHue: initialBaseHue, connections: new Set(), isSelected: false, isInConstellation: false,
+    audioParams: {
+      waveform: nodeSubtypeForAudioParams, visualStyle: visualStyle, pitch: initialPitch, scaleIndex: initialScaleIndex,
+      volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0),
+      reverbSend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_REVERB_SEND * 1.5) : DEFAULT_REVERB_SEND,
+      delaySend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_DELAY_SEND * 1.2) : DEFAULT_DELAY_SEND,
+      lowPassFreq: MAX_FILTER_FREQ, ...audioDetails,
+      triggerInterval: audioDetails.triggerInterval || DEFAULT_TRIGGER_INTERVAL,
+      syncSubdivisionIndex: audioDetails.syncSubdivisionIndex || DEFAULT_SUBDIVISION_INDEX, 
+      probability: audioDetails.probability || DEFAULT_PROBABILITY,
+      pulseIntensity: audioDetails.pulseIntensity || DEFAULT_PULSE_INTENSITY,
+      volLfoRate: audioDetails.volLfoRate || (0.1 + Math.random() * 0.2),
+      volLfoDepth: audioDetails.volLfoDepth || 0,
+      detune: audioDetails.detune || 7, lfoDepthFactor: audioDetails.lfoDepthFactor || 1,
+      baseFreq: audioDetails.baseFreq || drumDefaults?.baseFreq,
+      decay: audioDetails.decay || drumDefaults?.decay,
+      noiseDecay: audioDetails.noiseDecay || drumDefaults?.noiseDecay,
+      pitchShiftIndex: type === "pitchShift" ? (audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX) : 0,
+      pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX] : 0,
+      pitchShiftAlternating: type === "pitchShift" ? (audioDetails.pitchShiftAlternating || false) : false,
+      pitchShiftDirection: type === "pitchShift" ? (audioDetails.pitchShiftDirection || 1) : 1,
+      gateModeIndex: type === "gate" ? (audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX) : 0,
+      gateCounter: 0, lastRandomGateResult: true,
+      midiOutEnabled: false, midiChannel: 1, midiNote: 60,
+      osc1Type: nodeSubtypeForAudioParams,
+      
+      orbitonesEnabled: false,
+      orbitoneCount: defaultOrbitoneCount, 
+      orbitoneVoicingPhase: 0, 
+      orbitoneTimingPhase: 0,        
+      orbitoneMix: 0.5,    
+      orbitoneIntervals: [], 
+      orbitoneTimingOffsets: [],
+      orbitoneSpread: 0,
+
+      retriggerEnabled: false, retriggerVolumeSteps: [...defaultVolumeSteps],
+      retriggerPitchSteps: Array(numDefaultSteps).fill(0), retriggerFilterSteps: Array(numDefaultSteps).fill(0),
+      retriggerMuteSteps: Array(numDefaultSteps).fill(false), retriggerIntervalMs: 100,
+      retriggerRateMode: "constant", retriggerSyncSubdivisionIndex: DEFAULT_SUBDIVISION_INDEX, 
+      ignoreGlobalSync: false, 
+    },
+    color: null, audioNodes: null, isStartNode: isStartNodeType, isTriggered: false, lastTriggerPulseId: -1, animationState: 0,
+    isEnabled: defaultIsEnabled, starPoints: starPoints,
+    currentAngle: (type === "gate" || (type === "sound" && nodeSubtypeForAudioParams?.startsWith("sampler_"))) ? Math.random() * Math.PI * 2 : 0,
+    innerAngle: 0, pulsePhase: type === "nebula" || type === PORTAL_NEBULA_TYPE ? Math.random() * Math.PI * 2 : 0,
+    primaryInputConnectionId: type === "switch" ? null : undefined, lastTriggerTime: -1, nextSyncTriggerTime: 0,
+    activeRetriggers: [], currentRetriggerVisualIndex: -1,
+  };
+  
+  applyOrbitoneVoicingFromPhase(newNode);
+  applyOrbitoneTimingFromPhase(newNode);
+
+  if (newNode.type === "pulsar_rocket") {
+    newNode.audioParams.rocketDirectionAngle = 0; newNode.audioParams.rocketSpeed = ROCKET_DEFAULT_SPEED;
+    newNode.audioParams.rocketRange = ROCKET_DEFAULT_RANGE; newNode.audioParams.rocketGravity = ROCKET_DEFAULT_GRAVITY;
+  }
+
+  if (isStartNodeType && newNode.isEnabled && audioContext) {
+    const nowTime = audioContext.currentTime; const interval = newNode.audioParams.triggerInterval;
+    if (newNode.type === 'pulsar_random_particles') {
+      newNode.nextRandomTriggerTime = nowTime + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+    } else if (newNode.type !== 'pulsar_triggerable' && newNode.type !== 'pulsar_manual') {
+      if (isGlobalSyncEnabled && !newNode.audioParams.ignoreGlobalSync) {
+        const secondsPerBeat = 60.0 / (globalBPM || 120);
+        const subdivIndex = newNode.audioParams.syncSubdivisionIndex;
+        if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
+          const subdiv = subdivisionOptions[subdivIndex];
+          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
+            const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+            if (nodeIntervalSeconds > 0) {
+              newNode.nextSyncTriggerTime = Math.ceil(nowTime / nodeIntervalSeconds) * nodeIntervalSeconds;
+              if (newNode.nextSyncTriggerTime <= nowTime + 0.01) newNode.nextSyncTriggerTime += nodeIntervalSeconds;
+            }
+          }
+        }
+      } else {
+        newNode.lastTriggerTime = nowTime - interval * (0.8 + Math.random() * 0.19);
+      }
+    }
+  }
+  if (isAudioReady) {
+    newNode.audioNodes = createAudioNodesForNode(newNode);
+    if (newNode.audioNodes) updateNodeAudioParams(newNode);
+  }
+  nodes.push(newNode); saveState(); identifyAndRouteAllGroups(); return newNode;
+}
+
 function resetStartNodeTimers() {
   const nowTime = audioContext ? audioContext.currentTime : 0
   nodes.forEach((node) => {
@@ -8643,6 +9576,22 @@ function resetStartNodeTimers() {
     }
   })
   lastBeatTime = 0
+}
+
+function triggerLoad() {
+  
+  let dynamicLoadInput = document.getElementById("dynamicLoadStateInput");
+  if (!dynamicLoadInput) {
+    dynamicLoadInput = document.createElement("input");
+    dynamicLoadInput.type = "file";
+    dynamicLoadInput.id = "dynamicLoadStateInput"; 
+    dynamicLoadInput.accept = ".json";
+    dynamicLoadInput.style.display = "none"; 
+    dynamicLoadInput.addEventListener("change", handleFileLoad); 
+    document.body.appendChild(dynamicLoadInput); 
+  }
+  dynamicLoadInput.value = null; 
+  dynamicLoadInput.click(); 
 }
 
 hamburgerBtn.addEventListener("click", () => {
@@ -8841,16 +9790,12 @@ toggleInfoTextBtn.addEventListener("click", () => {
 
 function setupAddTool(buttonElement, type, requiresSubmenu = false, submenuType = null, submenuTitle = "") {
   setActiveTool("add");
-  console.log(`%c[setupAddTool] AFTER setActiveTool("add"): nodeTypeToAdd = ${type}, waveformToAdd = ${waveformToAdd}`, 'color: purple;'); 
-
   nodeTypeToAdd = type;
 
   if (currentTool !== "add" || nodeTypeToAdd !== type) {
       waveformToAdd = null;
       noteIndexToAdd = -1;
   }
-  console.log(`%c[setupAddTool] BEFORE populateSideToolbar: nodeTypeToAdd = ${nodeTypeToAdd}, waveformToAdd = ${waveformToAdd}`, 'color: purple;'); 
-
 
   const addButtons = toolbar.querySelectorAll("#toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
   addButtons.forEach((btn) => {
@@ -8858,12 +9803,11 @@ function setupAddTool(buttonElement, type, requiresSubmenu = false, submenuType 
   });
   if (buttonElement) buttonElement.classList.add("active");
 
-
   if (requiresSubmenu && submenuType) {
-      populateSideToolbar(submenuType, submenuTitle);
+      populateSideToolbar(submenuType, submenuTitle); 
   } else {
       resetSideToolbars();
-      sideToolbar.classList.add("hidden");
+      if (sideToolbar) sideToolbar.classList.add("hidden"); 
       if (type === PORTAL_NEBULA_TYPE) {
           waveformToAdd = null;
       }
@@ -9152,177 +10096,163 @@ function handleContextMenu(event) {
 canvas.addEventListener('contextmenu', handleContextMenu);
 
 function animationLoop() {
-    animationFrameId = requestAnimationFrame(animationLoop);
+  animationFrameId = requestAnimationFrame(animationLoop);
 
-    if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
-        return;
-    }
+  if (!isAudioReady || !isPlaying || !audioContext || audioContext.state !== 'running') {
+      return;
+  }
 
-    processScheduledTapeEvents(); // <--- DEZE REGEL IS CRUCIAAL EN WAS WAARSCHIJNLIJK WEG
+  processScheduledTapeEvents();
 
-    const now = audioContext.currentTime;
-    const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
-    const secondsPerBeat = 60.0 / (globalBPM || 120);
+  const now = audioContext.currentTime;
+  const deltaTime = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+  const secondsPerBeat = 60.0 / (globalBPM || 120);
 
-    if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
-        const epsilon = 0.01;
-        if (now >= lastBeatTime + secondsPerBeat - epsilon) {
-            if (!beatIndicatorElement.classList.contains("active")) {
-                beatIndicatorElement.classList.add("active");
-                setTimeout(() => {
-                    if (beatIndicatorElement) beatIndicatorElement.classList.remove("active");
-                }, 50);
-            }
-            lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
-        }
-    } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
-        beatIndicatorElement.classList.remove("active");
-        lastBeatTime = 0;
-    }
+  if (isGlobalSyncEnabled && beatIndicatorElement && secondsPerBeat > 0) {
+      const epsilon = 0.01;
+      if (now >= lastBeatTime + secondsPerBeat - epsilon) {
+          if (!beatIndicatorElement.classList.contains("active")) {
+              beatIndicatorElement.classList.add("active");
+              setTimeout(() => {
+                  if (beatIndicatorElement) beatIndicatorElement.classList.remove("active");
+              }, 50);
+          }
+          lastBeatTime = Math.floor(now / secondsPerBeat) * secondsPerBeat;
+      }
+  } else if (beatIndicatorElement && beatIndicatorElement.classList.contains("active")) {
+      beatIndicatorElement.classList.remove("active");
+      lastBeatTime = 0;
+  }
 
-    try {
-        nodes.forEach((node) => {
-            if (node.isStartNode && node.isEnabled &&
-                (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles" || node.type === "pulsar_rocket")) {
+  try {
+      nodes.forEach((node) => {
+          if (node.isStartNode && node.isEnabled && node.audioParams &&
+              (node.type === "pulsar_standard" || node.type === "pulsar_random_volume" || node.type === "pulsar_random_particles" || node.type === "pulsar_rocket")) {
 
-                let shouldPulse = false;
-                let pulseData = {};
+              let shouldPulse = false;
+              let pulseData = {};
 
-                if (node.type === "pulsar_random_particles") {
-                    if (node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) {
-                        node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                    }
-                    if (now >= node.nextRandomTriggerTime) {
-                        shouldPulse = true;
-                        node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
-                    }
-                } else {
-                    if (isGlobalSyncEnabled) {
-                        const index = node.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-                        if (index >= 0 && index < subdivisionOptions.length) {
-                            const subdiv = subdivisionOptions[index];
-                            if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
-                                const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                                if (nodeIntervalSeconds > 0) {
-                                    if (node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
-                                        const currentBeat = now / secondsPerBeat;
-                                        const currentSubdivision = Math.floor(currentBeat / subdiv.value);
-                                        node.nextSyncTriggerTime = (currentSubdivision + 1) * nodeIntervalSeconds;
-                                        if (node.nextSyncTriggerTime <= now + 0.005) {
-                                            node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                        }
-                                    }
-                                    if (now >= node.nextSyncTriggerTime - 0.005) {
-                                        shouldPulse = true;
-                                        node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                        if (node.nextSyncTriggerTime <= now) {
-                                            node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
-                                            if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
-                                        }
-                                    }
-                                } else {
-                                    console.warn(`Node ${node.id}: Ongeldige nodeIntervalSeconds (${nodeIntervalSeconds})`);
-                                }
-                            } else {
-                                console.warn(`Node ${node.id}: Ongeldig subdivisie object of waarde voor index ${index}. Subdiv:`, subdiv);
-                            }
-                        } else {
-                            console.error(`Node ${node.id}: Ongeldige syncSubdivisionIndex: ${index}. Reset naar default.`);
-                            node.syncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX;
-                        }
-                    } else {
-                        if (node.lastTriggerTime < 0) {
-                            node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
-                        }
-                        const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
-                        if (interval > 0 && (now - node.lastTriggerTime >= interval)) {
-                            shouldPulse = true;
-                            node.lastTriggerTime = now;
-                        }
-                    }
-                }
+              if (node.type === "pulsar_random_particles") {
+                  if (node.nextRandomTriggerTime === undefined || node.nextRandomTriggerTime === 0 || node.nextRandomTriggerTime < now - 10) {
+                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                  }
+                  if (now >= node.nextRandomTriggerTime) {
+                      shouldPulse = true;
+                      node.nextRandomTriggerTime = now + (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+                  }
+              } else { // Standard, Random Volume, Rocket Pulsars
+                  if (isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync) {
+                      const index = node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+                      if (index >= 0 && index < subdivisionOptions.length) {
+                          const subdiv = subdivisionOptions[index];
+                          if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
+                              const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                              if (nodeIntervalSeconds > 0) {
+                                  if (node.nextSyncTriggerTime === undefined || node.nextSyncTriggerTime === 0 || node.nextSyncTriggerTime < now - nodeIntervalSeconds * 2) {
+                                      const currentBeatEquivalent = now / nodeIntervalSeconds;
+                                      node.nextSyncTriggerTime = (Math.floor(currentBeatEquivalent) + 1) * nodeIntervalSeconds;
+                                      if (node.nextSyncTriggerTime <= now + 0.005) {
+                                          node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      }
+                                  }
+                                  if (now >= node.nextSyncTriggerTime - 0.005) {
+                                      shouldPulse = true;
+                                      node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      if (node.nextSyncTriggerTime <= now) { // Zorg dat het altijd in de toekomst is
+                                          node.nextSyncTriggerTime = Math.ceil(now / nodeIntervalSeconds) * nodeIntervalSeconds;
+                                          if (node.nextSyncTriggerTime <= now) node.nextSyncTriggerTime += nodeIntervalSeconds;
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  } else { // Niet gesynchroniseerd of negeert sync
+                      if (node.lastTriggerTime === undefined || node.lastTriggerTime < 0) {
+                          node.lastTriggerTime = now - Math.random() * (node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL);
+                      }
+                      const interval = node.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                      if (interval > 0 && (now - node.lastTriggerTime >= interval - 0.005)) {
+                          shouldPulse = true;
+                          node.lastTriggerTime = now;
+                      }
+                  }
+              }
 
-                if (shouldPulse) {
-                    pulseData = {
-                        intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
-                        color: node.color ?? null,
-                        particleMultiplier: 1.0,
-                    };
-                    if (node.type === "pulsar_random_volume") {
-                        pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
-                    }
+              if (shouldPulse) {
+                  pulseData = {
+                      intensity: node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
+                      color: node.color ?? null,
+                      particleMultiplier: 1.0,
+                  };
+                  if (node.type === "pulsar_random_volume") {
+                      pulseData.intensity = MIN_PULSE_INTENSITY + Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
+                  }
 
-                    currentGlobalPulseId++;
-                    node.animationState = 1;
-                    setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
+                  currentGlobalPulseId++;
+                  node.animationState = 1;
+                  setTimeout(() => { const checkNode = findNodeById(node.id); if (checkNode) checkNode.animationState = 0; }, 150);
 
-                    if (node.type === "pulsar_rocket") {
-                        launchRocket(node, pulseData);
-                    } else {
-                        node.connections.forEach(neighborId => {
-                            const neighborNode = findNodeById(neighborId);
-                            const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                            if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
-                                const travelTime = connection.length * DELAY_FACTOR;
-                                try {
-                                    createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
-                                    propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection);
-                                } catch (propError) {
-                                    console.error(`Fout tijdens pulse propagatie van node ${node.id} naar ${neighborId}:`, propError);
-                                }
-                            }
-                        });
-                    }
-                }
-            } else if (node.type === "gate") {
-                node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
-                node.currentAngle %= 2 * Math.PI;
-            } else if (node.type === "nebula") {
-                node.currentAngle += NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
-                node.currentAngle %= 2 * Math.PI;
-                node.innerAngle += NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
-                node.innerAngle %= 2 * Math.PI;
-                node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
-                node.pulsePhase %= 2 * Math.PI;
-            } else if (node.type === PORTAL_NEBULA_TYPE) {
-                node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
-                node.pulsePhase %= 2 * Math.PI;
-            }
-        });
+                  if (node.type === "pulsar_rocket") {
+                      launchRocket(node, pulseData);
+                  } else {
+                      node.connections.forEach(neighborId => {
+                          const neighborNode = findNodeById(neighborId);
+                          const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                          if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
+                              const travelTime = connection.length * DELAY_FACTOR;
+                              try {
+                                  createVisualPulse(connection.id, travelTime, node.id, Infinity, 'trigger', pulseData.color, pulseData.intensity);
+                                  propagateTrigger(neighborNode, travelTime, currentGlobalPulseId, node.id, Infinity, { type: 'trigger', data: pulseData }, connection, now + travelTime);
+                              } catch (propError) {}
+                          }
+                      });
+                  }
+              }
+          } else if (node.type === "gate" && node.currentAngle !== undefined) {
+              node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
+              node.currentAngle %= 2 * Math.PI;
+          } else if (node.type === "nebula" && node.pulsePhase !== undefined) {
+              node.currentAngle = (node.currentAngle || 0) + NEBULA_ROTATION_SPEED_OUTER * (deltaTime * 60);
+              node.currentAngle %= 2 * Math.PI;
+              node.innerAngle = (node.innerAngle || 0) + NEBULA_ROTATION_SPEED_INNER * (deltaTime * 60);
+              node.innerAngle %= 2 * Math.PI;
+              node.pulsePhase += NEBULA_PULSE_SPEED * (deltaTime * 60);
+              node.pulsePhase %= 2 * Math.PI;
+          } else if (node.type === PORTAL_NEBULA_TYPE && node.pulsePhase !== undefined) {
+              node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
+              node.pulsePhase %= 2 * Math.PI;
+          }
+      });
 
-        try {
-            updateNebulaInteractionAudio();
-        } catch (nebError) {
-            console.error("Fout tijdens updateNebulaInteractionAudio:", nebError);
-        }
+      try {
+          updateNebulaInteractionAudio();
+      } catch (nebError) {}
 
-        if (currentTool === 'brush' && isBrushing && lastBrushNode) {
-            if (Math.random() < 0.3) {
-                createParticles(lastBrushNode.x, lastBrushNode.y, 1);
-            }
-        }
+      if (currentTool === 'brush' && isBrushing && lastBrushNode) {
+          if (Math.random() < 0.3) {
+              createParticles(lastBrushNode.x, lastBrushNode.y, 1);
+          }
+      }
 
-        if (isTapeLoopPlaying || isTapeLoopRecording || (tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true')) {
-            tapeReelAngle += 2;
-            if (tapeReelLeft) {
-                tapeReelLeft.style.transform = `rotate(${tapeReelAngle}deg)`;
-            }
-            if (tapeReelRight) {
-                tapeReelRight.style.transform = `rotate(${tapeReelAngle}deg)`;
-            }
-        }
-        
-        draw();
+      if (isTapeLoopPlaying || isTapeLoopRecording || (tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true')) {
+          tapeReelAngle += 2 * (deltaTime * 60); //deltaTime factor for smoother animation
+          if (tapeReelLeft) {
+              tapeReelLeft.style.transform = `rotate(${tapeReelAngle}deg)`;
+          }
+          if (tapeReelRight) {
+              tapeReelRight.style.transform = `rotate(${tapeReelAngle}deg)`;
+          }
+      }
+      
+      draw();
 
-    } catch (loopError) {
-        console.error("Fout opgetreden in animationLoop:", loopError);
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-            console.error("Animation loop gestopt vanwege fout.");
-        }
-    }
-    previousFrameTime = now;
+  } catch (loopError) {
+      if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+      }
+  }
+  previousFrameTime = now;
 }
 function startAnimationLoop() {
   if (!animationFrameId) {
@@ -9370,663 +10300,6 @@ function createSlider(
   })
   container.appendChild(slider)
   return container
-}
-
-function populateEditPanel() {
-  editPanelContent.innerHTML = "";
-  if (currentTool !== "edit" || selectedElements.size === 0) {
-      if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && selectedElements.size === 0) {
-          hamburgerMenuPanel.classList.add("hidden");
-          if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-      }
-      return;
-  }
-
-  const selectedArray = Array.from(selectedElements);
-  const firstElementData = selectedArray[0];
-  const fragment = document.createDocumentFragment();
-  const title = document.createElement("p");
-
-  const nodeTypes = new Set(
-      selectedArray
-      .filter((el) => el.type === "node")
-      .map((el) => findNodeById(el.id)?.type)
-  );
-  const connectionTypesSet = new Set(
-      selectedArray
-      .filter((el) => el.type === "connection")
-      .map((el) => findConnectionById(el.id)?.type)
-  );
-
-  let titleText = "";
-  let allSameLogicalType = false;
-  let logicalType = "";
-
-  if (selectedArray.length === 1) {
-      const element = firstElementData.type === "node" ? findNodeById(firstElementData.id) : findConnectionById(firstElementData.id);
-      if (element) {
-          logicalType = element.type.replace(/_/g, " ");
-          titleText = `Edit ${logicalType} #${element.id}`;
-          allSameLogicalType = true;
-      } else {
-          titleText = "Edit Element";
-      }
-  } else {
-      const types = new Set([...nodeTypes, ...connectionTypesSet]);
-      if (types.size === 1) {
-          logicalType = [...types][0].replace(/_/g, " ");
-          titleText = `Edit ${selectedArray.length} ${logicalType}s`;
-          allSameLogicalType = true;
-      } else {
-          titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
-          allSameLogicalType = false;
-      }
-  }
-  title.innerHTML = `<strong>${titleText}</strong>`;
-  fragment.appendChild(title);
-
-  const elementsWithNote = selectedArray.filter((elData) => {
-      const el = elData.type === "node" ? findNodeById(elData.id) : findConnectionById(elData.id);
-      return (
-          el &&
-          (el.type === "sound" ||
-           el.type === "nebula" ||
-           (elData.type === "connection" && el.type === "string_violin"))
-      );
-  });
-
-  if (elementsWithNote.length > 0) {
-      const targetDataForNoteSelector = elementsWithNote.map((el) => ({ type: el.type, id: el.id }));
-      createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
-  }
-
-  if (allSameLogicalType) {
-      if (firstElementData.type === "node") {
-          const node = findNodeById(firstElementData.id);
-          if (node && isPulsarType(node.type)) {
-              const section = document.createElement("div");
-              section.classList.add("panel-section");
-              const enableLabel = document.createElement("label");
-              enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
-              enableLabel.textContent = node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
-              section.appendChild(enableLabel);
-              const enableCheckbox = document.createElement("input");
-              enableCheckbox.type = "checkbox";
-              enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
-              enableCheckbox.checked = node.isEnabled;
-              enableCheckbox.disabled = selectedArray.length > 1 && node.type === "pulsar_triggerable"; 
-              enableCheckbox.addEventListener("change", () => handlePulsarTriggerToggle(node));
-              section.appendChild(enableCheckbox);
-              section.appendChild(document.createElement("br"));
-
-              if (node.type !== "pulsar_random_particles" && node.type !== "pulsar_manual") {
-                  if (isGlobalSyncEnabled) {
-                      const subdivLabel = document.createElement("label");
-                      subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
-                      subdivLabel.textContent = "Sync Subdivision:";
-                      section.appendChild(subdivLabel);
-                      const subdivSelect = document.createElement("select");
-                      subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
-                      subdivSelect.disabled = selectedArray.length > 1;
-                      subdivisionOptions.forEach((opt, index) => {
-                          const option = document.createElement("option");
-                          option.value = index;
-                          option.textContent = opt.label;
-                          if (index === (node.syncSubdivisionIndex ?? node.audioParams?.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
-                          subdivSelect.appendChild(option);
-                      });
-                      subdivSelect.addEventListener("change", (e) => {
-                         selectedArray.forEach(elData => {
-                              const n = findNodeById(elData.id);
-                              if (n && isPulsarType(n.type) && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") {
-                                  n.syncSubdivisionIndex = parseInt(e.target.value, 10);
-                                  n.nextSyncTriggerTime = 0;
-                              }
-                          });
-                          saveState();
-                      });
-                      section.appendChild(subdivSelect);
-                  } else {
-                      const currentInterval = node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-                      const intervalVal = currentInterval.toFixed(1);
-                      const intervalSliderContainer = createSlider(
-                          `edit-pulsar-interval-${node.id}`,
-                          `Interval (${intervalVal}s):`, 0.1, 10.0, 0.1, currentInterval,
-                          saveState,
-                          (e) => {
-                              const newInterval = parseFloat(e.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual") n.audioParams.triggerInterval = newInterval;
-                              });
-                              e.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
-                          }
-                      );
-                      section.appendChild(intervalSliderContainer);
-                  }
-              } else if (node.type === "pulsar_random_particles") {
-                  const timingInfo = document.createElement("small");
-                  timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
-                  section.appendChild(timingInfo);
-              }
-              section.appendChild(document.createElement("br"));
-
-              if (node.type !== "pulsar_random_volume") {
-                  const currentIntensity = node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-                  const intensityVal = currentIntensity.toFixed(2);
-                  const intensitySliderContainer = createSlider(
-                      `edit-pulsar-intensity-${node.id}`,
-                      `Pulse Intensity (${intensityVal}):`, MIN_PULSE_INTENSITY, MAX_PULSE_INTENSITY, 0.01, currentIntensity,
-                      saveState,
-                      (e) => {
-                          const newIntensity = parseFloat(e.target.value);
-                          selectedArray.forEach((elData) => {
-                              const n = findNodeById(elData.id);
-                              if (n?.audioParams && n.type !== "pulsar_random_volume") n.audioParams.pulseIntensity = newIntensity;
-                          });
-                          e.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
-                      }
-                  );
-                  section.appendChild(intensitySliderContainer);
-              } else {
-                  const intensityInfo = document.createElement("small");
-                  intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
-                  section.appendChild(intensityInfo);
-              }
-              section.appendChild(document.createElement("br"));
-              const colorLabel = document.createElement("label");
-              colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
-              colorLabel.textContent = "Pulsar Color:";
-              section.appendChild(colorLabel);
-              const colorInput = document.createElement("input");
-              colorInput.type = "color";
-              colorInput.id = `edit-pulsar-color-${node.id}`;
-              const styles = getComputedStyle(document.documentElement);
-              const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
-              const fallbackColorVar = "--start-node-color";
-              const defaultColorRgba = styles.getPropertyValue(defaultColorVar).trim() || styles.getPropertyValue(fallbackColorVar).trim();
-              const defaultColorHex = rgbaToHex(defaultColorRgba);
-              colorInput.value = node.color ? rgbaToHex(node.color) : defaultColorHex;
-              colorInput.addEventListener("input", (e) => {
-                  const newColor = hexToRgba(e.target.value, 0.9);
-                   selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n) n.color = newColor;
-                  });
-              });
-              colorInput.addEventListener("change", saveState);
-              section.appendChild(colorInput);
-              fragment.appendChild(section);
-
-              if (node.type === "pulsar_rocket") {
-                const rocketSection = document.createElement("div");
-                rocketSection.classList.add("panel-section");
-                const rocketTitle = document.createElement("p");
-                rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
-                rocketSection.appendChild(rocketTitle);
-
-                let currentAngleDegVal = parseFloat(((node.audioParams.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0));
-                const dirSliderContainer = createSlider(
-                  `edit-rocket-dir-${node.id}`, `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
-                  saveState,
-                  (e) => {
-                    const newAngleDeg = parseFloat(e.target.value);
-                    selectedArray.forEach(elData => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                        n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
-                      }
-                    });
-                    e.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
-                  }
-                );
-                rocketSection.appendChild(dirSliderContainer);
-
-                let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
-                const speedSliderContainer = createSlider(
-                  `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 0.5, 10.0, 0.1, currentSpeedVal,
-                  saveState,
-                  (e) => {
-                    const newSpeed = parseFloat(e.target.value);
-                    selectedArray.forEach(elData => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketSpeed = newSpeed;}
-                    });
-                    e.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
-                  }
-                );
-                rocketSection.appendChild(speedSliderContainer);
-
-                let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
-                const rangeSliderContainer = createSlider(
-                  `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 1000, 10, currentRangeVal,
-                  saveState,
-                  (e) => {
-                    const newRange = parseFloat(e.target.value);
-                    selectedArray.forEach(elData => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === "pulsar_rocket" && n.audioParams) { n.audioParams.rocketRange = newRange; }
-                    });
-                    e.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
-                  }
-                );
-                rocketSection.appendChild(rangeSliderContainer);
-                fragment.appendChild(rocketSection);
-              }
-
-          } else if (isDrumType(node.type)) {
-               const section = document.createElement("div");
-               section.classList.add("panel-section");
-               const params = node.audioParams;
-               const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
-               const soundDiv = document.createElement("div");
-               soundDiv.classList.add("edit-drum-sound");
-               const soundLabel = document.createElement("strong");
-               soundLabel.textContent = defaults.label;
-               soundDiv.appendChild(soundLabel);
-
-               const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
-               const tuneVal = currentBaseFreq.toFixed(0);
-               const tuneSliderContainer = createSlider(
-                   `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20,
-                   node.type === "drum_hihat" ? 15000 : node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000, 1, currentBaseFreq,
-                   saveState,
-                   (e) => {
-                       const newFreq = parseFloat(e.target.value);
-                       selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
-                       e.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
-                   }
-               );
-               soundDiv.appendChild(tuneSliderContainer);
-
-              if (params?.decay !== undefined || defaults?.decay !== undefined) {
-                  const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
-                  const decayVal = currentDecay.toFixed(2);
-                  const decaySliderContainer = createSlider(
-                      `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
-                      saveState,
-                      (e) => {
-                           const newDecay = parseFloat(e.target.value);
-                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
-                           e.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
-                      }
-                  );
-                  soundDiv.appendChild(decaySliderContainer);
-              }
-
-              if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
-                   const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
-                  const noiseDecayVal = currentNoiseDecay.toFixed(2);
-                  const noiseDecaySliderContainer = createSlider(
-                       `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
-                      saveState,
-                      (e) => {
-                          const newNoiseDecay = parseFloat(e.target.value);
-                           selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
-                           e.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
-                      }
-                  );
-                  soundDiv.appendChild(noiseDecaySliderContainer);
-              }
-
-               const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
-               const volVal = currentVolume.toFixed(2);
-               const volSliderContainer = createSlider(
-                   `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
-                   saveState,
-                   (e) => {
-                       const newVol = parseFloat(e.target.value);
-                       selectedArray.forEach((elData) => {
-                           const n = findNodeById(elData.id);
-                           if (n?.audioParams) {
-                               n.audioParams.volume = newVol;
-                               updateNodeAudioParams(n);
-                           }
-                       });
-                       e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                   }
-               );
-               soundDiv.appendChild(volSliderContainer);
-               section.appendChild(soundDiv);
-               fragment.appendChild(section);
-
-           } else if (node.type === "switch" && selectedArray.length === 1) {
-               const section = document.createElement("div");
-               section.classList.add("panel-section");
-               const label = document.createElement("label");
-               label.textContent = "Primary Input Connection:";
-               section.appendChild(label);
-               const select = document.createElement("select");
-               select.id = `edit-switch-primary-${node.id}`;
-               const noneOpt = document.createElement("option");
-               noneOpt.value = "null";
-               noneOpt.textContent = "None (Set on next pulse)";
-               select.appendChild(noneOpt);
-               node.connections.forEach((neighborId) => {
-                   const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                   if (conn) {
-                       const otherNode = findNodeById(neighborId);
-                       const option = document.createElement("option");
-                       option.value = conn.id;
-                       option.textContent = `From Node #${neighborId} (${otherNode?.type || "?"})`;
-                       if (conn.id === node.primaryInputConnectionId) {
-                           option.selected = true;
-                       }
-                       select.appendChild(option);
-                   }
-               });
-               select.addEventListener("change", (e) => {
-                   node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
-                   saveState();
-               });
-               section.appendChild(select);
-               fragment.appendChild(section);
-           }
-
-      } else if (firstElementData.type === "connection") {
-          const connection = findConnectionById(firstElementData.id);
-          if (connection) {
-               if (connection.type === "string_violin") {
-                   const section = document.createElement("div");
-                   section.classList.add("panel-section");
-                   const params = connection.audioParams;
-                   const defaults = STRING_VIOLIN_DEFAULTS;
-
-                   const currentVol = params?.volume ?? defaults.volume;
-                   const volVal = currentVol.toFixed(2);
-                   const volSliderContainer = createSlider(
-                       `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
-                       saveState,
-                       (e) => {
-                           const newVol = parseFloat(e.target.value);
-                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
-                            e.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                       }
-                   );
-                   section.appendChild(volSliderContainer);
-
-                   const currentAttack = params?.attack ?? defaults.attack;
-                   const attackVal = currentAttack.toFixed(2);
-                   const attackSliderContainer = createSlider(
-                       `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
-                       saveState,
-                       (e) => {
-                            const newVal = parseFloat(e.target.value);
-                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
-                            e.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
-                       }
-                   );
-                   section.appendChild(attackSliderContainer);
-
-                   const currentRelease = params?.release ?? defaults.release;
-                   const releaseVal = currentRelease.toFixed(2);
-                   const releaseSliderContainer = createSlider(
-                       `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
-                       saveState,
-                       (e) => {
-                            const newVal = parseFloat(e.target.value);
-                            selectedArray.forEach((elData) => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
-                            e.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
-                       }
-                   );
-                   section.appendChild(releaseSliderContainer);
-                   fragment.appendChild(section);
-
-               } else if (connection.type === 'wavetrail') {
-                  const section = document.createElement("div");
-                  section.classList.add("panel-section");
-
-                  const fileLabel = document.createElement("label");
-                  fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
-                  fileLabel.textContent = "Audio File:";
-                  section.appendChild(fileLabel);
-
-                  const fileInput = document.createElement("input");
-                  fileInput.type = "file";
-                  fileInput.id = `edit-wavetrail-file-${connection.id}`;
-                  fileInput.accept = ".wav,.mp3,audio/*";
-                  fileInput.style.marginBottom = '5px';
-                  fileInput.addEventListener('change', (e) => handleWaveTrailFileInputChange(e, connection));
-                  section.appendChild(fileInput);
-
-                  const fileNameDisplay = document.createElement("small");
-                  fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
-                  fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || 'None selected'}`;
-                  fileNameDisplay.style.display = 'block';
-                  section.appendChild(fileNameDisplay);
-
-                  if (connection.audioParams?.buffer) {
-                      const bufferDuration = connection.audioParams.buffer.duration;
-                      const currentOffset = connection.audioParams.startTimeOffset || 0;
-                      const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
-                      const currentStartOffset = connection.audioParams.startTimeOffset || 0;
-                      const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
-                      const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
-                      const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
-
-                      const offsetLabel = document.createElement("label");
-                      offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
-                      offsetLabel.style.marginTop = '10px';
-                      offsetLabel.textContent = `Start Offset (${currentOffset.toFixed(2)}s):`;
-                      section.appendChild(offsetLabel);
-
-                      const offsetSlider = document.createElement("input");
-                      offsetSlider.type = "range";
-                      offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
-                      offsetSlider.min = "0";
-                      offsetSlider.max = bufferDuration.toFixed(3);
-                      offsetSlider.step = "0.01";
-                      offsetSlider.value = currentOffset;
-                      offsetSlider.title = "Scrub Start Time";
-
-                      const offsetValueDisplay = document.createElement("span");
-                      offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
-                      offsetValueDisplay.textContent = `${currentOffset.toFixed(2)}s`;
-                      offsetValueDisplay.style.fontSize = '0.8em';
-                      offsetValueDisplay.style.marginLeft = '5px';
-                      offsetValueDisplay.style.opacity = '0.8';
-
-                      const endOffsetLabel = document.createElement("label");
-                      endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
-                      endOffsetLabel.style.marginTop = '10px';
-                      endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
-
-                      const endOffsetSlider = document.createElement("input");
-                      endOffsetSlider.type = "range";
-                      endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
-                      endOffsetSlider.min = currentStartOffset.toFixed(3);
-                      endOffsetSlider.max = bufferDuration.toFixed(3);
-                      endOffsetSlider.step = "0.01";
-                      endOffsetSlider.value = currentEndOffset;
-                      endOffsetSlider.title = "Scrub End Time";
-
-                      const endOffsetValueDisplay = document.createElement("span");
-                      endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
-                      endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
-                      endOffsetValueDisplay.style.fontSize = '0.8em';
-                      endOffsetValueDisplay.style.marginLeft = '5px';
-                      endOffsetValueDisplay.style.opacity = '0.8';
-
-                      offsetSlider.addEventListener('input', (e) => {
-                          const newOffset = parseFloat(e.target.value);
-                          const maxOffset = Math.max(0, bufferDuration - 0.05);
-                          const clampedOffset = Math.min(newOffset, maxOffset);
-                          const currentEndValue = parseFloat(endOffsetSlider.value);
-
-                          if (connection.audioParams.startTimeOffset !== clampedOffset) {
-                               connection.audioParams.startTimeOffset = clampedOffset;
-                               offsetLabel.textContent = `Start Offset (${clampedOffset.toFixed(2)}s):`;
-                               offsetValueDisplay.textContent = `${clampedOffset.toFixed(2)}s`;
-                               endOffsetSlider.min = (clampedOffset + 0.05).toFixed(3);
-                                if (currentEndValue < clampedOffset + 0.05) {
-                                     const newEndValue = clampedOffset + 0.05;
-                                     endOffsetSlider.value = newEndValue;
-                                     connection.audioParams.endTimeOffset = (bufferDuration - newEndValue < 0.01) ? null : newEndValue;
-                                     const displayValue = connection.audioParams.endTimeOffset ?? bufferDuration;
-                                     endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
-                                     endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
-                                }
-                          }
-                           if (newOffset > maxOffset) { e.target.value = clampedOffset; }
-                      });
-                      offsetSlider.addEventListener('change', saveState);
-
-                      endOffsetSlider.addEventListener('input', (e) => {
-                          const newEndOffset = parseFloat(e.target.value);
-                          const minEndOffset = connection.audioParams.startTimeOffset + 0.05;
-                          const clampedEndOffset = Math.max(minEndOffset, newEndOffset);
-                          const finalEndOffset = (bufferDuration - clampedEndOffset < 0.01) ? null : clampedEndOffset;
-
-                          if (connection.audioParams.endTimeOffset !== finalEndOffset) {
-                              connection.audioParams.endTimeOffset = finalEndOffset;
-                              const displayValue = finalEndOffset ?? bufferDuration;
-                              endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
-                              endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
-                          }
-                           if (newEndOffset < minEndOffset) { e.target.value = minEndOffset; }
-                      });
-                      endOffsetSlider.addEventListener('change', saveState);
-
-                      section.appendChild(offsetSlider);
-                      section.appendChild(offsetValueDisplay);
-                      section.appendChild(endOffsetLabel);
-                      section.appendChild(endOffsetSlider);
-                      section.appendChild(endOffsetValueDisplay);
-
-                      const grainDurLabel = document.createElement("label");
-                      grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
-                      grainDurLabel.style.marginTop = '15px';
-                      grainDurLabel.textContent = `Grain Duration (${(currentGrainDuration * 1000).toFixed(0)}ms):`;
-                      section.appendChild(grainDurLabel);
-
-                      const grainDurSlider = document.createElement("input");
-                      grainDurSlider.type = "range"; grainDurSlider.id = `edit-wavetrail-graindur-${connection.id}`;
-                      grainDurSlider.min = "0.01"; grainDurSlider.max = "0.3"; grainDurSlider.step = "0.005";
-                      grainDurSlider.value = currentGrainDuration; grainDurSlider.title = "Grain Duration";
-
-                      const grainDurValueDisplay = document.createElement("span");
-                       grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`;
-                       grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`;
-                       grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-
-                      const grainOverlapSlider = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
-
-                      grainDurSlider.addEventListener('input', (e) => {
-                          const newDur = parseFloat(e.target.value);
-                          connection.audioParams.grainDuration = newDur;
-                          grainDurLabel.textContent = `Grain Duration (${(newDur * 1000).toFixed(0)}ms):`;
-                          grainDurValueDisplay.textContent = `${(newDur * 1000).toFixed(0)}ms`;
-                          if (grainOverlapSlider) {
-                              const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3);
-                              grainOverlapSlider.max = newMaxOverlap;
-                              const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
-                              const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
-                              if (parseFloat(grainOverlapSlider.value) > parseFloat(newMaxOverlap)) {
-                                   grainOverlapSlider.value = newMaxOverlap;
-                                   connection.audioParams.grainOverlap = parseFloat(newMaxOverlap);
-                                    if(overlapValueDisplay) overlapValueDisplay.textContent = `${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms`;
-                                    if(overlapLabel) overlapLabel.textContent = `Grain Overlap (${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms):`;
-                              }
-                          }
-                      });
-                      grainDurSlider.addEventListener('change', saveState);
-                      section.appendChild(grainDurSlider);
-                      section.appendChild(grainDurValueDisplay);
-
-                      const grainOverlapLabel = document.createElement("label");
-                      grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
-                      grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`;
-                      section.appendChild(grainOverlapLabel);
-
-                      const grainOverlapSliderElement = document.createElement("input");
-                      grainOverlapSliderElement.type = "range";
-                      grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`;
-                      grainOverlapSliderElement.min = "0";
-                      grainOverlapSliderElement.max = (currentGrainDuration - 0.005).toFixed(3);
-                      grainOverlapSliderElement.step = "0.005";
-                      grainOverlapSliderElement.value = Math.min(currentGrainOverlap, parseFloat(grainOverlapSliderElement.max));
-                      grainOverlapSliderElement.title = "Grain Overlap";
-
-                      const grainOverlapValueDisplay = document.createElement("span");
-                      grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`;
-                      grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`;
-                      grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-
-                      grainOverlapSliderElement.addEventListener('input', (e) => {
-                          const newOverlap = parseFloat(e.target.value);
-                          const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
-                          const clampedOverlap = Math.min(newOverlap, maxOverlap);
-                          connection.audioParams.grainOverlap = clampedOverlap;
-                          grainOverlapLabel.textContent = `Grain Overlap (${(clampedOverlap * 1000).toFixed(0)}ms):`;
-                          grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
-                           if (newOverlap > maxOverlap) { e.target.value = clampedOverlap; }
-                      });
-                      grainOverlapSliderElement.addEventListener('change', saveState);
-                      section.appendChild(grainOverlapSliderElement);
-                      section.appendChild(grainOverlapValueDisplay);
-
-                      const rateLabel = document.createElement("label");
-                      rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
-                      rateLabel.style.marginTop = '15px';
-                      rateLabel.textContent = `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`;
-                      section.appendChild(rateLabel);
-
-                      const rateSlider = document.createElement("input");
-                      rateSlider.type = "range"; rateSlider.id = `edit-wavetrail-rate-${connection.id}`;
-                      rateSlider.min = "0.25"; rateSlider.max = "4.0"; rateSlider.step = "0.01";
-                      rateSlider.value = currentPlaybackRate; rateSlider.title = "Playback Rate / Pitch";
-
-                      const rateValueDisplay = document.createElement("span");
-                      rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`;
-                      rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`;
-                      rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-
-                      rateSlider.addEventListener('input', (e) => {
-                          const newRate = parseFloat(e.target.value);
-                          connection.audioParams.playbackRate = newRate;
-                          rateLabel.textContent = `Playback Rate (${newRate.toFixed(2)}x):`;
-                          rateValueDisplay.textContent = `${newRate.toFixed(2)}x`;
-                      });
-                      rateSlider.addEventListener('change', saveState);
-
-                      const resetButton = document.createElement('button');
-                      resetButton.textContent = 'Reset Rate';
-                      resetButton.style.marginLeft = '10px'; resetButton.style.padding = '2px 6px'; resetButton.style.fontSize = '0.8em';
-                      resetButton.type = 'button';
-                      resetButton.addEventListener('click', () => {
-                            connection.audioParams.playbackRate = 1.0;
-                            rateSlider.value = 1.0;
-                            rateLabel.textContent = `Playback Rate (1.00x):`;
-                            rateValueDisplay.textContent = `1.00x`;
-                            saveState();
-                       });
-
-                      section.appendChild(rateSlider);
-                      section.appendChild(rateValueDisplay);
-                      section.appendChild(resetButton);
-                  }
-                  fragment.appendChild(section);
-               }
-          }
-      }
-  } else {
-       const multiInfo = document.createElement("small");
-       multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
-       fragment.appendChild(multiInfo);
-  }
-
-  editPanelContent.appendChild(fragment);
-
-  if (hamburgerMenuPanel && hamburgerMenuPanel.classList.contains("hidden") && currentTool === 'edit' && selectedElements.size > 0) {
-       hamburgerMenuPanel.classList.remove("hidden");
-       if (hamburgerBtn) hamburgerBtn.classList.add("active");
-  }
-  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
-      sideToolbar.classList.add("hidden");
-      const addBrushButtons = toolbar.querySelectorAll("#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button");
-       addBrushButtons.forEach(btn => btn.classList.remove("active"));
-       if(brushBtn) brushBtn.classList.remove("active");
-  }
 }
 
 function handleWaveTrailFileInputChange(event, connection) {
@@ -10418,9 +10691,6 @@ function triggerSave() {
     URL.revokeObjectURL(url)
   } catch (e) {}
 }
-function triggerLoad() {
-  loadStateInput.click()
-}
 function handleFileLoad(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -10478,22 +10748,6 @@ function onMIDISuccess(access) {
 function onMIDIFailure(msg) {}
 function populateMIDIDevices() {
   if (!midiAccess) return
-  midiInSelect.innerHTML = '<option value="">None</option>'
-  midiOutSelect.innerHTML = '<option value="">None</option>'
-  midiAccess.inputs.forEach((input) => {
-    const option = document.createElement("option")
-    option.value = input.id
-    option.textContent = input.name
-    midiInSelect.appendChild(option)
-  })
-  midiInSelect.value = activeMidiInput?.id || ""
-  midiAccess.outputs.forEach((output) => {
-    const option = document.createElement("option")
-    option.value = output.id
-    option.textContent = output.name
-    midiOutSelect.appendChild(option)
-  })
-  midiOutSelect.value = activeMidiOutput?.id || ""
 }
 function selectMIDIInput(id) {
   if (!midiAccess) return
@@ -10546,10 +10800,6 @@ function sendMidiMessage(messageArray) {
     } catch (error) {}
   }
 }
-midiInSelect.addEventListener("change", (e) => selectMIDIInput(e.target.value))
-midiOutSelect.addEventListener("change", (e) =>
-  selectMIDIOutput(e.target.value)
-)
 
 
 
@@ -10612,14 +10862,6 @@ if (glideToolButton) {
     console.warn("Knop met ID #glide-tool-button niet gevonden.");
 }
 
-
-
-
-
-
-
-
-loadStateInput.addEventListener("change", handleFileLoad)
 window.addEventListener("resize", () => {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
