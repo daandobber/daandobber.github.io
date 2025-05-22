@@ -20,17 +20,36 @@
                     <div class="reel-inner"></div>
                     <div class="reel-spoke"></div><div class="reel-spoke rot-1"></div><div class="reel-spoke rot-2"></div>
                 </div>
-                <div id="tapeLoopStatusLabel" class="cassette-status-display">Status: Idle</div>
+                <div id="tapeLoopStatusContainer" class="cassette-status-container">
+                    <div id="tapeLoopStatusLabel" class="cassette-status-display">Status: Idle</div>
+                    <div id="tapeLoopTimer" class="cassette-timer-display">00:00.0</div>
+                </div>
                 <div class="reel" id="tapeReelRight">
                     <div class="reel-inner"></div>
                     <div class="reel-spoke"></div><div class="reel-spoke rot-1"></div><div class="reel-spoke rot-2"></div>
                 </div>
             </div>
         </div>
-        <div class="cassette-bottom-label">
-            <input type="number" id="tapeLoopDurationInput" min="1" max="60" step="0.5" value="4">
-            <span>sec loop</span>
+        <div class="cassette-tape-visual-container">
+            <canvas id="tapeWaveformCanvas" class="tape-waveform-canvas"></canvas>
+            <div id="tapeVisualLoopRegion" class="tape-visual-loop-region">
+                <div id="tapeLoopHandleStart" class="tape-loop-handle start"></div>
+                <div id="tapeLoopHandleEnd" class="tape-loop-handle end"></div>
+            </div>
+            <div id="tapeVisualPlayhead" class="tape-visual-playhead"></div>
         </div>
+        <div class="cassette-bottom-label">
+            <input type="number" id="tapeLoopDurationInput" min="1" max="60" step="0.1" value="4">
+            <span>Record Length</span>
+        </div>
+    </div>
+
+    <div class="cassette-loop-controls">
+        <label for="tapeLoopStartInput">Start (s):</label>
+        <input type="number" id="tapeLoopStartInput" min="0" step="0.1" value="0">
+        <label for="tapeLoopEndInput">End (s):</label>
+        <input type="number" id="tapeLoopEndInput" min="0.1" step="0.1" value="4">
+        <button id="tapeLoopSetLoopPointsBtn" title="Set Loop Points">Set</button>
     </div>
 
     <div id="tapeLooperControls" class="cassette-controls">
@@ -38,6 +57,14 @@
         <button id="tapeLoopPlayBtn" title="Play Loop" disabled>▶️</button>
         <button id="tapeLoopStopBtn" title="Stop Loop" disabled>⏹️</button>
         <button id="tapeLoopClearBtn" title="Clear Loop" disabled>🗑️</button>
+    </div>
+    
+
+    <div class="cassette-speed-controls">
+        <label for="tapeLoopSpeedSlider">Speed:</label>
+        <input type="range" id="tapeLoopSpeedSlider" min="0.25" max="2.0" step="0.05" value="1.0">
+        <span id="tapeLoopSpeedValue">1.00x</span>
+        <button id="tapeLoopResetSpeedBtn" title="Reset Speed">Reset</button>
     </div>
 </div>
     <div id="app-menu-bar">
@@ -151,16 +178,6 @@
         <p><strong>Global Settings:</strong></p>
         <div id="editPanelContent">
             </div>
-         <hr>
-         <p><strong>MIDI Settings:</strong></p>
-         <label for="midiInSelect">MIDI Input (Transpose):</label>
-         <select id="midiInSelect" title="Select MIDI Input Device for Transposition"><option value="">None</option></select>
-         <label for="midiOutSelect">MIDI Output:</label>
-         <select id="midiOutSelect" title="Select MIDI Output Device"><option value="">None</option></select>
-         <small>Configure MIDI Out per element in its settings.</small>
-         <hr>
-         <p><strong>Save/Load:</strong></p>
-         <input type="file" id="loadStateInput" accept=".json" style="display: none;"> <small>Use File > Load/Save in the top menu bar.</small>
          <hr>
          <button id="closeHamburgerBtn" class="close-panel-button">Close Menu</button>
     </div>
