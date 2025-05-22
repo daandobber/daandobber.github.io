@@ -62,8 +62,8 @@
     --beat-indicator-color: rgba(180, 210, 255, 0.5);
     --button-disabled-bg: #2a355a;
     --button-disabled-color: #7788aa;
-    --toolbar-width: 52px; /* Bestaande verticale toolbar breedte */
-    --app-menu-bar-height: 40px; /* Nieuwe horizontale menubalk hoogte */
+    --toolbar-width: 52px; 
+    --app-menu-bar-height: 40px; 
     --side-toolbar-width: 240px;
     --hamburger-panel-width: 240px;
     --mixer-button-width: 30px;
@@ -1364,27 +1364,24 @@ body {
     opacity: 1;
 }
 
-/* In style.css */
-
-/* Styling voor het nieuwe paneel */
 #tapeLooperPanel.cassette-panel {
     position: fixed;
-    bottom: 20px; /* Positie rechtsonder */
-    right: -350px; /* Start buiten beeld */
-    width: 320px; /* Breedte van het paneel */
+    bottom: 20px;
+    right: -350px; 
+    width: 320px;
     padding: 15px;
-    background-color: #3c3c4c; /* Donkergrijs voor cassette look */
+    background-color: #3c3c4c;
     border: 2px solid #2a2a3a;
     border-radius: 8px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.5);
     z-index: 1050;
-    transition: right 0.4s ease-in-out; /* Slide animatie */
-    color: #ddd; /* Lichte tekstkleur */
-    font-family: 'Courier New', Courier, monospace; /* Retro font */
+    transition: right 0.4s ease-in-out;
+    color: #ddd;
+    font-family: 'Courier New', Courier, monospace;
 }
 
 #tapeLooperPanel.cassette-panel:not(.hidden) {
-    right: 20px; /* Schuif in beeld */
+    right: 20px;
 }
 
 #tapeLooperPanel .close-panel-button {
@@ -1433,17 +1430,111 @@ body {
   -webkit-appearance: none; margin: 0;
 }
 
-
 .cassette-window-area {
     background-color: #222;
     border: 1px solid #111;
     border-radius: 4px;
-    padding: 10px 5px;
+    padding: 8px 5px; /* Iets minder padding voor status/timer */
     margin: 5px 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+
+.cassette-status-container {
+    flex-grow: 1;
+    text-align: center;
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+}
+
+#tapeLoopStatusLabel.cassette-status-display {
+    font-size: 0.8em;
+    color: #aaccaa;
+    line-height: 1.2;
+}
+#tapeLoopTimer.cassette-timer-display {
+    font-size: 0.75em;
+    color: #ccc;
+    margin-top: 2px;
+    font-family: 'Orbitron', sans-serif; /* Voor een meer digitale look, optioneel */
+}
+
+
+.cassette-tape-visual-container {
+    width: 100%;
+    height: 28px; /* Verhoogd voor waveform en handles */
+    background-color: #282828; /* Donkere achtergrond voor de track */
+    border-radius: 3px;
+    margin: 10px 0;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #111;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.tape-waveform-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.tape-visual-loop-region {
+    position: absolute;
+    top: 0;
+    left: 0; /* Startpositie wordt door JS ingesteld op 0% */
+    /* width: 50%; */ /* VERWIJDER OF COMMENTARIEER DEZE REGEL */
+    height: 100%;
+    background-color: rgba(100, 150, 255, 0.3);
+    z-index: 2;
+    box-sizing: border-box;
+    border-left: 1px solid rgba(180, 210, 255, 0.6);
+    border-right: 1px solid rgba(180, 210, 255, 0.6);
+}
+
+.tape-loop-handle {
+    position: absolute;
+    top: 0;
+    width: 6px; /* Breedte van de handle */
+    height: 100%;
+    background-color: rgba(220, 220, 255, 0.7);
+    cursor: ew-resize;
+    z-index: 4; /* Boven de loop regio en playhead */
+}
+.tape-loop-handle.start {
+    left: -3px; /* Gecentreerd op de linker rand */
+    border-top-left-radius: 2px;
+    border-bottom-left-radius: 2px;
+}
+.tape-loop-handle.end {
+    right: -3px; /* Gecentreerd op de rechter rand */
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+.tape-loop-handle:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+
+.tape-visual-playhead {
+    position: absolute;
+    top: 0;
+    left: 0; 
+    width: 2px;
+    height: 100%;
+    background-color: #ff6060; /* Iets helderder rood */
+    box-shadow: 0 0 3px #ff6060;
+    z-index: 3; /* Boven loop region, onder handles */
+    transition: left 0.05s linear; 
+}
+
 
 .cassette-reels {
     display: flex;
@@ -1453,8 +1544,8 @@ body {
 }
 
 .reel {
-    width: 50px;
-    height: 50px;
+    width: 45px; /* Iets kleiner om ruimte te maken voor status/timer */
+    height: 45px;
     background-color: #1a1a1a;
     border-radius: 50%;
     border: 2px solid #333;
@@ -1466,8 +1557,8 @@ body {
 }
 
 .reel-inner {
-    width: 15px;
-    height: 15px;
+    width: 13px;
+    height: 13px;
     background-color: #333;
     border-radius: 50%;
     border: 1px solid #444;
@@ -1475,41 +1566,76 @@ body {
 
 .reel .reel-spoke {
     position: absolute;
-    width: 4px;
-    height: 55%; /* Maakt het iets langer dan de radius van reel-inner */
+    width: 3px;
+    height: 55%;
     background-color: #282828;
     top: 50%;
     left: 50%;
-    transform-origin: 50% 0%; /* Roteer vanaf het midden-boven */
+    transform-origin: 50% 0%;
     transform: translate(-50%, 0%) rotate(0deg);
 }
 .reel .reel-spoke.rot-1 { transform: translate(-50%, 0%) rotate(120deg); }
 .reel .reel-spoke.rot-2 { transform: translate(-50%, 0%) rotate(240deg); }
 
 
-#tapeLoopStatusLabel.cassette-status-display {
-    flex-grow: 1;
+.cassette-loop-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    margin: 10px 0;
+    padding: 5px;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+.cassette-loop-controls label {
+    font-size: 0.75em;
+    color: #bbb;
+}
+.cassette-loop-controls input[type="number"] {
+    background-color: rgba(20,20,30,0.5);
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 3px;
+    padding: 3px;
+    width: 45px;
     text-align: center;
     font-size: 0.8em;
-    padding: 0 10px;
-    color: #aaccaa; /* Groenige status kleur */
-    min-width: 80px; /* Zodat het niet te smal wordt */
+    -moz-appearance: textfield;
 }
+.cassette-loop-controls input[type="number"]::-webkit-inner-spin-button,
+.cassette-loop-controls input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.cassette-loop-controls button {
+    background-color: var(--button-bg, #555);
+    color: var(--text-color, #fff);
+    border: 1px solid var(--button-hover, #666);
+    padding: 4px 8px;
+    font-size: 0.8em;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.cassette-loop-controls button:hover {
+    background-color: var(--button-hover, #666);
+}
+
 
 .cassette-controls {
     display: flex;
     justify-content: space-around;
     padding-top: 5px;
+    margin-bottom: 10px;
 }
 
 .cassette-controls button {
     background-color: var(--button-bg, #555);
     color: var(--text-color, #fff);
     border: 1px solid var(--button-hover, #666);
-    padding: 8px 10px; /* Iets kleiner voor compactheid */
+    padding: 8px 10px;
     cursor: pointer;
     border-radius: 4px;
-    font-size: 1.2em; /* Grotere iconen */
+    font-size: 1.2em;
     line-height: 1;
     transition: background-color 0.2s ease;
 }
@@ -1522,7 +1648,296 @@ body {
     cursor: not-allowed;
     opacity: 0.6;
 }
-.cassette-controls button.active { /* Als een knop een 'actieve' staat heeft */
+.cassette-controls button.active {
     background-color: var(--button-active, #777);
     box-shadow: inset 0 0 5px rgba(0,0,0,0.4);
+}
+
+.cassette-speed-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 5px;
+    padding: 5px;
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+.cassette-speed-controls label {
+    font-size: 0.75em;
+    color: #bbb;
+}
+.cassette-speed-controls input[type="range"] {
+    flex-grow: 1;
+    height: 10px;
+    cursor: pointer;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.cassette-speed-controls input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #555;
+    border-radius: 2px;
+    border: 1px solid #444;
+}
+.cassette-speed-controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid #333;
+    height: 12px;
+    width: 12px;
+    border-radius: 50%;
+    background: #888;
+    cursor: pointer;
+    margin-top: -5px;
+}
+
+.cassette-speed-controls input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: #555;
+    border-radius: 2px;
+    border: 1px solid #444;
+}
+.cassette-speed-controls input[type="range"]::-moz-range-thumb {
+    border: 1px solid #333;
+    height: 12px;
+    width: 12px;
+    border-radius: 50%;
+    background: #888;
+    cursor: pointer;
+}
+
+
+.cassette-speed-controls span {
+    font-size: 0.8em;
+    width: 40px;
+    text-align: right;
+    color: #ccc;
+}
+.cassette-speed-controls button {
+    background-color: var(--button-bg, #555);
+    color: var(--text-color, #fff);
+    border: 1px solid var(--button-hover, #666);
+    padding: 4px 8px;
+    font-size: 0.8em;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.cassette-speed-controls button:hover {
+    background-color: var(--button-hover, #666);
+}
+
+
+
+.retrigger-editor-container {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid var(--button-disabled-bg);
+    border-radius: 4px;
+}
+
+.retrigger-bars-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    padding: 8px 2px 0px 2px; /* Meer padding boven voor ruimte mute toggles */
+    border: 1px solid var(--button-hover);
+    background-color: rgba(0,0,0,0.2);
+    min-height: 80px;
+    height: 120px; /* Iets meer hoogte voor de toggles onder de balken */
+    overflow-x: hidden; /* Voorkom horizontaal scrollen */
+    overflow-y: hidden;
+    box-sizing: border-box;
+    border-radius: 3px;
+    width: 100%;
+}
+
+.retrigger-editor-container {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid var(--button-disabled-bg);
+    border-radius: 4px;
+}
+
+.retrigger-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Balk boven, toggle onder */
+    align-items: center;
+    height: 100%; /* Vul de .retrigger-bars-area hoogte */
+    flex-basis: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 10px; /* Zorgt dat balkjes en toggles niet te smal worden */
+    position: relative;
+    padding: 4px 1px; /* Kleine padding binnen de wrapper */
+    box-sizing: border-box;
+}
+
+.retrigger-bar-visual-container {
+    width: 100%;
+    height: calc(100% - 20px); /* Ruimte voor de toggle onderaan (16px + 4px margin) */
+    display: flex;
+    align-items: flex-end; /* Balk start vanaf de bodem van deze container */
+    cursor: ns-resize;
+}
+
+.retrigger-bar {
+    width: 100%;
+    min-height: 2%; /* Zelfs waarde 0 is een beetje zichtbaar */
+    border-radius: 2px 2px 0 0;
+    transition: background-color 0.05s ease-out, transform 0.05s ease-out, box-shadow 0.05s ease-out, opacity 0.1s ease-out;
+    will-change: height, background-color, transform, opacity;
+}
+
+.retrigger-bar-wrapper:hover .retrigger-bar {
+    /* Hover effect kan hier als je de wrapper hover wilt gebruiken */
+}
+
+.retrigger-bar.playing {
+    background-color: var(--start-node-color) !important;
+    box-shadow: 0 0 8px var(--start-node-border), inset 0 0 5px rgba(255,255,255,0.3);
+    transform: scaleY(1.03); /* Subtiele verticale scale */
+}
+.retrigger-bar.playing.muted-style { /* Stijl voor als de spelende balk gemute is */
+    background-color: var(--relay-node-color) !important; /* Gedimd */
+    box-shadow: 0 0 5px var(--relay-node-border);
+    transform: scaleY(1.0);
+}
+
+
+/* Custom Mute Toggle Styling */
+.retrigger-step-mute-toggle-label {
+    display: block;
+    width: 14px;  /* Grootte van het klikbare "blokje" */
+    height: 14px;
+    background-color: var(--button-disabled-bg);
+    border: 1px solid var(--button-hover);
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative; /* Voor het pseudo-element */
+    margin-top: 4px; /* Ruimte tussen balk en toggle */
+    transition: background-color 0.2s ease;
+}
+
+.retrigger-step-mute-toggle-input {
+    opacity: 0; /* Verberg de daadwerkelijke checkbox */
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.retrigger-step-mute-toggle-label:hover {
+    border-color: var(--text-color);
+}
+
+/* Stijl voor "aan" (niet gemute) staat */
+.retrigger-step-mute-toggle-input:checked + span {
+    /* Dit span element moet je toevoegen binnen de label als je een visuele indicator wilt */
+}
+.retrigger-step-mute-toggle-input:checked ~ span { /* Alternatief als span na input komt */
+    /* Voor nu gebruiken we de achtergrond van de label zelf */
+}
+
+.retrigger-step-mute-toggle-label { /* Standaard "uit" (gemute) */
+    background-color: var(--button-disabled-bg);
+    opacity: 0.6;
+}
+.retrigger-step-mute-toggle-input:checked + span::before { /* Simpel vinkje */
+    content: '';
+    display: block;
+    width: 4px;
+    height: 8px;
+    border: solid var(--text-color);
+    border-width: 0 2px 2px 0;
+    transform: translate(3px, 0px) rotate(45deg);
+}
+
+.retrigger-step-mute-toggle-input:checked ~ /* directe sibling */ label, /* Of als label de parent is */
+.retrigger-step-mute-toggle-input:checked + /* directe sibling als label na input */ span {
+    /* Geen specifieke stijl hier nodig als we de parent label stylen */
+}
+/* Als de input IN de label zit (zoals nu), style de label gebaseerd op :checked van de input */
+.retrigger-step-mute-toggle-label input:checked {
+    /* Dit werkt niet direct zo voor parent styling, we stylen de label zelf */
+}
+input.retrigger-step-mute-toggle-input:checked ~ label, /* Als label na de input komt */
+label.retrigger-step-mute-toggle-label:has(input.retrigger-step-mute-toggle-input:checked) { /* Als input in label zit (nieuwere browsers) */
+    background-color: var(--button-active); /* "Aan" kleur */
+    opacity: 1;
+}
+/* Fallback voor oudere browsers zonder :has, JavaScript moet de class 'is-active-mute' op label zetten */
+.retrigger-step-mute-toggle-label.is-active-mute {
+    background-color: var(--button-active);
+    opacity: 1;
+}
+
+
+.retrigger-editor-controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.panel button {
+    font-size: 0.85em;
+    padding: 5px 10px;
+}
+
+.retrigger-bar-volume {
+    background-color: var(--button-active);
+}
+.retrigger-bar-pitch {
+    background-color: var(--pitch-node-color);
+}
+.retrigger-bar-filter {
+    background-color: var(--gate-node-border);
+}
+
+.retrigger-editor-tabs {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.retrigger-tab-button {
+    flex-grow: 1;
+    padding: 6px 10px;
+    font-size: 0.85em;
+    border: 1px solid var(--button-hover);
+    border-bottom: 1px solid var(--button-hover);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-radius: 3px 3px 0 0;
+    margin-right: -1px;
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    box-shadow: none;
+}
+.retrigger-tab-button:last-child {
+    margin-right: 0;
+}
+
+.retrigger-tab-button:hover {
+    background-color: var(--button-hover);
+}
+
+.retrigger-tab-button.active {
+    background-color: var(--panel-bg);
+    border-bottom: 1px solid var(--panel-bg);
+    color: var(--text-color);
+    font-weight: bold;
+    box-shadow: none;
+}
+
+.retrigger-editor-display-area {
+    /* Kan leeg blijven */
 }
