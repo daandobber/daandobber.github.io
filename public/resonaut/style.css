@@ -80,6 +80,12 @@
     --hex-color-root-bg: rgba(255, 255, 200, 0.8);
     --hex-color-root-border: rgba(255, 255, 230, 0.9);
     --hex-color-text: #ddeeff;
+    --timeline-grid-default-border-color: var(--gate-node-border, rgba(210, 190, 255, 0.8));
+    --timeline-grid-default-scanline-color: var(--start-node-color, rgba(255, 255, 200, 0.9));
+    --timeline-grid-internal-lines-color: var(--grid-color, rgba(100, 130, 180, 0.25));
+    --prorb-color: rgba(200, 210, 220, 0.75);
+    --prorb-border-color: rgba(0, 0, 0, 0.9);
+    --prorb-text-color: rgba(50, 60, 70, 0.9);
 }
 
 body.theme-minor-pentatonic {
@@ -150,6 +156,9 @@ body.theme-minor-pentatonic {
     --hex-color-root-bg: rgba(255, 200, 255, 0.8);
     --hex-color-root-border: rgba(255, 230, 255, 0.9);
     --hex-color-text: #eeddee;
+    --timeline-grid-default-border-color: rgba(180, 120, 160, 0.7);
+    --timeline-grid-default-scanline-color: rgba(220, 150, 200, 0.9);
+    --timeline-grid-internal-lines-color: rgba(180, 120, 160, 0.2);
 }
 
 body.theme-major {
@@ -220,6 +229,9 @@ body.theme-major {
     --hex-color-root-bg: rgba(200, 255, 220, 0.8);
     --hex-color-root-border: rgba(230, 255, 240, 0.9);
     --hex-color-text: #ddffee;
+    --timeline-grid-default-border-color: rgba(120, 180, 220, 0.7);
+    --timeline-grid-default-scanline-color: rgba(150, 200, 255, 0.9);
+    --timeline-grid-internal-lines-color: rgba(120, 180, 220, 0.2);
 }
 
 body.theme-minor {
@@ -290,6 +302,9 @@ body.theme-minor {
     --hex-color-root-bg: rgba(255, 210, 180, 0.8);
     --hex-color-root-border: rgba(255, 230, 210, 0.9);
     --hex-color-text: #ffeedd;
+    --timeline-grid-default-border-color: rgba(255, 190, 190, 0.75);
+    --timeline-grid-default-scanline-color: rgba(255, 210, 180, 0.9);
+    --timeline-grid-internal-lines-color: rgba(180, 130, 110, 0.25);
 }
 
 body.theme-chromatic {
@@ -360,6 +375,9 @@ body.theme-chromatic {
     --hex-color-root-bg: rgba(230, 230, 230, 0.8);
     --hex-color-root-border: rgba(255, 255, 255, 0.9);
     --hex-color-text: #f0f0f0;
+    --timeline-grid-default-border-color: rgba(210, 210, 210, 0.75);
+    --timeline-grid-default-scanline-color: rgba(255, 255, 255, 0.9);
+    --timeline-grid-internal-lines-color: rgba(150, 150, 160, 0.25);
 }
 
 body {
