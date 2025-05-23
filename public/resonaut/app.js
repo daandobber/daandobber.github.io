@@ -111,7 +111,38 @@ const tapeWaveformCtx = tapeWaveformCanvas ? tapeWaveformCanvas.getContext('2d')
 const tapeLoopTimer = document.getElementById('tapeLoopTimer');
 const tapeLoopHandleStart = document.getElementById('tapeLoopHandleStart');
 const tapeLoopHandleEnd = document.getElementById('tapeLoopHandleEnd');
+const TIMELINE_GRID_TYPE = 'timeline_grid';
+const PRORB_TYPE = 'prorb';
+const TIMELINE_GRID_DEFAULT_WIDTH = 250;
+const TIMELINE_GRID_DEFAULT_HEIGHT = 400;
+const TIMELINE_GRID_DEFAULT_SPEED = 4.0;
+const TIMELINE_GRID_DEFAULT_COLOR = 'rgba(120, 220, 120, 0.7)';
+const TIMELINE_GRID_DEFAULT_PULSE_INTENSITY = 0.9;
+const addTimelineGridBtn = document.getElementById("addTimelineGridBtn");
+if (addTimelineGridBtn) {
+    addTimelineGridBtn.addEventListener("click", (e) => {
+        setupAddTool(e.currentTarget, TIMELINE_GRID_TYPE, false);
+    });
+} else {
+    console.warn("#addTimelineGridBtn not found in DOM!");
+}
+const addPrOrbBtn = document.getElementById("addPrOrbBtn");
+if (addPrOrbBtn) {
+    addPrOrbBtn.addEventListener("click", (e) => {
+        setupAddTool(e.currentTarget, PRORB_TYPE, false);
+    });
+} else {
+    console.warn("#addPrOrbBtn not found in DOM!");
+}
+let isResizingTimelineGrid = false;
+let resizingTimelineGridNode = null; // The timeline grid node being resized
+let resizeHandleType = null; // e.g., 'top-left', 'right', 'bottom', etc.
+let resizeStartMousePos = { x: 0, y: 0 }; // Mouse position at the start of resize
+let initialNodeDimensions = { x: 0, y: 0, width: 0, height: 0 }; // Node's state at resize start
 let tapeReelAngle = 0;
+let isDrawingNewTimelineGrid = false;
+let newTimelineGridInitialCorner = null; // Will store {x, y} of the mousedown point
+let currentlyPlacingTimelineNodeId = null; // ID of the timeline node being placed/resized
 
 let isAbletonLinkActive = false;
 let unsavedChanges = false;
@@ -184,8 +215,8 @@ const MIN_NODE_SIZE = 0.6
 const MAX_NODE_SIZE = 1.8
 const MIN_FILTER_FREQ = 350
 const MAX_FILTER_FREQ = 16000
-const DEFAULT_REVERB_SEND = 0.4
-const DEFAULT_DELAY_SEND = 0.3
+const DEFAULT_REVERB_SEND = 0.0
+const DEFAULT_DELAY_SEND = 0.0
 const DEFAULT_TRIGGER_INTERVAL = 2.5
 const DEFAULT_PULSE_INTENSITY = 0.7
 const MIN_PULSE_INTENSITY = 0.1
@@ -575,9 +606,9 @@ const analogWaveformPresets = [{
     details: {
       visualStyle: "analog_sine",
       ampEnv: {
-        attack: 0.005,
-        decay: 0.2,
-        sustain: 0.2,
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 0.02,
         release: 0.2
       }
     }
@@ -589,10 +620,10 @@ const analogWaveformPresets = [{
     details: {
       visualStyle: "analog_square",
       ampEnv: {
-        attack: 0.005,
-        decay: 0.2,
-        sustain: 0.2,
-        release: 0.2
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 0.01,
+        release: 0.01
       }
     }
   },
@@ -1199,14 +1230,24 @@ function lerp(a, b, t) {
 
 function findNodeAt(worldX, worldY) {
   for (let i = nodes.length - 1; i >= 0; i--) {
-    const n = nodes[i]
-    const apparentRadius = (NODE_RADIUS_BASE * n.size * 1.15) / viewScale
-    const d = distance(worldX, worldY, n.x, n.y)
-    if (d < apparentRadius) {
-      return n
+    const n = nodes[i];
+    if (n.type === TIMELINE_GRID_TYPE) {
+      const rectX1 = n.x - n.width / 2;
+      const rectY1 = n.y - n.height / 2;
+      const rectX2 = n.x + n.width / 2;
+      const rectY2 = n.y + n.height / 2;
+      if (worldX >= rectX1 && worldX <= rectX2 && worldY >= rectY1 && worldY <= rectY2) {
+        return n;
+      }
+    } else {
+      const apparentRadius = (NODE_RADIUS_BASE * n.size * 1.15);
+      const d = distance(worldX, worldY, n.x, n.y);
+      if (d < apparentRadius) {
+        return n;
+      }
     }
   }
-  return null
+  return null;
 }
 
 function findNodeById(id) {
@@ -1905,15 +1946,102 @@ function identifyAndRouteAllGroups() {
 }
 
 function createAudioNodesForNode(node) {
-  if (!audioContext || (!["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) && !isDrumType(node.type))) {
+  if (!audioContext) {
+    console.warn("AudioContext not ready, cannot create audio nodes for node ID:", node.id);
     return null;
   }
-  const now = audioContext.currentTime;
-  const startDelay = now + 0.02;
+  if (node.type === TIMELINE_GRID_TYPE) { // Timeline grids don't have their own audio output nodes
+    return null;
+  }
+  
+  // Initial check for types that are expected to have audio nodes.
+  // If a new audio-producing node type is added, it should be included here or in the try block.
+  if (![PRORB_TYPE, "sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) && !isDrumType(node.type)) {
+    return null; // Not an audio producing node type we handle here
+  }
+
   const params = node.audioParams;
+  const now = audioContext.currentTime;
+  const startDelay = now + 0.02; 
 
   try {
-    if (node.type === "sound") {
+    if (node.type === PRORB_TYPE) {
+      const audioNodes = {
+        oscillator1: audioContext.createOscillator(),
+        osc1Gain: audioContext.createGain(),
+        oscillator2: null,
+        osc2Gain: null,
+        fmModulator: null,
+        fmModulatorGain: null,
+        filterNode: audioContext.createBiquadFilter(),
+        mainGain: audioContext.createGain(),
+        lfo1Osc: null,
+        lfo1Gain: null,
+        reverbSendGain: null,
+        delaySendGain: null
+      };
+
+      audioNodes.oscillator1.type = params.osc1Waveform || 'sawtooth';
+      audioNodes.oscillator1.connect(audioNodes.osc1Gain);
+      audioNodes.osc1Gain.connect(audioNodes.filterNode);
+      audioNodes.osc1Gain.gain.value = params.osc1Level !== undefined ? params.osc1Level : 0.7;
+
+      if (params.osc2Enabled) {
+        audioNodes.oscillator2 = audioContext.createOscillator();
+        audioNodes.oscillator2.type = params.osc2Waveform || 'square';
+        audioNodes.osc2Gain = audioContext.createGain();
+        audioNodes.osc2Gain.gain.value = params.osc2Level !== undefined ? params.osc2Level : 0.0;
+        audioNodes.oscillator2.connect(audioNodes.osc2Gain);
+        audioNodes.osc2Gain.connect(audioNodes.filterNode);
+      }
+
+      if (params.fmEnabled) {
+        audioNodes.fmModulator = audioContext.createOscillator();
+        audioNodes.fmModulator.type = params.fmModulatorWaveform || 'sine';
+        audioNodes.fmModulatorGain = audioContext.createGain();
+        audioNodes.fmModulatorGain.gain.value = 0; 
+        audioNodes.fmModulator.connect(audioNodes.fmModulatorGain);
+        audioNodes.fmModulatorGain.connect(audioNodes.oscillator1.frequency); 
+      }
+
+      audioNodes.filterNode.type = params.filterType || 'lowpass';
+      audioNodes.filterNode.frequency.value = params.lowPassFreq !== undefined ? params.lowPassFreq : 8000;
+      audioNodes.filterNode.Q.value = params.filterResonance !== undefined ? params.filterResonance : 1.0;
+      audioNodes.filterNode.connect(audioNodes.mainGain);
+      audioNodes.mainGain.gain.value = 0; 
+
+      if (params.lfo1Enabled) {
+        audioNodes.lfo1Osc = audioContext.createOscillator();
+        audioNodes.lfo1Osc.type = params.lfo1Waveform || 'sine';
+        audioNodes.lfo1Osc.frequency.setValueAtTime(params.lfo1Rate || 2.0, now);
+        audioNodes.lfo1Gain = audioContext.createGain();
+        audioNodes.lfo1Gain.gain.value = params.lfo1Depth || 0;
+        audioNodes.lfo1Osc.connect(audioNodes.lfo1Gain);
+        // LFO target connection logic will be in updateNodeAudioParams / triggerNodeEffect
+      }
+      
+      try { audioNodes.oscillator1.start(startDelay); } catch (e) {}
+      if (audioNodes.oscillator2) { try { audioNodes.oscillator2.start(startDelay); } catch (e) {} }
+      if (audioNodes.fmModulator) { try { audioNodes.fmModulator.start(startDelay); } catch (e) {} }
+      if (audioNodes.lfo1Osc) { try { audioNodes.lfo1Osc.start(startDelay); } catch (e) {} }
+
+      if (isReverbReady && reverbNode) {
+        audioNodes.reverbSendGain = audioContext.createGain();
+        audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
+        audioNodes.mainGain.connect(audioNodes.reverbSendGain);
+        audioNodes.reverbSendGain.connect(reverbNode);
+      }
+      if (isDelayReady && masterDelaySendGain) {
+        audioNodes.delaySendGain = audioContext.createGain();
+        audioNodes.delaySendGain.gain.value = params.delaySend || 0;
+        audioNodes.mainGain.connect(audioNodes.delaySendGain);
+        audioNodes.delaySendGain.connect(masterDelaySendGain);
+      }
+      
+      audioNodes.mainGain.connect(masterGain);
+      return audioNodes;
+
+  } else if (node.type === "sound") { 
       const audioNodes = {
         gainNode: audioContext.createGain(),
         lowPassFilter: audioContext.createBiquadFilter(),
@@ -1922,6 +2050,7 @@ function createAudioNodesForNode(node) {
         volLfo: audioContext.createOscillator(),
         volLfoGain: audioContext.createGain(),
         oscillator1: null,
+        osc1Gain: audioContext.createGain(), 
         modulatorOsc1: null,
         modulatorGain1: null,
         oscillator2: null,
@@ -1934,18 +2063,30 @@ function createAudioNodesForNode(node) {
 
       audioNodes.gainNode.gain.setValueAtTime(0, now);
       audioNodes.lowPassFilter.type = params.filterType || "lowpass";
-      audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2;
+      audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2; 
+      audioNodes.lowPassFilter.frequency.value = params.lowPassFreq || MAX_FILTER_FREQ;
+      
+      if (params.waveform && !params.waveform.startsWith('sampler_')) {
+          audioNodes.oscillator1 = audioContext.createOscillator();
+          const osc1BaseWaveform = params.osc1Type || params.baseSoundType || params.carrierWaveform || params.actualOscillatorType || params.waveform || "sine";
+          const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
+          audioNodes.oscillator1.type = validOscTypes.includes(osc1BaseWaveform) ? osc1BaseWaveform : (osc1BaseWaveform === "pulse" ? "square" : "sine");
+          audioNodes.oscillator1.frequency.setValueAtTime(params.pitch, now);
+          audioNodes.oscillator1.connect(audioNodes.osc1Gain);
+      }
+      audioNodes.osc1Gain.gain.value = 1.0; 
+      audioNodes.osc1Gain.connect(audioNodes.lowPassFilter);
       audioNodes.lowPassFilter.connect(audioNodes.gainNode);
 
       if (isReverbReady && reverbNode) {
         audioNodes.reverbSendGain = audioContext.createGain();
-        audioNodes.reverbSendGain.gain.value = params.reverbSend;
+        audioNodes.reverbSendGain.gain.value = params.reverbSend || 0; // Use 0 if not defined
         audioNodes.gainNode.connect(audioNodes.reverbSendGain);
         audioNodes.reverbSendGain.connect(reverbNode);
       }
       if (isDelayReady && masterDelaySendGain) {
         audioNodes.delaySendGain = audioContext.createGain();
-        audioNodes.delaySendGain.gain.value = params.delaySend;
+        audioNodes.delaySendGain.gain.value = params.delaySend || 0; // Use 0 if not defined
         audioNodes.gainNode.connect(audioNodes.delaySendGain);
         audioNodes.delaySendGain.connect(masterDelaySendGain);
       }
@@ -1955,24 +2096,11 @@ function createAudioNodesForNode(node) {
       audioNodes.volLfoGain.gain.value = fluctuatingGroupNodeIDs.has(node.id) ? parseFloat(groupFluctuateAmount.value) : (params.volLfoDepth || 0);
       audioNodes.volLfo.connect(audioNodes.volLfoGain);
       audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
-      try {
-        audioNodes.volLfo.start(startDelay);
-      } catch (e) {}
+      try { audioNodes.volLfo.start(startDelay); } catch (e) {}
 
-      const osc1BaseWaveform = params.osc1Type || params.baseSoundType || params.carrierWaveform || params.actualOscillatorType || params.waveform || "sine";
-      const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
-      const finalOsc1Waveform = validOscTypes.includes(osc1BaseWaveform) ? osc1BaseWaveform : (osc1BaseWaveform === "pulse" ? "square" : "sine");
-
-      if (!(params.waveform && params.waveform.startsWith('sampler_'))) {
-        audioNodes.oscillator1 = audioContext.createOscillator();
-        audioNodes.oscillator1.type = finalOsc1Waveform;
-        audioNodes.oscillator1.frequency.setValueAtTime(params.pitch, now);
-        audioNodes.oscillator1.connect(audioNodes.lowPassFilter);
-        try {
-          audioNodes.oscillator1.start(startDelay);
-        } catch (e) {}
-
-        if (params.carrierWaveform && params.modulatorWaveform && audioNodes.oscillator1) {
+      if (audioNodes.oscillator1) { 
+          try { audioNodes.oscillator1.start(startDelay); } catch (e) {}
+        if (params.carrierWaveform && params.modulatorWaveform) {
           audioNodes.modulatorOsc1 = audioContext.createOscillator();
           audioNodes.modulatorOsc1.type = params.modulatorWaveform;
           const modRatio = params.modulatorRatio || 1.0;
@@ -1981,12 +2109,11 @@ function createAudioNodesForNode(node) {
           audioNodes.modulatorGain1.gain.setValueAtTime(0, now);
           audioNodes.modulatorOsc1.connect(audioNodes.modulatorGain1);
           audioNodes.modulatorGain1.connect(audioNodes.oscillator1.frequency);
-          try {
-            audioNodes.modulatorOsc1.start(startDelay);
-          } catch (e) {}
+          try { audioNodes.modulatorOsc1.start(startDelay); } catch (e) {}
         }
-        if (!params.orbitonesEnabled && params.osc2Type && !params.carrierWaveform && audioNodes.oscillator1) {
+        if (!params.orbitonesEnabled && params.osc2Type && !params.carrierWaveform) {
           audioNodes.oscillator2 = audioContext.createOscillator();
+          const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
           audioNodes.oscillator2.type = validOscTypes.includes(params.osc2Type) ? params.osc2Type : (params.osc2Type === "pulse" ? "square" : "sine");
           if (params.osc2Detune) audioNodes.oscillator2.detune.setValueAtTime(params.osc2Detune, now);
           const osc2BaseFreq = params.pitch * Math.pow(2, (params.osc2Octave || 0));
@@ -1995,82 +2122,66 @@ function createAudioNodesForNode(node) {
           audioNodes.osc2Gain.gain.value = params.osc2Mix || 0.5;
           audioNodes.oscillator2.connect(audioNodes.osc2Gain);
           audioNodes.osc2Gain.connect(audioNodes.lowPassFilter);
-          try {
-            audioNodes.oscillator2.start(startDelay);
-          } catch (e) {}
+          try { audioNodes.oscillator2.start(startDelay); } catch (e) {}
         }
       }
 
-      if (params.orbitonesEnabled && params.orbitoneCount > 0 && params.orbitoneIntervals) {
+      if (params.orbitonesEnabled && params.orbitoneCount > 0 && params.orbitoneIntervals && !(params.waveform && params.waveform.startsWith('sampler_'))) {
         const allFrequenciesForCreation = getOrbitoneFrequencies(
           params.scaleIndex, params.orbitoneCount, params.orbitoneIntervals,
           params.orbitoneSpread, currentScale, params.pitch
         );
-        const actualOrbitoneFrequencies = allFrequenciesForCreation.slice(1);
+        const actualOrbitoneFrequencies = allOutputFrequencies.slice(1); // Typo: should be allFrequenciesForCreation
+        const osc1BaseWaveformForOrbitones = params.osc1Type || params.waveform || "sine";
+        const validOscTypesForOrbitones = ["sine", "square", "sawtooth", "triangle"];
+        const finalOrbitoneWaveform = validOscTypesForOrbitones.includes(osc1BaseWaveformForOrbitones) ? osc1BaseWaveformForOrbitones : "sine";
 
         for (let i = 0; i < actualOrbitoneFrequencies.length; i++) {
           const freq = actualOrbitoneFrequencies[i];
           if (isNaN(freq) || freq <= 0) continue;
-
-          if (!(params.waveform && params.waveform.startsWith('sampler_'))) {
             const orbitOsc = audioContext.createOscillator();
-            orbitOsc.type = finalOsc1Waveform;
+            orbitOsc.type = finalOrbitoneWaveform; 
             orbitOsc.frequency.setValueAtTime(freq, now);
-
             const orbitIndividualGainNode = audioContext.createGain();
-            const baseOrbitoneLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-            orbitIndividualGainNode.gain.setValueAtTime(baseOrbitoneLevel, now);
-
+            orbitIndividualGainNode.gain.setValueAtTime(0, now); 
             orbitOsc.connect(orbitIndividualGainNode);
-            orbitIndividualGainNode.connect(audioNodes.lowPassFilter);
-
-            try {
-              orbitOsc.start(startDelay);
-            } catch (e) {}
+            orbitIndividualGainNode.connect(audioNodes.lowPassFilter); 
+            try { orbitOsc.start(startDelay); } catch (e) {}
             audioNodes.orbitoneOscillators.push(orbitOsc);
             audioNodes.orbitoneIndividualGains.push(orbitIndividualGainNode);
-
-            if (params.carrierWaveform && params.modulatorWaveform) {
-              const modOsc = audioContext.createOscillator();
-              modOsc.type = params.modulatorWaveform;
-              const modRatio = params.modulatorRatio || 1.0;
-              modOsc.frequency.setValueAtTime(freq * modRatio, now);
-              const modGain = audioContext.createGain();
-              modGain.gain.setValueAtTime(0, now);
-              modOsc.connect(modGain);
-              modGain.connect(orbitOsc.frequency);
-              try {
-                modOsc.start(startDelay);
-              } catch (e) {}
-              audioNodes.orbitoneModulatorOscs.push(modOsc);
-              audioNodes.orbitoneModulatorGains.push(modGain);
+             if (params.carrierWaveform && params.modulatorWaveform && audioNodes.fmModulatorGain) {
+                const modOsc = audioContext.createOscillator();
+                modOsc.type = params.modulatorWaveform;
+                const modRatio = params.modulatorRatio || 1.0;
+                modOsc.frequency.setValueAtTime(freq * modRatio, now);
+                const modGain = audioContext.createGain();
+                modGain.gain.setValueAtTime(0, now); // FM depth for orbitone modulator
+                modOsc.connect(modGain);
+                modGain.connect(orbitOsc.frequency); 
+                try { modOsc.start(startDelay); } catch (e) {}
+                audioNodes.orbitoneModulatorOscs.push(modOsc);
+                audioNodes.orbitoneModulatorGains.push(modGain);
             }
-          }
         }
       }
       return audioNodes;
-    } else if (node.type === "nebula") {
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = 0;
-      const filterNode = audioContext.createBiquadFilter();
-      filterNode.type = params.filterType || "lowpass";
-      filterNode.Q.value = params.filterResonance || NEBULA_FILTER_Q;
+  } else if (node.type === "nebula") {
+      const audioNodes = {};
+      audioNodes.gainNode = audioContext.createGain(); audioNodes.gainNode.gain.value = 0;
+      audioNodes.filterNode = audioContext.createBiquadFilter();
+      audioNodes.filterNode.type = params.filterType || "lowpass";
+      audioNodes.filterNode.Q.value = params.filterResonance || NEBULA_FILTER_Q;
       const baseFreq = params.pitch;
-      const filterLfo = audioContext.createOscillator();
-      filterLfo.type = "sine";
-      filterLfo.frequency.setValueAtTime(NEBULA_FILTER_LFO_RATE, now);
-      const filterLfoGain = audioContext.createGain();
-      filterLfoGain.gain.setValueAtTime(baseFreq * NEBULA_FILTER_LFO_DEPTH_FACTOR * (params.lfoDepthFactor || 1), now);
-      filterLfo.connect(filterLfoGain);
-      filterLfoGain.connect(filterNode.frequency);
-      const volLfo = audioContext.createOscillator();
-      volLfo.type = "sine";
-      volLfo.frequency.setValueAtTime(NEBULA_VOL_LFO_RATE, now);
-      const volLfoGain = audioContext.createGain();
-      volLfoGain.gain.value = NEBULA_VOL_LFO_DEPTH;
-      volLfo.connect(volLfoGain);
-      volLfoGain.connect(gainNode.gain);
-      const oscillators = [];
+      audioNodes.filterLfo = audioContext.createOscillator(); audioNodes.filterLfo.type = "sine";
+      audioNodes.filterLfo.frequency.setValueAtTime(NEBULA_FILTER_LFO_RATE, now);
+      audioNodes.filterLfoGain = audioContext.createGain();
+      audioNodes.filterLfoGain.gain.setValueAtTime(baseFreq * NEBULA_FILTER_LFO_DEPTH_FACTOR * (params.lfoDepthFactor || 1), now);
+      audioNodes.filterLfo.connect(audioNodes.filterLfoGain); audioNodes.filterLfoGain.connect(audioNodes.filterNode.frequency);
+      audioNodes.volLfo = audioContext.createOscillator(); audioNodes.volLfo.type = "sine";
+      audioNodes.volLfo.frequency.setValueAtTime(NEBULA_VOL_LFO_RATE, now);
+      audioNodes.volLfoGain = audioContext.createGain(); audioNodes.volLfoGain.gain.value = NEBULA_VOL_LFO_DEPTH;
+      audioNodes.volLfo.connect(audioNodes.volLfoGain); audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
+      audioNodes.oscillators = [];
       const baseWaveformForNebula = params.osc1Type || params.waveform || "sawtooth";
       const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
       let waveformType = validOscTypes.includes(baseWaveformForNebula) ? baseWaveformForNebula : "sawtooth";
@@ -2081,165 +2192,68 @@ function createAudioNodesForNode(node) {
         osc.frequency.setValueAtTime(freq, now);
         osc.detune.setValueAtTime((i % 2 === 0 ? 1 : -1) * (params.detune || NEBULA_OSC_DETUNE) * (i + 1), now);
         osc.type = waveformType;
-        osc.connect(filterNode);
-        oscillators.push(osc);
+        osc.connect(audioNodes.filterNode); audioNodes.oscillators.push(osc);
       });
-      filterNode.connect(gainNode);
-      let reverbSendGain = null;
-      if (isReverbReady && reverbNode) {
-        reverbSendGain = audioContext.createGain();
-        reverbSendGain.gain.value = params.reverbSend;
-        gainNode.connect(reverbSendGain);
-        reverbSendGain.connect(reverbNode);
-      }
-      let delaySendGain = null;
-      if (isDelayReady && masterDelaySendGain) {
-        delaySendGain = audioContext.createGain();
-        delaySendGain.gain.value = params.delaySend;
-        gainNode.connect(delaySendGain);
-        delaySendGain.connect(masterDelaySendGain);
-      }
-      const sizeRange = MAX_NODE_SIZE - MIN_NODE_SIZE;
-      const normalizedSize = (node.size - MIN_NODE_SIZE) / (sizeRange || 1);
+      audioNodes.filterNode.connect(audioNodes.gainNode);
+      if (isReverbReady && reverbNode) { audioNodes.reverbSendGain = audioContext.createGain(); audioNodes.reverbSendGain.gain.value = params.reverbSend || 0; audioNodes.gainNode.connect(audioNodes.reverbSendGain); audioNodes.reverbSendGain.connect(reverbNode); }
+      if (isDelayReady && masterDelaySendGain) { audioNodes.delaySendGain = audioContext.createGain(); audioNodes.delaySendGain.gain.value = params.delaySend || 0; audioNodes.gainNode.connect(audioNodes.delaySendGain); audioNodes.delaySendGain.connect(masterDelaySendGain); }
       const initialVol = Math.min(NEBULA_MAX_VOL, node.size * NEBULA_VOL_SCALING);
-      const initialFilterFreq = params.filterCutoff || (baseFreq * 2 + normalizedSize * baseFreq * (params.filterFreqFactor || 12));
-      filterNode.frequency.setValueAtTime(initialFilterFreq, now);
-      gainNode.gain.linearRampToValueAtTime(initialVol, now + 0.5);
-      try {
-        filterLfo.start(startDelay);
-      } catch (e) {}
-      try {
-        volLfo.start(startDelay);
-      } catch (e) {}
-      oscillators.forEach((osc) => {
-        try {
-          osc.start(startDelay);
-        } catch (e) {}
-      });
-      if (originalNebulaGroupGain) {
-        gainNode.connect(originalNebulaGroupGain);
-      } else {
-        gainNode.connect(masterGain);
-      }
-      return {
-        gainNode,
-        filterNode,
-        filterLfo,
-        filterLfoGain,
-        volLfo,
-        volLfoGain,
-        oscillators,
-        reverbSendGain,
-        delaySendGain
-      };
-    } else if (node.type === PORTAL_NEBULA_TYPE) {
-      const defaults = PORTAL_NEBULA_DEFAULTS;
-      const mainGain = audioContext.createGain();
-      mainGain.gain.setValueAtTime(0, now);
-      mainGain.gain.linearRampToValueAtTime(params.volume, now + 1.0);
-      const droneOsc = audioContext.createOscillator();
-      droneOsc.type = params.actualOscillatorType || 'triangle';
-      droneOsc.frequency.setValueAtTime(params.pitch, now);
-      const droneFreqLfo = audioContext.createOscillator();
-      droneFreqLfo.type = 'sine';
-      droneFreqLfo.frequency.setValueAtTime(0.05 + Math.random() * 0.05, now);
-      const droneFreqLfoGain = audioContext.createGain();
-      droneFreqLfoGain.gain.setValueAtTime(0.5 + Math.random() * 0.5, now);
-      droneFreqLfo.connect(droneFreqLfoGain);
-      droneFreqLfoGain.connect(droneOsc.frequency);
-      droneOsc.connect(mainGain);
-      const harmonics = [];
-      const harmonicGain = audioContext.createGain();
-      harmonicGain.gain.setValueAtTime(defaults.harmonicBaseGain, now);
-      const shimmerLfo = audioContext.createOscillator();
-      shimmerLfo.type = 'sine';
-      shimmerLfo.frequency.setValueAtTime(defaults.shimmerRate, now);
-      const shimmerLfoGain = audioContext.createGain();
-      shimmerLfoGain.gain.setValueAtTime(defaults.shimmerDepth, now);
-      shimmerLfo.connect(shimmerLfoGain);
-      shimmerLfoGain.connect(harmonicGain.gain);
+      const initialFilterFreq = params.filterCutoff || (baseFreq * 2 + ((node.size - MIN_NODE_SIZE) / (MAX_NODE_SIZE - MIN_NODE_SIZE || 1)) * baseFreq * (params.filterFreqFactor || 12));
+      audioNodes.filterNode.frequency.setValueAtTime(initialFilterFreq, now);
+      audioNodes.gainNode.gain.linearRampToValueAtTime(initialVol, now + 0.5);
+      try { audioNodes.filterLfo.start(startDelay); } catch (e) {}
+      try { audioNodes.volLfo.start(startDelay); } catch (e) {}
+      audioNodes.oscillators.forEach((osc) => { try { osc.start(startDelay); } catch (e) {} });
+      if (originalNebulaGroupGain) { audioNodes.gainNode.connect(originalNebulaGroupGain); } 
+      else { audioNodes.gainNode.connect(masterGain); }
+      return audioNodes;
+  } else if (node.type === PORTAL_NEBULA_TYPE) {
+      const audioNodes = {}; const defaults = PORTAL_NEBULA_DEFAULTS; 
+      audioNodes.mainGain = audioContext.createGain();
+      audioNodes.mainGain.gain.setValueAtTime(0, now); audioNodes.mainGain.gain.linearRampToValueAtTime(params.volume, now + 1.0);
+      audioNodes.droneOsc = audioContext.createOscillator(); audioNodes.droneOsc.type = params.actualOscillatorType || 'triangle';
+      audioNodes.droneOsc.frequency.setValueAtTime(params.pitch, now);
+      audioNodes.droneFreqLfo = audioContext.createOscillator(); audioNodes.droneFreqLfo.type = 'sine';
+      audioNodes.droneFreqLfo.frequency.setValueAtTime(0.05 + Math.random() * 0.05, now);
+      audioNodes.droneFreqLfoGain = audioContext.createGain(); audioNodes.droneFreqLfoGain.gain.setValueAtTime(0.5 + Math.random() * 0.5, now);
+      audioNodes.droneFreqLfo.connect(audioNodes.droneFreqLfoGain); audioNodes.droneFreqLfoGain.connect(audioNodes.droneOsc.frequency);
+      audioNodes.droneOsc.connect(audioNodes.mainGain); audioNodes.harmonics = [];
+      audioNodes.harmonicGain = audioContext.createGain(); audioNodes.harmonicGain.gain.setValueAtTime(defaults.harmonicBaseGain, now);
+      audioNodes.shimmerLfo = audioContext.createOscillator(); audioNodes.shimmerLfo.type = 'sine';
+      audioNodes.shimmerLfo.frequency.setValueAtTime(defaults.shimmerRate, now);
+      audioNodes.shimmerLfoGain = audioContext.createGain(); audioNodes.shimmerLfoGain.gain.setValueAtTime(defaults.shimmerDepth, now);
+      audioNodes.shimmerLfo.connect(audioNodes.shimmerLfoGain); audioNodes.shimmerLfoGain.connect(audioNodes.harmonicGain.gain);
       for (let i = 0; i < defaults.numHarmonics; i++) {
-        const harmonicOsc = audioContext.createOscillator();
-        harmonicOsc.type = 'sine';
+        const harmonicOsc = audioContext.createOscillator(); harmonicOsc.type = 'sine';
         const freqMultiplier = Math.pow(2, (i + 1) * defaults.harmonicSpread * 0.5 + Math.random() * 0.1);
         harmonicOsc.frequency.setValueAtTime(params.pitch * freqMultiplier, now);
         harmonicOsc.detune.setValueAtTime((Math.random() - 0.5) * 15, now);
-        harmonicOsc.connect(harmonicGain);
-        harmonics.push(harmonicOsc);
+        harmonicOsc.connect(audioNodes.harmonicGain); audioNodes.harmonics.push(harmonicOsc);
       }
-      harmonicGain.connect(mainGain);
-      let reverbSendGain = null;
-      if (isReverbReady && reverbNode) {
-        reverbSendGain = audioContext.createGain();
-        reverbSendGain.gain.value = params.reverbSend;
-        mainGain.connect(reverbSendGain);
-        reverbSendGain.connect(reverbNode);
-      }
-      let delaySendGain = null;
-      if (isDelayReady && masterDelaySendGain) {
-        delaySendGain = audioContext.createGain();
-        delaySendGain.gain.value = params.delaySend;
-        mainGain.connect(delaySendGain);
-        delaySendGain.connect(masterDelaySendGain);
-      }
-      try {
-        droneOsc.start(startDelay);
-      } catch (e) {}
-      try {
-        droneFreqLfo.start(startDelay);
-      } catch (e) {}
-      try {
-        shimmerLfo.start(startDelay);
-      } catch (e) {}
-      harmonics.forEach(osc => {
-        try {
-          osc.start(startDelay);
-        } catch (e) {}
-      });
-      if (portalGroupGain) {
-        mainGain.connect(portalGroupGain);
-      } else {
-        mainGain.connect(masterGain);
-      }
-      return {
-        mainGain,
-        droneOsc,
-        droneFreqLfo,
-        droneFreqLfoGain,
-        harmonics,
-        harmonicGain,
-        shimmerLfo,
-        shimmerLfoGain,
-        reverbSendGain,
-        delaySendGain
-      };
-    } else if (isDrumType(node.type)) {
-      const mainGain = audioContext.createGain();
-      mainGain.gain.value = params.volume;
-      let reverbSendGain = null;
-      if (isReverbReady && reverbNode) {
-        reverbSendGain = audioContext.createGain();
-        reverbSendGain.gain.value = params.reverbSend ?? DEFAULT_REVERB_SEND;
-        mainGain.connect(reverbSendGain);
-        reverbSendGain.connect(reverbNode);
-      }
-      let delaySendGain = null;
-      if (isDelayReady && masterDelaySendGain) {
-        delaySendGain = audioContext.createGain();
-        delaySendGain.gain.value = params.delaySend ?? DEFAULT_DELAY_SEND;
-        mainGain.connect(delaySendGain);
-        delaySendGain.connect(masterDelaySendGain);
-      }
-      return {
-        mainGain,
-        reverbSendGain,
-        delaySendGain
-      };
+      audioNodes.harmonicGain.connect(audioNodes.mainGain);
+      if (isReverbReady && reverbNode) { audioNodes.reverbSendGain = audioContext.createGain(); audioNodes.reverbSendGain.gain.value = params.reverbSend || 0; audioNodes.mainGain.connect(audioNodes.reverbSendGain); audioNodes.reverbSendGain.connect(reverbNode); }
+      if (isDelayReady && masterDelaySendGain) { audioNodes.delaySendGain = audioContext.createGain(); audioNodes.delaySendGain.gain.value = params.delaySend || 0; audioNodes.mainGain.connect(audioNodes.delaySendGain); audioNodes.delaySendGain.connect(masterDelaySendGain); }
+      try { audioNodes.droneOsc.start(startDelay); } catch (e) {}
+      try { audioNodes.droneFreqLfo.start(startDelay); } catch (e) {}
+      try { audioNodes.shimmerLfo.start(startDelay); } catch (e) {}
+      audioNodes.harmonics.forEach(osc => { try { osc.start(startDelay); } catch (e) {} });
+      if (portalGroupGain) { audioNodes.mainGain.connect(portalGroupGain); } 
+      else { audioNodes.mainGain.connect(masterGain); }
+      return audioNodes;
+  } else if (isDrumType(node.type)) {
+      const audioNodes = {};
+      audioNodes.mainGain = audioContext.createGain();
+      audioNodes.mainGain.gain.value = params.volume || 1.0; 
+      if (isReverbReady && reverbNode) { audioNodes.reverbSendGain = audioContext.createGain(); audioNodes.reverbSendGain.gain.value = params.reverbSend ?? DEFAULT_REVERB_SEND; audioNodes.mainGain.connect(audioNodes.reverbSendGain); audioNodes.reverbSendGain.connect(reverbNode); }
+      if (isDelayReady && masterDelaySendGain) { audioNodes.delaySendGain = audioContext.createGain(); audioNodes.delaySendGain.gain.value = params.delaySend ?? DEFAULT_DELAY_SEND; audioNodes.mainGain.connect(audioNodes.delaySendGain); audioNodes.delaySendGain.connect(masterDelaySendGain); }
+      audioNodes.mainGain.connect(masterGain); 
+      return audioNodes;
     }
   } catch (e) {
-    return null;
+    console.error("Error creating audio nodes for node type:", node.type, "ID:", node.id, e);
+    return null; 
   }
-  return null;
+  return null; 
 }
 
 /**
@@ -2994,6 +3008,10 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
   const now = audioContext.currentTime;
   const params = node.audioParams;
   const intensity = pulseData.intensity ?? 1.0;
+  const baseVolume = 0.2; // This is the base for oscillator volume scaling
+  const targetVolume = baseVolume * intensity;
+  const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume)); // Max peak for main gainNode if oscillator
+
   const ampEnv = params.ampEnv || {
     attack: 0.01,
     decay: 0.3,
@@ -3023,38 +3041,13 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
       orbitoneIndividualGains
     } = node.audioNodes;
 
-    const baseVolume = 0.6;
-    const targetVolume = baseVolume * intensity;
-    const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume));
-
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(clampedVolume, now + ampEnv.attack);
-    gainNode.gain.setTargetAtTime(clampedVolume * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3 + 0.001);
-
-    const totalDurationForMainNodeEnvelope = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0));
-    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
-    setTimeout(() => {
-      const stillNode = findNodeById(node.id);
-      if (stillNode && stillNode.audioNodes?.gainNode) {
-        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
-        stillNode.audioNodes.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
-        stillNode.audioNodes.gainNode.gain.setValueAtTime(currentGainVal, audioContext.currentTime);
-        stillNode.audioNodes.gainNode.gain.setTargetAtTime(0, audioContext.currentTime, mainNodeReleaseTimeConstant);
-      }
-      if (stillNode) stillNode.isTriggered = false;
-    }, totalDurationForMainNodeEnvelope * 1000);
+    let peakVolumeForMainEnvelope = clampedVolume; // Default for oscillators
 
     if (params.waveform && params.waveform.startsWith('sampler_')) {
-      console.log(`[Sampler Trigger AANGEPAST] Attempting sampler: ${params.waveform} for node ${node.id}`);
       const samplerId = params.waveform.replace('sampler_', '');
       const definition = SAMPLER_DEFINITIONS.find(s => s.id === samplerId);
 
-      console.log(`[Sampler Trigger AANGEPAST] Definition for ${samplerId}: ${!!definition}, Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
-
       if (definition && definition.isLoaded && definition.buffer) {
-        console.log(`[Sampler Trigger AANGEPAST] Conditions MET for playing ${samplerId}`);
-
         const allOutputFrequencies = getOrbitoneFrequencies(
           params.scaleIndex,
           params.orbitonesEnabled ? params.orbitoneCount : 0,
@@ -3066,7 +3059,6 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
 
         allOutputFrequencies.forEach((freq, index) => {
           if (isNaN(freq) || freq <= 0) {
-            console.warn(`[Sampler Play AANGEPAST] Invalid frequency for note ${index} of ${samplerId}: ${freq}`);
             return;
           }
           const isMainNote = index === 0;
@@ -3082,69 +3074,75 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
           source.playbackRate.setValueAtTime(targetRate, scheduledStartTime);
 
           const perNoteSamplerGain = audioContext.createGain();
-
-          // --- AANPASSING HIER ---
           let noteVolumeFactor;
-          if (params.orbitonesEnabled && params.orbitoneCount > 0) {
-            // Als orbitones AAN staan, gebruik de mix logic
-            const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-            noteVolumeFactor = isMainNote ? (1.0 - orbitoneBaseMixLevel) : (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
-          } else {
-            // Als orbitones UIT staan, krijgt de hoofdnoot vol volume (factor 1.0), anderen 0
+          const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+
+          if (!params.orbitonesEnabled || params.orbitoneCount === 0) {
             noteVolumeFactor = isMainNote ? 1.0 : 0;
+          } else {
+            const mainNoteVolWhenMixedOut = (orbitoneBaseMixLevel >= 0.99) ? 0.0 : (1.0 - orbitoneBaseMixLevel);
+            noteVolumeFactor = isMainNote ?
+              mainNoteVolWhenMixedOut :
+              (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
           }
-          // --- EINDE AANPASSING ---
 
-          const finalNoteVolume = clampedVolume * noteVolumeFactor;
+          // --- SAMPLER VOLUME ADJUSTMENT ---
+          // clampedVolume here is still based on baseVolume (0.2) for consistency.
+          // We want the signal from perNoteSamplerGain to be effectively around 1.0 * intensity 
+          // before it hits the main gainNode, to match oscillator levels.
+          const SAMPLER_VOLUME_BOOST_FACTOR = 4.0 / baseVolume; // e.g., 1.0 / 0.2 = 5.0
+          let boostedSamplerNoteVolume = clampedVolume * noteVolumeFactor * SAMPLER_VOLUME_BOOST_FACTOR;
+          boostedSamplerNoteVolume = Math.min(1.5, boostedSamplerNoteVolume); // Cap to prevent extreme clipping before main gain
+          
+          const finalNoteVolumeForThisSamplerInstance = boostedSamplerNoteVolume;
+          // --- END SAMPLER VOLUME ADJUSTMENT ---
 
-          console.log(`[Sampler Play AANGEPAST] Node: ${node.id}, Sampler: ${samplerId}, NoteIndex: ${index}, Freq: ${freq.toFixed(2)}, Rate: ${targetRate.toFixed(2)}, FinalVol: ${finalNoteVolume.toFixed(3)}, ClampedVol: ${clampedVolume.toFixed(3)}, Intensity: ${intensity.toFixed(3)}, NoteVolFactor: ${noteVolumeFactor.toFixed(3)}`);
 
-          if (finalNoteVolume < 0.001 && isMainNote) { // Voeg check toe voor hoofdnoot
-            console.warn(`[Sampler Play AANGEPAST] Main note for ${samplerId} has near-zero volume. Skipping play.`);
-            return; // Skip als hoofdnoot te zacht is
-          }
-          if (finalNoteVolume < 0.001 && !isMainNote) { // Orbitone is te zacht, skip deze specifieke orbitone
+          if (finalNoteVolumeForThisSamplerInstance < 0.001) {
+            if (isMainNote) {}
             return;
           }
 
-
           perNoteSamplerGain.gain.setValueAtTime(0, scheduledStartTime);
-          perNoteSamplerGain.gain.linearRampToValueAtTime(finalNoteVolume, scheduledStartTime + 0.005); // 5ms attack
+          perNoteSamplerGain.gain.linearRampToValueAtTime(finalNoteVolumeForThisSamplerInstance, scheduledStartTime + 0.005);
 
           source.connect(perNoteSamplerGain);
           perNoteSamplerGain.connect(lowPassFilter);
-
-          console.log(`[Sampler Play AANGEPAST] Starting source for ${samplerId} (note ${index}) at ${scheduledStartTime.toFixed(3)}`);
           source.start(scheduledStartTime);
 
-          const estimatedEnvelopeDuration = ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0);
-          const bufferActualDuration = definition.buffer.duration / targetRate;
-          const stopTime = scheduledStartTime + Math.min(bufferActualDuration, estimatedEnvelopeDuration + ampEnv.release * 0.5);
+          const samplerReleaseFactor = params.samplerReleaseFactor !== undefined ? params.samplerReleaseFactor : 0.5;
+          const samplerSustainFactor = params.samplerSustainFactor !== undefined ? params.samplerSustainFactor : 0.8;
+          const samplerSpecificReleaseTimeConstant = samplerReleaseFactor * (ampEnv.release / 4 + 0.001);
+          const samplerEstimatedDuration = samplerSustainFactor * (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
 
-          perNoteSamplerGain.gain.setTargetAtTime(0.0001, scheduledStartTime + estimatedEnvelopeDuration, ampEnv.release / 4 + 0.001);
-          if (bufferActualDuration < (estimatedEnvelopeDuration + ampEnv.release)) {
+          perNoteSamplerGain.gain.setTargetAtTime(0.0001, scheduledStartTime + samplerEstimatedDuration, samplerSpecificReleaseTimeConstant);
+
+          const bufferActualDuration = definition.buffer.duration / targetRate;
+          const stopTime = scheduledStartTime + Math.min(bufferActualDuration, samplerEstimatedDuration + (ampEnv.release * samplerReleaseFactor * 1.5));
+          if (bufferActualDuration < (samplerEstimatedDuration + (ampEnv.release * samplerReleaseFactor))) {
             source.stop(stopTime);
           }
+
           source.onended = () => {
             try {
               perNoteSamplerGain.disconnect();
               source.disconnect();
-              console.log(`[Sampler Play AANGEPAST] Sampler source ${samplerId} (note ${index}) ended and disconnected.`);
             } catch (e) {}
           };
         });
+        // For samplers, the main envelope peak is the same as oscillators,
+        // because the perNoteSamplerGain is already boosted to compensate.
+        peakVolumeForMainEnvelope = clampedVolume; 
       } else {
-        console.warn(`[Sampler Trigger AANGEPAST] Sampler conditions NOT MET for ${samplerId} AT TRIGGER TIME. Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
-        if (oscillator1) { // Fallback naar oscillator
+        if (oscillator1) {
           const fallbackFreq = params.pitch;
           oscillator1.frequency.cancelScheduledValues(now);
           oscillator1.frequency.setTargetAtTime(fallbackFreq, now, 0.005);
-          if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) {
-            /* ... FM fallback ... */
-          }
         }
       }
-    } else if (oscillator1) { // Dit is voor niet-sampler 'sound' nodes (Oscillator-based)
+    } else if (oscillator1) { 
+      peakVolumeForMainEnvelope = clampedVolume; // Standard peak for oscillators
+
       const targetFreq = params.pitch;
       oscillator1.frequency.cancelScheduledValues(now);
       oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
@@ -3155,7 +3153,7 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
         oscillator2.frequency.setTargetAtTime(osc2BaseFreq, now, 0.005);
       }
 
-      if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) {
+      if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) { 
         const modRatio = params.modulatorRatio || 1.0;
         modulatorOsc1.frequency.cancelScheduledValues(now);
         modulatorOsc1.frequency.setTargetAtTime(targetFreq * modRatio, now, 0.005);
@@ -3182,14 +3180,21 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
           }
         }, totalModDuration * 1000);
       }
-      // Hier zou de orbitone logic voor oscillator-based sounds ook moeten komen als je die later weer activeert
       if (params.orbitonesEnabled && orbitoneOscillators && orbitoneIndividualGains && !(params.waveform && params.waveform.startsWith('sampler_'))) {
-        allOutputFrequencies.slice(1).forEach((freq, i) => { // Start vanaf index 1 voor orbitones
+        const allOutputFrequencies = getOrbitoneFrequencies(
+          params.scaleIndex,
+          params.orbitoneCount,
+          params.orbitoneIntervals,
+          params.orbitoneSpread,
+          currentScale,
+          params.pitch
+        );
+        allOutputFrequencies.slice(1).forEach((freq, i) => {
           const orbitOsc = orbitoneOscillators[i];
           const orbitIndGain = orbitoneIndividualGains[i];
           const modOsc = orbitoneModulatorOscs ? orbitoneModulatorOscs[i] : null;
           const modGain = orbitoneModulatorGains ? orbitoneModulatorGains[i] : null;
-          const timingOffsetMs = params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[i] !== undefined ? params.orbitoneTimingOffsets[i] : 0;
+          const timingOffsetMs = (params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[i] !== undefined) ? params.orbitoneTimingOffsets[i] : 0;
           const scheduledOrbitoneStartTime = now + (timingOffsetMs / 1000.0);
 
           if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
@@ -3197,22 +3202,17 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
             orbitOsc.frequency.setTargetAtTime(freq, scheduledOrbitoneStartTime, 0.005);
 
             const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-            let volMultiplier = orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount);
+            let volMultiplier = (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
             orbitIndGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
-            orbitIndGain.gain.setTargetAtTime(Math.min(1.0, Math.max(0.01, volMultiplier * clampedVolume)), scheduledOrbitoneStartTime, 0.01);
+            orbitIndGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
+            orbitIndGain.gain.linearRampToValueAtTime(Math.min(1.0, Math.max(0.01, volMultiplier * peakVolumeForMainEnvelope)), scheduledOrbitoneStartTime + ampEnv.attack);
+            orbitIndGain.gain.setTargetAtTime(0.0001, scheduledOrbitoneStartTime + totalDurationForMainNodeEnvelope - mainNodeReleaseTimeConstant, mainNodeReleaseTimeConstant);
 
-
-            if (modOsc && modGain && params.carrierWaveform) {
-              // Modulator logic voor orbitone
+            if (modOsc && modGain && params.carrierWaveform) { 
               const modRatio = params.modulatorRatio || 1.0;
               modOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
               modOsc.frequency.setTargetAtTime(freq * modRatio, scheduledOrbitoneStartTime, 0.005);
-              const modEnv = params.modulatorEnv || {
-                attack: 0.005,
-                decay: 0.15,
-                sustain: 0,
-                release: 0.2
-              };
+              const modEnv = params.modulatorEnv || { attack: 0.005, decay: 0.15, sustain: 0, release: 0.2 };
               const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
               const modDepth = freq * fmDepthScale;
               modGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
@@ -3235,17 +3235,35 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
       }
     }
 
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(peakVolumeForMainEnvelope, now + ampEnv.attack);
+    gainNode.gain.setTargetAtTime(peakVolumeForMainEnvelope * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3 + 0.001);
+
+    const totalDurationForMainNodeEnvelope = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0));
+    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
+    setTimeout(() => {
+      const stillNode = findNodeById(node.id);
+      if (stillNode && stillNode.audioNodes?.gainNode) {
+        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
+        stillNode.audioNodes.gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+        stillNode.audioNodes.gainNode.gain.setValueAtTime(currentGainVal, audioContext.currentTime);
+        stillNode.audioNodes.gainNode.gain.setTargetAtTime(0, audioContext.currentTime, mainNodeReleaseTimeConstant);
+      }
+      if (stillNode) stillNode.isTriggered = false;
+    }, totalDurationForMainNodeEnvelope * 1000);
+
+
     const particleCount = Math.round(5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0));
     createParticles(node.x, node.y, particleCount);
 
   } else if (isDrumType(node.type)) {
-    // Drum logic (neem aan dat dit werkt zoals voorheen)
     if (!node.audioNodes?.mainGain) return;
     node.isTriggered = true;
     node.animationState = 1;
     const soundParams = params;
     const mainGain = node.audioNodes.mainGain;
-    const finalVol = soundParams.volume * intensity;
+    const finalVol = (soundParams.volume || 1.0) * intensity; 
     const targetFreq = soundParams.baseFreq;
     try {
       if (node.type === 'drum_kick') {
@@ -3374,7 +3392,6 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
     } catch (e) {
       node.isTriggered = false;
       node.animationState = 0;
-      console.error(`Error in triggerNodeEffect (${node.type}):`, e);
     }
     setTimeout(() => {
       const stillNode = findNodeById(node.id);
@@ -3382,7 +3399,7 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
     }, 150);
     createParticles(node.x, node.y, 3);
   }
-}
+} 
 
 function startRetriggerSequence(node, originalPulseData) {
   if (!isAudioReady || !node || !node.audioParams || !node.audioParams.retriggerEnabled) {
@@ -4701,7 +4718,7 @@ function deepCopyState(stateToCopy) {
       if (value instanceof Set) {
         return Array.from(value);
       }
-      if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer) || key === "activeRetriggers") {
+      if (key === "audioNodes" || (key === "buffer" && value instanceof AudioBuffer) || key === "activeRetriggers" || key === "triggeredInThisSweep") {
         return undefined;
       }
       return value;
@@ -4711,7 +4728,11 @@ function deepCopyState(stateToCopy) {
     if (parsed.nodes) {
       parsed.nodes.forEach((node) => {
         node.connections = node.connections ? new Set(node.connections) : new Set();
-        if (!node.audioParams) node.audioParams = {};
+        if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE) {
+          node.audioParams = {};
+        } else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams) {
+            node.audioParams = {};
+        }
         node.activeRetriggers = [];
         node.currentRetriggerVisualIndex = -1;
       });
@@ -4731,7 +4752,6 @@ function deepCopyState(stateToCopy) {
     }
     return parsed;
   } catch (e) {
-    console.error("Error during deep copy/parse state:", e);
     return null;
   }
 }
@@ -4740,8 +4760,31 @@ function saveState() {
   if (isPerformingUndoRedo) return;
   unsavedChanges = true;
   const currentState = {
-    nodes: nodes,
-    connections: connections,
+    nodes: nodes.map(node => {
+      const nodeCopy = { ...node };
+      delete nodeCopy.triggeredInThisSweep;
+      delete nodeCopy.audioNodes;
+      if (node.type === TIMELINE_GRID_TYPE) {
+        // Ensure new properties are explicitly included if they exist directly on node
+        nodeCopy.scanlineDirection = node.scanlineDirection || 'forward';
+        nodeCopy.isPingPongForward = node.isPingPongForward !== undefined ? node.isPingPongForward : true;
+        nodeCopy.timelineMusicalDurationBars = node.timelineMusicalDurationBars || 1;
+        // audioParams should also reflect these if they are controlled via edit panel
+        if (nodeCopy.audioParams) {
+            nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
+            nodeCopy.audioParams.timelineMusicalDurationBars = nodeCopy.timelineMusicalDurationBars;
+        }
+      }
+      return nodeCopy;
+    }),
+    connections: connections.map(conn => {
+      const connCopy = { ...conn };
+      delete connCopy.audioNodes;
+      if (connCopy.audioParams && connCopy.audioParams.buffer && connCopy.type === 'wavetrail') {
+        delete connCopy.audioParams.buffer;
+      }
+      return connCopy;
+    }),
     selectedElements: Array.from(selectedElements),
     fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
     nodeIdCounter: nodeIdCounter,
@@ -4775,7 +4818,6 @@ function saveState() {
 
 function loadState(stateToLoad) {
   if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
-    console.error("Ongeldige of incomplete state data om te laden.");
     return;
   }
 
@@ -4795,9 +4837,17 @@ function loadState(stateToLoad) {
 
   nodes = stateToLoad.nodes;
   connections = stateToLoad.connections;
-  selectedElements = stateToLoad.selectedElements ? new Set(stateToLoad.selectedElements.map(el => ({
-    ...el
-  }))) : new Set();
+
+  if (stateToLoad.selectedElements) {
+    const elementsToProcess = Array.isArray(stateToLoad.selectedElements) ?
+      stateToLoad.selectedElements :
+      Array.from(stateToLoad.selectedElements);
+    selectedElements = new Set(elementsToProcess.map(el => ({ ...el
+    })));
+  } else {
+    selectedElements = new Set();
+  }
+
   fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ? new Set(stateToLoad.fluctuatingGroupNodeIDs) : new Set();
   nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
   connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
@@ -4834,132 +4884,175 @@ function loadState(stateToLoad) {
     node.activeRetriggers = [];
     node.currentRetriggerVisualIndex = -1;
 
-    if (!node.audioParams) node.audioParams = {};
+    if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE) node.audioParams = {};
+    else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams) node.audioParams = {};
 
-    const defaultVolumeSteps = [0.8, 0.65, 0.5];
-    const numDefaultSteps = defaultVolumeSteps.length;
+    if (node.type === TIMELINE_GRID_TYPE) {
+      node.width = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+      node.height = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+      node.timelineSpeed = node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+      node.timelineMusicalDurationBars = node.timelineMusicalDurationBars || 1;
+      node.timelineIsPlaying = node.timelineIsPlaying !== undefined ? node.timelineIsPlaying : true;
+      node.timelineIsLooping = node.timelineIsLooping !== undefined ? node.timelineIsLooping : true;
+      node.scanLinePosition = node.scanLinePosition || 0;
+      node.triggeredInThisSweep = new Set();
+      node.timelinePulseIntensity = node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+      node.internalGridDivisions = node.internalGridDivisions || 8;
+      node.showInternalGrid = node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+      node.snapToInternalGrid = node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
+      node.isInResizeMode = node.isInResizeMode || false;
+      node.scanlineDirection = node.scanlineDirection || 'forward';
+      node.isPingPongForward = node.isPingPongForward !== undefined ? node.isPingPongForward : true;
 
-    const defaultRetriggerParams = {
-      retriggerEnabled: false,
-      retriggerVolumeSteps: [...defaultVolumeSteps],
-      retriggerPitchSteps: Array(numDefaultSteps).fill(0),
-      retriggerFilterSteps: Array(numDefaultSteps).fill(0),
-      retriggerMuteSteps: Array(numDefaultSteps).fill(false),
-      retriggerIntervalMs: 100,
-      retriggerRateMode: "constant",
-    };
 
-    for (const key in defaultRetriggerParams) {
-      if (node.audioParams[key] === undefined) {
-        node.audioParams[key] = defaultRetriggerParams[key];
+      if (!node.audioParams) node.audioParams = {};
+      node.audioParams.timelineSpeed = node.timelineSpeed;
+      node.audioParams.timelineMusicalDurationBars = node.timelineMusicalDurationBars;
+      node.audioParams.timelineIsPlaying = node.timelineIsPlaying;
+      node.audioParams.timelineIsLooping = node.timelineIsLooping;
+      node.audioParams.timelinePulseIntensity = node.timelinePulseIntensity;
+      node.audioParams.width = node.width;
+      node.audioParams.height = node.height;
+      node.audioParams.internalGridDivisions = node.internalGridDivisions;
+      node.audioParams.showInternalGrid = node.showInternalGrid;
+      node.audioParams.snapToInternalGrid = node.snapToInternalGrid;
+      node.audioParams.scanlineDirection = node.scanlineDirection;
+      node.audioParams.isInResizeMode = node.isInResizeMode;
+
+
+      node.isStartNode = false;
+      node.audioNodes = null;
+      delete node.starPoints;
+      delete node.baseHue;
+      delete node.color;
+    } else {
+      const defaultVolumeSteps = [0.8, 0.65, 0.5];
+      const numDefaultSteps = defaultVolumeSteps.length;
+
+      const defaultRetriggerParams = {
+        retriggerEnabled: false,
+        retriggerVolumeSteps: [...defaultVolumeSteps],
+        retriggerPitchSteps: Array(numDefaultSteps).fill(0),
+        retriggerFilterSteps: Array(numDefaultSteps).fill(0),
+        retriggerMuteSteps: Array(numDefaultSteps).fill(false),
+        retriggerIntervalMs: 100,
+        retriggerRateMode: "constant",
+      };
+
+      for (const key in defaultRetriggerParams) {
+        if (node.audioParams[key] === undefined) {
+          node.audioParams[key] = defaultRetriggerParams[key];
+        }
       }
-    }
 
-    if (node.audioParams.retriggerRate !== undefined) {
-      if (node.audioParams.retriggerIntervalMs === defaultRetriggerParams.retriggerIntervalMs) {
-        node.audioParams.retriggerIntervalMs = Math.max(20, Math.round(1000 / node.audioParams.retriggerRate));
+      if (node.audioParams.retriggerRate !== undefined) {
+        if (node.audioParams.retriggerIntervalMs === defaultRetriggerParams.retriggerIntervalMs) {
+          node.audioParams.retriggerIntervalMs = Math.max(20, Math.round(1000 / node.audioParams.retriggerRate));
+        }
+        delete node.audioParams.retriggerRate;
       }
-      delete node.audioParams.retriggerRate;
-    }
 
-    let currentStepCount = (node.audioParams.retriggerVolumeSteps || defaultRetriggerParams.retriggerVolumeSteps).length;
+      let currentStepCount = (node.audioParams.retriggerVolumeSteps || defaultRetriggerParams.retriggerVolumeSteps).length;
 
-    if (node.audioParams.retriggerCount !== undefined || node.audioParams.retriggerVolumeDecay !== undefined) {
-      const countFromOldParam = node.audioParams.retriggerCount || currentStepCount;
-      const decayType = node.audioParams.retriggerVolumeDecay || "linear";
-      const baseVol = 0.8;
-      const newVolumeSteps = [];
-      for (let i = 0; i < countFromOldParam; i++) {
-        let vol = baseVol;
-        if (decayType === "linear") vol *= Math.max(0, 1 - (i / Math.max(1, countFromOldParam - 1)));
-        else if (decayType === "exponential") vol *= Math.pow(0.75, i);
-        newVolumeSteps.push(parseFloat(vol.toFixed(2)));
+      if (node.audioParams.retriggerCount !== undefined || node.audioParams.retriggerVolumeDecay !== undefined) {
+        const countFromOldParam = node.audioParams.retriggerCount || currentStepCount;
+        const decayType = node.audioParams.retriggerVolumeDecay || "linear";
+        const baseVol = 0.8;
+        const newVolumeSteps = [];
+        for (let i = 0; i < countFromOldParam; i++) {
+          let vol = baseVol;
+          if (decayType === "linear") vol *= Math.max(0, 1 - (i / Math.max(1, countFromOldParam - 1)));
+          else if (decayType === "exponential") vol *= Math.pow(0.75, i);
+          newVolumeSteps.push(parseFloat(vol.toFixed(2)));
+        }
+        node.audioParams.retriggerVolumeSteps = newVolumeSteps.length > 0 ? newVolumeSteps : [...defaultRetriggerParams.retriggerVolumeSteps];
+        currentStepCount = node.audioParams.retriggerVolumeSteps.length;
+
+        delete node.audioParams.retriggerCount;
+        delete node.audioParams.retriggerVolumeDecay;
       }
-      node.audioParams.retriggerVolumeSteps = newVolumeSteps.length > 0 ? newVolumeSteps : [...defaultRetriggerParams.retriggerVolumeSteps];
-      currentStepCount = node.audioParams.retriggerVolumeSteps.length;
 
-      delete node.audioParams.retriggerCount;
-      delete node.audioParams.retriggerVolumeDecay;
-    }
+      const ensureStepArrayLength = (arrayName, defaultValue) => {
+        if (!node.audioParams[arrayName] || !Array.isArray(node.audioParams[arrayName]) || node.audioParams[arrayName].length !== currentStepCount) {
+          node.audioParams[arrayName] = Array(currentStepCount).fill(defaultValue);
+        }
+      };
 
-    const ensureStepArrayLength = (arrayName, defaultValue) => {
-      if (!node.audioParams[arrayName] || !Array.isArray(node.audioParams[arrayName]) || node.audioParams[arrayName].length !== currentStepCount) {
-        node.audioParams[arrayName] = Array(currentStepCount).fill(defaultValue);
+      ensureStepArrayLength("retriggerPitchSteps", 0);
+      ensureStepArrayLength("retriggerFilterSteps", 0);
+      ensureStepArrayLength("retriggerMuteSteps", false);
+
+      if (node.audioParams.retriggerFilterArcType !== undefined) {
+        const oldType = node.audioParams.retriggerFilterArcType;
+        const oldFactor = node.audioParams.retriggerFilterArcFactor;
+        if (oldType === "open") {
+          node.audioParams.retriggerFilterArcAmount = oldFactor !== undefined ? oldFactor : 0.5;
+        } else if (oldType === "close") {
+          node.audioParams.retriggerFilterArcAmount = oldFactor !== undefined ? -oldFactor : -0.5;
+        } else {
+          node.audioParams.retriggerFilterArcAmount = 0;
+        }
+        delete node.audioParams.retriggerFilterArcType;
+        delete node.audioParams.retriggerFilterArcFactor;
       }
-    };
 
-    ensureStepArrayLength("retriggerPitchSteps", 0);
-    ensureStepArrayLength("retriggerFilterSteps", 0);
-    ensureStepArrayLength("retriggerMuteSteps", false);
-
-
-    if (node.audioParams.retriggerFilterArcType !== undefined) {
-      const oldType = node.audioParams.retriggerFilterArcType;
-      const oldFactor = node.audioParams.retriggerFilterArcFactor;
-      if (oldType === "open") {
-        node.audioParams.retriggerFilterArcAmount = oldFactor !== undefined ? oldFactor : 0.5;
-      } else if (oldType === "close") {
-        node.audioParams.retriggerFilterArcAmount = oldFactor !== undefined ? -oldFactor : -0.5;
-      } else {
-        node.audioParams.retriggerFilterArcAmount = 0;
+      if (node.audioParams.retriggerPitchArcType !== undefined) {
+        if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
+          const oldStepFactor = node.audioParams.retriggerPitchArcStep === undefined ? 0.03 : node.audioParams.retriggerPitchArcStep;
+          const newType = "relative_factor";
+          const newStep = node.audioParams.retriggerPitchArcType === "down" ? -Math.abs(oldStepFactor) : Math.abs(oldStepFactor);
+          node.audioParams.retriggerPitchArcType = newType;
+          node.audioParams.retriggerPitchArcStep = newStep;
+        } else if (node.audioParams.retriggerPitchArcType === "step") {
+          node.audioParams.retriggerPitchArcType = "semitone_step";
+        } else if (node.audioParams.retriggerPitchArcType === "none" && node.audioParams.retriggerPitchArcStep === undefined) {
+          node.audioParams.retriggerPitchArcStep = 0;
+        }
       }
-      delete node.audioParams.retriggerFilterArcType;
-      delete node.audioParams.retriggerFilterArcFactor;
-    }
+      node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+      node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+      node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
+      node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+      node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+      node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+      node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
+      node.audioParams.gateModeIndex = node.gateModeIndex ?? node.audioParams.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
+      node.gateModeIndex = node.audioParams.gateModeIndex;
+      node.audioParams.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
+      node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
+      node.audioParams.volume = node.audioParams.volume ?? 1.0;
 
-    if (node.audioParams.retriggerPitchArcType !== undefined) {
-      if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
-        const oldStepFactor = node.audioParams.retriggerPitchArcStep === undefined ? 0.03 : node.audioParams.retriggerPitchArcStep;
-        const newType = "relative_factor";
-        const newStep = node.audioParams.retriggerPitchArcType === "down" ? -Math.abs(oldStepFactor) : Math.abs(oldStepFactor);
-        node.audioParams.retriggerPitchArcType = newType;
-        node.audioParams.retriggerPitchArcStep = newStep;
-      } else if (node.audioParams.retriggerPitchArcType === "step") {
-        node.audioParams.retriggerPitchArcType = "semitone_step";
-      } else if (node.audioParams.retriggerPitchArcType === "none" && node.audioParams.retriggerPitchArcStep === undefined) {
-        node.audioParams.retriggerPitchArcStep = 0;
+      if (isDrumType(node.type)) {
+        const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
+        node.audioParams.baseFreq = node.audioParams.baseFreq ?? defaults?.baseFreq;
+        node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
+        node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
+        if (node.type === "drum_snare" || node.type === "drum_clap") {
+          node.audioParams.noiseDecay = node.audioParams.noiseDecay ?? defaults?.noiseDecay;
+        }
       }
-    }
-
-    node.audioParams.reverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-    node.audioParams.delaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-    node.audioParams.probability = node.audioParams.probability ?? DEFAULT_PROBABILITY;
-    node.audioParams.pulseIntensity = node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-    node.audioParams.triggerInterval = node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-    node.audioParams.syncSubdivisionIndex = node.syncSubdivisionIndex ?? node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-    node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
-    node.audioParams.gateModeIndex = node.gateModeIndex ?? node.audioParams.gateModeIndex ?? DEFAULT_GATE_MODE_INDEX;
-    node.gateModeIndex = node.audioParams.gateModeIndex;
-    node.audioParams.pitchShiftIndex = node.pitchShiftIndex ?? node.audioParams.pitchShiftIndex ?? DEFAULT_PITCH_SHIFT_INDEX;
-    node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
-    node.audioParams.volume = node.audioParams.volume ?? 1.0;
-
-    if (isDrumType(node.type)) {
-      const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
-      node.audioParams.baseFreq = node.audioParams.baseFreq ?? defaults?.baseFreq;
-      node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
-      node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
-      if (node.type === "drum_snare" || node.type === "drum_clap") {
-        node.audioParams.noiseDecay = node.audioParams.noiseDecay ?? defaults?.noiseDecay;
+      if (["sound", "nebula"].includes(node.type)) {
+        node.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0));
+        node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
+        if (isNaN(node.audioParams.pitch)) {
+          node.audioParams.scaleIndex = 0;
+          node.audioParams.pitch = getFrequency(currentScale, 0);
+        }
       }
-    }
-    if (["sound", "nebula"].includes(node.type)) {
-      node.audioParams.scaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0));
-      node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
-      if (isNaN(node.audioParams.pitch)) {
-        node.audioParams.scaleIndex = 0;
-        node.audioParams.pitch = getFrequency(currentScale, 0);
+      if (node.type === PORTAL_NEBULA_TYPE) {
+        node.audioParams.pitch = node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
+        node.audioParams.volume = node.audioParams.volume ?? 0.6;
       }
-    }
-    if (node.type === PORTAL_NEBULA_TYPE) {
-      node.audioParams.pitch = node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
-      node.audioParams.volume = node.audioParams.volume ?? 0.6;
     }
 
     if (isAudioReady) {
-      node.audioNodes = createAudioNodesForNode(node);
-      if (node.audioNodes) {
-        updateNodeAudioParams(node);
+      if (node.type !== TIMELINE_GRID_TYPE) {
+        node.audioNodes = createAudioNodesForNode(node);
+        if (node.audioNodes) {
+          updateNodeAudioParams(node);
+        }
+      } else {
+        node.audioNodes = null;
       }
     }
   });
@@ -4991,6 +5084,11 @@ function loadState(stateToLoad) {
       conn.audioParams.buffer = null;
       conn.audioParams.waveformPath = null;
       conn.audioParams.fileName = conn.audioParams.fileName || null;
+      conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
+      conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset ?? null;
+      conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
+      conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
+      conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
       conn.audioNodes = null;
     } else {
       conn.audioNodes = null;
@@ -4999,7 +5097,7 @@ function loadState(stateToLoad) {
 
   updateSyncUI();
   updateScaleAndTransposeUI();
-  if (isAudioReady) updateMixerUI();
+  if (isAudioReady) updateMixerGUI();
   updateConstellationGroup();
   populateEditPanel();
   drawPianoRoll();
@@ -5087,6 +5185,10 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
   const now = audioContext.currentTime;
   const params = node.audioParams;
   const intensity = pulseData.intensity ?? 1.0;
+  
+  const baseVolumeSettingForFinalEnvelope = 0.2; 
+  const oscillatorVolumeMultiplier = 0.75; 
+
   const ampEnv = params.ampEnv || {
     attack: 0.01,
     decay: 0.3,
@@ -5096,7 +5198,6 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
 
   if (node.type === 'sound') {
     if (!node.audioNodes || !node.audioNodes.gainNode || !node.audioNodes.lowPassFilter) {
-      console.warn(`[Sampler Trigger V6 Final] Node ${node.id} mist audioNodes.gainNode of lowPassFilter.`);
       node.isTriggered = false;
       node.animationState = 0;
       return;
@@ -5104,7 +5205,7 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
     node.isTriggered = true;
     node.animationState = 1;
     const {
-      gainNode,
+      gainNode, 
       lowPassFilter,
       oscillator1,
       modulatorOsc1,
@@ -5114,22 +5215,23 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
       orbitoneOscillators,
       orbitoneModulatorOscs,
       orbitoneModulatorGains,
-      orbitoneIndividualGains
+      orbitoneIndividualGains,
+      osc1Gain 
     } = node.audioNodes;
 
-    // *** PAS DEZE WAARDE AAN OM OSCILLATORS ZACHTER TE MAKEN RELATIEF TOT SAMPLERS ***
-    const baseVolume = 0.2; // Was 0.6. Probeer waarden tussen 0.4 en 0.55
-    // *** EINDE AANPASSING baseVolume ***
+    let finalEnvelopePeak;
 
-    const targetVolume = baseVolume * intensity;
-    // clampedVolume is het piekniveau voor de *hoofd* gainNode van deze 'sound' node
-    const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume));
+    if (params.waveform && params.waveform.startsWith('sampler_')) {
+      finalEnvelopePeak = baseVolumeSettingForFinalEnvelope * intensity;
+    } else { 
+      finalEnvelopePeak = (baseVolumeSettingForFinalEnvelope * intensity) * oscillatorVolumeMultiplier;
+    }
+    finalEnvelopePeak = Math.max(0.01, Math.min(1.0, finalEnvelopePeak));
 
-    // Envelope voor de HOOFD gainNode. Alle audio (osc of sampler) gaat hierdoorheen.
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(clampedVolume, now + ampEnv.attack);
-    gainNode.gain.setTargetAtTime(clampedVolume * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3 + 0.001);
+    gainNode.gain.linearRampToValueAtTime(finalEnvelopePeak, now + ampEnv.attack);
+    gainNode.gain.setTargetAtTime(finalEnvelopePeak * ampEnv.sustain, now + ampEnv.attack, ampEnv.decay / 3 + 0.001);
 
     const totalDurationForMainNodeEnvelope = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0));
     const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
@@ -5146,15 +5248,10 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
 
 
     if (params.waveform && params.waveform.startsWith('sampler_')) {
-      console.log(`[Sampler Trigger - V6 Final] Node: ${node.id}, Sampler: ${params.waveform}, Orbitones Enabled: ${params.orbitonesEnabled}, Count: ${params.orbitoneCount}, Mix: ${params.orbitoneMix}`);
       const samplerId = params.waveform.replace('sampler_', '');
       const definition = SAMPLER_DEFINITIONS.find(s => s.id === samplerId);
 
-      console.log(`[Sampler Trigger - V6 Final] Definition for ${samplerId}: ${!!definition}, Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
-
       if (definition && definition.isLoaded && definition.buffer) {
-        console.log(`[Sampler Trigger - V6 Final] Conditions MET for playing ${samplerId}`);
-
         const allOutputFrequencies = getOrbitoneFrequencies(
           params.scaleIndex,
           params.orbitonesEnabled ? params.orbitoneCount : 0,
@@ -5165,113 +5262,112 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
         );
 
         allOutputFrequencies.forEach((freq, index) => {
-          if (isNaN(freq) || freq <= 0) {
-            console.warn(`[Sampler Play - V6 Final] Invalid frequency for note ${index} of ${samplerId}: ${freq}`);
-            return;
-          }
+          if (isNaN(freq) || freq <= 0) { return; }
           const isMainNote = index === 0;
           const timingOffsetMs = isMainNote ? 0 : (params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[index - 1] !== undefined ? params.orbitoneTimingOffsets[index - 1] : 0);
           const scheduledStartTime = now + (timingOffsetMs / 1000.0);
-
           const source = audioContext.createBufferSource();
           source.buffer = definition.buffer;
           let targetRate = 1;
-          if (definition.baseFreq > 0) {
-            targetRate = Math.max(0.1, Math.min(8, freq / definition.baseFreq));
-          }
+          if (definition.baseFreq > 0) { targetRate = Math.max(0.1, Math.min(8, freq / definition.baseFreq)); }
           source.playbackRate.setValueAtTime(targetRate, scheduledStartTime);
-
           const perNoteSamplerGain = audioContext.createGain();
-
           let noteVolumeFactor;
           const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-
           if (!params.orbitonesEnabled || params.orbitoneCount === 0) {
             noteVolumeFactor = isMainNote ? 1.0 : 0;
           } else {
             const mainNoteVolWhenMixedOut = (orbitoneBaseMixLevel >= 0.99) ? 0.0 : (1.0 - orbitoneBaseMixLevel);
-            noteVolumeFactor = isMainNote ?
-              mainNoteVolWhenMixedOut :
-              (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
+            noteVolumeFactor = isMainNote ? mainNoteVolWhenMixedOut : (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
           }
-
-          let finalSamplerSpecificVolume = clampedVolume * noteVolumeFactor;
-
-          // *** VERHOOG DEZE WAARDE OM SAMPLERS LUİDER TE MAKEN ***
-          const SAMPLER_GENERAL_BOOST = 3.6; // Stond op 1.8 of 2.0, probeer 2.2, 2.5 etc.
-          finalSamplerSpecificVolume *= SAMPLER_GENERAL_BOOST;
-          // Begrens het volume om clipping te voorkomen
-          finalSamplerSpecificVolume = Math.min(finalSamplerSpecificVolume, 1.5); // Maximaal 1.5 bijvoorbeeld
-          // *** EINDE AANPASSING SAMPLER BOOST ***
-
-          console.log(`[Sampler Play - V6 Final] Node: ${node.id}, Sampler: ${samplerId}, NoteIdx: ${index}, FinalVol: ${finalSamplerSpecificVolume.toFixed(3)}, clampedVol: ${clampedVolume.toFixed(3)}, noteVolFactor: ${noteVolumeFactor.toFixed(3)}, BOOST: ${SAMPLER_GENERAL_BOOST}`);
-
-          if (finalSamplerSpecificVolume < 0.001) {
-            if (isMainNote) console.warn(`[Sampler Play - V6 Final] Hoofdnoot ${samplerId} volume te laag (${finalSamplerSpecificVolume}). Overgeslagen.`);
-            return;
-          }
-
+          let targetSamplerIndividualPeak = intensity * noteVolumeFactor;
+          targetSamplerIndividualPeak = Math.min(1.0, Math.max(0.001, targetSamplerIndividualPeak)); 
+          if (targetSamplerIndividualPeak < 0.001 && noteVolumeFactor > 0) { return; }
+          if (noteVolumeFactor === 0) return;
           perNoteSamplerGain.gain.setValueAtTime(0, scheduledStartTime);
-          perNoteSamplerGain.gain.linearRampToValueAtTime(finalSamplerSpecificVolume, scheduledStartTime + 0.005);
-
+          perNoteSamplerGain.gain.linearRampToValueAtTime(targetSamplerIndividualPeak, scheduledStartTime + 0.005); 
           source.connect(perNoteSamplerGain);
-          perNoteSamplerGain.connect(lowPassFilter);
-
-          console.log(`[Sampler Play - V6 Final] Starting source ${samplerId} (note ${index}) at ${scheduledStartTime.toFixed(3)}, gain: ${finalSamplerSpecificVolume.toFixed(3)}`);
+          perNoteSamplerGain.connect(lowPassFilter); 
           source.start(scheduledStartTime);
-
-          // Parameters voor sampler-specifieke envelope (standaards als niet gedefinieerd op node)
-          const samplerReleaseFactor = params.samplerReleaseFactor !== undefined ? params.samplerReleaseFactor : 0.5;
-          const samplerSustainFactor = params.samplerSustainFactor !== undefined ? params.samplerSustainFactor : 0.8;
-
-          const samplerSpecificReleaseTimeConstant = samplerReleaseFactor * (ampEnv.release / 4 + 0.001);
-          const samplerEstimatedDuration = samplerSustainFactor * (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
-
-          perNoteSamplerGain.gain.setTargetAtTime(0.0001, scheduledStartTime + samplerEstimatedDuration, samplerSpecificReleaseTimeConstant);
-
+          const samplerIntrinsicAttack = 0.005; 
+          const samplerIntrinsicDecay = params.samplerDecayFactor !== undefined ? params.samplerDecayFactor * 0.15 : 0.15; 
+          const samplerIntrinsicSustainLevel = targetSamplerIndividualPeak * (params.samplerSustainFactor !== undefined ? params.samplerSustainFactor * 0.0 : 0.0); 
+          const samplerIntrinsicRelease = params.samplerReleaseFactor !== undefined ? params.samplerReleaseFactor * 0.2 : 0.2;
+          perNoteSamplerGain.gain.setTargetAtTime(samplerIntrinsicSustainLevel, scheduledStartTime + samplerIntrinsicAttack, samplerIntrinsicDecay / 3 + 0.001);
+          const estimatedSamplerSoundDuration = samplerIntrinsicAttack + samplerIntrinsicDecay + 0.05; 
           const bufferActualDuration = definition.buffer.duration / targetRate;
-          const stopTime = scheduledStartTime + Math.min(bufferActualDuration, samplerEstimatedDuration + (ampEnv.release * samplerReleaseFactor * 1.5));
-          if (bufferActualDuration < (samplerEstimatedDuration + (ampEnv.release * samplerReleaseFactor))) {
-            source.stop(stopTime);
-          }
-
-          source.onended = () => {
-            try {
-              perNoteSamplerGain.disconnect();
-              source.disconnect();
-            } catch (e) {}
-          };
+          const naturalStopTime = scheduledStartTime + Math.min(bufferActualDuration, estimatedSamplerSoundDuration + samplerIntrinsicRelease);
+          perNoteSamplerGain.gain.setTargetAtTime(0.0001, scheduledStartTime + estimatedSamplerSoundDuration, samplerIntrinsicRelease / 3 + 0.001);
+          if (bufferActualDuration < (estimatedSamplerSoundDuration + samplerIntrinsicRelease)) { source.stop(naturalStopTime); }
+          source.onended = () => { try { perNoteSamplerGain.disconnect(); source.disconnect(); } catch (e) {} };
         });
-      } else {
-        console.warn(`[Sampler Trigger - V6 Final] Sampler conditions NOT MET for ${samplerId} AT TRIGGER TIME. Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
-        if (oscillator1) {
-          /* Fallback logic kan hier blijven als je dat wilt */
-        }
+      } else { 
+          if (oscillator1) { 
+            const fallbackFreq = params.pitch;
+            oscillator1.frequency.cancelScheduledValues(now);
+            oscillator1.frequency.setTargetAtTime(fallbackFreq, now, 0.005);
+          } 
       }
-    } else if (oscillator1) { // Dit is voor niet-sampler 'sound' nodes (Oscillator-based)
-      console.log(`[Oscillator Trigger - V6 Final] Node: ${node.id}, Waveform: ${params.waveform}, Clamped Main Volume: ${clampedVolume.toFixed(3)}`);
-
+    } else if (oscillator1) { 
       const targetFreq = params.pitch;
       oscillator1.frequency.cancelScheduledValues(now);
       oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
 
-      if (oscillator2 && osc2Gain && params.osc2Type && !params.carrierWaveform && !params.orbitonesEnabled) {
-        const osc2BaseFreq = targetFreq * Math.pow(2, (params.osc2Octave || 0));
-        oscillator2.frequency.cancelScheduledValues(now);
-        oscillator2.frequency.setTargetAtTime(osc2BaseFreq, now, 0.005);
-        // De gain van osc2Gain (params.osc2Mix) is al ingesteld bij creatie en wordt meegeschaald door hoofd gainNode
+      let currentOsc1GainNode = node.audioNodes.osc1Gain;
+      if (!currentOsc1GainNode) {
+        currentOsc1GainNode = audioContext.createGain();
+        node.audioNodes.osc1Gain = currentOsc1GainNode;
+        if (oscillator1.numberOfOutputs > 0) {
+            try {oscillator1.disconnect(lowPassFilter);} catch(e){} 
+        }
+        oscillator1.connect(currentOsc1GainNode);
+        currentOsc1GainNode.connect(lowPassFilter);
       }
+      
+      let osc1TargetGainLevel = intensity; 
 
-      if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) { // FM Synthese
+      if (params.orbitonesEnabled && orbitoneOscillators && orbitoneIndividualGains && orbitoneIndividualGains.length > 0) {
+        const orbitoneMix = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+        osc1TargetGainLevel = intensity * (1.0 - orbitoneMix); 
+
+        const numActiveOrbitones = orbitoneOscillators.length;
+        const levelPerOrbitone = (intensity * orbitoneMix) / Math.max(1, numActiveOrbitones);
+        
+        const allOutputFrequencies = getOrbitoneFrequencies(
+          params.scaleIndex, params.orbitoneCount, params.orbitoneIntervals,
+          params.orbitoneSpread, currentScale, params.pitch
+        );
+
+        allOutputFrequencies.slice(1).forEach((freq, i) => {
+          const orbitOsc = orbitoneOscillators[i];
+          const orbitIndGain = orbitoneIndividualGains[i];
+          if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
+            orbitOsc.frequency.cancelScheduledValues(now); 
+            orbitOsc.frequency.setTargetAtTime(freq, now, 0.005);
+            let orbitoneIndividualTargetPeak = levelPerOrbitone;
+            orbitoneIndividualTargetPeak = Math.min(1.0, Math.max(0.001, orbitoneIndividualTargetPeak));
+            orbitIndGain.gain.cancelScheduledValues(now);
+            orbitIndGain.gain.setValueAtTime(orbitoneIndividualTargetPeak, now); 
+          }
+        });
+      } else if (oscillator2 && osc2Gain && params.osc2Type && !params.carrierWaveform) {
+        const osc2Mix = params.osc2Mix || 0.5;
+        osc1TargetGainLevel = intensity * (1.0 - osc2Mix);
+        osc2Gain.gain.cancelScheduledValues(now);
+        osc2Gain.gain.setValueAtTime(intensity * osc2Mix, now); 
+        oscillator2.frequency.cancelScheduledValues(now);
+        oscillator2.frequency.setTargetAtTime(targetFreq * Math.pow(2, (params.osc2Octave || 0)), now, 0.005);
+      }
+      
+      currentOsc1GainNode.gain.cancelScheduledValues(now);
+      currentOsc1GainNode.gain.setValueAtTime(Math.max(0.001, Math.min(1.0, osc1TargetGainLevel)), now);
+
+
+      if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) { 
         const modRatio = params.modulatorRatio || 1.0;
         modulatorOsc1.frequency.cancelScheduledValues(now);
         modulatorOsc1.frequency.setTargetAtTime(targetFreq * modRatio, now, 0.005);
-        const modEnv = params.modulatorEnv || {
-          attack: 0.005,
-          decay: 0.15,
-          sustain: 0,
-          release: 0.2
-        };
+        const modEnv = params.modulatorEnv || { attack: 0.005, decay: 0.15, sustain: 0, release: 0.2 };
         const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
         const modDepth = targetFreq * fmDepthScale;
         modulatorGain1.gain.cancelScheduledValues(now);
@@ -5279,7 +5375,6 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
         modulatorGain1.gain.linearRampToValueAtTime(modDepth, now + modEnv.attack);
         const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
         modulatorGain1.gain.setTargetAtTime(modSustainLevel, now + modEnv.attack, modEnv.decay / 3 + 0.001);
-        const totalModDuration = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
         setTimeout(() => {
           if (modulatorGain1 && audioContext && audioContext.state === 'running') {
             const currentModGainVal = modulatorGain1.gain.value;
@@ -5287,66 +5382,7 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
             modulatorGain1.gain.setValueAtTime(currentModGainVal, audioContext.currentTime);
             modulatorGain1.gain.setTargetAtTime(0.0001, audioContext.currentTime, (modEnv.release || 0.2) / 3 + 0.001);
           }
-        }, totalModDuration * 1000);
-      }
-      if (params.orbitonesEnabled && orbitoneOscillators && orbitoneIndividualGains && !(params.waveform && params.waveform.startsWith('sampler_'))) {
-        const allOutputFrequencies = getOrbitoneFrequencies(
-          params.scaleIndex,
-          params.orbitoneCount,
-          params.orbitoneIntervals,
-          params.orbitoneSpread,
-          currentScale,
-          params.pitch
-        );
-        allOutputFrequencies.slice(1).forEach((freq, i) => {
-          const orbitOsc = orbitoneOscillators[i];
-          const orbitIndGain = orbitoneIndividualGains[i];
-          const modOsc = orbitoneModulatorOscs ? orbitoneModulatorOscs[i] : null;
-          const modGain = orbitoneModulatorGains ? orbitoneModulatorGains[i] : null;
-          const timingOffsetMs = (params.orbitoneTimingOffsets && params.orbitoneTimingOffsets[i] !== undefined) ? params.orbitoneTimingOffsets[i] : 0;
-          const scheduledOrbitoneStartTime = now + (timingOffsetMs / 1000.0);
-
-          if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
-            orbitOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
-            orbitOsc.frequency.setTargetAtTime(freq, scheduledOrbitoneStartTime, 0.005);
-
-            const orbitoneBaseMixLevel = params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-            let volMultiplier = (orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount));
-            // Deze volMultiplier wordt ook geschaald door de hoofd `clampedVolume`
-            orbitIndGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
-            orbitIndGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
-            orbitIndGain.gain.linearRampToValueAtTime(Math.min(1.0, Math.max(0.01, volMultiplier * clampedVolume)), scheduledOrbitoneStartTime + ampEnv.attack);
-            orbitIndGain.gain.setTargetAtTime(0.0001, scheduledOrbitoneStartTime + totalDurationForMainNodeEnvelope - mainNodeReleaseTimeConstant, mainNodeReleaseTimeConstant);
-
-            if (modOsc && modGain && params.carrierWaveform) { // Modulator logica voor oscillator orbitonen
-              const modRatio = params.modulatorRatio || 1.0;
-              modOsc.frequency.cancelScheduledValues(scheduledOrbitoneStartTime);
-              modOsc.frequency.setTargetAtTime(freq * modRatio, scheduledOrbitoneStartTime, 0.005);
-              const modEnv = params.modulatorEnv || {
-                attack: 0.005,
-                decay: 0.15,
-                sustain: 0,
-                release: 0.2
-              };
-              const fmDepthScale = params.modulatorDepthScale !== undefined ? params.modulatorDepthScale : 2;
-              const modDepth = freq * fmDepthScale;
-              modGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
-              modGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
-              modGain.gain.linearRampToValueAtTime(modDepth, scheduledOrbitoneStartTime + modEnv.attack);
-              const modSustainLevel = modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
-              modGain.gain.setTargetAtTime(modSustainLevel, scheduledOrbitoneStartTime + modEnv.attack, modEnv.decay / 3 + 0.001);
-              const totalModDurationOrb = (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
-              setTimeout(() => {
-                if (modGain && audioContext && audioContext.state === 'running') {
-                  const currentModGainVal = modGain.gain.value;
-                  modGain.gain.cancelScheduledValues(audioContext.currentTime);
-                  modGain.gain.setValueAtTime(currentModGainVal, audioContext.currentTime);
-                  modGain.gain.setTargetAtTime(0.0001, audioContext.currentTime, (modEnv.release || 0.2) / 3 + 0.001);
-                }
-              }, (totalModDurationOrb + timingOffsetMs) * 1000);
-            }
-          }
-        });
+        }, (modEnv.attack + modEnv.decay + (modEnv.sustain > 0 ? 0.1 : 0)) * 1000); 
       }
     }
 
@@ -5358,142 +5394,83 @@ function triggerNodeEffect(node, pulseData = {}, startFrequency = null, glideDur
     node.isTriggered = true;
     node.animationState = 1;
     const soundParams = params;
-    const mainGain = node.audioNodes.mainGain;
-    const finalVol = (soundParams.volume || 1.0) * intensity; // Drums gebruiken hun eigen volume param + intensity
+    const mainGain = node.audioNodes.mainGain; 
+    const finalVol = (soundParams.volume || 1.0) * intensity; 
     const targetFreq = soundParams.baseFreq;
     try {
       if (node.type === 'drum_kick') {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
+        const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
         const kickStartFreq = targetFreq * 2.5;
         osc.frequency.setValueAtTime(kickStartFreq, now);
         osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.05);
-        gain.gain.setValueAtTime(finalVol, now);
+        gain.gain.setValueAtTime(finalVol, now); 
         gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay);
-        osc.connect(gain);
-        gain.connect(mainGain);
-        osc.start(now);
-        osc.stop(now + soundParams.decay + 0.05);
+        osc.connect(gain); gain.connect(mainGain); 
+        osc.start(now); osc.stop(now + soundParams.decay + 0.05);
       } else if (node.type === "drum_snare") {
-        const noiseDur = soundParams.noiseDecay ?? 0.15;
-        const bodyDecay = soundParams.decay ?? 0.2;
+        const noiseDur = soundParams.noiseDecay ?? 0.15; const bodyDecay = soundParams.decay ?? 0.2;
         const noise = audioContext.createBufferSource();
         const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * noiseDur, audioContext.sampleRate);
         const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
+        for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; }
         noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter();
-        noiseFilter.type = 'highpass';
-        noiseFilter.frequency.value = 1500;
+        const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = 1500;
         const noiseGain = audioContext.createGain();
-        noiseGain.gain.setValueAtTime(finalVol * 0.8, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(mainGain);
-        noise.start(now);
-        noise.stop(now + noiseDur + 0.01);
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(soundParams.baseFreq, now);
-        gain.gain.setValueAtTime(finalVol * 0.7, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay);
-        osc.connect(gain);
-        gain.connect(mainGain);
-        osc.start(now);
-        osc.stop(now + bodyDecay + 0.01);
+        noiseGain.gain.setValueAtTime(finalVol * 0.8, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
+        noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain);
+        noise.start(now); noise.stop(now + noiseDur + 0.01);
+        const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(soundParams.baseFreq, now);
+        gain.gain.setValueAtTime(finalVol * 0.7, now); gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay);
+        osc.connect(gain); gain.connect(mainGain);
+        osc.start(now); osc.stop(now + bodyDecay + 0.01);
       } else if (node.type === 'drum_hihat') {
         const decay = soundParams.decay ?? 0.05;
         const noise = audioContext.createBufferSource();
         const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay, audioContext.sampleRate);
         const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
+        for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1; }
         noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter();
-        noiseFilter.type = 'highpass';
-        noiseFilter.frequency.value = soundParams.baseFreq;
+        const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.value = soundParams.baseFreq;
         const noiseGain = audioContext.createGain();
-        noiseGain.gain.setValueAtTime(finalVol, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(mainGain);
-        noise.start(now);
-        noise.stop(now + decay + 0.01);
+        noiseGain.gain.setValueAtTime(finalVol, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+        noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain);
+        noise.start(now); noise.stop(now + decay + 0.01);
       } else if (node.type === 'drum_clap') {
         const decay = soundParams.noiseDecay ?? 0.1;
         const noise = audioContext.createBufferSource();
         const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * decay * 1.5, audioContext.sampleRate);
         const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
+        for (let i = 0; i < output.length; i++) { output[i] = Math.random() * 2 - 1;}
         noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter();
-        noiseFilter.type = 'bandpass';
-        noiseFilter.frequency.value = soundParams.baseFreq ?? 1500;
-        noiseFilter.Q.value = 1.5;
+        const noiseFilter = audioContext.createBiquadFilter(); noiseFilter.type = 'bandpass'; noiseFilter.frequency.value = soundParams.baseFreq ?? 1500; noiseFilter.Q.value = 1.5;
         const noiseGain = audioContext.createGain();
-        noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002);
-        noiseGain.gain.setValueAtTime(finalVol, now + 0.002);
-        noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01);
-        noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01);
-        noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015);
-        noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(mainGain);
-        noise.start(now);
-        noise.stop(now + decay + 0.05);
+        noiseGain.gain.setValueAtTime(0, now); noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002);
+        noiseGain.gain.setValueAtTime(finalVol, now + 0.002); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01);
+        noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01); noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015);
+        noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+        noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(mainGain);
+        noise.start(now); noise.stop(now + decay + 0.05);
       } else if (node.type === 'drum_tom1' || node.type === 'drum_tom2') {
         const decay = soundParams.decay ?? (node.type === 'drum_tom1' ? 0.4 : 0.5);
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = 'sine';
-        const tomStartFreq = targetFreq * 1.8;
-        osc.frequency.setValueAtTime(tomStartFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08);
-        gain.gain.setValueAtTime(finalVol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        osc.connect(gain);
-        gain.connect(mainGain);
-        osc.start(now);
-        osc.stop(now + decay + 0.01);
+        const osc = audioContext.createOscillator(); const gain = audioContext.createGain();
+        osc.type = 'sine'; const tomStartFreq = targetFreq * 1.8;
+        osc.frequency.setValueAtTime(tomStartFreq, now); osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08);
+        gain.gain.setValueAtTime(finalVol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+        osc.connect(gain); gain.connect(mainGain);
+        osc.start(now); osc.stop(now + decay + 0.01);
       } else if (node.type === 'drum_cowbell') {
         const decay = soundParams.decay ?? 0.3;
-        const osc1 = audioContext.createOscillator();
-        const osc2 = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc1.type = 'square';
-        osc2.type = 'square';
-        osc1.frequency.value = soundParams.baseFreq;
-        osc2.frequency.value = soundParams.baseFreq * 1.5;
-        gain.gain.setValueAtTime(finalVol * 0.6, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(mainGain);
-        osc1.start(now);
-        osc1.stop(now + decay);
-        osc2.start(now);
-        osc2.stop(now + decay);
+        const osc1_cb = audioContext.createOscillator(); const osc2_cb = audioContext.createOscillator(); const gain_cb = audioContext.createGain();
+        osc1_cb.type = 'square'; osc2_cb.type = 'square';
+        osc1_cb.frequency.value = soundParams.baseFreq; osc2_cb.frequency.value = soundParams.baseFreq * 1.5;
+        gain_cb.gain.setValueAtTime(finalVol * 0.6, now); gain_cb.gain.exponentialRampToValueAtTime(0.001, now + decay);
+        osc1_cb.connect(gain_cb); osc2_cb.connect(gain_cb); gain_cb.connect(mainGain);
+        osc1_cb.start(now); osc1_cb.stop(now + decay);
+        osc2_cb.start(now); osc2_cb.stop(now + decay);
       }
-    } catch (e) {
-      node.isTriggered = false;
-      node.animationState = 0;
-      console.error(`Error in triggerNodeEffect (${node.type}):`, e);
-    }
-    setTimeout(() => {
-      const stillNode = findNodeById(node.id);
-      if (stillNode) stillNode.isTriggered = false;
-    }, 150);
+    } catch (e) { node.isTriggered = false; node.animationState = 0; }
+    setTimeout(() => { const stillNode = findNodeById(node.id); if (stillNode) stillNode.isTriggered = false; }, 150);
     createParticles(node.x, node.y, 3);
   }
 }
@@ -6206,23 +6183,335 @@ function updateLoopRegionAndInputs() {
   }
 }
 
+function handleMouseDown(event) {
+  if (!isPlaying && event.target === canvas) {
+    togglePlayPause();
+    return;
+  }
+  if (!isAudioReady) return;
 
-function handleLoopHandleMouseDown(event, handleType) {
-  if (!tapeLoopBuffer || !tapeWaveformCanvas) return;
-  event.stopPropagation();
-  isDraggingLoopHandle = handleType;
-  loopHandleDragStartX = event.clientX;
-
-  const bufferDuration = tapeLoopBuffer.duration;
-  if (handleType === 'start') {
-    initialLoopHandleValue = userDefinedLoopStart;
-  } else {
-    initialLoopHandleValue = (userDefinedLoopEnd === -1 || userDefinedLoopEnd > bufferDuration) ? bufferDuration : userDefinedLoopEnd;
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) ||
+    sideToolbar.contains(event.target) ||
+    transportControlsDiv.contains(event.target) ||
+    mixerPanel.contains(event.target);
+  if (targetIsPanelControl) {
+    return;
   }
 
-  document.addEventListener('mousemove', handleLoopHandleMouseMove);
-  document.addEventListener('mouseup', handleLoopHandleMouseUp);
-  tapeWaveformCanvas.style.cursor = 'ew-resize';
+  updateMousePos(event);
+
+  _tempWasSelectedAtMouseDown = false;
+  isDragging = false;
+  isConnecting = false;
+  isResizing = false;
+  isSelecting = false;
+  isPanning = false;
+  didDrag = false;
+  selectionRect.active = false;
+  isRotatingRocket = null;
+  isResizingTimelineGrid = false;
+  resizingTimelineGridNode = null;
+  resizeHandleType = null;
+  
+  isDrawingNewTimelineGrid = false;
+  newTimelineGridInitialCorner = null;
+
+  nodeClickedAtMouseDown = null;
+  connectionClickedAtMouseDown = null;
+  elementClickedAtMouseDown = null;
+  mouseDownPos = { ...mousePos };
+
+  if (currentTool === 'add' && nodeTypeToAdd === TIMELINE_GRID_TYPE) {
+    isDrawingNewTimelineGrid = true;
+    newTimelineGridInitialCorner = { ...mousePos };
+    const tempDimensions = { width: 5, height: 5 };
+    const newNode = addNode(mousePos.x, mousePos.y, TIMELINE_GRID_TYPE, null, tempDimensions);
+    if (newNode) {
+      currentlyPlacingTimelineNodeId = newNode.id;
+      newNode.isInResizeMode = false;
+      selectedElements.clear();
+      selectedElements.add({ type: 'node', id: newNode.id });
+      _tempWasSelectedAtMouseDown = true;
+      nodeClickedAtMouseDown = newNode;
+      elementClickedAtMouseDown = { type: 'node', id: newNode.id, nodeRef: newNode };
+    } else {
+      isDrawingNewTimelineGrid = false;
+    }
+    didDrag = false;
+    canvas.style.cursor = 'crosshair';
+    return;
+  }
+
+  let activeSelectedNode = null;
+  if (currentTool === 'edit' && selectedElements.size > 0) {
+    const firstSelectedElement = Array.from(selectedElements)[0];
+    if (firstSelectedElement && firstSelectedElement.type === 'node') {
+      activeSelectedNode = findNodeById(firstSelectedElement.id);
+    }
+  }
+
+  if (activeSelectedNode && activeSelectedNode.type === TIMELINE_GRID_TYPE && !isPanning) {
+    const node = activeSelectedNode;
+
+    if (node.resizeToggleIconRect &&
+      mousePos.x >= node.resizeToggleIconRect.x1 && mousePos.x <= node.resizeToggleIconRect.x2 &&
+      mousePos.y >= node.resizeToggleIconRect.y1 && mousePos.y <= node.resizeToggleIconRect.y2) {
+      node.isInResizeMode = !node.isInResizeMode;
+      if (node.audioParams) node.audioParams.isInResizeMode = node.isInResizeMode;
+      saveState();
+      nodeClickedAtMouseDown = node;
+      elementClickedAtMouseDown = { type: 'node', id: node.id, nodeRef: node };
+      _tempWasSelectedAtMouseDown = true;
+      didDrag = false;
+      return; 
+    }
+    
+    if (node.directionToggleIconRect &&
+        mousePos.x >= node.directionToggleIconRect.x1 && mousePos.x <= node.directionToggleIconRect.x2 &&
+        mousePos.y >= node.directionToggleIconRect.y1 && mousePos.y <= node.directionToggleIconRect.y2) {
+        const directions = ['forward', 'backward', 'ping-pong'];
+        let currentIndex = directions.indexOf(node.scanlineDirection || 'forward');
+        currentIndex = (currentIndex + 1) % directions.length;
+        node.scanlineDirection = directions[currentIndex];
+        if (node.scanlineDirection === 'ping-pong') {
+            node.isPingPongForward = true; 
+        }
+        if (node.audioParams) node.audioParams.scanlineDirection = node.scanlineDirection;
+        saveState();
+        nodeClickedAtMouseDown = node;
+        elementClickedAtMouseDown = { type: 'node', id: node.id, nodeRef: node };
+        _tempWasSelectedAtMouseDown = true;
+        didDrag = false;
+        return; 
+    }
+
+    if (node.isInResizeMode) {
+      const handleDetectionPixelMargin = 12;
+      const handleHitAreaWorld = handleDetectionPixelMargin / viewScale;
+      const hArea = handleHitAreaWorld / 2;
+      const rX = node.x - node.width / 2;
+      const rY = node.y - node.height / 2;
+      const rCX = node.x;
+      const rCY = node.y;
+      const rXW = node.x + node.width / 2;
+      const rYH = node.y + node.height / 2;
+      const handles = [
+          { x: rX,  y: rY,  type: 'top-left', cursor: 'nwse-resize' }, 
+          { x: rCX, y: rY,  type: 'top', cursor: 'ns-resize' }, 
+          { x: rXW, y: rY,  type: 'top-right', cursor: 'nesw-resize' },
+          { x: rX,  y: rCY, type: 'left', cursor: 'ew-resize' },   
+          { x: rXW, y: rCY, type: 'right', cursor: 'ew-resize' },
+          { x: rX,  y: rYH, type: 'bottom-left', cursor: 'nesw-resize' }, 
+          { x: rCX, y: rYH, type: 'bottom', cursor: 'ns-resize' }, 
+          { x: rXW, y: rYH, type: 'bottom-right', cursor: 'nwse-resize' }
+      ];
+      for (const handle of handles) {
+        if (mousePos.x >= handle.x - hArea && mousePos.x <= handle.x + hArea &&
+            mousePos.y >= handle.y - hArea && mousePos.y <= handle.y + hArea) {
+          isResizingTimelineGrid = true;
+          resizingTimelineGridNode = node;
+          resizeHandleType = handle.type;
+          resizeStartMousePos = { ...mousePos };
+          initialNodeDimensions = { x: node.x, y: node.y, width: node.width, height: node.height };
+          nodeClickedAtMouseDown = node;
+          elementClickedAtMouseDown = { type: 'node', id: node.id, nodeRef: node };
+          _tempWasSelectedAtMouseDown = true;
+          didDrag = false;
+          canvas.style.cursor = handle.cursor;
+          return;
+        }
+      }
+    }
+  }
+  
+  const potentialNodeClickedGeneral = findNodeAt(mousePos.x, mousePos.y);
+  const potentialConnectionClickedGeneral = !potentialNodeClickedGeneral ? findConnectionNear(mousePos.x, mousePos.y) : null;
+  
+  if (potentialNodeClickedGeneral) {
+    elementClickedAtMouseDown = { type: 'node', id: potentialNodeClickedGeneral.id, nodeRef: potentialNodeClickedGeneral };
+    _tempWasSelectedAtMouseDown = isElementSelected('node', potentialNodeClickedGeneral.id);
+  } else if (potentialConnectionClickedGeneral) {
+    elementClickedAtMouseDown = { type: 'connection', id: potentialConnectionClickedGeneral.id, connRef: potentialConnectionClickedGeneral };
+    _tempWasSelectedAtMouseDown = isElementSelected('connection', potentialConnectionClickedGeneral.id);
+  }
+  nodeClickedAtMouseDown = potentialNodeClickedGeneral;
+  connectionClickedAtMouseDown = potentialConnectionClickedGeneral;
+  
+  if (nodeClickedAtMouseDown) {
+      nodeWasSelectedAtMouseDown = _tempWasSelectedAtMouseDown;
+  }
+
+  if (potentialNodeClickedGeneral && potentialNodeClickedGeneral.type === "pulsar_rocket" &&
+    isElementSelected('node', potentialNodeClickedGeneral.id) && currentTool === 'edit') {
+    const outerR = NODE_RADIUS_BASE * potentialNodeClickedGeneral.size * (1 + potentialNodeClickedGeneral.animationState * 0.5);
+    const handleOrbitRadius = outerR * 1.6;
+    const handleGripRadius = 7 / viewScale;
+    const drawingAngleRad = (potentialNodeClickedGeneral.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
+    const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
+    const handleGripX_world = potentialNodeClickedGeneral.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
+    const handleGripY_world = potentialNodeClickedGeneral.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
+    const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
+
+    if (distToHandle < handleGripRadius) {
+      isRotatingRocket = potentialNodeClickedGeneral;
+      isDragging = false;
+      const initialMouseAngleToNodeCenterRad = Math.atan2(mousePos.y - isRotatingRocket.y, mousePos.x - isRotatingRocket.x);
+      rotationStartDetails = {
+        screenX: screenMousePos.x,
+        screenY: screenMousePos.y,
+        initialNodeUIAngleRad: isRotatingRocket.audioParams.rocketDirectionAngle || 0,
+        initialMouseMathAngleRad: initialMouseAngleToNodeCenterRad
+      };
+      canvas.style.cursor = 'grabbing';
+      nodeClickedAtMouseDown = null;
+      elementClickedAtMouseDown = null;
+      connectionClickedAtMouseDown = null;
+      return;
+    }
+  }
+
+  if (event.button === 1 || (isSpacebarDown && event.button === 0)) {
+    isPanning = true;
+    panStart = { ...screenMousePos };
+    canvas.style.cursor = 'grabbing';
+    nodeClickedAtMouseDown = null;
+    connectionClickedAtMouseDown = null;
+    elementClickedAtMouseDown = null;
+    isRotatingRocket = null;
+    isResizingTimelineGrid = false;
+    return;
+  }
+
+  if (isRotatingRocket || isResizingTimelineGrid) {
+    return;
+  }
+
+  if (elementClickedAtMouseDown) {
+    const element = elementClickedAtMouseDown;
+    const node = element.type === 'node' ? nodeClickedAtMouseDown : null;
+
+    if (event.shiftKey && currentTool === 'edit' && node && node.type !== TIMELINE_GRID_TYPE) {
+      isResizing = true;
+      resizeStartSize = node.size;
+      resizeStartY = screenMousePos.y;
+      canvas.style.cursor = 'ns-resize';
+    } else if (event.shiftKey && currentTool !== 'edit') {
+      if (isElementSelected(element.type, element.id)) {
+        selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
+      } else {
+        selectedElements.add({ type: element.type, id: element.id });
+      }
+      if (currentTool === 'edit') updateConstellationGroup();
+      updateGroupControlsUI();
+      populateEditPanel();
+      nodeClickedAtMouseDown = null;
+      connectionClickedAtMouseDown = null;
+      elementClickedAtMouseDown = null;
+    } else {
+      if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') {
+        if (node && !['nebula', PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(node.type)) {
+          isConnecting = true;
+          connectingNode = node;
+          if (currentTool === 'connect_string') connectionTypeToAdd = 'string_violin';
+          else if (currentTool === 'connect_glide') connectionTypeToAdd = 'glide';
+          else if (currentTool === 'connect_wavetrail') connectionTypeToAdd = 'wavetrail';
+          else connectionTypeToAdd = 'standard';
+          canvas.style.cursor = 'grabbing';
+        }
+      } else if (currentTool === 'delete') {
+        if (node) removeNode(node);
+        else if (connectionClickedAtMouseDown) removeConnection(connectionClickedAtMouseDown);
+        nodeClickedAtMouseDown = null;
+        connectionClickedAtMouseDown = null;
+        elementClickedAtMouseDown = null;
+      } else if (currentTool === 'edit') {
+        let selectionChanged = false;
+        if (!isElementSelected(element.type, element.id)) {
+          selectedElements.forEach(selEl => { 
+            if (selEl.type === 'node') {
+                const n = findNodeById(selEl.id);
+                if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+            }
+          });
+          selectedElements.clear(); 
+          selectedElements.add({ type: element.type, id: element.id });
+          selectionChanged = true;
+        }
+        if (node) {
+          isDragging = true;
+          dragStartPos = { ...mousePos };
+          nodeDragOffsets.clear();
+          selectedElements.forEach(el => {
+            if (el.type === 'node') {
+              const n = findNodeById(el.id);
+              if (n) nodeDragOffsets.set(el.id, { x: n.x - mousePos.x, y: n.y - mousePos.y });
+            }
+          });
+          canvas.style.cursor = 'move';
+        }
+        if (selectionChanged) {
+          updateConstellationGroup();
+          populateEditPanel();
+        }
+      }
+    }
+  } else { 
+    if (currentTool === 'edit') {
+      isSelecting = true;
+      selectionRect = { startX: mousePos.x, startY: mousePos.y, endX: mousePos.x, endY: mousePos.y, active: false };
+      if (!event.shiftKey) {
+        if (selectedElements.size > 0) {
+          selectedElements.forEach(selEl => { 
+            if (selEl.type === 'node') {
+              const n = findNodeById(selEl.id);
+              if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+            }
+          });
+          selectedElements.clear();
+          updateConstellationGroup();
+          populateEditPanel();
+        }
+      }
+    } else if (currentTool === 'add' && nodeTypeToAdd !== null && nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
+      if (!event.shiftKey && selectedElements.size > 0) {
+        selectedElements.clear();
+        updateConstellationGroup();
+        populateEditPanel();
+      }
+    } else if (!['connect', 'connect_string', 'connect_glide', 'connect_wavetrail', 'delete'].includes(currentTool) && !(currentTool === 'add' && nodeTypeToAdd === TIMELINE_GRID_TYPE)) {
+      if (selectedElements.size > 0 && !event.shiftKey) {
+        selectedElements.forEach(selEl => { 
+          if (selEl.type === 'node') {
+            const n = findNodeById(selEl.id);
+            if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+          }
+        });
+        selectedElements.clear();
+        updateGroupControlsUI();
+        populateEditPanel();
+      }
+    }
+  }
+  hideOverlappingPanels();
+}
+function snapToInternalGrid(positionToSnap, timelineGridNode) {
+    if (!timelineGridNode || timelineGridNode.type !== TIMELINE_GRID_TYPE ||
+        !timelineGridNode.snapToInternalGrid || timelineGridNode.internalGridDivisions <= 1) {
+        return { x: positionToSnap.x, y: positionToSnap.y };
+    }
+
+    const timelineRectX = timelineGridNode.x - timelineGridNode.width / 2;
+    const divisionWidth = timelineGridNode.width / timelineGridNode.internalGridDivisions;
+    
+    const relativeX = positionToSnap.x - timelineRectX; 
+    
+    const nearestDivisionIndex = Math.round(relativeX / divisionWidth);
+    
+    let snappedRelativeX = nearestDivisionIndex * divisionWidth;
+
+    let snappedWorldX = timelineRectX + snappedRelativeX;
+
+    return { x: snappedWorldX, y: positionToSnap.y };
 }
 
 function handleLoopHandleMouseMove(event) {
@@ -6262,30 +6551,323 @@ function handleLoopHandleMouseMove(event) {
   }
 }
 
-function handleLoopHandleMouseUp(event) {
-  if (!isDraggingLoopHandle) return;
+function handleMouseUp(event) {
+  if (!isAudioReady) return;
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
+  if (targetIsPanelControl) {
+    isDragging = false;
+    isConnecting = false;
+    isResizing = false;
+    isSelecting = false;
+    isPanning = false;
+    isRotatingRocket = null;
+    isResizingTimelineGrid = false;
+    isDrawingNewTimelineGrid = false;
+    selectionRect.active = false;
+    connectingNode = null;
+    nodeClickedAtMouseDown = null;
+    connectionClickedAtMouseDown = null;
+    currentlyPlacingTimelineNodeId = null;
+    newTimelineGridInitialCorner = null;
+    canvas.style.cursor = 'crosshair';
+    return;
+  }
 
-  document.removeEventListener('mousemove', handleLoopHandleMouseMove);
-  document.removeEventListener('mouseup', handleLoopHandleMouseUp);
-  if (tapeWaveformCanvas) tapeWaveformCanvas.style.cursor = 'default';
+  updateMousePos(event);
 
-  // Definitieve waarden van inputvelden overnemen
-  userDefinedLoopStart = parseFloat(tapeLoopStartInput.value);
-  userDefinedLoopEnd = parseFloat(tapeLoopEndInput.value);
+  let stateWasChanged = false;
 
-  isDraggingLoopHandle = null;
-  waveformPathData = null;      // Belangrijk: Forceer hertekenen/re-zoom
-  updateLoopRegionAndInputs();  // Stelt UI en audio loop punten correct in
+  if (isDrawingNewTimelineGrid && currentlyPlacingTimelineNodeId !== null) {
+    const node = findNodeById(currentlyPlacingTimelineNodeId);
+    if (node && node.type === TIMELINE_GRID_TYPE) {
+      const startX = newTimelineGridInitialCorner.x;
+      const startY = newTimelineGridInitialCorner.y;
+      const currentX = mousePos.x;
+      const currentY = mousePos.y;
+      let finalWidth = Math.abs(currentX - startX);
+      let finalHeight = Math.abs(currentY - startY);
+      let finalCenterX = Math.min(startX, currentX) + finalWidth / 2;
+      let finalCenterY = Math.min(startY, currentY) + finalHeight / 2;
+      finalWidth = Math.max(20, finalWidth); 
+      finalHeight = Math.max(20, finalHeight);
+      node.x = finalCenterX;
+      node.y = finalCenterY;
+      node.width = finalWidth;
+      node.height = finalHeight;
+      node.isInResizeMode = true; 
+      if (node.audioParams) {
+          node.audioParams.width = node.width;
+          node.audioParams.height = node.height;
+      }
+      selectedElements.clear();
+      selectedElements.add({ type: 'node', id: node.id });
+      populateEditPanel();
+      stateWasChanged = true;
+    }
+    isDrawingNewTimelineGrid = false;
+    newTimelineGridInitialCorner = null;
+    currentlyPlacingTimelineNodeId = null;
+    didDrag = false; 
+    if (stateWasChanged) saveState();
+    setActiveTool('edit'); 
+    if (addTimelineGridBtn && addTimelineGridBtn.classList.contains('active')) {
+        addTimelineGridBtn.classList.remove('active');
+    }
+    canvas.style.cursor = 'crosshair';
+    return; 
+  }
 
-  if (isTapeLoopPlaying && tapeLoopSourceNode) {
-    const wasPlaying = isTapeLoopPlaying;
-    stopTapeLoopPlayback();
-    if (wasPlaying) {
-      // Start playback vanaf het begin van de (mogelijk nieuwe) loop
-      playTapeLoop(audioContext.currentTime, 0);
+  const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y);
+  const connectionUnderCursor = !nodeUnderCursor ? findConnectionNear(mousePos.x, mousePos.y) : null;
+  let elementUnderCursor = null;
+  if (nodeUnderCursor) elementUnderCursor = { type: 'node', id: nodeUnderCursor.id };
+  else if (connectionUnderCursor) elementUnderCursor = { type: 'connection', id: connectionUnderCursor.id };
+
+  const wasSelectedAtStart = _tempWasSelectedAtMouseDown;
+  _tempWasSelectedAtMouseDown = false;
+
+  const wasResizing = isResizing;
+  const wasConnecting = isConnecting;
+  const wasDragging = isDragging;
+  const wasSelecting = isSelecting;
+  const wasPanning = isPanning;
+  const wasRotatingARocket = isRotatingRocket;
+  const wasResizingTimelineGridCurrent = isResizingTimelineGrid;
+
+  const nodeClickedStart = nodeClickedAtMouseDown;
+  const connectionClickedStart = connectionClickedAtMouseDown;
+  const elementClickedStartOriginal = nodeClickedAtMouseDown ? { type: 'node', id: nodeClickedAtMouseDown.id, nodeRef: nodeClickedAtMouseDown } : 
+                                 (connectionClickedAtMouseDown ? { type: 'connection', id: connectionClickedAtMouseDown.id, connRef: connectionClickedAtMouseDown } : null);
+
+  isResizing = false;
+  isConnecting = false;
+  isDragging = false;
+  isSelecting = false;
+  isPanning = false;
+  isRotatingRocket = null;
+  isResizingTimelineGrid = false;
+  selectionRect.active = false;
+  canvas.style.cursor = 'crosshair';
+
+  if (wasRotatingARocket) {
+    saveState();
+    stateWasChanged = true;
+  } else if (wasResizingTimelineGridCurrent) {
+    if (resizingTimelineGridNode) {
+        resizingTimelineGridNode.isInResizeMode = true; 
+    }
+    resizingTimelineGridNode = null;
+    resizeHandleType = null;
+    saveState();
+    stateWasChanged = true;
+  } else if (wasConnecting) {
+    if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(nodeUnderCursor.type)) {
+      connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
+      stateWasChanged = true;
+    }
+    connectingNode = null;
+    connectionTypeToAdd = 'standard';
+  } else if (wasResizing) {
+    stateWasChanged = true;
+  } else if (wasDragging) {
+    stateWasChanged = true;
+    identifyAndRouteAllGroups();
+  } else if (wasSelecting && didDrag) {
+    const selX1 = Math.min(selectionRect.startX, selectionRect.endX);
+    const selY1 = Math.min(selectionRect.startY, selectionRect.endY);
+    const selX2 = Math.max(selectionRect.startX, selectionRect.endX);
+    const selY2 = Math.max(selectionRect.startY, selectionRect.endY);
+    if (!event.shiftKey) selectedElements.clear();
+    nodes.forEach(n => {
+      if (n.x >= selX1 && n.x <= selX2 && n.y >= selY1 && n.y <= selY2) {
+        selectedElements.add({ type: 'node', id: n.id });
+      }
+    });
+    connections.forEach(c => {
+      const nA = findNodeById(c.nodeAId);
+      const nB = findNodeById(c.nodeBId);
+      if (nA && nB) {
+        const midX = (nA.x + nB.x) / 2 + c.controlPointOffsetX;
+        const midY = (nA.y + nB.y) / 2 + c.controlPointOffsetY;
+        if (midX >= selX1 && midX <= selX2 && midY >= selY1 && midY <= selY2) {
+          selectedElements.add({ type: 'connection', id: c.id });
+        }
+      }
+    });
+    stateWasChanged = true;
+    updateConstellationGroup();
+    populateEditPanel();
+  } else if (!wasDragging && !wasPanning && !wasResizing && !wasRotatingARocket && !wasResizingTimelineGridCurrent) {
+    if (currentTool === 'brush') {
+      if (!elementUnderCursor) {
+        let typeToPlace = brushNodeType;
+        let subtypeToPlace = (brushNodeType === 'sound') ? brushWaveform : null;
+        if (!isBrushing && brushStartWithPulse) {
+          typeToPlace = 'pulsar_standard';
+          subtypeToPlace = null;
+        }
+        const newNode = addNode(mousePos.x, mousePos.y, typeToPlace, subtypeToPlace);
+        if (newNode) {
+          stateWasChanged = true;
+          if (isBrushing && lastBrushNode) {
+            connectNodes(lastBrushNode, newNode, 'standard');
+          }
+          lastBrushNode = newNode;
+          isBrushing = true;
+          selectedElements.clear();
+          selectedElements.add({ type: 'node', id: newNode.id });
+          populateEditPanel();
+        }
+      } else {
+        isBrushing = false;
+        lastBrushNode = null;
+        if (!isElementSelected(elementUnderCursor.type, elementUnderCursor.id)) {
+          if (!event.shiftKey) selectedElements.clear();
+          selectedElements.add(elementUnderCursor);
+          updateConstellationGroup();
+          populateEditPanel();
+          stateWasChanged = true;
+        }
+      }
+    } else if (currentTool === 'edit') {
+      if (elementClickedStartOriginal && elementUnderCursor && elementClickedStartOriginal.type === elementUnderCursor.type && elementClickedStartOriginal.id === elementUnderCursor.id) {
+        const targetElement = elementClickedStartOriginal;
+        const node = targetElement.type === 'node' ? nodeClickedAtMouseDown : null; 
+        const connection = targetElement.type === 'connection' ? connectionClickedStart : null; 
+        if (event.button === 0) {
+          if (event.altKey) {
+            if (node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift' || node.type === PRORB_TYPE)) {
+              handlePitchCycleDown(targetElement); stateWasChanged = true;
+            } else if (connection && connection.type === 'string_violin') {
+              handlePitchCycleDown(targetElement); stateWasChanged = true;
+            }
+          } else if (!event.shiftKey) {
+            if (wasSelectedAtStart) { 
+              if (node) {
+                if (node.type === 'pulsar_manual') triggerManualPulsar(node);
+                else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles' && node.type !== "pulsar_rocket") {
+                  if (isGlobalSyncEnabled) handleSubdivisionCycle(node); else handleTapTempo(node);
+                  stateWasChanged = true;
+                } else if (node.type === 'sound' || node.type === 'nebula' || node.type === PRORB_TYPE) {
+                  handlePitchCycle(targetElement); stateWasChanged = true;
+                } else if (node.type === 'gate') {
+                  handleGateCycle(node); stateWasChanged = true;
+                } else if (node.type === 'probabilityGate') {
+                  handleProbabilityCycle(node); stateWasChanged = true;
+                } else if (node.type === 'pitchShift') {
+                  handlePitchShiftCycle(node); stateWasChanged = true;
+                } else if (isDrumType(node.type)) triggerNodeEffect(node);
+                else if (node.type === TIMELINE_GRID_TYPE) { 
+                                    node.isInResizeMode = !node.isInResizeMode; 
+                                    stateWasChanged = true;
+                                    populateEditPanel(); 
+                                }
+              } else if (connection && connection.type === 'string_violin') {
+                handlePitchCycle(targetElement); stateWasChanged = true;
+              }
+            } else { 
+              if (!isElementSelected(targetElement.type, targetElement.id) || selectedElements.size > 1) {
+                selectedElements.clear();
+                selectedElements.add(targetElement);
+                if (node && node.type === TIMELINE_GRID_TYPE) node.isInResizeMode = true; 
+                else if (node && node.type !== TIMELINE_GRID_TYPE && node.hasOwnProperty('isInResizeMode')) node.isInResizeMode = false;
+                updateConstellationGroup();
+                populateEditPanel();
+                stateWasChanged = true;
+              }
+            }
+          }
+        }
+      } else if (!elementClickedStartOriginal && !event.shiftKey && currentTool === 'edit') {
+        if (selectedElements.size > 0) {
+            selectedElements.forEach(selEl => { 
+                if (selEl.type === 'node') {
+                    const n = findNodeById(selEl.id);
+                    if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+                }
+            });
+          selectedElements.clear();
+          updateConstellationGroup();
+          populateEditPanel();
+          stateWasChanged = true;
+        }
+        isBrushing = false;
+        lastBrushNode = null;
+      }
+    }
+
+    // Node Adding Logic (for non-Timeline Grid types, or Timeline Grid if draw-to-size wasn't used which is not current flow)
+    const isClickToAddAction = currentTool === 'add' && (nodeTypeToAdd !== TIMELINE_GRID_TYPE || (nodeTypeToAdd === TIMELINE_GRID_TYPE && !didDrag && !isDrawingNewTimelineGrid) );
+
+    if (isClickToAddAction) {
+        isBrushing = false;
+        lastBrushNode = null;
+        const clickedOnTimelineGrid = elementClickedStartOriginal && elementClickedStartOriginal.type === 'node' && elementClickedStartOriginal.nodeRef?.type === TIMELINE_GRID_TYPE;
+        const clickedOnEmptySpace = !elementClickedStartOriginal;
+
+        if (clickedOnEmptySpace || clickedOnTimelineGrid) {
+            const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch']; 
+            const canActuallyAddThisNode = 
+                directAddTypes.includes(nodeTypeToAdd) ||
+                nodeTypeToAdd === PRORB_TYPE || // Explicitly allow PRORB_TYPE
+                (nodeTypeToAdd === 'sound' && waveformToAdd) ||
+                (nodeTypeToAdd === 'nebula' && waveformToAdd) ||
+                (isPulsarType(nodeTypeToAdd)) ||
+                (isDrumType(nodeTypeToAdd)) ||
+                (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
+
+            if (nodeTypeToAdd === TIMELINE_GRID_TYPE && clickedOnTimelineGrid) {
+                // Prevent adding timeline grid onto another one with a simple click
+            } else if (canActuallyAddThisNode) {
+                const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
+                if (newNode) {
+                    if (!event.shiftKey) selectedElements.clear();
+                    selectedElements.add({ type: 'node', id: newNode.id });
+                    if(newNode.type === TIMELINE_GRID_TYPE && !optionalDimensions) newNode.isInResizeMode = true; // If not drawn to size
+                    else if (newNode.type === PRORB_TYPE) newNode.isSelected = true; // Ensure PrOrb is selected
+                    populateEditPanel();
+                    stateWasChanged = true;
+                }
+            }
+        }
+    } else if (currentTool === 'delete' && elementClickedStartOriginal) {
+        if (elementClickedStartOriginal.type === 'node') removeNode(nodeClickedAtMouseDown); 
+        else if (elementClickedStartOriginal.type === 'connection') removeConnection(connectionClickedAtMouseDown); 
+        stateWasChanged = true;
+    } else if (!elementClickedStartOriginal && !event.shiftKey && currentTool !== 'add' && currentTool !== 'brush' && currentTool !== 'delete' && currentTool !== 'connect' && currentTool !== 'connect_string' && currentTool !== 'connect_glide' && currentTool !== 'connect_wavetrail') {
+        // This is for deselecting when clicking on empty space, not during an add operation
+        if (selectedElements.size > 0) {
+            selectedElements.forEach(selEl => {
+                if (selEl.type === 'node') {
+                    const n = findNodeById(selEl.id);
+                    if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+                }
+            });
+            selectedElements.clear();
+            updateGroupControlsUI();
+            populateEditPanel();
+            stateWasChanged = true;
+        }
     }
   }
-  saveState();
+
+  didDrag = false;
+  nodeClickedAtMouseDown = null;
+  connectionClickedAtMouseDown = null;
+  elementClickedAtMouseDown = null;
+  nodeWasSelectedAtMouseDown = false;
+  nodeDragOffsets.clear();
+  panStart = { x: 0, y: 0 };
+  connectionTypeToAdd = 'standard';
+  resizingTimelineGridNode = null;
+  resizeHandleType = null;
+  newTimelineGridInitialCorner = null; 
+  currentlyPlacingTimelineNodeId = null; 
+
+  if (stateWasChanged && !isPerformingUndoRedo) {
+    saveState();
+  }
+  updateGroupControlsUI(); 
 }
 
 function setupLoopHandles() {
@@ -6835,6 +7417,7 @@ function animationLoop() {
             node.connections.forEach(neighborId => {
               const neighborNode = findNodeById(neighborId);
               const connection = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+
               if (neighborNode && neighborNode.type !== 'nebula' && neighborNode.type !== PORTAL_NEBULA_TYPE && connection && neighborNode.lastTriggerPulseId !== currentGlobalPulseId) {
                 const travelTime = connection.length * DELAY_FACTOR;
                 try {
@@ -6861,6 +7444,144 @@ function animationLoop() {
       } else if (node.type === PORTAL_NEBULA_TYPE && node.pulsePhase !== undefined) {
         node.pulsePhase += (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
         node.pulsePhase %= 2 * Math.PI;
+      } else if (node.type === TIMELINE_GRID_TYPE) {
+        if (node.timelineIsPlaying) {
+            const prevScanLinePosition = node.scanLinePosition;
+            const cappedDeltaTime = Math.min(deltaTime, 1.0 / 15);
+            let currentTimelineDurationSeconds;
+
+            if (isGlobalSyncEnabled && node.timelineMusicalDurationBars && globalBPM > 0) {
+                const beatsPerBar = 4; 
+                currentTimelineDurationSeconds = node.timelineMusicalDurationBars * beatsPerBar * (60.0 / globalBPM);
+            } else {
+                currentTimelineDurationSeconds = node.timelineSpeed > 0 ? node.timelineSpeed : TIMELINE_GRID_DEFAULT_SPEED;
+            }
+            
+            if (currentTimelineDurationSeconds <=0) currentTimelineDurationSeconds = TIMELINE_GRID_DEFAULT_SPEED;
+
+            let effectiveSpeed = (cappedDeltaTime / currentTimelineDurationSeconds);
+            let boundaryReachedThisFrame = false;
+
+            if (node.scanlineDirection === 'forward') {
+                node.scanLinePosition += effectiveSpeed;
+                if (node.scanLinePosition >= 1.0) {
+                    boundaryReachedThisFrame = true;
+                    if (node.timelineIsLooping) {
+                        node.scanLinePosition = node.scanLinePosition % 1.0; 
+                    } else {
+                        node.scanLinePosition = 1.0;
+                        node.timelineIsPlaying = false;
+                    }
+                }
+            } else if (node.scanlineDirection === 'backward') {
+                node.scanLinePosition -= effectiveSpeed;
+                if (node.scanLinePosition <= 0.0) {
+                    boundaryReachedThisFrame = true;
+                    if (node.timelineIsLooping) {
+                        node.scanLinePosition = 1.0 - (Math.abs(node.scanLinePosition) % 1.0);
+                         if (node.scanLinePosition >= 0.9999) node.scanLinePosition = 0.0; // Handle precise wrap
+                    } else {
+                        node.scanLinePosition = 0.0;
+                        node.timelineIsPlaying = false;
+                    }
+                }
+            } else if (node.scanlineDirection === 'ping-pong') {
+                if (node.isPingPongForward) {
+                    node.scanLinePosition += effectiveSpeed;
+                    if (node.scanLinePosition >= 1.0) {
+                        boundaryReachedThisFrame = true;
+                        node.scanLinePosition = 1.0 - (node.scanLinePosition - 1.0); 
+                        node.isPingPongForward = false;
+                        if (!node.timelineIsLooping && prevScanLinePosition < 1.0) { 
+                            // Ping-pong implies it continues unless not looping and it was the *first* time hitting the boundary
+                        }
+                    }
+                } else { 
+                    node.scanLinePosition -= effectiveSpeed;
+                    if (node.scanLinePosition <= 0.0) {
+                        boundaryReachedThisFrame = true;
+                        node.scanLinePosition = Math.abs(node.scanLinePosition); 
+                        node.isPingPongForward = true;
+                        if (!node.timelineIsLooping && prevScanLinePosition > 0.0) {
+                           // node.timelineIsPlaying = false; // Option: stop if not looping after one full ping-pong
+                        }
+                    }
+                }
+                 if (boundaryReachedThisFrame && !node.timelineIsLooping) {
+                     // For non-looping ping-pong, it effectively completes its one pass (forward then backward or vice-versa)
+                     // We might decide to stop it here, or let it sit at the edge.
+                     // For now, let it sit at the edge it reached if not looping, the playing flag will handle overall stop.
+                     // If it hits 0 and not looping, it might stop. if it hits 1 and not looping, it might stop.
+                     // This depends on if a single "ping" or "pong" is considered a full play.
+                     // Let's assume for now that ping-pong continues until explicitly stopped or if timelineIsPlaying is set to false.
+                 }
+            }
+            
+            if (boundaryReachedThisFrame && node.timelineIsLooping) {
+                 if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear(); else node.triggeredInThisSweep = new Set();
+            }
+
+            const gridRectX = node.x - node.width / 2;
+            const currentScanLineWorldX = gridRectX + node.scanLinePosition * node.width;
+            const prevSweepPositionX = gridRectX + prevScanLinePosition * node.width;
+
+            const gridTopY = node.y - node.height / 2;
+            const gridBottomY = node.y + node.height / 2;
+
+            let segmentsToTest = [];
+            if (boundaryReachedThisFrame && node.timelineIsLooping) {
+                if (node.scanlineDirection === 'forward' || (node.scanlineDirection === 'ping-pong' && !node.isPingPongForward)) { // Just turned backward or looped forward
+                    segmentsToTest.push({ min: prevSweepPositionX, max: gridRectX + node.width }); 
+                    segmentsToTest.push({ min: gridRectX, max: currentScanLineWorldX }); 
+                } else if (node.scanlineDirection === 'backward' || (node.scanlineDirection === 'ping-pong' && node.isPingPongForward)) { // Just turned forward or looped backward
+                     segmentsToTest.push({ min: gridRectX, max: prevSweepPositionX }); 
+                     segmentsToTest.push({ min: currentScanLineWorldX, max: gridRectX + node.width }); 
+                }
+            } else {
+                 segmentsToTest.push({ min: Math.min(prevSweepPositionX, currentScanLineWorldX), max: Math.max(prevSweepPositionX, currentScanLineWorldX) });
+            }
+            
+            if(Math.abs(prevSweepPositionX - currentScanLineWorldX) > 0.001) { // Only trigger if scanline moved
+                nodes.forEach(otherNode => {
+                    if (otherNode.id === node.id || otherNode.type === TIMELINE_GRID_TYPE) return;
+                    if (!otherNode.audioParams && !isDrumType(otherNode.type) && otherNode.type !== 'sound' && otherNode.type !== 'nebula' && otherNode.type !== PORTAL_NEBULA_TYPE) return;
+
+                    const nodeApparentRadius = (NODE_RADIUS_BASE * otherNode.size);
+                    const nodeCenterX = otherNode.x;
+                    const nodeCenterY = otherNode.y;
+
+                    if (nodeCenterY + nodeApparentRadius < gridTopY || nodeCenterY - nodeApparentRadius > gridBottomY) {
+                        return;
+                    }
+
+                    for (const segment of segmentsToTest) {
+                        const nodeLeftEdge = nodeCenterX - nodeApparentRadius;
+                        const nodeRightEdge = nodeCenterX + nodeApparentRadius;
+
+                        if (Math.max(nodeLeftEdge, segment.min) <= Math.min(nodeRightEdge, segment.max)) {
+                            if (!node.triggeredInThisSweep || !node.triggeredInThisSweep.has(otherNode.id)) {
+                                const timelinePulseData = {
+                                    intensity: node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY,
+                                    color: (node.audioParams && node.audioParams.color) ? node.audioParams.color : TIMELINE_GRID_DEFAULT_COLOR,
+                                    particleMultiplier: 0.6
+                                };
+                                triggerNodeEffect(otherNode, timelinePulseData);
+
+                                if (!node.triggeredInThisSweep) node.triggeredInThisSweep = new Set();
+                                node.triggeredInThisSweep.add(otherNode.id);
+
+                                otherNode.animationState = 1.0;
+                                setTimeout(() => {
+                                    const stillNode = findNodeById(otherNode.id);
+                                    if (stillNode && !stillNode.isTriggered) stillNode.animationState = 0;
+                                }, 250);
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+        }
       }
     });
 
@@ -6897,7 +7618,6 @@ function animationLoop() {
         }
       }
     }
-
 
     if (isTapeLoopPlaying || isTapeLoopRecording || (tapeLoopRecordBtn && tapeLoopRecordBtn.dataset.isArmed === 'true')) {
       let speedMultiplier = 1.0;
@@ -7271,7 +7991,7 @@ function drawNode(node) {
   let isActiveRetriggerVisual = node.activeRetriggers && node.activeRetriggers.length > 0 && node.currentRetriggerVisualIndex !== -1;
 
   if (node.animationState > 0 && !node.isTriggered && !isActiveRetriggerVisual) {
-    node.animationState -= (["sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) || isDrumType(node.type)) ? 0.03 : 0.08;
+    node.animationState -= (["sound", "nebula", PORTAL_NEBULA_TYPE, PRORB_TYPE].includes(node.type) || isDrumType(node.type)) ? 0.03 : 0.08;
   }
   node.animationState = Math.max(0, node.animationState);
 
@@ -7288,7 +8008,7 @@ function drawNode(node) {
   const isStartNodeDisabled = node.isStartNode && !node.isEnabled;
   const disabledFillColorGeneral = styles.getPropertyValue("--start-node-disabled-color").trim();
   const disabledBorderColorGeneral = styles.getPropertyValue("--start-node-disabled-border").trim();
-  const baseAlpha = (node.type === "nebula" ? 0.5 : (node.type === PORTAL_NEBULA_TYPE ? 0.7 : 0.6)) + node.size * 0.3;
+  const baseAlpha = (node.type === "nebula" ? 0.5 : (node.type === PORTAL_NEBULA_TYPE ? 0.7 : 0.6)) + (node.size || 1.0) * 0.3;
 
   if (isPulsarType(node.type)) {
     const cssVarBase = `--${node.type.replace("_", "-")}`;
@@ -7324,14 +8044,24 @@ function drawNode(node) {
     fillColor = styles.getPropertyValue("--switch-node-color").trim();
     borderColor = styles.getPropertyValue("--switch-node-border").trim();
     glowColor = borderColor;
+  } else if (node.type === PRORB_TYPE) {
+    fillColor = styles.getPropertyValue('--prorb-color').trim() || 'rgba(200, 210, 220, 0.75)';
+    borderColor = styles.getPropertyValue('--prorb-border-color').trim() || 'rgba(160, 170, 180, 0.9)';
+    glowColor = borderColor;
   } else if (node.type === "sound" || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) {
-    const nodeBaseHue = ((node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + (params.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
+    const nodeBaseHue = ((node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + ((params?.scaleIndex || 0) % currentScale.notes.length) * HUE_STEP) % 360;
     const lightness = scaleBase.l * (0.8 + node.size * 0.2);
     const saturation = scaleBase.s * (node.type === "nebula" ? 0.7 : (node.type === PORTAL_NEBULA_TYPE ? 0.9 : 1.0));
     const alpha = baseAlpha;
     fillColor = hslToRgba(nodeBaseHue, saturation, lightness, Math.min(0.95, alpha));
     borderColor = hslToRgba(nodeBaseHue, saturation * 0.8, lightness * 0.6, 0.9);
     glowColor = hslToRgba(nodeBaseHue, saturation, lightness * 1.1, 1.0);
+  } else if (node.type === TIMELINE_GRID_TYPE) {
+    const currentStylesTimeline = getComputedStyle(document.documentElement);
+    const gridBoxStrokeFromCSSTimeline = currentStylesTimeline.getPropertyValue('--timeline-grid-default-border-color').trim() || 'rgba(120, 220, 120, 0.7)';
+    fillColor = (node.audioParams && node.audioParams.color !== undefined && node.audioParams.color !== null) ? node.audioParams.color.replace(/[\d\.]+\)$/g, '0.05)') : gridBoxStrokeFromCSSTimeline.replace(/[\d\.]+\)$/g, '0.05)');
+    borderColor = (node.audioParams && node.audioParams.color !== undefined && node.audioParams.color !== null) ? node.audioParams.color : gridBoxStrokeFromCSSTimeline;
+    glowColor = (node.audioParams && node.audioParams.color !== undefined && node.audioParams.color !== null) ? node.audioParams.color : gridBoxStrokeFromCSSTimeline;
   } else {
     fillColor = "grey";
     borderColor = "darkgrey";
@@ -7340,921 +8070,578 @@ function drawNode(node) {
 
   ctx.fillStyle = fillColor;
   ctx.strokeStyle = borderColor;
-  const baseLineWidth = (node.isStartNode ? 2.5 : node.type === "relay" || node.type === "reflector" || node.type === "switch" ? 1.0 : 1.5);
-  ctx.lineWidth = Math.max(0.5 / viewScale, (isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 : baseLineWidth) / viewScale);
+  const baseLineWidth = (node.isStartNode ? 2.5 : (node.type === "relay" || node.type === "reflector" || node.type === "switch" ? 1.0 : (node.type === TIMELINE_GRID_TYPE || node.type === PRORB_TYPE ? 2.0 : 1.5)));
+  ctx.lineWidth = Math.max(0.5 / viewScale, (isSelectedAndOutlineNeeded || node.isInResizeMode ? baseLineWidth + 1.5 : baseLineWidth) / viewScale);
 
   let needsRestore = false;
-  if ((node.type === "gate" || (node.type === "sound" && params.waveform?.startsWith("sampler_"))) && node.currentAngle !== undefined) {
-    ctx.save();
-    ctx.translate(node.x, node.y);
-    if (node.type === "gate") {
-      ctx.rotate(node.currentAngle);
-    } else if (node.type === "sound" && params.waveform.startsWith("sampler_")) {
-      node.currentAngle = (node.currentAngle + 0.005 * (performance.now() * 0.01)) % (Math.PI * 2);
-      ctx.rotate(node.currentAngle);
-    }
-    ctx.translate(-node.x, -node.y);
-    needsRestore = true;
+  if ((node.type === "gate" || (node.type === "sound" && node.type !==PRORB_TYPE && params?.waveform?.startsWith("sampler_"))) && node.currentAngle !== undefined) {
+    ctx.save(); ctx.translate(node.x, node.y);
+    if (node.type === "gate") { ctx.rotate(node.currentAngle); } 
+    else if (node.type === "sound" && params.waveform.startsWith("sampler_")) { node.currentAngle = (node.currentAngle + 0.005 * (performance.now() * 0.01)) % (Math.PI * 2); ctx.rotate(node.currentAngle); }
+    ctx.translate(-node.x, -node.y); needsRestore = true;
   }
 
-  if (node.isInConstellation && currentTool === "edit") {
-    const highlightRadius = (NODE_RADIUS_BASE * node.size + 5);
-    ctx.fillStyle = styles.getPropertyValue("--constellation-highlight").trim() || "rgba(255, 255, 150, 0.15)";
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, highlightRadius, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  if (node.isInConstellation && currentTool === "edit" && node.type !== TIMELINE_GRID_TYPE) { 
+      const highlightRadius = (NODE_RADIUS_BASE * node.size + 5);
+      ctx.fillStyle = styles.getPropertyValue("--constellation-highlight").trim() || "rgba(255, 255, 150, 0.15)";
+      ctx.beginPath(); ctx.arc(node.x, node.y, highlightRadius, 0, Math.PI * 2); ctx.fill();
+   }
 
-  if ((node.animationState > 0 || preTriggerFlash > 0 || isSelectedAndOutlineNeeded || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE) && !isStartNodeDisabled) {
+  if ((node.animationState > 0 || preTriggerFlash > 0 || isSelectedAndOutlineNeeded || node.isInResizeMode || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE || node.type === PRORB_TYPE) && !isStartNodeDisabled && node.type !== TIMELINE_GRID_TYPE) {
     ctx.shadowColor = glowColor;
-    let glowAmount = (isPulsarType(node.type) || isDrumType(node.type) || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE ? 5 : 0) + (node.animationState + preTriggerFlash) * 15 + (isSelectedAndOutlineNeeded ? 5 : 0);
+    let glowAmount = (isPulsarType(node.type) || isDrumType(node.type) || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE || node.type === PRORB_TYPE ? 5 : 0) + (node.animationState + preTriggerFlash) * 15 + (isSelectedAndOutlineNeeded || node.isInResizeMode ? 5 : 0);
     if ((node.type === "gate" || node.type === "probabilityGate" || node.type === "pitchShift" || node.type === "relay" || node.type === "reflector" || node.type === "switch")) {
-      glowAmount = (isSelectedAndOutlineNeeded ? 5 : 0) + (node.animationState > 0 ? (10 + node.animationState * 10) : 0);
-    } else if (node.type === "nebula") {
-      const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8;
-      glowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0);
-    } else if (node.type === PORTAL_NEBULA_TYPE) {
-      const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15;
-      glowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0);
+      glowAmount = (isSelectedAndOutlineNeeded || node.isInResizeMode ? 5 : 0) + (node.animationState > 0 ? (10 + node.animationState * 10) : 0);
+    } else if (node.type === "nebula") { 
+        const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8;
+        glowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded || node.isInResizeMode ? 5 : 0);
+    } else if (node.type === PORTAL_NEBULA_TYPE) { 
+        const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15;
+        glowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded || node.isInResizeMode ? 5 : 0);
+    } else if (node.type === PRORB_TYPE) { 
+        glowAmount = (isSelectedAndOutlineNeeded ? 8 : 3) + node.animationState * 10; 
     }
     ctx.shadowBlur = Math.min(40, glowAmount) / viewScale;
   } else {
     ctx.shadowBlur = 0;
   }
 
-  const visualStyle = params.visualStyle;
+  const visualStyle = params?.visualStyle;
 
-  if (node.type === "sound" && visualStyle) {
-    const planetColors = {
-      planet_mercury: {
-        fill: hslToRgba(30, 10, 55, baseAlpha),
-        border: hslToRgba(30, 10, 40, 0.9),
-        craters: hslToRgba(30, 10, 35, baseAlpha)
-      },
-      planet_venus: {
-        fill: hslToRgba(45, 50, 70, baseAlpha),
-        border: hslToRgba(45, 50, 55, 0.9),
-        swirl1: hslToRgba(50, 55, 75, baseAlpha * 0.7),
-        swirl2: hslToRgba(40, 45, 65, baseAlpha * 0.6)
-      },
-      planet_earth: {
-        fill: hslToRgba(210, 60, 55, baseAlpha),
-        border: hslToRgba(210, 60, 40, 0.9),
-        land: hslToRgba(120, 40, 45, baseAlpha * 1.2),
-        cloud: hslToRgba(200, 20, 90, baseAlpha * 0.5)
-      },
-      planet_mars: {
-        fill: hslToRgba(15, 70, 50, baseAlpha),
-        border: hslToRgba(15, 70, 35, 0.9),
-        cap: hslToRgba(0, 0, 90, baseAlpha)
-      },
-      planet_jupiter: {
-        fill: hslToRgba(35, 60, 65, baseAlpha),
-        border: hslToRgba(35, 60, 50, 0.9),
-        spot: hslToRgba(10, 70, 55, baseAlpha),
-        band1: hslToRgba(40, 55, 60, baseAlpha),
-        band2: hslToRgba(30, 65, 70, baseAlpha)
-      },
-      planet_saturn: {
-        fill: hslToRgba(50, 55, 70, baseAlpha),
-        border: hslToRgba(50, 55, 55, 0.9),
-        ringOuter: hslToRgba(50, 35, 65, baseAlpha * 0.7),
-        ringInner: hslToRgba(50, 30, 60, baseAlpha * 0.5)
-      },
-      planet_uranus: {
-        fill: hslToRgba(180, 50, 65, baseAlpha),
-        border: hslToRgba(180, 50, 50, 0.9)
-      },
-      planet_neptune: {
-        fill: hslToRgba(230, 70, 60, baseAlpha),
-        border: hslToRgba(230, 70, 45, 0.9),
-        darkSpot: hslToRgba(230, 75, 40, baseAlpha)
-      },
-      fm_galaxy: {
-        fill: hslToRgba(270, 70, 50, 0.7),
-        border: hslToRgba(270, 70, 35, 0.9)
-      },
-      fm_crystal: {
-        fill: hslToRgba(180, 80, 75, 0.8),
-        border: hslToRgba(180, 80, 60, 0.9)
-      },
-      fm_chime: {
-        fill: hslToRgba(60, 75, 65, 0.75),
-        border: hslToRgba(60, 75, 50, 0.9)
-      },
-      fm_glass: {
-        fill: hslToRgba(190, 40, 80, 0.6),
-        border: hslToRgba(190, 40, 65, 0.8)
-      },
-      fm_organ: {
-        fill: hslToRgba(30, 60, 60, 0.8),
-        border: hslToRgba(30, 60, 45, 0.9)
-      },
-      fm_epiano: {
-        fill: hslToRgba(220, 50, 65, 0.7),
-        border: hslToRgba(220, 50, 50, 0.9)
-      },
-      fm_ethnic: {
-        fill: hslToRgba(0, 65, 55, 0.75),
-        border: hslToRgba(0, 65, 40, 0.9)
-      },
-      fm_metallic: {
-        fill: hslToRgba(210, 15, 60, 0.8),
-        border: hslToRgba(210, 15, 45, 0.9)
-      },
-      fm_harmonic: {
-        fill: hslToRgba(150, 70, 60, 0.7),
-        border: hslToRgba(150, 70, 45, 0.9)
-      },
-      fm_void: {
-        fill: hslToRgba(0, 0, 20, 0.85),
-        border: hslToRgba(0, 0, 10, 0.9)
-      },
+  if (node.type === TIMELINE_GRID_TYPE) { 
+    const rectX = node.x - node.width / 2; 
+    const rectY = node.y - node.height / 2;
+    const currentStylesTimeline = getComputedStyle(document.documentElement);
+    const gridBoxStrokeActual = (node.audioParams && node.audioParams.color !== undefined && node.audioParams.color !== null) ? node.audioParams.color : currentStylesTimeline.getPropertyValue('--timeline-grid-default-border-color').trim() || 'rgba(120, 220, 120, 0.7)';
+    const gridBoxFillActual = gridBoxStrokeActual.replace(/[\d\.]+\)$/g, '0.05)');
+    const scanlineColor = currentStylesTimeline.getPropertyValue('--timeline-grid-default-scanline-color').trim() || gridBoxStrokeActual.replace(/[\d\.]+\)$/g, '0.9)');
+    const internalGridLineColor = currentStylesTimeline.getPropertyValue('--timeline-grid-internal-lines-color').trim() || gridBoxStrokeActual.replace(/[\d\.]+\)$/g, '0.3)');
+
+    ctx.fillStyle = gridBoxFillActual; 
+    ctx.fillRect(rectX, rectY, node.width, node.height);
+    
+    ctx.strokeStyle = gridBoxStrokeActual; 
+    let currentDefaultLineWidth = Math.max(0.8 / viewScale, 2 / viewScale); 
+    ctx.lineWidth = currentDefaultLineWidth;
+
+    if (isSelectedAndOutlineNeeded || node.isInResizeMode) { 
+        ctx.save(); 
+        ctx.strokeStyle = "rgba(255, 255, 0, 0.9)"; 
+        ctx.lineWidth = Math.max(0.5 / viewScale, (baseLineWidth + 2) / viewScale); 
+        ctx.shadowColor = "rgba(255, 255, 0, 0.7)"; 
+        ctx.shadowBlur = 10 / viewScale; 
+        ctx.strokeRect(rectX, rectY, node.width, node.height); 
+        ctx.restore(); 
+        ctx.lineWidth = currentDefaultLineWidth; 
+        ctx.strokeStyle = gridBoxStrokeActual; 
+    } else {
+        ctx.strokeRect(rectX, rectY, node.width, node.height);
+    }
+    ctx.shadowBlur = 0;
+
+    if (node.showInternalGrid && node.internalGridDivisions > 1) { 
+        const divisionWidth = node.width / node.internalGridDivisions; 
+        ctx.save(); 
+        ctx.strokeStyle = internalGridLineColor; 
+        ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale); 
+        ctx.beginPath(); 
+        for (let i = 1; i < node.internalGridDivisions; i++) { 
+            const lineX = rectX + i * divisionWidth; 
+            ctx.moveTo(lineX, rectY); 
+            ctx.lineTo(lineX, rectY + node.height); 
+        } 
+        ctx.stroke(); 
+        ctx.restore(); 
+    }
+
+    if (node.scanLinePosition >= 0 && node.scanLinePosition <= 1.0) { 
+        const scanLineX = rectX + node.scanLinePosition * node.width; 
+        ctx.beginPath(); 
+        ctx.moveTo(scanLineX, rectY); 
+        ctx.lineTo(scanLineX, rectY + node.height); 
+        ctx.strokeStyle = scanlineColor; 
+        ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale); 
+        ctx.shadowColor = scanlineColor; 
+        ctx.shadowBlur = 5 / viewScale; 
+        ctx.stroke(); 
+        ctx.shadowBlur = 0; 
+    }
+    
+    const shouldShowControls = isSelectedAndOutlineNeeded;
+    if (shouldShowControls) {
+        const iconSizeScreen = 16; const iconSizeWorld = iconSizeScreen / viewScale; 
+        const paddingScreen = 5; const paddingWorld = paddingScreen / viewScale;
+        
+        const resizeIconBoxX = node.x + node.width / 2 - iconSizeWorld - paddingWorld; 
+        const resizeIconBoxY = node.y - node.height / 2 + paddingWorld; 
+        const resizeIconCenterX = resizeIconBoxX + iconSizeWorld / 2; 
+        const resizeIconCenterY = resizeIconBoxY + iconSizeWorld / 2;
+        ctx.save(); 
+        ctx.fillStyle = node.isInResizeMode ? 'rgba(255, 200, 0, 0.85)' : 'rgba(200, 200, 220, 0.65)'; 
+        ctx.strokeStyle = 'rgba(50, 50, 50, 0.9)'; 
+        ctx.lineWidth = 1 / viewScale; 
+        ctx.beginPath(); ctx.rect(resizeIconBoxX, resizeIconBoxY, iconSizeWorld, iconSizeWorld); 
+        ctx.fill(); ctx.stroke();
+        const resizeIconSymbol = node.isInResizeMode ? '▣' : '✥'; 
+        const resizeIconFontSize = iconSizeWorld * 0.7; 
+        ctx.font = `bold ${resizeIconFontSize}px sans-serif`; 
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
+        ctx.fillStyle = 'rgba(0,0,0,0.8)'; 
+        ctx.fillText(resizeIconSymbol, resizeIconCenterX, resizeIconCenterY + resizeIconFontSize * 0.05); 
+        ctx.restore();
+        node.resizeToggleIconRect = { 
+            x1: resizeIconBoxX, y1: resizeIconBoxY, 
+            x2: resizeIconBoxX + iconSizeWorld, y2: resizeIconBoxY + iconSizeWorld 
+        };
+        
+        const directionIconBoxX = node.x - node.width / 2 + paddingWorld; 
+        const directionIconBoxY = node.y - node.height / 2 + paddingWorld; 
+        const directionIconCenterX = directionIconBoxX + iconSizeWorld / 2; 
+        const directionIconCenterY = directionIconBoxY + iconSizeWorld / 2;
+        ctx.save(); 
+        ctx.fillStyle = 'rgba(200, 220, 255, 0.65)'; 
+        ctx.strokeStyle = 'rgba(50, 50, 50, 0.9)'; 
+        ctx.lineWidth = 1 / viewScale; 
+        ctx.beginPath(); ctx.rect(directionIconBoxX, directionIconBoxY, iconSizeWorld, iconSizeWorld); 
+        ctx.fill(); ctx.stroke();
+        let directionSymbol = '?'; 
+        if (node.scanlineDirection === 'forward') directionSymbol = '→'; 
+        else if (node.scanlineDirection === 'backward') directionSymbol = '←'; 
+        else if (node.scanlineDirection === 'ping-pong') directionSymbol = '↔';
+        const directionIconFontSize = iconSizeWorld * (directionSymbol === '↔' ? 0.9 : 0.75); 
+        ctx.font = `bold ${directionIconFontSize}px sans-serif`; 
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
+        ctx.fillStyle = 'rgba(0,0,0,0.8)'; 
+        ctx.fillText(directionSymbol, directionIconCenterX, directionIconCenterY + directionIconFontSize * 0.1); 
+        ctx.restore();
+        node.directionToggleIconRect = { 
+            x1: directionIconBoxX, y1: directionIconBoxY, 
+            x2: directionIconBoxX + iconSizeWorld, y2: directionIconBoxY + iconSizeWorld 
+        };
+    } else { 
+        delete node.resizeToggleIconRect; 
+        delete node.directionToggleIconRect; 
+    }
+
+    if (shouldShowControls && node.isInResizeMode) { 
+        const handleDrawSizeScreen = 8; 
+        const handleDrawSizeWorld = handleDrawSizeScreen / viewScale; 
+        const halfHandleDraw = handleDrawSizeWorld / 2; 
+        const handlesPositions = [ 
+            { x: rectX, y: rectY }, { x: rectX + node.width / 2, y: rectY }, { x: rectX + node.width, y: rectY }, 
+            { x: rectX, y: rectY + node.height / 2 }, { x: rectX + node.width, y: rectY + node.height / 2 }, 
+            { x: rectX, y: rectY + node.height }, { x: rectX + node.width / 2, y: rectY + node.height }, { x: rectX + node.width, y: rectY + node.height } 
+        ]; 
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.7)'; 
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)'; 
+        ctx.lineWidth = 1 / viewScale; 
+        handlesPositions.forEach(handlePos => { 
+            ctx.beginPath(); 
+            ctx.rect(handlePos.x - halfHandleDraw, handlePos.y - halfHandleDraw, handleDrawSizeWorld, handleDrawSizeWorld); 
+            ctx.fill(); ctx.stroke(); 
+        }); 
+    }
+    
+    } else if (node.type === "sound" && visualStyle) {
+    const planetColorsInternal = {
+      planet_mercury: { fill: hslToRgba(30, 10, 55, baseAlpha), border: hslToRgba(30, 10, 40, 0.9), craters: hslToRgba(30, 10, 35, baseAlpha) },
+      planet_venus: { fill: hslToRgba(45, 50, 70, baseAlpha), border: hslToRgba(45, 50, 55, 0.9), swirl1: hslToRgba(50, 55, 75, baseAlpha * 0.7), swirl2: hslToRgba(40, 45, 65, baseAlpha * 0.6) },
+      planet_earth: { fill: hslToRgba(210, 60, 55, baseAlpha), border: hslToRgba(210, 60, 40, 0.9), land: hslToRgba(120, 40, 45, baseAlpha * 1.2), cloud: hslToRgba(200, 20, 90, baseAlpha * 0.5) },
+      planet_mars: { fill: hslToRgba(15, 70, 50, baseAlpha), border: hslToRgba(15, 70, 35, 0.9), cap: hslToRgba(0, 0, 90, baseAlpha) },
+      planet_jupiter: { fill: hslToRgba(35, 60, 65, baseAlpha), border: hslToRgba(35, 60, 50, 0.9), spot: hslToRgba(10, 70, 55, baseAlpha), band1: hslToRgba(40, 55, 60, baseAlpha), band2: hslToRgba(30, 65, 70, baseAlpha) },
+      planet_saturn: { fill: hslToRgba(50, 55, 70, baseAlpha), border: hslToRgba(50, 55, 55, 0.9), ringOuter: hslToRgba(50, 35, 65, baseAlpha * 0.7), ringInner: hslToRgba(50, 30, 60, baseAlpha * 0.5) },
+      planet_uranus: { fill: hslToRgba(180, 50, 65, baseAlpha), border: hslToRgba(180, 50, 50, 0.9) },
+      planet_neptune: { fill: hslToRgba(230, 70, 60, baseAlpha), border: hslToRgba(230, 70, 45, 0.9), darkSpot: hslToRgba(230, 75, 40, baseAlpha) },
+      fm_galaxy: { fill: hslToRgba(270, 70, 50, 0.7), border: hslToRgba(270, 70, 35, 0.9) },
+      fm_crystal: { fill: hslToRgba(180, 80, 75, 0.8), border: hslToRgba(180, 80, 60, 0.9) },
+      fm_chime: { fill: hslToRgba(60, 75, 65, 0.75), border: hslToRgba(60, 75, 50, 0.9) },
+      fm_glass: { fill: hslToRgba(190, 40, 80, 0.6), border: hslToRgba(190, 40, 65, 0.8) },
+      fm_organ: { fill: hslToRgba(30, 60, 60, 0.8), border: hslToRgba(30, 60, 45, 0.9) },
+      fm_epiano: { fill: hslToRgba(220, 50, 65, 0.7), border: hslToRgba(220, 50, 50, 0.9) },
+      fm_ethnic: { fill: hslToRgba(0, 65, 55, 0.75), border: hslToRgba(0, 65, 40, 0.9) },
+      fm_metallic: { fill: hslToRgba(210, 15, 60, 0.8), border: hslToRgba(210, 15, 45, 0.9) },
+      fm_harmonic: { fill: hslToRgba(150, 70, 60, 0.7), border: hslToRgba(150, 70, 45, 0.9) },
+      fm_void: { fill: hslToRgba(0, 0, 20, 0.85), border: hslToRgba(0, 0, 10, 0.9) },
     };
-    const currentPlanetColors = planetColors[visualStyle];
+    const currentPlanetColors = planetColorsInternal[visualStyle];
     if (currentPlanetColors) {
       fillColor = currentPlanetColors.fill;
       borderColor = currentPlanetColors.border;
       ctx.fillStyle = fillColor;
       ctx.strokeStyle = borderColor;
     }
-
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    ctx.beginPath(); 
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2); 
     ctx.fill();
-
-    switch (visualStyle) {
-      case "planet_mercury":
-        for (let i = 0; i < 3; i++) {
-          const cr = r * (0.1 + Math.random() * 0.15);
-          const ca = Math.random() * Math.PI * 2;
-          const cx = node.x + Math.cos(ca) * r * 0.5;
-          const cy = node.y + Math.sin(ca) * r * 0.5;
-          ctx.fillStyle = currentPlanetColors.craters;
-          ctx.beginPath();
-          ctx.arc(cx, cy, cr, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        break;
-      case "planet_venus":
-        ctx.save();
-        ctx.clip();
-        for (let i = 0; i < 2; i++) {
-          const sx = node.x + (Math.random() - 0.5) * r * 0.8;
-          const sy = node.y + (Math.random() - 0.5) * r * 0.8;
-          const sr1 = r * (0.4 + Math.random() * 0.3);
-          const sr2 = r * (0.2 + Math.random() * 0.2);
-          ctx.fillStyle = i % 2 === 0 ? currentPlanetColors.swirl1 : currentPlanetColors.swirl2;
-          ctx.beginPath();
-          ctx.ellipse(sx, sy, sr1, sr2, Math.random() * Math.PI, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-        break;
-      case "planet_earth":
-        ctx.save();
-        ctx.clip();
-        ctx.fillStyle = currentPlanetColors.land;
-        ctx.beginPath();
-        ctx.ellipse(node.x - r * 0.2, node.y + r * 0.1, r * 0.5, r * 0.3, Math.PI / 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(node.x + r * 0.3, node.y - r * 0.2, r * 0.4, r * 0.25, -Math.PI / 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = currentPlanetColors.cloud;
-        for (let i = 0; i < 3; i++) {
-          ctx.beginPath();
-          ctx.arc(node.x + (Math.random() - 0.5) * r, node.y + (Math.random() - 0.5) * r, r * (0.15 + Math.random() * 0.2), 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-        break;
-      case "planet_mars":
-        ctx.fillStyle = currentPlanetColors.cap;
-        ctx.beginPath();
-        ctx.arc(node.x, node.y - r * 0.8, r * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-      case "planet_jupiter":
-        ctx.save();
-        ctx.clip();
-        ctx.fillStyle = currentPlanetColors.band1;
-        ctx.fillRect(node.x - r, node.y - r * 0.4, r * 2, r * 0.3);
-        ctx.fillStyle = currentPlanetColors.band2;
-        ctx.fillRect(node.x - r, node.y + r * 0.1, r * 2, r * 0.25);
-        ctx.fillStyle = currentPlanetColors.spot;
-        ctx.beginPath();
-        ctx.ellipse(node.x + r * 0.3, node.y + r * 0.4, r * 0.35, r * 0.2, -Math.PI / 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        break;
-      case "planet_saturn":
-        ctx.strokeStyle = currentPlanetColors.ringOuter;
-        ctx.lineWidth = (r * 0.25) / viewScale;
-        ctx.beginPath();
-        ctx.ellipse(node.x, node.y, r * 1.6, r * 0.5, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.strokeStyle = currentPlanetColors.ringInner;
-        ctx.lineWidth = (r * 0.15) / viewScale;
-        ctx.beginPath();
-        ctx.ellipse(node.x, node.y, r * 1.25, r * 0.4, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        break;
-      case "planet_neptune":
-        ctx.fillStyle = currentPlanetColors.darkSpot;
-        ctx.beginPath();
-        ctx.ellipse(node.x - r * 0.3, node.y - r * 0.2, r * 0.4, r * 0.25, Math.PI / 6, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-      case "fm_galaxy":
-        drawStarShape(ctx, node.x, node.y, 7, r, r * 0.4);
-        ctx.fill();
-        break;
-      case "fm_crystal":
-        for (let i = 0; i < 5; i++) {
-          const angle = (i / 5) * Math.PI * 2 + now * 0.1;
-          ctx.beginPath();
-          ctx.moveTo(node.x + Math.cos(angle) * r * 0.3, node.y + Math.sin(angle) * r * 0.3);
-          ctx.lineTo(node.x + Math.cos(angle + Math.PI * 0.15) * r, node.y + Math.sin(angle + Math.PI * 0.15) * r);
-          ctx.lineTo(node.x + Math.cos(angle - Math.PI * 0.15) * r, node.y + Math.sin(angle - Math.PI * 0.15) * r);
-          ctx.closePath();
-          ctx.fill();
-        }
-        break;
-      case "fm_chime":
-        for (let i = 0; i < 3; i++) {
-          ctx.fillRect(node.x - r * 0.1 + i * r * 0.4 - r * 0.4, node.y - r * 0.8, r * 0.2, r * 1.6);
-        }
-        break;
-      case "fm_glass":
-        ctx.beginPath();
-        ctx.moveTo(node.x - r * 0.7, node.y + r * 0.7);
-        ctx.lineTo(node.x - r * 0.3, node.y - r * 0.7);
-        ctx.lineTo(node.x + r * 0.3, node.y - r * 0.7);
-        ctx.lineTo(node.x + r * 0.7, node.y + r * 0.7);
-        ctx.stroke();
-        break;
-      case "fm_organ":
-        drawStarShape(ctx, node.x, node.y, 4, r, r * 0.8);
-        ctx.fill();
-        ctx.stroke();
-        break;
-      case "fm_epiano":
-        ctx.beginPath();
-        ctx.ellipse(node.x, node.y, r, r * 0.6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        break;
-      case "fm_ethnic":
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, Math.PI * 0.2, Math.PI * 0.8);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, Math.PI * 1.2, Math.PI * 1.8);
-        ctx.fill();
-        break;
-      case "fm_metallic":
-        ctx.beginPath();
-        ctx.rect(node.x - r * 0.7, node.y - r * 0.7, r * 1.4, r * 1.4);
-        ctx.fill();
-        ctx.stroke();
-        drawStarShape(ctx, node.x, node.y, 6, r * 0.5, r * 0.2);
-        ctx.fillStyle = borderColor;
-        ctx.fill();
-        break;
-      case "fm_harmonic":
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        for (let i = 1; i < 4; i++) {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, r * (1 - i * 0.2), 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        break;
-      case "fm_void":
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        break;
-      default:
-        const waveform = params.waveform;
-        if (waveform === "sine" || !waveform) {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        } else if (waveform === "square") {
-          ctx.beginPath();
-          ctx.rect(node.x - r * 0.9, node.y - r * 0.9, r * 1.8, r * 1.8);
-        } else if (waveform === "triangle" || waveform === "sawtooth") {
-          ctx.beginPath();
-          ctx.moveTo(node.x, node.y - r);
-          ctx.lineTo(node.x + r * 0.866, node.y + r * 0.5);
-          ctx.lineTo(node.x - r * 0.866, node.y + r * 0.5);
-          ctx.closePath();
-        } else if (waveform === "fmBell" || waveform === "fmXylo") {
-          drawStarShape(ctx, node.x, node.y, 5, r, r * 0.5);
-        } else if (waveform?.startsWith("sampler_")) {
-          let arms = 1;
-          const samplerType = waveform.replace("sampler_", "");
-          const samplerDef = SAMPLER_DEFINITIONS.find(s => s.id === samplerType);
-          if (samplerDef && samplerDef.icon) {
-            if (samplerDef.icon === "🎹") arms = 2;
-            else if (samplerDef.icon === "🌬️") arms = 3;
-            else if (samplerDef.icon === "🪵") arms = 4;
-          }
-          drawSatelliteShape(ctx, node.x, node.y, r, arms);
-        } else {
-          ctx.beginPath();
-          ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        }
-        ctx.fill();
-        ctx.stroke();
-        break;
-    }
+    if (currentPlanetColors) {
+      switch (visualStyle) {
+        case "planet_mercury": for (let i = 0; i < 3; i++) { const cr = r * (0.1 + Math.random() * 0.15); const ca = Math.random() * Math.PI * 2; const cx = node.x + Math.cos(ca) * r * 0.5; const cy = node.y + Math.sin(ca) * r * 0.5; ctx.fillStyle = currentPlanetColors.craters; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill(); } break;
+        case "planet_venus": ctx.save(); ctx.clip(); for (let i = 0; i < 2; i++) { const sx = node.x + (Math.random() - 0.5) * r * 0.8; const sy = node.y + (Math.random() - 0.5) * r * 0.8; const sr1 = r * (0.4 + Math.random() * 0.3); const sr2 = r * (0.2 + Math.random() * 0.2); ctx.fillStyle = i % 2 === 0 ? currentPlanetColors.swirl1 : currentPlanetColors.swirl2; ctx.beginPath(); ctx.ellipse(sx, sy, sr1, sr2, Math.random() * Math.PI, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); break;
+        case "planet_earth": ctx.save(); ctx.clip(); ctx.fillStyle = currentPlanetColors.land; ctx.beginPath(); ctx.ellipse(node.x - r * 0.2, node.y + r * 0.1, r * 0.5, r * 0.3, Math.PI / 4, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(node.x + r * 0.3, node.y - r * 0.2, r * 0.4, r * 0.25, -Math.PI / 6, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = currentPlanetColors.cloud; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(node.x + (Math.random() - 0.5) * r, node.y + (Math.random() - 0.5) * r, r * (0.15 + Math.random() * 0.2), 0, Math.PI * 2); ctx.fill(); } ctx.restore(); break;
+        case "planet_mars": ctx.fillStyle = currentPlanetColors.cap; ctx.beginPath(); ctx.arc(node.x, node.y - r * 0.8, r * 0.3, 0, Math.PI * 2); ctx.fill(); break;
+        case "planet_jupiter": ctx.save(); ctx.clip(); ctx.fillStyle = currentPlanetColors.band1; ctx.fillRect(node.x - r, node.y - r * 0.4, r * 2, r * 0.3); ctx.fillStyle = currentPlanetColors.band2; ctx.fillRect(node.x - r, node.y + r * 0.1, r * 2, r * 0.25); ctx.fillStyle = currentPlanetColors.spot; ctx.beginPath(); ctx.ellipse(node.x + r * 0.3, node.y + r * 0.4, r * 0.35, r * 0.2, -Math.PI / 5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); break;
+        case "planet_saturn": ctx.strokeStyle = currentPlanetColors.ringOuter; ctx.lineWidth = (r * 0.25) / viewScale; ctx.beginPath(); ctx.ellipse(node.x, node.y, r * 1.6, r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.strokeStyle = currentPlanetColors.ringInner; ctx.lineWidth = (r * 0.15) / viewScale; ctx.beginPath(); ctx.ellipse(node.x, node.y, r * 1.25, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke(); break;
+        case "planet_neptune": ctx.fillStyle = currentPlanetColors.darkSpot; ctx.beginPath(); ctx.ellipse(node.x - r * 0.3, node.y - r * 0.2, r * 0.4, r * 0.25, Math.PI / 6, 0, Math.PI * 2); ctx.fill(); break;
+        case "fm_galaxy": drawStarShape(ctx, node.x, node.y, 7, r, r * 0.4); ctx.fill(); break;
+        case "fm_crystal": for (let i = 0; i < 5; i++) { const angle = (i / 5) * Math.PI * 2 + now * 0.1; ctx.beginPath(); ctx.moveTo(node.x + Math.cos(angle) * r * 0.3, node.y + Math.sin(angle) * r * 0.3); ctx.lineTo(node.x + Math.cos(angle + Math.PI * 0.15) * r, node.y + Math.sin(angle + Math.PI * 0.15) * r); ctx.lineTo(node.x + Math.cos(angle - Math.PI * 0.15) * r, node.y + Math.sin(angle - Math.PI * 0.15) * r); ctx.closePath(); ctx.fill(); } break;
+        case "fm_chime": for (let i = 0; i < 3; i++) { ctx.fillRect(node.x - r * 0.1 + i * r * 0.4 - r * 0.4, node.y - r * 0.8, r * 0.2, r * 1.6); } break;
+        case "fm_glass": ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y + r * 0.7); ctx.lineTo(node.x - r * 0.3, node.y - r * 0.7); ctx.lineTo(node.x + r * 0.3, node.y - r * 0.7); ctx.lineTo(node.x + r * 0.7, node.y + r * 0.7); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+        case "fm_organ": drawStarShape(ctx, node.x, node.y, 4, r, r * 0.8); ctx.fill(); ctx.stroke(); break;
+        case "fm_epiano": ctx.beginPath(); ctx.ellipse(node.x, node.y, r, r * 0.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); break;
+        case "fm_ethnic": ctx.beginPath(); ctx.arc(node.x, node.y, r, Math.PI * 0.2, Math.PI * 0.8); ctx.fill(); ctx.beginPath(); ctx.arc(node.x, node.y, r, Math.PI * 1.2, Math.PI * 1.8); ctx.fill(); ctx.stroke(); break;
+        case "fm_metallic": ctx.beginPath(); ctx.rect(node.x - r * 0.7, node.y - r * 0.7, r * 1.4, r * 1.4); ctx.fill(); ctx.stroke(); drawStarShape(ctx, node.x, node.y, 6, r * 0.5, r * 0.2); ctx.fillStyle = borderColor; ctx.fill(); break;
+        case "fm_harmonic": ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.arc(node.x, node.y, r * (1 - i * 0.2), 0, Math.PI * 2); ctx.stroke(); } break;
+        case "fm_void": ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); break;
+        default: const waveform = params?.waveform; if (waveform === "sine" || !waveform) {} else if (waveform === "square") { ctx.beginPath(); ctx.rect(node.x - r * 0.9, node.y - r * 0.9, r * 1.8, r * 1.8); ctx.fill(); ctx.stroke(); } else if (waveform === "triangle" || waveform === "sawtooth") { ctx.beginPath(); ctx.moveTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.866, node.y + r * 0.5); ctx.lineTo(node.x - r * 0.866, node.y + r * 0.5); ctx.closePath(); ctx.fill(); ctx.stroke(); } else if (waveform === "fmBell" || waveform === "fmXylo") { drawStarShape(ctx, node.x, node.y, 5, r, r * 0.5); ctx.fill(); ctx.stroke();} else if (waveform?.startsWith("sampler_")) { let arms = 1; const samplerType = waveform.replace("sampler_", ""); const samplerDef = SAMPLER_DEFINITIONS.find(s => s.id === samplerType); if (samplerDef && samplerDef.icon) {} drawSatelliteShape(ctx, node.x, node.y, r, arms); } break;
+      }
+    } else { const waveform = params?.waveform; if (waveform === "sine" || !waveform) { ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); } else if (waveform === "square") { ctx.beginPath(); ctx.rect(node.x - r * 0.9, node.y - r * 0.9, r * 1.8, r * 1.8); } else if (waveform === "triangle" || waveform === "sawtooth") { ctx.beginPath(); ctx.moveTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.866, node.y + r * 0.5); ctx.lineTo(node.x - r * 0.866, node.y + r * 0.5); ctx.closePath(); } else if (waveform === "fmBell" || waveform === "fmXylo") { drawStarShape(ctx, node.x, node.y, 5, r, r * 0.5); } else if (waveform?.startsWith("sampler_")) { let arms = 1; const samplerType = waveform.replace("sampler_", ""); const samplerDef = SAMPLER_DEFINITIONS.find(s => s.id === samplerType); if (samplerDef && samplerDef.icon) { if (samplerDef.icon === "🎹") arms = 2; else if (samplerDef.icon === "🌬️") arms = 3; else if (samplerDef.icon === "🪵") arms = 4;} drawSatelliteShape(ctx, node.x, node.y, r, arms); } else { ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); } if (!(waveform?.startsWith("sampler_"))) { ctx.fill(); ctx.stroke(); } }
     ctx.stroke();
-
-  } else if (isDrumType(node.type)) {
-    ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth / viewScale);
-    ctx.strokeStyle = borderColor;
-    ctx.fillStyle = fillColor;
+  } else if (isDrumType(node.type)) { 
+    ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth / viewScale); 
+    ctx.strokeStyle = borderColor; 
+    ctx.fillStyle = fillColor; 
     switch (node.type) {
-      case 'drum_kick':
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        const innerKickR = r * (0.6 + node.animationState * 0.1);
-        ctx.fillStyle = node.color ? hexToRgba(rgbaToHex(node.color), 0.6) : fillColor.replace(/[\d\.]+\)$/g, '0.6)');
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, innerKickR, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-      case 'drum_snare':
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.save();
-        ctx.strokeStyle = borderColor + '80';
-        ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale);
-        const numWires = 3;
-        for (let i = 0; i < numWires; i++) {
-          const offset = (i - (numWires - 1) / 2) * (r * 0.4);
-          ctx.beginPath();
-          ctx.moveTo(node.x - r * 0.7, node.y + offset);
-          ctx.lineTo(node.x + r * 0.7, node.y + offset);
-          ctx.stroke();
-        }
-        ctx.restore();
-        break;
-      case 'drum_hihat':
-        const cymbalYOffset = r * 0.2;
-        const cymbalWidth = r * 1.4;
-        const cymbalControlY = r * 0.3;
-        ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth * 0.8 / viewScale);
-        ctx.beginPath();
-        ctx.moveTo(node.x - cymbalWidth / 2, node.y - cymbalYOffset);
-        ctx.quadraticCurveTo(node.x, node.y - cymbalYOffset - cymbalControlY, node.x + cymbalWidth / 2, node.y - cymbalYOffset);
-        ctx.stroke();
-        const bottomY = node.y + cymbalYOffset + node.animationState * (r * 0.35);
-        ctx.beginPath();
-        ctx.moveTo(node.x - cymbalWidth / 2, bottomY);
-        ctx.quadraticCurveTo(node.x, bottomY + cymbalControlY, node.x + cymbalWidth / 2, bottomY);
-        ctx.stroke();
-        const stickBaseY = node.y - r * 1.3;
-        const stickTipY = node.y - r * 0.3 + node.animationState * (r * 0.7);
-        const stickX = node.x + r * 0.6;
-        ctx.save();
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale);
-        ctx.beginPath();
-        ctx.moveTo(stickX, stickBaseY);
-        ctx.lineTo(stickX + r * 0.1, stickTipY);
-        ctx.stroke();
-        ctx.restore();
-        break;
-      case 'drum_clap':
-        const handWidth = r * 0.8;
-        const handHeight = r * 1.0;
-        const minGap = r * 0.1;
-        const maxGap = r * 0.7;
-        const currentGap = minGap + (1 - node.animationState) * (maxGap - minGap);
-        const yPos = node.y - handHeight / 2;
-        const borderRadius = r * 0.25;
-        ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth / viewScale);
-        drawRoundedRect(ctx, node.x - handWidth - currentGap / 2, yPos, handWidth, handHeight, borderRadius);
-        ctx.fill();
-        ctx.stroke();
-        drawRoundedRect(ctx, node.x + currentGap / 2, yPos, handWidth, handHeight, borderRadius);
-        ctx.fill();
-        ctx.stroke();
-        break;
-      case 'drum_tom1':
-      case 'drum_tom2':
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.save();
-        ctx.strokeStyle = borderColor + '90';
-        ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale);
-        ctx.beginPath();
-        ctx.moveTo(node.x - r * 0.7, node.y);
-        ctx.lineTo(node.x + r * 0.7, node.y);
-        ctx.stroke();
-        ctx.restore();
-        break;
-      case 'drum_cowbell':
-        const topWidth = r * 0.8;
-        const bottomWidth = r * 1.3;
-        const cHeight = r * 1.1;
-        ctx.beginPath();
-        ctx.moveTo(node.x - topWidth / 2, node.y - cHeight / 2);
-        ctx.lineTo(node.x + topWidth / 2, node.y - cHeight / 2);
-        ctx.lineTo(node.x + bottomWidth / 2, node.y + cHeight / 2);
-        ctx.lineTo(node.x - bottomWidth / 2, node.y + cHeight / 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        break;
-      default:
-        ctx.beginPath();
-        ctx.rect(node.x - r * 0.8, node.y - r * 0.8, r * 1.6, r * 1.6);
-        ctx.fill();
-        ctx.stroke();
-        break;
+      case 'drum_kick': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); const innerKickR = r * (0.6 + node.animationState * 0.1); ctx.fillStyle = node.color ? hexToRgba(rgbaToHex(node.color), 0.6) : fillColor.replace(/[\d\.]+\)$/g, '0.6)'); ctx.beginPath(); ctx.arc(node.x, node.y, innerKickR, 0, Math.PI * 2); ctx.fill(); break; 
+      case 'drum_snare': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.save(); ctx.strokeStyle = borderColor + '80'; ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale); const numWires = 3; for (let i = 0; i < numWires; i++) { const offset = (i - (numWires - 1) / 2) * (r * 0.4); ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y + offset); ctx.lineTo(node.x + r * 0.7, node.y + offset); ctx.stroke(); } ctx.restore(); break; 
+      case 'drum_hihat': const cymbalYOffset = r * 0.2; const cymbalWidth = r * 1.4; const cymbalControlY = r * 0.3; ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth * 0.8 / viewScale); ctx.beginPath(); ctx.moveTo(node.x - cymbalWidth / 2, node.y - cymbalYOffset); ctx.quadraticCurveTo(node.x, node.y - cymbalYOffset - cymbalControlY, node.x + cymbalWidth / 2, node.y - cymbalYOffset); ctx.stroke(); const bottomY = node.y + cymbalYOffset + node.animationState * (r * 0.35); ctx.beginPath(); ctx.moveTo(node.x - cymbalWidth / 2, bottomY); ctx.quadraticCurveTo(node.x, bottomY + cymbalControlY, node.x + cymbalWidth / 2, bottomY); ctx.stroke(); const stickBaseY = node.y - r * 1.3; const stickTipY = node.y - r * 0.3 + node.animationState * (r * 0.7); const stickX = node.x + r * 0.6; ctx.save(); ctx.strokeStyle = borderColor; ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale); ctx.beginPath(); ctx.moveTo(stickX, stickBaseY); ctx.lineTo(stickX + r * 0.1, stickTipY); ctx.stroke(); ctx.restore(); break; 
+      case 'drum_clap': const handWidth = r * 0.8; const handHeight = r * 1.0; const minGap = r * 0.1; const maxGap = r * 0.7; const currentGap = minGap + (1 - node.animationState) * (maxGap - minGap); const yPosClap = node.y - handHeight / 2; const borderRadiusClap = r * 0.25; ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth / viewScale); drawRoundedRect(ctx, node.x - handWidth - currentGap / 2, yPosClap, handWidth, handHeight, borderRadiusClap); ctx.fill(); ctx.stroke(); drawRoundedRect(ctx, node.x + currentGap / 2, yPosClap, handWidth, handHeight, borderRadiusClap); ctx.fill(); ctx.stroke(); break; 
+      case 'drum_tom1': case 'drum_tom2': ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.save(); ctx.strokeStyle = borderColor + '90'; ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale); ctx.beginPath(); ctx.moveTo(node.x - r * 0.7, node.y); ctx.lineTo(node.x + r * 0.7, node.y); ctx.stroke(); ctx.restore(); break; 
+      case 'drum_cowbell': const topWidth = r * 0.8; const bottomWidth = r * 1.3; const cHeight = r * 1.1; ctx.beginPath(); ctx.moveTo(node.x - topWidth / 2, node.y - cHeight / 2); ctx.lineTo(node.x + topWidth / 2, node.y - cHeight / 2); ctx.lineTo(node.x + bottomWidth / 2, node.y + cHeight / 2); ctx.lineTo(node.x - bottomWidth / 2, node.y + cHeight / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); break; 
+      default: ctx.beginPath(); ctx.rect(node.x - r * 0.8, node.y - r * 0.8, r * 1.6, r * 1.6); ctx.fill(); ctx.stroke(); break; 
     }
-  } else if (node.type === "gate") {
-    const innerRadius = r * 0.4;
-    const shieldRadius = r * 0.85;
-    const openingStartAngle = -GATE_ANGLE_SIZE / 2;
-    const openingEndAngle = GATE_ANGLE_SIZE / 2;
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.stroke();
-    const gateBgFill = fillColor + "90";
-    ctx.fillStyle = gateBgFill;
-    ctx.fill();
-    ctx.fillStyle = borderColor + "A0";
-    ctx.beginPath();
-    ctx.moveTo(node.x + Math.cos(openingEndAngle) * innerRadius, node.y + Math.sin(openingEndAngle) * innerRadius);
-    ctx.lineTo(node.x + Math.cos(openingEndAngle) * shieldRadius, node.y + Math.sin(openingEndAngle) * shieldRadius);
-    ctx.arc(node.x, node.y, shieldRadius, openingEndAngle, openingStartAngle + Math.PI * 2, false);
-    ctx.lineTo(node.x + Math.cos(openingStartAngle) * innerRadius, node.y + Math.sin(openingStartAngle) * innerRadius);
-    ctx.arc(node.x, node.y, innerRadius, openingStartAngle + Math.PI * 2, openingEndAngle, true);
-    ctx.closePath();
-    ctx.fill();
-    let shouldPassVisual = false;
-    const mode = GATE_MODES[node.gateModeIndex || 0];
-    if (mode === "RAND") {
-      shouldPassVisual = node.lastRandomGateResult;
-    } else {
-      const counterCheck = node.gateCounter || 0;
-      switch (mode) {
-        case "1/2":
-          if (counterCheck % 2 === 0) shouldPassVisual = true;
-          break;
-        case "1/3":
-          if (counterCheck % 3 === 0) shouldPassVisual = true;
-          break;
-        case "1/4":
-          if (counterCheck % 4 === 0) shouldPassVisual = true;
-          break;
-        case "2/3":
-          if (counterCheck % 3 !== 0) shouldPassVisual = true;
-          break;
-        case "3/4":
-          if (counterCheck % 4 !== 0) shouldPassVisual = true;
-          break;
+  } else if (node.type === "gate") { 
+    const innerRadius = r * 0.4; const shieldRadius = r * 0.85; const openingStartAngle = -GATE_ANGLE_SIZE / 2; const openingEndAngle = GATE_ANGLE_SIZE / 2; 
+    ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke(); const gateBgFill = fillColor + "90"; ctx.fillStyle = gateBgFill; ctx.fill(); ctx.fillStyle = borderColor + "A0"; 
+    ctx.beginPath(); ctx.moveTo(node.x + Math.cos(openingEndAngle) * innerRadius, node.y + Math.sin(openingEndAngle) * innerRadius); ctx.lineTo(node.x + Math.cos(openingEndAngle) * shieldRadius, node.y + Math.sin(openingEndAngle) * shieldRadius); ctx.arc(node.x, node.y, shieldRadius, openingEndAngle, openingStartAngle + Math.PI * 2, false); ctx.lineTo(node.x + Math.cos(openingStartAngle) * innerRadius, node.y + Math.sin(openingStartAngle) * innerRadius); ctx.arc(node.x, node.y, innerRadius, openingStartAngle + Math.PI * 2, openingEndAngle, true); ctx.closePath(); ctx.fill(); 
+    let shouldPassVisual = false; const mode = GATE_MODES[params?.gateModeIndex || 0]; if (mode === "RAND") { shouldPassVisual = node.lastRandomGateResult; } else { const counterCheck = node.gateCounter || 0; switch (mode) { case "1/2": if (counterCheck % 2 === 0) shouldPassVisual = true; break; case "1/3": if (counterCheck % 3 === 0) shouldPassVisual = true; break; case "1/4": if (counterCheck % 4 === 0) shouldPassVisual = true; break; case "2/3": if (counterCheck % 3 !== 0) shouldPassVisual = true; break; case "3/4": if (counterCheck % 4 !== 0) shouldPassVisual = true; break; } } 
+    if (node.animationState > 0 && shouldPassVisual) { ctx.save(); ctx.strokeStyle = styles.getPropertyValue("--pulse-visual-color").trim() || "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale); ctx.shadowColor = glowColor; ctx.shadowBlur = 10 / viewScale; ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.9, openingStartAngle, openingEndAngle); ctx.stroke(); ctx.restore(); } 
+  } else if (node.type === "probabilityGate") { 
+    ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); 
+    const fontSize = Math.max(8 / viewScale, (r * 0.8) / viewScale); ctx.font = `bold ${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("%", node.x, node.y + fontSize * 0.1); 
+  } else if (node.type === "pitchShift") { 
+    ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = fillColor + "90"; ctx.fill(); 
+    if (node.animationState < 0.5) { ctx.fillStyle = borderColor; ctx.beginPath(); const arrowSize = r * 0.5; const arrowY = node.y - arrowSize * 0.3; ctx.moveTo(node.x, arrowY - arrowSize / 2); ctx.lineTo(node.x - arrowSize / 2, arrowY + arrowSize / 2); ctx.lineTo(node.x + arrowSize / 2, arrowY + arrowSize / 2); ctx.closePath(); ctx.fill(); } 
+  } else if (node.type === "relay") { 
+    ctx.beginPath(); ctx.arc(node.x, node.y, r * 0.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); 
+  } else if (node.type === "reflector") { 
+    ctx.beginPath(); ctx.arc(node.x, node.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); 
+    const fontSize = Math.max(8 / viewScale, (r * 0.9) / viewScale); ctx.font = `${fontSize}px sans-serif`; ctx.fillStyle = borderColor; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⟲", node.x, node.y + fontSize * 0.1); 
+  } else if (node.type === "switch") { 
+    ctx.beginPath(); ctx.moveTo(node.x - r * 0.8, node.y + r * 0.8); ctx.lineTo(node.x, node.y - r); ctx.lineTo(node.x + r * 0.8, node.y + r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke(); 
+  } else if (node.type === "nebula") { 
+    wobbleX = Math.sin(now * 0.1 + node.id) * (2 / viewScale); wobbleY = Math.cos(now * 0.07 + node.id * 2) * (2 / viewScale); 
+    const nodeBaseHue = (node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + ((params?.scaleIndex || 0) % currentScale.notes.length) * HUE_STEP) % 360; 
+    const baseSaturation = scaleBase.s * 0.8; const baseLightness = scaleBase.l * (0.7 + node.size * 0.2); const hueShiftSpeed = 10; const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360; 
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(node.x + wobbleX, node.y + wobbleY); 
+    const numBlobs = 5; const baseRadiusNeb = NODE_RADIUS_BASE * node.size * 1.1; 
+    for (let i = 0; i < numBlobs; i++) { const angleOffset = (now * (0.1 + i * 0.02) + node.id + i * 1.1); const distFactor = 0.15 + ((Math.sin(now * 0.15 + i * 0.9) + 1) / 2) * 0.25; const offsetX = Math.cos(angleOffset) * baseRadiusNeb * distFactor; const offsetY = Math.sin(angleOffset) * baseRadiusNeb * distFactor; const radiusFactor = 0.6 + ((Math.cos(now * 0.2 + i * 1.3) + 1) / 2) * 0.4; const blobRadius = baseRadiusNeb * radiusFactor * 0.7; const blobAlpha = 0.15 + ((Math.sin(now * 0.25 + i * 1.5) + 1) / 2) * 0.15; const blobLightness = baseLightness * (0.95 + ((Math.cos(now * 0.18 + i) + 1) / 2) * 0.15); const blobSaturation = baseSaturation * (0.9 + ((Math.sin(now * 0.22 + i * 0.5) + 1) / 2) * 0.15); const finalBlobAlpha = Math.min(1.0, blobAlpha * 1.5); ctx.fillStyle = hslToRgba(currentHue, blobSaturation, blobLightness, finalBlobAlpha); ctx.beginPath(); ctx.arc(offsetX, offsetY, blobRadius, 0, Math.PI * 2); ctx.fill(); } 
+    const coreRadius = baseRadiusNeb * 0.3; const coreAlpha = 0.3; ctx.fillStyle = hslToRgba(currentHue, baseSaturation * 1.1, baseLightness * 1.1, coreAlpha); ctx.beginPath(); ctx.arc(0, 0, coreRadius, 0, Math.PI * 2); ctx.fill(); 
+    ctx.restore(); ctx.save(); const currentGlowColor = glowColor; ctx.shadowColor = currentGlowColor; const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8; const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0); ctx.shadowBlur = Math.min(20 / viewScale, currentGlowAmount / viewScale); ctx.fillStyle = "rgba(0,0,0,0)"; ctx.beginPath(); ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadiusNeb * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.restore(); 
+  } else if (node.type === PORTAL_NEBULA_TYPE) { 
+    const defaults = PORTAL_NEBULA_DEFAULTS; 
+    const pulseSpeed = defaults.pulseSpeed; 
+    const baseRadiusPortal = NODE_RADIUS_BASE * node.size; 
+    const nodeBaseHue = node.baseHue ?? defaults.baseColorHue; 
+    const hueShiftSpeed = 5; 
+    const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360; 
+    const saturation = scaleBase.s * 0.9; 
+    const lightness = scaleBase.l * 1.1; 
+    ctx.save(); 
+    const currentGlowColor = glowColor; 
+    ctx.shadowColor = currentGlowColor; 
+    const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15; 
+    const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0); 
+    ctx.shadowBlur = Math.min(40 / viewScale, currentGlowAmount / viewScale); 
+    const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1; 
+    const irisRadius = baseRadiusPortal * irisRadiusFactor; 
+    const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2; 
+    ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha); 
+    ctx.beginPath(); 
+    ctx.arc(node.x, node.y, Math.max(1 / viewScale, irisRadius), 0, Math.PI * 2); 
+    ctx.fill(); 
+    ctx.restore(); 
+    const numRings = 4; 
+    const originalLineWidth = ctx.lineWidth; 
+    ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale); 
+    for (let i = 1; i <= numRings; i++) { 
+      const ringPulsePhase = node.pulsePhase * (pulseSpeed * (1 + i * 0.1)); 
+      const ringRadiusFactor = 0.6 + i * 0.25 + Math.sin(ringPulsePhase) * 0.08; 
+      const ringRadius = baseRadiusPortal * ringRadiusFactor; 
+      const ringAlpha = 0.1 + (1 - i / numRings) * 0.3 + Math.sin(ringPulsePhase) * 0.05; 
+      const ringLightness = lightness * (1.0 - i * 0.1); 
+      ctx.strokeStyle = hslToRgba(currentHue, saturation * (1.0 - i * 0.05), ringLightness, ringAlpha); 
+      ctx.beginPath(); 
+      if (ringRadius > 0) { 
+        ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2); 
+        ctx.stroke(); 
       }
     }
-    if (node.animationState > 0 && shouldPassVisual) {
-      ctx.save();
-      ctx.strokeStyle = styles.getPropertyValue("--pulse-visual-color").trim() || "rgba(255, 255, 255, 0.9)";
-      ctx.lineWidth = Math.max(1 / viewScale, 2.5 / viewScale);
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 10 / viewScale;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, r * 0.9, openingStartAngle, openingEndAngle);
-      ctx.stroke();
-      ctx.restore();
-    }
-  } else if (node.type === "probabilityGate") {
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    const fontSize = Math.max(8 / viewScale, (r * 0.8) / viewScale);
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.fillStyle = borderColor;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("%", node.x, node.y + fontSize * 0.1);
-  } else if (node.type === "pitchShift") {
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = fillColor + "90";
-    ctx.fill();
-    if (node.animationState < 0.5) {
-      ctx.fillStyle = borderColor;
-      ctx.beginPath();
-      const arrowSize = r * 0.5;
-      const arrowY = node.y - arrowSize * 0.3;
-      ctx.moveTo(node.x, arrowY - arrowSize / 2);
-      ctx.lineTo(node.x - arrowSize / 2, arrowY + arrowSize / 2);
-      ctx.lineTo(node.x + arrowSize / 2, arrowY + arrowSize / 2);
-      ctx.closePath();
-      ctx.fill();
-    }
-  } else if (node.type === "relay") {
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  } else if (node.type === "reflector") {
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    const fontSize = Math.max(8 / viewScale, (r * 0.9) / viewScale);
-    ctx.font = `${fontSize}px sans-serif`;
-    ctx.fillStyle = borderColor;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("⟲", node.x, node.y + fontSize * 0.1);
-  } else if (node.type === "switch") {
-    ctx.beginPath();
-    ctx.moveTo(node.x - r * 0.8, node.y + r * 0.8);
-    ctx.lineTo(node.x, node.y - r);
-    ctx.lineTo(node.x + r * 0.8, node.y + r * 0.8);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  } else if (node.type === "nebula") {
-    wobbleX = Math.sin(now * 0.1 + node.id) * (2 / viewScale);
-    wobbleY = Math.cos(now * 0.07 + node.id * 2) * (2 / viewScale);
-    const nodeBaseHue = (node.baseHue !== null && node.baseHue !== undefined) ? node.baseHue : (scaleBase.h + (params.scaleIndex % currentScale.notes.length) * HUE_STEP) % 360;
-    const baseSaturation = scaleBase.s * 0.8;
-    const baseLightness = scaleBase.l * (0.7 + node.size * 0.2);
-    const hueShiftSpeed = 10;
-    const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360;
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.translate(node.x + wobbleX, node.y + wobbleY);
-    const numBlobs = 5;
-    const baseRadiusNeb = NODE_RADIUS_BASE * node.size * 1.1;
-    for (let i = 0; i < numBlobs; i++) {
-      const angleOffset = (now * (0.1 + i * 0.02) + node.id + i * 1.1);
-      const distFactor = 0.15 + ((Math.sin(now * 0.15 + i * 0.9) + 1) / 2) * 0.25;
-      const offsetX = Math.cos(angleOffset) * baseRadiusNeb * distFactor;
-      const offsetY = Math.sin(angleOffset) * baseRadiusNeb * distFactor;
-      const radiusFactor = 0.6 + ((Math.cos(now * 0.2 + i * 1.3) + 1) / 2) * 0.4;
-      const blobRadius = baseRadiusNeb * radiusFactor * 0.7;
-      const blobAlpha = 0.15 + ((Math.sin(now * 0.25 + i * 1.5) + 1) / 2) * 0.15;
-      const blobLightness = baseLightness * (0.95 + ((Math.cos(now * 0.18 + i) + 1) / 2) * 0.15);
-      const blobSaturation = baseSaturation * (0.9 + ((Math.sin(now * 0.22 + i * 0.5) + 1) / 2) * 0.15);
-      const finalBlobAlpha = Math.min(1.0, blobAlpha * 1.5);
-      ctx.fillStyle = hslToRgba(currentHue, blobSaturation, blobLightness, finalBlobAlpha);
-      ctx.beginPath();
-      ctx.arc(offsetX, offsetY, blobRadius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    const coreRadius = baseRadiusNeb * 0.3;
-    const coreAlpha = 0.3;
-    ctx.fillStyle = hslToRgba(currentHue, baseSaturation * 1.1, baseLightness * 1.1, coreAlpha);
-    ctx.beginPath();
-    ctx.arc(0, 0, coreRadius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    ctx.save();
-    const currentGlowColor = glowColor;
-    ctx.shadowColor = currentGlowColor;
-    const pulseEffect = (Math.sin(node.pulsePhase) * 0.5 + 0.5) * 8;
-    const currentGlowAmount = 3 + pulseEffect + (isSelectedAndOutlineNeeded ? 5 : 0);
-    ctx.shadowBlur = Math.min(20 / viewScale, currentGlowAmount / viewScale);
-    ctx.fillStyle = "rgba(0,0,0,0)";
-    ctx.beginPath();
-    ctx.arc(node.x + wobbleX, node.y + wobbleY, baseRadiusNeb * 0.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  } else if (node.type === PORTAL_NEBULA_TYPE) {
-    const defaults = PORTAL_NEBULA_DEFAULTS;
-    const pulseSpeed = defaults.pulseSpeed;
-    const baseRadiusPortal = NODE_RADIUS_BASE * node.size;
-    const nodeBaseHue = node.baseHue ?? defaults.baseColorHue;
-    const hueShiftSpeed = 5;
-    const currentHue = (nodeBaseHue + (now * hueShiftSpeed)) % 360;
-    const saturation = scaleBase.s * 0.9;
-    const lightness = scaleBase.l * 1.1;
-    ctx.save();
-    const currentGlowColor = glowColor;
-    ctx.shadowColor = currentGlowColor;
-    const pulseEffectGlow = (Math.sin(node.pulsePhase * 0.8) * 0.5 + 0.5) * 15;
-    const currentGlowAmount = 10 + pulseEffectGlow + (isSelectedAndOutlineNeeded ? 5 : 0);
-    ctx.shadowBlur = Math.min(40 / viewScale, currentGlowAmount / viewScale);
-    const irisRadiusFactor = 0.4 + Math.sin(node.pulsePhase * pulseSpeed) * 0.1;
-    const irisRadius = baseRadiusPortal * irisRadiusFactor;
-    const irisAlpha = 0.7 + Math.sin(node.pulsePhase * pulseSpeed) * 0.2;
-    ctx.fillStyle = hslToRgba(currentHue, saturation * 1.1, lightness * 1.2, irisAlpha);
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, Math.max(1 / viewScale, irisRadius), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-    const numRings = 4;
-    const originalLineWidth = ctx.lineWidth;
-    ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
-    for (let i = 1; i <= numRings; i++) {
-      const ringPulsePhase = node.pulsePhase * (pulseSpeed * (1 + i * 0.1));
-      const ringRadiusFactor = 0.6 + i * 0.25 + Math.sin(ringPulsePhase) * 0.08;
-      const ringRadius = baseRadiusPortal * ringRadiusFactor;
-      const ringAlpha = 0.1 + (1 - i / numRings) * 0.3 + Math.sin(ringPulsePhase) * 0.05;
-      const ringLightness = lightness * (1.0 - i * 0.1);
-      ctx.strokeStyle = hslToRgba(currentHue, saturation * (1.0 - i * 0.05), ringLightness, ringAlpha);
-      ctx.beginPath();
-      if (ringRadius > 0) {
-        ctx.arc(node.x, node.y, ringRadius, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-    ctx.lineWidth = originalLineWidth;
-  } else if (isPulsarType(node.type)) {
-    const outerR = r;
-    const innerR = outerR * 0.4;
-    const points = node.starPoints || 6;
-
-    if (node.type === "pulsar_rocket") {
-      ctx.save();
-      ctx.translate(node.x, node.y);
-      const drawingAngleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
-      ctx.rotate(drawingAngleRad);
-      ctx.beginPath();
-      ctx.arc(0, 0, outerR * 0.9, 0, Math.PI * 2);
-      ctx.fillStyle = fillColor;
-      ctx.fill();
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = Math.max(0.5 / viewScale, (isSelectedAndOutlineNeeded ? baseLineWidth + 1.5 / viewScale : baseLineWidth) * 0.8);
-      ctx.stroke();
-      const barrelLength = outerR * 1.4;
-      const barrelWidth = outerR * 0.5;
-      ctx.fillStyle = borderColor;
-      ctx.strokeStyle = fillColor;
-      ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth * 0.5 / viewScale);
-      ctx.beginPath();
-      const barrelBaseOffset = outerR * 0.2;
-      if (typeof ctx.roundRect === 'function') {
-        ctx.roundRect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth, barrelWidth / 3);
+    ctx.lineWidth = originalLineWidth; 
+  } else if (isPulsarType(node.type)) { 
+    const outerR = r; 
+    const innerR = outerR * 0.4; 
+    const points = node.starPoints || 6; 
+    if (node.type === "pulsar_rocket") { 
+      ctx.save(); 
+      ctx.translate(node.x, node.y); 
+      const drawingAngleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2); 
+      ctx.rotate(drawingAngleRad); 
+      ctx.beginPath(); 
+      ctx.arc(0, 0, outerR * 0.9, 0, Math.PI * 2); 
+      ctx.fillStyle = fillColor; 
+      ctx.fill(); 
+      ctx.strokeStyle = borderColor; 
+      ctx.lineWidth = Math.max(0.5 / viewScale, (isSelectedAndOutlineNeeded || node.isInResizeMode ? baseLineWidth + 1.5 / viewScale : baseLineWidth) * 0.8); 
+      ctx.stroke(); 
+      const barrelLength = outerR * 1.4; 
+      const barrelWidth = outerR * 0.5; 
+      ctx.fillStyle = borderColor; 
+      ctx.strokeStyle = fillColor; 
+      ctx.lineWidth = Math.max(0.5 / viewScale, baseLineWidth * 0.5 / viewScale); 
+      ctx.beginPath(); 
+      const barrelBaseOffset = outerR * 0.2; 
+      if (typeof ctx.roundRect === 'function') { 
+        ctx.roundRect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth, barrelWidth / 3); 
       } else {
-        ctx.rect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth);
+        ctx.rect(barrelBaseOffset, -barrelWidth / 2, barrelLength - barrelBaseOffset, barrelWidth); 
       }
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-
-      if (isSelectedAndOutlineNeeded) {
-        const handleOrbitRadius = outerR * 1.6;
-        const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
-        const handleDisplayOffsetAngleRad = Math.PI / 4;
-        const handleActualDisplayAngleRad = drawingAngleForHandleRad + handleDisplayOffsetAngleRad;
-        const handleGripX = node.x + Math.cos(handleActualDisplayAngleRad) * handleOrbitRadius;
-        const handleGripY = node.y + Math.sin(handleActualDisplayAngleRad) * handleOrbitRadius;
-        const handleGripRadius = 6 / viewScale;
-        ctx.beginPath();
-        ctx.arc(handleGripX, handleGripY, handleGripRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 0, 0.6)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, handleOrbitRadius * 0.9, drawingAngleForHandleRad - 0.5, drawingAngleForHandleRad + 0.5);
-        ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)';
-        ctx.lineWidth = Math.max(0.5 / viewScale, 2 / viewScale);
-        ctx.stroke();
+      ctx.fill(); 
+      ctx.stroke(); 
+      ctx.restore(); 
+      if (isSelectedAndOutlineNeeded || node.isInResizeMode) { 
+        const handleOrbitRadius = outerR * 1.6; 
+        const drawingAngleForHandleRad = (node.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2); 
+        const handleDisplayOffsetAngleRad = Math.PI / 4; 
+        const handleActualDisplayAngleRad = drawingAngleForHandleRad + handleDisplayOffsetAngleRad; 
+        const handleGripX = node.x + Math.cos(handleActualDisplayAngleRad) * handleOrbitRadius; 
+        const handleGripY = node.y + Math.sin(handleActualDisplayAngleRad) * handleOrbitRadius; 
+        const handleGripRadius = 6 / viewScale; 
+        ctx.beginPath(); 
+        ctx.arc(handleGripX, handleGripY, handleGripRadius, 0, Math.PI * 2); 
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.6)'; 
+        ctx.fill(); 
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)'; 
+        ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale); 
+        ctx.stroke(); 
+        ctx.beginPath(); 
+        ctx.arc(node.x, node.y, handleOrbitRadius * 0.9, drawingAngleForHandleRad - 0.5, drawingAngleForHandleRad + 0.5); 
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.7)'; 
+        ctx.lineWidth = Math.max(0.5 / viewScale, 2 / viewScale); 
+        ctx.stroke(); 
       }
     } else {
-      drawStarShape(ctx, node.x, node.y, points, outerR, innerR);
-      ctx.fill();
-      ctx.stroke();
-      if (node.type === "pulsar_triggerable") {
-        const lockSize = outerR * 0.5;
-        ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor;
-        ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor;
-        ctx.lineWidth = baseLineWidth * 0.5 / viewScale;
-        ctx.beginPath();
-        ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5);
-        ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25);
-        ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true);
-        ctx.stroke();
+      drawStarShape(ctx, node.x, node.y, points, outerR, innerR); 
+      ctx.fill(); 
+      ctx.stroke(); 
+      if (node.type === "pulsar_triggerable") { 
+        const lockSize = outerR * 0.5; 
+        ctx.fillStyle = isStartNodeDisabled ? disabledFillColorGeneral : borderColor; 
+        ctx.strokeStyle = isStartNodeDisabled ? disabledBorderColorGeneral : fillColor; 
+        ctx.lineWidth = baseLineWidth * 0.5 / viewScale; 
+        ctx.beginPath(); 
+        ctx.rect(node.x - lockSize * 0.3, node.y - lockSize * 0.25, lockSize * 0.6, lockSize * 0.5); 
+        ctx.moveTo(node.x + lockSize * 0.3, node.y - lockSize * 0.25); 
+        ctx.arc(node.x, node.y - lockSize * 0.25, lockSize * 0.4, 0, Math.PI, true); 
+        ctx.stroke(); 
       }
     }
-  } else {
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+  } else { 
+    ctx.beginPath(); 
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2); 
+    ctx.fill(); 
+    ctx.stroke(); 
   }
 
-  if (isSelectedAndOutlineNeeded && node.type !== "pulsar_rocket") {
-    ctx.save();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = "rgba(255, 255, 0, 0.9)";
-    ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
-    ctx.beginPath();
-    const outlineRadius = (NODE_RADIUS_BASE * node.size + 2);
-    const finalOutlineX = node.x + wobbleX;
-    const finalOutlineY = node.y + wobbleY;
-    ctx.arc(finalOutlineX, finalOutlineY, outlineRadius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+  if ((isSelectedAndOutlineNeeded || node.isInResizeMode) && node.type !== "pulsar_rocket" && node.type !== TIMELINE_GRID_TYPE && node.type !== PRORB_TYPE ) {
+    ctx.save(); ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255, 255, 0, 0.9)"; ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
+    ctx.beginPath(); const outlineRadius = (NODE_RADIUS_BASE * node.size + 2); const finalOutlineX = node.x + wobbleX; const finalOutlineY = node.y + wobbleY;
+    ctx.arc(finalOutlineX, finalOutlineY, outlineRadius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
-  if (needsRestore) {
-    ctx.restore();
-  }
+
+  if (needsRestore) { ctx.restore(); }
   ctx.shadowBlur = 0;
 
-  if (params && params.retriggerEnabled && params.retriggerVolumeSteps && params.retriggerVolumeSteps.length > 0) {
-    const steps = params.retriggerVolumeSteps;
-    const count = steps.length;
-    const activeVisualIndex = node.currentRetriggerVisualIndex;
-    const nodeBaseDrawRadiusForVisuals = (NODE_RADIUS_BASE * node.size);
-    const visualOffsetFromNodeEdgeScaled = nodeBaseDrawRadiusForVisuals * 0.35;
-    const visualStartRadiusScaled = nodeBaseDrawRadiusForVisuals + visualOffsetFromNodeEdgeScaled;
-    const totalAngleSpan = Math.PI * 1.9;
-    const segmentAngle = count > 1 ? totalAngleSpan / Math.max(1, count - 1) : 0;
-    let nodeCanvasRotation = 0;
-    if (node.type === "gate" && node.currentAngle !== undefined) {
-      nodeCanvasRotation = node.currentAngle;
+  if (params && params.retriggerEnabled && params.retriggerVolumeSteps && params.retriggerVolumeSteps.length > 0) { 
+    const steps = params.retriggerVolumeSteps; 
+    const count = steps.length; 
+    const activeVisualIndex = node.currentRetriggerVisualIndex; 
+    const nodeBaseDrawRadiusForVisuals = (NODE_RADIUS_BASE * node.size); 
+    const visualOffsetFromNodeEdgeScaled = nodeBaseDrawRadiusForVisuals * 0.35; 
+    const visualStartRadiusScaled = nodeBaseDrawRadiusForVisuals + visualOffsetFromNodeEdgeScaled; 
+    const totalAngleSpan = Math.PI * 1.9; 
+    const segmentAngle = count > 1 ? totalAngleSpan / Math.max(1, count - 1) : 0; 
+    let nodeCanvasRotation = 0; 
+    if (node.type === "gate" && node.currentAngle !== undefined) { 
+      nodeCanvasRotation = node.currentAngle; 
     }
-    const startAngleRad = -Math.PI / 2 - (count > 1 ? totalAngleSpan / 2 : 0) + nodeCanvasRotation;
-    for (let i = 0; i < count; i++) {
-      const volumeFactor = steps[i] || 0;
-      const isActive = (i === activeVisualIndex);
-      const angle = startAngleRad + i * segmentAngle;
-      const gasBaseLength = (6 / viewScale);
-      const gasVolumeLength = (volumeFactor * 12 / viewScale);
-      const totalVisualLength = gasBaseLength + gasVolumeLength;
-      const gasWidth = Math.max(1 / viewScale, (3 / viewScale) + (volumeFactor * 6 / viewScale));
-      const radialStartX = node.x + Math.cos(angle) * visualStartRadiusScaled;
-      const radialStartY = node.y + Math.sin(angle) * visualStartRadiusScaled;
-      const radialEndX = node.x + Math.cos(angle) * (visualStartRadiusScaled + totalVisualLength);
-      const radialEndY = node.y + Math.sin(angle) * (visualStartRadiusScaled + totalVisualLength);
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(radialStartX, radialStartY);
-      ctx.lineTo(radialEndX, radialEndY);
-      let Rval = 160,
-        Gval = 190,
-        Bval = 230;
-      let nodeFillColor = fillColor;
+    const startAngleRad = -Math.PI / 2 - (count > 1 ? totalAngleSpan / 2 : 0) + nodeCanvasRotation; 
+    for (let i = 0; i < count; i++) { 
+      const volumeFactor = steps[i] || 0; 
+      const isActive = (i === activeVisualIndex); 
+      const angle = startAngleRad + i * segmentAngle; 
+      const gasBaseLength = (6 / viewScale); 
+      const gasVolumeLength = (volumeFactor * 12 / viewScale); 
+      const totalVisualLength = gasBaseLength + gasVolumeLength; 
+      const gasWidth = Math.max(1 / viewScale, (3 / viewScale) + (volumeFactor * 6 / viewScale)); 
+      const radialStartX = node.x + Math.cos(angle) * visualStartRadiusScaled; 
+      const radialStartY = node.y + Math.sin(angle) * visualStartRadiusScaled; 
+      const radialEndX = node.x + Math.cos(angle) * (visualStartRadiusScaled + totalVisualLength); 
+      const radialEndY = node.y + Math.sin(angle) * (visualStartRadiusScaled + totalVisualLength); 
+      ctx.save(); 
+      ctx.beginPath(); 
+      ctx.moveTo(radialStartX, radialStartY); 
+      ctx.lineTo(radialEndX, radialEndY); 
+      let Rval = 160, Gval = 190, Bval = 230; 
+      let nodeFillColor = fillColor; 
       try {
-        const rgbaMatch = nodeFillColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d\.]+)?\)/);
-        if (rgbaMatch) {
-          Rval = parseInt(rgbaMatch[1]);
-          Gval = parseInt(rgbaMatch[2]);
-          Bval = parseInt(rgbaMatch[3]);
+        const rgbaMatch = nodeFillColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d\.]+)?\)/); 
+        if (rgbaMatch) { 
+          Rval = parseInt(rgbaMatch[1]); Gval = parseInt(rgbaMatch[2]); Bval = parseInt(rgbaMatch[3]); 
         }
       } catch (e) {}
-      if (isActive) {
-        Rval = Math.min(255, Rval + 80);
-        Gval = Math.min(255, Gval + 60);
-        Bval = Math.max(30, Bval - 60);
-      }
-      const alphaVal = 0.25 + volumeFactor * 0.5 + (isActive ? 0.35 : 0);
-      ctx.strokeStyle = `rgba(${Rval},${Gval},${Bval},${Math.min(0.9, alphaVal)})`;
-      ctx.lineWidth = gasWidth;
-      ctx.lineCap = 'round';
-      ctx.shadowColor = `rgba(${Rval},${Gval},${Bval},${Math.min(0.7, alphaVal * 0.8)})`;
-      ctx.shadowBlur = (isActive ? 10 : 5) / viewScale;
-      ctx.stroke();
-      ctx.restore();
+      if (isActive) { Rval = Math.min(255, Rval + 80); Gval = Math.min(255, Gval + 60); Bval = Math.max(30, Bval - 60); } 
+      const alphaVal = 0.25 + volumeFactor * 0.5 + (isActive ? 0.35 : 0); 
+      ctx.strokeStyle = `rgba(${Rval},${Gval},${Bval},${Math.min(0.9, alphaVal)})`; 
+      ctx.lineWidth = gasWidth; 
+      ctx.lineCap = 'round'; 
+      ctx.shadowColor = `rgba(${Rval},${Gval},${Bval},${Math.min(0.7, alphaVal * 0.8)})`; 
+      ctx.shadowBlur = (isActive ? 10 : 5) / viewScale; 
+      ctx.stroke(); 
+      ctx.restore(); 
     }
   }
-
-  if (node.type === 'sound' && params.orbitonesEnabled && params.orbitoneCount > 0 && node.audioNodes?.orbitoneOscillators) {
-    const orbitBaseRadius = NODE_RADIUS_BASE * node.size * 1.5;
-    const orbitoneVisualSize = NODE_RADIUS_BASE * node.size * 0.25;
-    const numVisualOrbitones = params.orbitoneCount;
-    const mainNodeFillColor = fillColor;
-    const mainNodeBorderColor = borderColor;
-
-    for (let i = 0; i < numVisualOrbitones; i++) {
-      const angleIncrement = (Math.PI * 2) / numVisualOrbitones;
-      const baseAngle = i * angleIncrement;
-      const orbitSpeedFactor = 0.15 + (i * 0.03);
-      const currentAngle = baseAngle + (now * orbitSpeedFactor + node.id * 0.3);
-      const orbitRadiusVariation = Math.sin(now * 0.4 + i * 0.7) * (orbitBaseRadius * 0.1);
-      const currentOrbitRadius = orbitBaseRadius + orbitRadiusVariation;
-      const ox = node.x + Math.cos(currentAngle) * currentOrbitRadius;
-      const oy = node.y + Math.sin(currentAngle) * currentOrbitRadius;
-      let orbitFill = 'rgba(200, 220, 255, 0.3)';
-      let orbitStroke = 'rgba(230, 240, 255, 0.5)';
+  if (node.type === 'sound' && node.type !== PRORB_TYPE && params?.orbitonesEnabled && params.orbitoneCount > 0 && node.audioNodes?.orbitoneOscillators) { 
+    const orbitBaseRadius = NODE_RADIUS_BASE * node.size * 1.5; 
+    const orbitoneVisualSize = NODE_RADIUS_BASE * node.size * 0.25; 
+    const numVisualOrbitones = params.orbitoneCount; 
+    const mainNodeFillColor = fillColor; 
+    for (let i = 0; i < numVisualOrbitones; i++) { 
+      const angleIncrement = (Math.PI * 2) / numVisualOrbitones; 
+      const baseAngle = i * angleIncrement; 
+      const orbitSpeedFactor = 0.15 + (i * 0.03); 
+      const currentAngle = baseAngle + (now * orbitSpeedFactor + node.id * 0.3); 
+      const orbitRadiusVariation = Math.sin(now * 0.4 + i * 0.7) * (orbitBaseRadius * 0.1); 
+      const currentOrbitRadius = orbitBaseRadius + orbitRadiusVariation; 
+      const ox = node.x + Math.cos(currentAngle) * currentOrbitRadius; 
+      const oy = node.y + Math.sin(currentAngle) * currentOrbitRadius; 
+      let orbitFill = 'rgba(200, 220, 255, 0.3)'; 
+      let orbitStroke = 'rgba(230, 240, 255, 0.5)'; 
       try {
-        const mainRgbMatch = mainNodeFillColor.match(/\d+/g);
-        if (mainRgbMatch && mainRgbMatch.length >= 3) {
-          const mainRgb = mainRgbMatch.map(Number);
-          const baseAlphaOrbitone = 0.3 + params.orbitoneVolumeVariation * 0.2;
-          orbitFill = `rgba(${Math.min(255, mainRgb[0] + i*5 + 10)}, ${Math.min(255, mainRgb[1] - i*3 + 5)}, ${Math.max(0, mainRgb[2] - i*8 + 15)}, ${baseAlphaOrbitone})`;
-          orbitStroke = `rgba(${Math.min(255, mainRgb[0] + i*3 + 30)}, ${Math.min(255, mainRgb[1] + 15)}, ${Math.max(0, mainRgb[2] + 5)}, ${baseAlphaOrbitone + 0.2})`;
+        const mainRgbMatch = mainNodeFillColor.match(/\d+/g); 
+        if (mainRgbMatch && mainRgbMatch.length >= 3) { 
+          const mainRgb = mainRgbMatch.map(Number); 
+          const baseAlphaOrbitone = 0.3 + params.orbitoneVolumeVariation * 0.2; 
+          orbitFill = `rgba(${Math.min(255, mainRgb[0] + i*5 + 10)}, ${Math.min(255, mainRgb[1] - i*3 + 5)}, ${Math.max(0, mainRgb[2] - i*8 + 15)}, ${baseAlphaOrbitone})`; 
+          orbitStroke = `rgba(${Math.min(255, mainRgb[0] + i*3 + 30)}, ${Math.min(255, mainRgb[1] + 15)}, ${Math.max(0, mainRgb[2] + 5)}, ${baseAlphaOrbitone + 0.2})`; 
         }
       } catch (e) {}
-      ctx.fillStyle = orbitFill;
-      ctx.strokeStyle = orbitStroke;
-      ctx.lineWidth = Math.max(0.5 / viewScale, 0.8 / viewScale);
-      ctx.beginPath();
-      ctx.arc(ox, oy, Math.max(1 / viewScale, orbitoneVisualSize), 0, Math.PI * 2);
-      ctx.fill();
-      if (isSelectedAndOutlineNeeded || node.animationState > 0.05) {
-        ctx.shadowColor = orbitStroke;
-        ctx.shadowBlur = (3 + node.animationState * 5) / viewScale;
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+      ctx.fillStyle = orbitFill; 
+      ctx.strokeStyle = orbitStroke; 
+      ctx.lineWidth = Math.max(0.5 / viewScale, 0.8 / viewScale); 
+      ctx.beginPath(); 
+      ctx.arc(ox, oy, Math.max(1 / viewScale, orbitoneVisualSize), 0, Math.PI * 2); 
+      ctx.fill(); 
+      if (isSelectedAndOutlineNeeded || node.isInResizeMode || node.animationState > 0.05) { 
+        ctx.shadowColor = orbitStroke; 
+        ctx.shadowBlur = (3 + node.animationState * 5) / viewScale; 
+        ctx.stroke(); 
+        ctx.shadowBlur = 0; 
       } else {
-        ctx.stroke();
+        ctx.stroke(); 
       }
     }
   }
-
+  
   if (isInfoTextVisible) {
     const fontSize = Math.max(8 / viewScale, 10 / viewScale);
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    let labelText = "";
-    let secondLineText = "";
+    ctx.font = `bold ${fontSize}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    let labelText = ""; let secondLineText = "";
     const baseRadiusForLabel = NODE_RADIUS_BASE * node.size;
     let labelYOffset = baseRadiusForLabel * 1.1 + fontSize / 1.5 + 2 / viewScale;
     ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-    if (node.type === "sound" || node.type === "nebula") {
+
+    if (node.type === PRORB_TYPE) {
+        labelText = "PrOrb";
+        if (params) {
+            secondLineText = `${params.osc1Waveform || "?"}${params.osc2Enabled ? " + " + params.osc2Waveform : ""}`;
+            if (params.fmEnabled) secondLineText += " (FM)";
+        }
+    } else if (node.type === "sound" || node.type === "nebula") { 
       labelText = getNoteNameFromScaleIndex(currentScale, params.scaleIndex);
       const presetDef = analogWaveformPresets.find(p => p.type === params.waveform) || fmSynthPresets.find(p => p.type === params.waveform);
-      if (presetDef && presetDef.label !== labelText) {
-        secondLineText = presetDef.label;
+      if (presetDef && presetDef.label !== labelText) { secondLineText = presetDef.label; }
+      if (node.type === "sound" && params.orbitonesEnabled && params.orbitoneCount > 0) { secondLineText = (secondLineText ? secondLineText + " " : "") + `(+${params.orbitoneCount} Orb)`; }
+      if (node.type === "sound" && params.waveform?.startsWith("sampler_")) { labelYOffset = baseRadiusForLabel * 1.3 + fontSize / 1.5 + 2 / viewScale; } 
+      else if (node.type === "nebula") { labelYOffset = (baseRadiusForLabel * 1.1) * 1.2 + fontSize / 1.5 + 2 / viewScale; }
+    } else if (node.type === PORTAL_NEBULA_TYPE) { 
+        labelText = "Portal"; labelYOffset = (baseRadiusForLabel * 1.1) + fontSize / 1.5 + 2 / viewScale; 
+    } else if (isPulsarType(node.type)) { 
+      let typeLabel = pulsarTypes.find((pt) => pt.type === node.type)?.label || "Pulsar"; 
+      labelText = typeLabel; 
+      if (!node.isEnabled && node.type !== "pulsar_manual") labelText += " (Off)"; 
+      if (node.type === "pulsar_random_volume") { secondLineText = `Int: Random`; } 
+      else if (node.type === "pulsar_manual") { secondLineText = `Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; } 
+      else if (node.type !== "pulsar_rocket") { 
+          if (node.type === "pulsar_random_particles") { secondLineText = "Timing: Random"; } 
+          else if (isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync) { 
+              const subdivIndexToUse = node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX; 
+              const subdiv = subdivisionOptions[subdivIndexToUse]; 
+              secondLineText = `Sync: ${subdiv?.label ?? "?"}`; 
+          } else { secondLineText = `Intv: ${(params.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`; } 
+          if (node.type !== "pulsar_random_volume") { secondLineText += ` | Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`; } 
+      } else if (node.type === "pulsar_rocket") { 
+          const angleDeg = ((params.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0); 
+          secondLineText = `Dir: ${angleDeg}°`; 
       }
-      if (node.type === "sound" && params.orbitonesEnabled && params.orbitoneCount > 0) {
-        secondLineText = (secondLineText ? secondLineText + " " : "") + `(+${params.orbitoneCount} Orb)`;
+    } else if (isDrumType(node.type)) { 
+      labelText = DRUM_ELEMENT_DEFAULTS[node.type]?.label || "Drum"; 
+      labelYOffset = baseRadiusForLabel + fontSize / 1.5 + 2 / viewScale; 
+    } else if (node.type === "gate") { 
+      labelText = GATE_MODES[params?.gateModeIndex || 0]; 
+    } else if (node.type === "probabilityGate") { 
+      labelText = `${((params?.probability ?? DEFAULT_PROBABILITY) * 100).toFixed(0)}%`; 
+    } else if (node.type === "pitchShift") { 
+      const amount = PITCH_SHIFT_AMOUNTS[params?.pitchShiftIndex || 0]; 
+      labelText = (amount > 0 ? "+" : "") + amount + (params?.pitchShiftAlternating ? " ⇄" : ""); 
+    } else if (node.type === "relay") { 
+      labelText = "Relay"; 
+      labelYOffset = (baseRadiusForLabel * 0.6) + fontSize / 1.5 + 2 / viewScale; 
+    } else if (node.type === "reflector") { 
+      labelText = "Reflector"; 
+    } else if (node.type === "switch") { 
+      labelText = "Switch"; 
+      labelYOffset = baseRadiusForLabel * 0.9 + fontSize / 1.5 + 2 / viewScale; 
+    } else if (node.type === TIMELINE_GRID_TYPE) { 
+      labelText = `Timeline`;
+      if(isGlobalSyncEnabled && node.timelineMusicalDurationBars) {
+          const barLabel = node.timelineMusicalDurationBars === 1 ? "Bar" : "Bars";
+          const beatCount = node.timelineMusicalDurationBars * 4;
+          const beatLabel = beatCount === 1 ? "Beat" : "Beats";
+          if (node.timelineMusicalDurationBars >= 0.25) { 
+             if (node.timelineMusicalDurationBars < 1) { 
+                labelText = `Timeline (${beatCount} ${beatLabel})`;
+             } else {
+                labelText = `Timeline (${node.timelineMusicalDurationBars} ${barLabel})`;
+             }
+          } else { 
+            labelText = `Timeline (${node.timelineSpeed.toFixed(1)}s)`;
+          }
+      } else {
+        labelText = `Timeline (${(node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED).toFixed(1)}s)`;
       }
-      if (node.type === "sound" && params.waveform?.startsWith("sampler_")) {
-        labelYOffset = baseRadiusForLabel * 1.3 + fontSize / 1.5 + 2 / viewScale;
-      } else if (node.type === "nebula") {
-        labelYOffset = (baseRadiusForLabel * 1.1) * 1.2 + fontSize / 1.5 + 2 / viewScale;
-      }
-    } else if (node.type === PORTAL_NEBULA_TYPE) {
-      labelText = "Portal";
-      labelYOffset = (baseRadiusForLabel * 1.1) + fontSize / 1.5 + 2 / viewScale;
-    } else if (isPulsarType(node.type)) {
-      let typeLabel = pulsarTypes.find((pt) => pt.type === node.type)?.label || "Pulsar";
-      labelText = typeLabel;
-      if (!node.isEnabled && node.type !== "pulsar_manual") labelText += " (Off)";
-      if (node.type === "pulsar_random_volume") {
-        secondLineText = `Int: Random`;
-      } else if (node.type === "pulsar_manual") {
-        secondLineText = `Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`;
-      } else if (node.type !== "pulsar_rocket") {
-        if (node.type === "pulsar_random_particles") {
-          secondLineText = "Timing: Random";
-        } else if (isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync) {
-          const subdivIndexToUse = node.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-          const subdiv = subdivisionOptions[subdivIndexToUse];
-          secondLineText = `Sync: ${subdiv?.label ?? "?"}`;
-        } else {
-          secondLineText = `Intv: ${(params.triggerInterval || DEFAULT_TRIGGER_INTERVAL).toFixed(1)}s`;
-        }
-        if (node.type !== "pulsar_random_volume") {
-          secondLineText += ` | Int: ${(params.pulseIntensity ?? DEFAULT_PULSE_INTENSITY).toFixed(1)}`;
-        }
-      } else if (node.type === "pulsar_rocket") {
-        const angleDeg = ((params.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0);
-        secondLineText = `Dir: ${angleDeg}°`;
-      }
-    } else if (isDrumType(node.type)) {
-      labelText = DRUM_ELEMENT_DEFAULTS[node.type]?.label || "Drum";
-      labelYOffset = baseRadiusForLabel + fontSize / 1.5 + 2 / viewScale;
-    } else if (node.type === "gate") {
-      labelText = GATE_MODES[node.gateModeIndex || 0];
-    } else if (node.type === "probabilityGate") {
-      labelText = `${(params.probability * 100).toFixed(0)}%`;
-    } else if (node.type === "pitchShift") {
-      const amount = PITCH_SHIFT_AMOUNTS[node.pitchShiftIndex || 0];
-      labelText = (amount > 0 ? "+" : "") + amount + (node.pitchShiftAlternating ? " ⇄" : "");
-    } else if (node.type === "relay") {
-      labelText = "Relay";
-      labelYOffset = (baseRadiusForLabel * 0.6) + fontSize / 1.5 + 2 / viewScale;
-    } else if (node.type === "reflector") {
-      labelText = "Reflector";
-    } else if (node.type === "switch") {
-      labelText = "Switch";
-      labelYOffset = baseRadiusForLabel * 0.9 + fontSize / 1.5 + 2 / viewScale;
+      secondLineText = node.timelineIsPlaying ? "Playing" : "Paused";
+      if (node.timelineIsLooping) secondLineText += " (Loop)";
+      let directionSymbol = '';
+        if (node.scanlineDirection === 'forward') directionSymbol = ' →';
+        else if (node.scanlineDirection === 'backward') directionSymbol = ' ←';
+        else if (node.scanlineDirection === 'ping-pong') directionSymbol = ' ↔';
+      secondLineText += directionSymbol;
+      labelYOffset = node.height / 2 + fontSize * 1.2;
     }
-    const finalLabelX = node.x + wobbleX;
-    const finalLabelYBase = node.y + wobbleY;
-    if (labelText) {
-      ctx.fillText(labelText, finalLabelX, finalLabelYBase + labelYOffset);
-    }
-    if (secondLineText) {
-      ctx.fillText(secondLineText, finalLabelX, finalLabelYBase + labelYOffset + fontSize * 1.1);
-    }
+
+    const finalLabelX = node.x + wobbleX; const finalLabelYBase = node.y + wobbleY;
+    if (labelText) { ctx.fillText(labelText, finalLabelX, finalLabelYBase + labelYOffset); }
+    if (secondLineText) { ctx.fillText(secondLineText, finalLabelX, finalLabelYBase + labelYOffset + fontSize * 1.1); }
   }
 }
 
@@ -9268,496 +9655,45 @@ function createExplosionAnimation(x, y, color) {
 
 let _tempWasSelectedAtMouseDown = false;
 
-function handleMouseDown(event) {
-  console.log(`DEBUG handleMouseDown Start: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}'`);
-
-  if (!isPlaying && event.target === canvas) {
-    togglePlayPause();
-    return;
-  }
-  if (!isAudioReady) return;
-
-  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) ||
-    sideToolbar.contains(event.target) ||
-    transportControlsDiv.contains(event.target) ||
-    mixerPanel.contains(event.target);
-  if (targetIsPanelControl) {
-    return;
-  }
-
-  updateMousePos(event);
-
-  _tempWasSelectedAtMouseDown = false;
-  const potentialNodeClicked = findNodeAt(mousePos.x, mousePos.y);
-  const potentialConnectionClicked = !potentialNodeClicked ? findConnectionNear(mousePos.x, mousePos.y) : null;
-  let potentialElementClicked = null;
-
-  if (potentialNodeClicked) {
-    potentialElementClicked = {
-      type: 'node',
-      id: potentialNodeClicked.id
-    };
-    _tempWasSelectedAtMouseDown = isElementSelected('node', potentialNodeClicked.id);
-  } else if (potentialConnectionClicked) {
-    potentialElementClicked = {
-      type: 'connection',
-      id: potentialConnectionClicked.id
-    };
-    _tempWasSelectedAtMouseDown = isElementSelected('connection', potentialConnectionClicked.id);
-  }
-
-  nodeClickedAtMouseDown = potentialNodeClicked;
-  connectionClickedAtMouseDown = potentialConnectionClicked;
-  elementClickedAtMouseDown = potentialElementClicked;
-  nodeWasSelectedAtMouseDown = nodeClickedAtMouseDown ? _tempWasSelectedAtMouseDown : false;
-
-  mouseDownPos = {
-    ...mousePos
-  };
-  isDragging = false;
-  isConnecting = false;
-  isResizing = false;
-  isSelecting = false;
-  isPanning = false;
-  didDrag = false;
-  selectionRect.active = false;
-  isRotatingRocket = null;
-
-  if (potentialNodeClicked && potentialNodeClicked.type === "pulsar_rocket" &&
-    isElementSelected('node', potentialNodeClicked.id) && currentTool === 'edit') {
-    const outerR = NODE_RADIUS_BASE * potentialNodeClicked.size * (1 + potentialNodeClicked.animationState * 0.5);
-    const handleOrbitRadius = outerR * 1.6;
-    const handleGripRadius = 7 / viewScale;
-    const drawingAngleRad = (potentialNodeClicked.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
-    const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
-    const handleGripX_world = potentialNodeClicked.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
-    const handleGripY_world = potentialNodeClicked.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
-    const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
-
-    if (distToHandle < handleGripRadius) {
-      isRotatingRocket = potentialNodeClicked;
-      isDragging = false;
-      const initialMouseAngleToNodeCenterRad = Math.atan2(mousePos.y - isRotatingRocket.y, mousePos.x - isRotatingRocket.x);
-      rotationStartDetails = {
-        screenX: screenMousePos.x,
-        screenY: screenMousePos.y,
-        initialNodeUIAngleRad: isRotatingRocket.audioParams.rocketDirectionAngle || 0,
-        initialMouseMathAngleRad: initialMouseAngleToNodeCenterRad
-      };
-      canvas.style.cursor = 'grabbing';
-      console.log(`%c[MouseDown] Starting rotation for Rocket Pulsar ${isRotatingRocket.id}`, 'color: orange');
-      nodeClickedAtMouseDown = null;
-      elementClickedAtMouseDown = null;
-      connectionClickedAtMouseDown = null;
-    }
-  }
-
-
-  if (event.button === 1 || (isSpacebarDown && event.button === 0)) {
-    isPanning = true;
-    panStart = {
-      ...screenMousePos
-    };
-    canvas.style.cursor = 'grabbing';
-    nodeClickedAtMouseDown = null;
-    connectionClickedAtMouseDown = null;
-    elementClickedAtMouseDown = null;
-    isRotatingRocket = null;
-    return;
-  }
-
-  if (isRotatingRocket) {
-    return;
-  }
-
-  if (elementClickedAtMouseDown) {
-    const element = elementClickedAtMouseDown;
-    const node = element.type === 'node' ? nodeClickedAtMouseDown : null;
-
-    if (event.shiftKey && currentTool === 'edit' && node) {
-      isResizing = true;
-      resizeStartSize = node.size;
-      resizeStartY = screenMousePos.y;
-      canvas.style.cursor = 'ns-resize';
-    } else if (event.shiftKey && currentTool !== 'edit') {
-      if (isElementSelected(element.type, element.id)) {
-        selectedElements = new Set([...selectedElements].filter(el => !(el.type === element.type && el.id === element.id)));
-      } else {
-        selectedElements.add(element);
-      }
-      if (currentTool === 'edit') updateConstellationGroup();
-      updateGroupControlsUI();
-      populateEditPanel();
-      nodeClickedAtMouseDown = null;
-      connectionClickedAtMouseDown = null;
-    } else {
-      if (currentTool === 'connect' || currentTool === 'connect_string' || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') {
-        console.log("DEBUG MouseDown: Connect tool active. Clicked on node?", !!node);
-        if (node && !['nebula', PORTAL_NEBULA_TYPE].includes(node.type)) {
-          console.log("DEBUG MouseDown: Starting connection from node", node.id);
-          isConnecting = true;
-          connectingNode = node;
-          if (currentTool === 'connect_string') {
-            connectionTypeToAdd = 'string_violin';
-          } else if (currentTool === 'connect_glide') {
-            connectionTypeToAdd = 'glide';
-          } else if (currentTool === 'connect_wavetrail') {
-            connectionTypeToAdd = 'wavetrail';
-          } else {
-            connectionTypeToAdd = 'standard';
-          }
-          console.log("DEBUG MouseDown: connectionTypeToAdd =", connectionTypeToAdd);
-          canvas.style.cursor = 'grabbing';
-        } else if (node) {
-          console.log("DEBUG MouseDown: Cannot start connection from node type:", node.type);
-        } else {
-          console.log("DEBUG MouseDown: Connect tool active but did not click on a node.");
-        }
-      } else if (currentTool === 'delete') {
-        if (node) removeNode(node);
-        else if (connectionClickedAtMouseDown) removeConnection(connectionClickedAtMouseDown);
-        nodeClickedAtMouseDown = null;
-        connectionClickedAtMouseDown = null;
-      } else if (currentTool === 'edit') {
-        let selectionChanged = false;
-        if (!isElementSelected(element.type, element.id)) {
-          selectedElements.clear();
-          selectedElements.add(element);
-          selectionChanged = true;
-        }
-        if (node) {
-          isDragging = true;
-          dragStartPos = {
-            ...mousePos
-          };
-          nodeDragOffsets.clear();
-          selectedElements.forEach(el => {
-            if (el.type === 'node') {
-              const n = findNodeById(el.id);
-              if (n) nodeDragOffsets.set(el.id, {
-                x: n.x - mousePos.x,
-                y: n.y - mousePos.y
-              });
-            }
-          });
-          canvas.style.cursor = 'move';
-        }
-        if (selectionChanged) {
-          updateConstellationGroup();
-          populateEditPanel();
-        }
-      }
-    }
-  } else {
-    if (currentTool === 'edit') {
-      isSelecting = true;
-      selectionRect = {
-        startX: mousePos.x,
-        startY: mousePos.y,
-        endX: mousePos.x,
-        endY: mousePos.y,
-        active: false
-      };
-      if (!event.shiftKey) {
-        if (selectedElements.size > 0) {
-          selectedElements.clear();
-          updateConstellationGroup();
-          populateEditPanel();
-        }
-      }
-    } else if (currentTool === 'add' && nodeTypeToAdd !== null) {
-      console.log(`DEBUG handleMouseDown: 'add' mode detected, node will be added on mouseUp.`);
-      if (!event.shiftKey && selectedElements.size > 0) {
-        selectedElements.clear();
-        updateConstellationGroup();
-        populateEditPanel();
-      }
-    } else if (!['connect', 'connect_string', 'connect_glide', 'connect_wavetrail', 'delete'].includes(currentTool)) {
-      if (selectedElements.size > 0 && !event.shiftKey) {
-        selectedElements.clear();
-        updateGroupControlsUI();
-        populateEditPanel();
-      }
-    }
-  }
-  hideOverlappingPanels();
-}
-
-function handleMouseUp(event) {
-  if (!isAudioReady) return;
-  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
-  if (targetIsPanelControl) {
-    isDragging = false;
-    isConnecting = false;
-    isResizing = false;
-    isSelecting = false;
-    isPanning = false;
-    isRotatingRocket = null;
-    selectionRect.active = false;
-    connectingNode = null;
-    nodeClickedAtMouseDown = null;
-    connectionClickedAtMouseDown = null;
-    canvas.style.cursor = 'crosshair';
-    return;
-  }
-
-  updateMousePos(event);
-  const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y);
-  const connectionUnderCursor = !nodeUnderCursor ? findConnectionNear(mousePos.x, mousePos.y) : null;
-  let elementUnderCursor = null;
-  if (nodeUnderCursor) elementUnderCursor = {
-    type: 'node',
-    id: nodeUnderCursor.id
-  };
-  else if (connectionUnderCursor) elementUnderCursor = {
-    type: 'connection',
-    id: connectionUnderCursor.id
-  };
-
-  const wasSelectedAtStart = _tempWasSelectedAtMouseDown;
-  _tempWasSelectedAtMouseDown = false;
-
-  const wasResizing = isResizing;
-  const wasConnecting = isConnecting;
-  const wasDragging = isDragging;
-  const wasSelecting = isSelecting;
-  const wasPanning = isPanning;
-  const wasRotatingARocket = isRotatingRocket;
-
-  const nodeClickedStart = nodeClickedAtMouseDown;
-  const connectionClickedStart = connectionClickedAtMouseDown;
-  const elementClickedStart = nodeClickedStart ? {
-    type: 'node',
-    id: nodeClickedStart.id
-  } : (connectionClickedStart ? {
-    type: 'connection',
-    id: connectionClickedStart.id
-  } : null);
-  let stateWasChanged = false;
-
-  isResizing = false;
-  isConnecting = false;
-  isDragging = false;
-  isSelecting = false;
-  isPanning = false;
-  isRotatingRocket = null;
-  selectionRect.active = false;
-  canvas.style.cursor = 'crosshair';
-
-  if (wasRotatingARocket) {
-    console.log(`%c[MouseUp] Finished rotation for Rocket Pulsar ${wasRotatingARocket.id}`, 'color: orange');
-    saveState();
-    stateWasChanged = true;
-  } else if (wasConnecting) {
-    console.log(`%c[handleMouseUp - Connect] connectingNode: ${connectingNode?.id}, nodeUnderCursor: ${nodeUnderCursor?.id}, type: ${nodeUnderCursor?.type}`, 'color: orange');
-    if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor.type)) {
-      console.log(`%c[handleMouseUp - Connect] Attempting to connect ${connectingNode.id} to ${nodeUnderCursor.id}`, 'color: lightgreen');
-      connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd);
-      stateWasChanged = true;
-    } else {
-      console.log(`%c[handleMouseUp - Connect] Conditions not met for connection. connectingNode: ${!!connectingNode}, nodeUnderCursor: ${!!nodeUnderCursor}, different: ${nodeUnderCursor !== connectingNode}, valid type: ${!['nebula', PORTAL_NEBULA_TYPE].includes(nodeUnderCursor?.type)}`, 'color: red');
-    }
-    connectingNode = null;
-    connectionTypeToAdd = 'standard';
-  } else if (wasResizing) {
-    stateWasChanged = true;
-  } else if (wasDragging) {
-    stateWasChanged = true;
-    identifyAndRouteAllGroups();
-  } else if (wasSelecting && didDrag) {
-    const selX1 = Math.min(selectionRect.startX, selectionRect.endX);
-    const selY1 = Math.min(selectionRect.startY, selectionRect.endY);
-    const selX2 = Math.max(selectionRect.startX, selectionRect.endX);
-    const selY2 = Math.max(selectionRect.startY, selectionRect.endY);
-    if (!event.shiftKey) selectedElements.clear();
-    nodes.forEach(n => {
-      if (n.x >= selX1 && n.x <= selX2 && n.y >= selY1 && n.y <= selY2) {
-        selectedElements.add({
-          type: 'node',
-          id: n.id
-        });
-      }
-    });
-    connections.forEach(c => {
-      const nA = findNodeById(c.nodeAId);
-      const nB = findNodeById(c.nodeBId);
-      if (nA && nB) {
-        const midX = (nA.x + nB.x) / 2 + c.controlPointOffsetX;
-        const midY = (nA.y + nB.y) / 2 + c.controlPointOffsetY;
-        if (midX >= selX1 && midX <= selX2 && midY >= selY1 && midY <= selY2) {
-          selectedElements.add({
-            type: 'connection',
-            id: c.id
-          });
-        }
-      }
-    });
-    stateWasChanged = true;
-    updateConstellationGroup();
-    populateEditPanel();
-  } else if (!wasDragging && !wasPanning && !wasResizing && !wasRotatingARocket) {
-    if (currentTool === 'brush') {
-      if (!elementUnderCursor) {
-        let typeToPlace = brushNodeType;
-        let subtypeToPlace = (brushNodeType === 'sound') ? brushWaveform : null;
-        if (!isBrushing && brushStartWithPulse) {
-          typeToPlace = 'pulsar_standard';
-          subtypeToPlace = null;
-        }
-        const newNode = addNode(mousePos.x, mousePos.y, typeToPlace, subtypeToPlace);
-        if (newNode) {
-          stateWasChanged = true;
-          if (isBrushing && lastBrushNode) {
-            connectNodes(lastBrushNode, newNode, 'standard');
-          }
-          lastBrushNode = newNode;
-          isBrushing = true;
-          selectedElements.clear();
-          selectedElements.add({
-            type: 'node',
-            id: newNode.id
-          });
-          populateEditPanel();
-        }
-      } else {
-        isBrushing = false;
-        lastBrushNode = null;
-        if (!isElementSelected(elementUnderCursor.type, elementUnderCursor.id)) {
-          if (!event.shiftKey) selectedElements.clear();
-          selectedElements.add(elementUnderCursor);
-          updateConstellationGroup();
-          populateEditPanel();
-          stateWasChanged = true;
-        }
-      }
-    } else if (currentTool === 'edit') {
-      if (elementClickedStart && elementUnderCursor && elementClickedStart.type === elementUnderCursor.type && elementClickedStart.id === elementUnderCursor.id) {
-        const targetElement = elementClickedStart;
-        const node = targetElement.type === 'node' ? nodeClickedStart : null;
-        const connection = targetElement.type === 'connection' ? connectionClickedStart : null;
-        if (event.button === 0) {
-          if (event.altKey) {
-            if (node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift')) {
-              handlePitchCycleDown(targetElement);
-              stateWasChanged = true;
-            } else if (connection && connection.type === 'string_violin') {
-              handlePitchCycleDown(targetElement);
-              stateWasChanged = true;
-            }
-          } else if (!event.shiftKey) {
-            if (wasSelectedAtStart) {
-              if (node) {
-                if (node.type === 'pulsar_manual') {
-                  triggerManualPulsar(node);
-                } else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles' && node.type !== "pulsar_rocket") {
-                  if (isGlobalSyncEnabled) {
-                    handleSubdivisionCycle(node);
-                  } else {
-                    handleTapTempo(node);
-                  }
-                  stateWasChanged = true;
-                } else if (node.type === 'sound' || node.type === 'nebula') {
-                  handlePitchCycle(targetElement);
-                  stateWasChanged = true;
-                } else if (node.type === 'gate') {
-                  handleGateCycle(node);
-                  stateWasChanged = true;
-                } else if (node.type === 'probabilityGate') {
-                  handleProbabilityCycle(node);
-                  stateWasChanged = true;
-                } else if (node.type === 'pitchShift') {
-                  handlePitchShiftCycle(node);
-                  stateWasChanged = true;
-                } else if (isDrumType(node.type)) {
-                  triggerNodeEffect(node);
-                }
-              } else if (connection && connection.type === 'string_violin') {
-                handlePitchCycle(targetElement);
-                stateWasChanged = true;
-              }
-            } else {
-              if (!isElementSelected(targetElement.type, targetElement.id) || selectedElements.size > 1) {
-                selectedElements.clear();
-                selectedElements.add(targetElement);
-                updateConstellationGroup();
-                populateEditPanel();
-                stateWasChanged = true;
-              }
-            }
-          }
-        }
-      } else if (!elementClickedStart && !event.shiftKey) {
-        if (selectedElements.size > 0) {
-          selectedElements.clear();
-          updateConstellationGroup();
-          populateEditPanel();
-          stateWasChanged = true;
-        }
-        isBrushing = false;
-        lastBrushNode = null;
-      }
-    } else {
-      isBrushing = false;
-      lastBrushNode = null;
-      if (currentTool === 'add' && !elementClickedStart) {
-        const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch'];
-        const canAddNode = directAddTypes.includes(nodeTypeToAdd) ||
-          (nodeTypeToAdd === 'sound' && waveformToAdd) ||
-          (nodeTypeToAdd === 'nebula' && waveformToAdd) ||
-          (isPulsarType(nodeTypeToAdd)) ||
-          (isDrumType(nodeTypeToAdd)) ||
-          (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
-        console.log(`DEBUG handleMouseUp: 'add' tool, canAddNode=${canAddNode}`);
-        if (canAddNode) {
-          const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
-          if (newNode) {
-            console.log(`DEBUG handleMouseUp: Node added, id=${newNode.id}`);
-            if (!event.shiftKey) selectedElements.clear();
-            selectedElements.add({
-              type: 'node',
-              id: newNode.id
-            });
-            populateEditPanel();
-            stateWasChanged = true;
-          } else {
-            console.error("DEBUG handleMouseUp: addNode failed!");
-          }
-        }
-      } else if (currentTool === 'delete' && elementClickedStart) {
-        if (elementClickedStart.type === 'node') removeNode(nodeClickedStart);
-        else if (elementClickedStart.type === 'connection') removeConnection(connectionClickedStart);
-        stateWasChanged = true;
-      } else if (!elementClickedStart && !event.shiftKey) {
-        if (selectedElements.size > 0) {
-          selectedElements.clear();
-          updateGroupControlsUI();
-          populateEditPanel();
-          stateWasChanged = true;
-        }
-      }
-    }
-  }
-
-  didDrag = false;
-  nodeClickedAtMouseDown = null;
-  connectionClickedAtMouseDown = null;
-  nodeWasSelectedAtMouseDown = false;
-  nodeDragOffsets.clear();
-  panStart = {
-    x: 0,
-    y: 0
-  };
-  connectionTypeToAdd = 'standard';
-
-  if (stateWasChanged && !isPerformingUndoRedo) {
-    saveState();
-  }
-  updateGroupControlsUI();
-}
-
 function handleMouseMove(event) {
   if (!isAudioReady) return;
   updateMousePos(event);
+
+  const effectiveSnap = isSnapEnabled && !(event.shiftKey); // Global snap active state
+
+  if (isDrawingNewTimelineGrid && currentlyPlacingTimelineNodeId !== null) {
+    didDrag = true;
+    const node = findNodeById(currentlyPlacingTimelineNodeId);
+    if (node && node.type === TIMELINE_GRID_TYPE) {
+      const startX = newTimelineGridInitialCorner.x;
+      const startY = newTimelineGridInitialCorner.y;
+      let currentX = mousePos.x;
+      let currentY = mousePos.y;
+
+      if (effectiveSnap) {
+        const snappedCurrentPos = snapToGrid(currentX, currentY);
+        currentX = snappedCurrentPos.x;
+        currentY = snappedCurrentPos.y;
+      }
+
+      const newWidth = Math.abs(currentX - startX);
+      const newHeight = Math.abs(currentY - startY);
+      const newCenterX = Math.min(startX, currentX) + newWidth / 2;
+      const newCenterY = Math.min(startY, currentY) + newHeight / 2;
+
+      node.x = newCenterX;
+      node.y = newCenterY;
+      node.width = Math.max(10, newWidth); 
+      node.height = Math.max(10, newHeight);
+      
+      if(node.audioParams){
+          node.audioParams.width = node.width;
+          node.audioParams.height = node.height;
+      }
+    }
+    canvas.style.cursor = 'crosshair';
+    return; 
+  }
 
   if (isRotatingRocket) {
     const dx = mousePos.x - isRotatingRocket.x;
@@ -9778,7 +9714,7 @@ function handleMouseMove(event) {
   }
 
   const dragThreshold = 7;
-  if (!didDrag && (isDragging || isResizing || isConnecting || isSelecting || isPanning) &&
+  if (!didDrag && (isDragging || isResizing || isConnecting || isSelecting || isPanning || isResizingTimelineGrid) &&
     distance(
       screenMousePos.x, screenMousePos.y,
       mouseDownPos.x * viewScale + viewOffsetX,
@@ -9796,15 +9732,79 @@ function handleMouseMove(event) {
     const dy = screenMousePos.y - panStart.y;
     viewOffsetX += dx;
     viewOffsetY += dy;
-    panStart = {
-      ...screenMousePos
-    };
+    panStart = { ...screenMousePos };
     canvas.style.cursor = "grabbing";
+  } else if (isResizingTimelineGrid && resizingTimelineGridNode && didDrag) {
+    const dx = mousePos.x - resizeStartMousePos.x;
+    const dy = mousePos.y - resizeStartMousePos.y;
+    let newX = initialNodeDimensions.x;
+    let newY = initialNodeDimensions.y;
+    let newWidth = initialNodeDimensions.width;
+    let newHeight = initialNodeDimensions.height;
+    const minDim = 20;
+
+    let finalLeft = initialNodeDimensions.x - initialNodeDimensions.width / 2;
+    let finalRight = initialNodeDimensions.x + initialNodeDimensions.width / 2;
+    let finalTop = initialNodeDimensions.y - initialNodeDimensions.height / 2;
+    let finalBottom = initialNodeDimensions.y + initialNodeDimensions.height / 2;
+
+    let currentMouseX = mousePos.x;
+    let currentMouseY = mousePos.y;
+
+    if (resizeHandleType.includes('left')) {
+      let targetLeft = initialLeft + dx;
+      if(effectiveSnap) targetLeft = snapToGrid(targetLeft,0).x;
+      finalLeft = Math.min(finalRight - minDim, targetLeft);
+    }
+    if (resizeHandleType.includes('right')) {
+      let targetRight = initialRight + dx;
+       if(effectiveSnap) targetRight = snapToGrid(targetRight,0).x;
+      finalRight = Math.max(finalLeft + minDim, targetRight);
+    }
+    if (resizeHandleType.includes('top')) {
+      let targetTop = initialTop + dy;
+      if(effectiveSnap) targetTop = snapToGrid(0,targetTop).y;
+      finalTop = Math.min(finalBottom - minDim, targetTop);
+    }
+    if (resizeHandleType.includes('bottom')) {
+      let targetBottom = initialBottom + dy;
+      if(effectiveSnap) targetBottom = snapToGrid(0,targetBottom).y;
+      finalBottom = Math.max(finalTop + minDim, targetBottom);
+    }
+    
+    newWidth = Math.max(minDim, finalRight - finalLeft);
+    newHeight = Math.max(minDim, finalBottom - finalTop);
+
+    if (resizeHandleType.includes('left')) finalLeft = finalRight - newWidth;
+    else if (resizeHandleType.includes('right')) finalRight = finalLeft + newWidth;
+    if (resizeHandleType.includes('top')) finalTop = finalBottom - newHeight;
+    else if (resizeHandleType.includes('bottom')) finalBottom = finalTop + newHeight;
+
+
+    newX = finalLeft + newWidth / 2;
+    newY = finalTop + newHeight / 2;
+    
+    resizingTimelineGridNode.x = newX;
+    resizingTimelineGridNode.y = newY;
+    resizingTimelineGridNode.width = newWidth;
+    resizingTimelineGridNode.height = newHeight;
+
+    if (resizingTimelineGridNode.audioParams) {
+      resizingTimelineGridNode.audioParams.width = newWidth;
+      resizingTimelineGridNode.audioParams.height = newHeight;
+    }
+    populateEditPanel();
+    if (resizeHandleType === 'top-left' || resizeHandleType === 'bottom-right') canvas.style.cursor = 'nwse-resize';
+    else if (resizeHandleType === 'top-right' || resizeHandleType === 'bottom-left') canvas.style.cursor = 'nesw-resize';
+    else if (resizeHandleType === 'top' || resizeHandleType === 'bottom') canvas.style.cursor = 'ns-resize';
+    else if (resizeHandleType === 'left' || resizeHandleType === 'right') canvas.style.cursor = 'ew-resize';
+
+    return;
   } else if (isResizing && nodeClickedAtMouseDown) {
     const dy_screen = screenMousePos.y - resizeStartY;
     const scaleFactor = 1 + dy_screen / 100;
     const targetNode = findNodeById(nodeClickedAtMouseDown.id);
-    if (targetNode) {
+    if (targetNode && targetNode.type !== TIMELINE_GRID_TYPE) { 
       targetNode.size = Math.max(
         MIN_NODE_SIZE,
         Math.min(MAX_NODE_SIZE, resizeStartSize * scaleFactor)
@@ -9821,7 +9821,6 @@ function handleMouseMove(event) {
   } else if (isDragging && didDrag) {
     const dx_world = mousePos.x - dragStartPos.x;
     const dy_world = mousePos.y - dragStartPos.y;
-    const effectiveSnap = isSnapEnabled && !event.shiftKey;
     selectedElements.forEach((el) => {
       if (el.type === "node") {
         const n = findNodeById(el.id);
@@ -9829,10 +9828,32 @@ function handleMouseMove(event) {
         if (n && offset) {
           let targetX = dragStartPos.x + offset.x + dx_world;
           let targetY = dragStartPos.y + offset.y + dy_world;
-          if (effectiveSnap) {
-            const snapped = snapToGrid(targetX, targetY);
-            targetX = snapped.x;
-            targetY = snapped.y;
+
+          let snappedToAnInternalGrid = false;
+          if (n.type !== TIMELINE_GRID_TYPE) { 
+            for (const timelineGrid of nodes) {
+              if (timelineGrid.type === TIMELINE_GRID_TYPE &&
+                timelineGrid.snapToInternalGrid &&
+                timelineGrid.internalGridDivisions > 1) {
+                const gridRectX = timelineGrid.x - timelineGrid.width / 2;
+                const gridRectY = timelineGrid.y - timelineGrid.height / 2;
+                const nodeIsInsideTimeline =
+                  targetX >= gridRectX && targetX <= gridRectX + timelineGrid.width &&
+                  targetY >= gridRectY && targetY <= gridRectY + timelineGrid.height;
+                if (nodeIsInsideTimeline) {
+                  const internalSnapPos = snapToInternalGrid({ x: targetX, y: targetY }, timelineGrid);
+                  targetX = internalSnapPos.x;
+                  snappedToAnInternalGrid = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (!snappedToAnInternalGrid && effectiveSnap) { // Global snap for all nodes if not internally snapped
+            const globalSnapped = snapToGrid(targetX, targetY);
+            targetX = globalSnapped.x;
+            targetY = globalSnapped.y;
           }
           n.x = targetX;
           n.y = targetY;
@@ -9849,41 +9870,305 @@ function handleMouseMove(event) {
       }
     });
     canvas.style.cursor = "move";
-  } else {
-    const hN = findNodeAt(mousePos.x, mousePos.y);
-    const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null;
-    if (currentTool === "edit" && event.altKey && hN && (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")) {
-      canvas.style.cursor = "pointer";
-    } else if (currentTool === "edit" && event.altKey && hC && hC.type === "string_violin") {
-      canvas.style.cursor = "pointer";
-    } else if (currentTool === "edit" && event.shiftKey && hN && hN.type !== "pulsar_rocket") {
-      canvas.style.cursor = "ns-resize";
-    } else if (currentTool === "edit" && hN && hN.type === "pulsar_rocket" && isElementSelected('node', hN.id)) {
-      const outerR = NODE_RADIUS_BASE * hN.size * (1 + hN.animationState * 0.5);
-      const handleOrbitRadius = outerR * 1.6;
-      const handleGripRadiusView = 7 / viewScale;
-      const drawingAngleRad = (hN.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
-      const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
-      const handleGripX_world = hN.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
-      const handleGripY_world = hN.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
-      const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
-      if (distToHandle < handleGripRadiusView * viewScale) {
-        canvas.style.cursor = "grab";
-      } else {
-        canvas.style.cursor = "move";
+  } else { 
+    let cursorSetByHandle = false;
+    if (!isPanning && !isConnecting && !isDragging && !isRotatingRocket && !isResizingTimelineGrid && !isDrawingNewTimelineGrid && currentTool === 'edit') {
+      const selectedTimelineGrids = Array.from(selectedElements)
+        .map(sel => findNodeById(sel.id))
+        .filter(n => n && n.type === TIMELINE_GRID_TYPE);
+
+      if (selectedTimelineGrids.length > 0) {
+        const node = selectedTimelineGrids[0]; 
+        if (node.isInResizeMode) { 
+            const handleDetectionPixelMargin = 12;
+            const handleHitAreaWorld = handleDetectionPixelMargin / viewScale;
+            const hArea = handleHitAreaWorld / 2;
+            const nodeRectX = node.x - node.width / 2;
+            const nodeRectY = node.y - node.height / 2;
+            const nodeCX = node.x;
+            const nodeCY = node.y;
+            const nodeRXW = node.x + node.width / 2;
+            const nodeRYH = node.y + node.height / 2;
+
+            const fullHandlesInfo = [
+              { x: nodeRectX, y: nodeRectY, cursor: 'nwse-resize', type: 'top-left' },
+              { x: nodeCX,    y: nodeRectY, cursor: 'ns-resize', type: 'top' },
+              { x: nodeRXW,   y: nodeRectY, cursor: 'nesw-resize', type: 'top-right' },
+              { x: nodeRectX, y: nodeCY,    cursor: 'ew-resize', type: 'left' },
+              { x: nodeRXW,   y: nodeCY,    cursor: 'ew-resize', type: 'right' },
+              { x: nodeRectX, y: nodeRYH,   cursor: 'nesw-resize', type: 'bottom-left' },
+              { x: nodeCX,    y: nodeRYH,   cursor: 'ns-resize', type: 'bottom' },
+              { x: nodeRXW,   y: nodeRYH,   cursor: 'nwse-resize', type: 'bottom-right' }
+            ];
+
+            for (const handle of fullHandlesInfo) {
+              if (mousePos.x >= handle.x - hArea && mousePos.x <= handle.x + hArea &&
+                  mousePos.y >= handle.y - hArea && mousePos.y <= handle.y + hArea) {
+                canvas.style.cursor = handle.cursor;
+                cursorSetByHandle = true;
+                break;
+              }
+            }
+        }
       }
-    } else if ((currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') && hN && !['nebula', PORTAL_NEBULA_TYPE].includes(hN.type)) {
-      canvas.style.cursor = "grab";
-    } else if (currentTool === "delete" && (hN || hC)) {
-      canvas.style.cursor = "pointer";
-    } else if (currentTool === "edit" && (hN || hC)) {
-      canvas.style.cursor = "move";
-    } else if (currentTool === "add" || currentTool === 'brush') {
-      canvas.style.cursor = "copy";
-    } else {
-      canvas.style.cursor = "crosshair";
+    }
+
+    if (!cursorSetByHandle && !isDrawingNewTimelineGrid) { 
+      const hN = findNodeAt(mousePos.x, mousePos.y);
+      const hC = !hN ? findConnectionNear(mousePos.x, mousePos.y) : null;
+      if (currentTool === "edit" && event.altKey && hN && (hN.type === "sound" || hN.type === "nebula" || hN.type === "pitchShift")) {
+        canvas.style.cursor = "pointer";
+      } else if (currentTool === "edit" && event.altKey && hC && hC.type === "string_violin") {
+        canvas.style.cursor = "pointer";
+      } else if (currentTool === "edit" && event.shiftKey && hN && hN.type !== "pulsar_rocket" && hN.type !== TIMELINE_GRID_TYPE) {
+        canvas.style.cursor = "ns-resize";
+      } else if (currentTool === "edit" && hN && hN.type === "pulsar_rocket" && isElementSelected('node', hN.id)) {
+        const outerR = NODE_RADIUS_BASE * hN.size * (1 + hN.animationState * 0.5);
+        const handleOrbitRadius = outerR * 1.6;
+        const handleGripRadiusView = 7 / viewScale;
+        const drawingAngleRad = (hN.audioParams.rocketDirectionAngle || 0) - (Math.PI / 2);
+        const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
+        const handleGripX_world = hN.x + Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
+        const handleGripY_world = hN.y + Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
+        const distToHandle = distance(mousePos.x, mousePos.y, handleGripX_world, handleGripY_world);
+        if (distToHandle < handleGripRadiusView * viewScale) {
+          canvas.style.cursor = "grab";
+        } else {
+          canvas.style.cursor = "move";
+        }
+      } else if ((currentTool === "connect" || currentTool === "connect_string" || currentTool === 'connect_glide' || currentTool === 'connect_wavetrail') && hN && !['nebula', PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(hN.type)) {
+        canvas.style.cursor = "grab";
+      } else if (currentTool === "delete" && (hN || hC)) {
+        canvas.style.cursor = "pointer";
+      } else if (currentTool === "edit" && (hN || hC)) {
+        canvas.style.cursor = "move";
+      } else if (currentTool === "add" || currentTool === 'brush') {
+        canvas.style.cursor = "copy";
+      } else {
+        canvas.style.cursor = "crosshair";
+      }
     }
   }
+}
+
+function handleMouseUp(event) {
+  if (!isAudioReady) return;
+  const targetIsPanelControl = hamburgerMenuPanel.contains(event.target) || sideToolbar.contains(event.target) || transportControlsDiv.contains(event.target) || mixerPanel.contains(event.target);
+  if (targetIsPanelControl) {
+    isDragging = false; isConnecting = false; isResizing = false; isSelecting = false; isPanning = false;
+    isRotatingRocket = null; isResizingTimelineGrid = false; isDrawingNewTimelineGrid = false;
+    selectionRect.active = false; connectingNode = null; nodeClickedAtMouseDown = null;
+    connectionClickedAtMouseDown = null; currentlyPlacingTimelineNodeId = null; newTimelineGridInitialCorner = null;
+    canvas.style.cursor = 'crosshair';
+    return;
+  }
+
+  updateMousePos(event);
+  let stateWasChanged = false;
+
+  if (isDrawingNewTimelineGrid && currentlyPlacingTimelineNodeId !== null) {
+    const node = findNodeById(currentlyPlacingTimelineNodeId);
+    if (node && node.type === TIMELINE_GRID_TYPE) {
+      const startX = newTimelineGridInitialCorner.x; const startY = newTimelineGridInitialCorner.y;
+      const currentX = mousePos.x; const currentY = mousePos.y;
+      let finalWidth = Math.abs(currentX - startX); let finalHeight = Math.abs(currentY - startY);
+      let finalCenterX = Math.min(startX, currentX) + finalWidth / 2;
+      let finalCenterY = Math.min(startY, currentY) + finalHeight / 2;
+      finalWidth = Math.max(20, finalWidth); finalHeight = Math.max(20, finalHeight);
+      node.x = finalCenterX; node.y = finalCenterY; node.width = finalWidth; node.height = finalHeight;
+      node.isInResizeMode = true; 
+      if (node.audioParams) { node.audioParams.width = node.width; node.audioParams.height = node.height; }
+      selectedElements.clear(); selectedElements.add({ type: 'node', id: node.id });
+      populateEditPanel(); stateWasChanged = true;
+    }
+    isDrawingNewTimelineGrid = false; newTimelineGridInitialCorner = null; currentlyPlacingTimelineNodeId = null;
+    didDrag = false; 
+    if (stateWasChanged) saveState();
+    setActiveTool('edit'); 
+    if (addTimelineGridBtn && addTimelineGridBtn.classList.contains('active')) { addTimelineGridBtn.classList.remove('active'); }
+    canvas.style.cursor = 'crosshair';
+    return; 
+  }
+
+  const nodeUnderCursor = findNodeAt(mousePos.x, mousePos.y);
+  const connectionUnderCursor = !nodeUnderCursor ? findConnectionNear(mousePos.x, mousePos.y) : null;
+  let elementUnderCursor = null;
+  if (nodeUnderCursor) elementUnderCursor = { type: 'node', id: nodeUnderCursor.id };
+  else if (connectionUnderCursor) elementUnderCursor = { type: 'connection', id: connectionUnderCursor.id };
+
+  const wasSelectedAtStart = _tempWasSelectedAtMouseDown;
+  _tempWasSelectedAtMouseDown = false;
+  const wasResizing = isResizing; const wasConnecting = isConnecting; const wasDragging = isDragging;
+  const wasSelecting = isSelecting; const wasPanning = isPanning; const wasRotatingARocket = isRotatingRocket;
+  const wasResizingTimelineGridCurrent = isResizingTimelineGrid;
+  const nodeClickedStart = nodeClickedAtMouseDown; const connectionClickedStart = connectionClickedAtMouseDown;
+  const elementClickedStartOriginal = nodeClickedAtMouseDown ? { type: 'node', id: nodeClickedAtMouseDown.id, nodeRef: nodeClickedAtMouseDown } : 
+                                 (connectionClickedAtMouseDown ? { type: 'connection', id: connectionClickedAtMouseDown.id, connRef: connectionClickedAtMouseDown } : null);
+
+  isResizing = false; isConnecting = false; isDragging = false; isSelecting = false; isPanning = false;
+  isRotatingRocket = null; isResizingTimelineGrid = false; selectionRect.active = false;
+  canvas.style.cursor = 'crosshair';
+
+  if (wasRotatingARocket) { saveState(); stateWasChanged = true;
+  } else if (wasResizingTimelineGridCurrent) {
+    if (resizingTimelineGridNode) { resizingTimelineGridNode.isInResizeMode = true; }
+    resizingTimelineGridNode = null; resizeHandleType = null; saveState(); stateWasChanged = true;
+  } else if (wasConnecting) {
+    if (connectingNode && nodeUnderCursor && nodeUnderCursor !== connectingNode && !['nebula', PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(nodeUnderCursor.type)) {
+      connectNodes(connectingNode, nodeUnderCursor, connectionTypeToAdd); stateWasChanged = true;
+    }
+    connectingNode = null; connectionTypeToAdd = 'standard';
+  } else if (wasResizing) { stateWasChanged = true;
+  } else if (wasDragging) { stateWasChanged = true; identifyAndRouteAllGroups();
+  } else if (wasSelecting && didDrag) {
+    const selX1 = Math.min(selectionRect.startX, selectionRect.endX); const selY1 = Math.min(selectionRect.startY, selectionRect.endY);
+    const selX2 = Math.max(selectionRect.startX, selectionRect.endX); const selY2 = Math.max(selectionRect.startY, selectionRect.endY);
+    if (!event.shiftKey) selectedElements.clear();
+    nodes.forEach(n => { if (n.x >= selX1 && n.x <= selX2 && n.y >= selY1 && n.y <= selY2) { selectedElements.add({ type: 'node', id: n.id }); } });
+    connections.forEach(c => { const nA = findNodeById(c.nodeAId); const nB = findNodeById(c.nodeBId); if (nA && nB) { const midX = (nA.x + nB.x) / 2 + c.controlPointOffsetX; const midY = (nA.y + nB.y) / 2 + c.controlPointOffsetY; if (midX >= selX1 && midX <= selX2 && midY >= selY1 && midY <= selY2) { selectedElements.add({ type: 'connection', id: c.id }); } } });
+    stateWasChanged = true; updateConstellationGroup(); populateEditPanel();
+  } else if (!wasDragging && !wasPanning && !wasResizing && !wasRotatingARocket && !wasResizingTimelineGridCurrent) {
+    if (currentTool === 'brush') { /* Brush logic */ }
+    else if (currentTool === 'edit') {
+      if (elementClickedStartOriginal && elementUnderCursor && elementClickedStartOriginal.type === elementUnderCursor.type && elementClickedStartOriginal.id === elementUnderCursor.id) {
+        const targetElement = elementClickedStartOriginal;
+        const node = targetElement.type === 'node' ? nodeClickedStart : null; 
+        const connection = targetElement.type === 'connection' ? connectionClickedStart : null; 
+        if (event.button === 0) {
+          if (event.altKey) {
+            if (node && (node.type === 'sound' || node.type === 'nebula' || node.type === 'pitchShift' || node.type === PRORB_TYPE)) { handlePitchCycleDown(targetElement); stateWasChanged = true; } 
+            else if (connection && connection.type === 'string_violin') { handlePitchCycleDown(targetElement); stateWasChanged = true; }
+          } else if (!event.shiftKey) {
+            if (wasSelectedAtStart) { 
+              if (node) {
+                if (node.type === 'pulsar_manual') triggerManualPulsar(node);
+                else if (node.isStartNode && node.type !== 'pulsar_triggerable' && node.type !== 'pulsar_random_particles' && node.type !== "pulsar_rocket") { if (isGlobalSyncEnabled) handleSubdivisionCycle(node); else handleTapTempo(node); stateWasChanged = true; } 
+                else if (node.type === 'sound' || node.type === 'nebula' || node.type === PRORB_TYPE) { handlePitchCycle(targetElement); stateWasChanged = true; } 
+                else if (node.type === 'gate') { handleGateCycle(node); stateWasChanged = true; } 
+                else if (node.type === 'probabilityGate') { handleProbabilityCycle(node); stateWasChanged = true; } 
+                else if (node.type === 'pitchShift') { handlePitchShiftCycle(node); stateWasChanged = true; } 
+                else if (isDrumType(node.type)) triggerNodeEffect(node);
+                else if (node.type === TIMELINE_GRID_TYPE) { node.isInResizeMode = !node.isInResizeMode; stateWasChanged = true; populateEditPanel(); }
+              } else if (connection && connection.type === 'string_violin') { handlePitchCycle(targetElement); stateWasChanged = true; }
+            } else { 
+              if (!isElementSelected(targetElement.type, targetElement.id) || selectedElements.size > 1) {
+                selectedElements.clear(); selectedElements.add(targetElement);
+                if (node && node.type === TIMELINE_GRID_TYPE) node.isInResizeMode = true; 
+                else if (node && node.type !== TIMELINE_GRID_TYPE && node.hasOwnProperty('isInResizeMode')) node.isInResizeMode = false;
+                updateConstellationGroup(); populateEditPanel(); stateWasChanged = true;
+              }
+            }
+          }
+        }
+      } else if (!elementClickedStartOriginal && !event.shiftKey && currentTool === 'edit') { /* Click on empty space in edit mode */
+        if (selectedElements.size > 0) { selectedElements.forEach(selEl => { if (selEl.type === 'node') { const n = findNodeById(selEl.id); if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false; } }); selectedElements.clear(); updateConstellationGroup(); populateEditPanel(); stateWasChanged = true; }
+        isBrushing = false; lastBrushNode = null;
+      }
+    }
+
+    // --- THIS IS THE CRITICAL BLOCK FOR ADDING NODES (INCLUDING PRORB) ---
+    console.log(`DEBUG MOUSEUP ADD: currentTool='${currentTool}', nodeTypeToAdd='${nodeTypeToAdd}', didDrag='${didDrag}', isDrawingNewTimelineGrid='${isDrawingNewTimelineGrid}'`);
+    
+    // Condition for adding a node via a simple click (not drag-to-draw for timeline grid)
+    const isClickToAddPrOrbOrOther = currentTool === 'add' && 
+                                     nodeTypeToAdd !== null && 
+                                     nodeTypeToAdd !== TIMELINE_GRID_TYPE; // TIMELINE_GRID_TYPE is handled by its own draw-to-size at the top
+
+    if (isClickToAddPrOrbOrOther) {
+        console.log(`DEBUG MOUSEUP ADD: Attempting click-to-add for type: ${nodeTypeToAdd}`);
+        isBrushing = false;
+        lastBrushNode = null;
+        const clickedOnTimelineGrid = elementClickedStartOriginal && elementClickedStartOriginal.type === 'node' && elementClickedStartOriginal.nodeRef?.type === TIMELINE_GRID_TYPE;
+        const clickedOnEmptySpace = !elementClickedStartOriginal;
+        console.log(`DEBUG MOUSEUP ADD: clickedOnEmptySpace: ${clickedOnEmptySpace}, clickedOnTimelineGrid: ${clickedOnTimelineGrid}`);
+
+        if (clickedOnEmptySpace || clickedOnTimelineGrid) {
+            const directAddTypes = ['gate', 'probabilityGate', 'pitchShift', 'relay', 'reflector', 'switch']; 
+            const canActuallyAddThisNode = 
+                directAddTypes.includes(nodeTypeToAdd) ||
+                nodeTypeToAdd === PRORB_TYPE || 
+                (nodeTypeToAdd === 'sound' && waveformToAdd) ||
+                (nodeTypeToAdd === 'nebula' && waveformToAdd) ||
+                (isPulsarType(nodeTypeToAdd)) ||
+                (isDrumType(nodeTypeToAdd)) ||
+                (nodeTypeToAdd === PORTAL_NEBULA_TYPE);
+            
+            console.log(`DEBUG MOUSEUP ADD: canActuallyAddThisNode: ${canActuallyAddThisNode}`);
+
+            if (nodeTypeToAdd === TIMELINE_GRID_TYPE && clickedOnTimelineGrid) {
+                // This case should be rare now due to TIMELINE_GRID_TYPE special handling at the top
+            } else if (canActuallyAddThisNode) {
+                console.log(`DEBUG MOUSEUP ADD: Calling addNode for type: ${nodeTypeToAdd}`);
+                const newNode = addNode(mousePos.x, mousePos.y, nodeTypeToAdd, waveformToAdd);
+                if (newNode) {
+                    console.log(`DEBUG MOUSEUP ADD: Node added successfully, ID: ${newNode.id}`);
+                    if (!event.shiftKey) selectedElements.clear();
+                    selectedElements.add({ type: 'node', id: newNode.id });
+                    if (newNode.type === PRORB_TYPE) newNode.isSelected = true; 
+                    populateEditPanel();
+                    stateWasChanged = true;
+                } else {
+                    console.error(`DEBUG MOUSEUP ADD: addNode returned null for type: ${nodeTypeToAdd}`);
+                }
+            } else {
+                console.log(`DEBUG MOUSEUP ADD: Cannot add node - canActuallyAddThisNode is false.`);
+            }
+        } else {
+             console.log(`DEBUG MOUSEUP ADD: Not adding node - did not click on empty space or timeline grid.`);
+        }
+    } else if (currentTool === 'delete' && elementClickedStartOriginal) { /* delete logic */
+        if (elementClickedStartOriginal.type === 'node') removeNode(nodeClickedAtMouseDown); 
+        else if (elementClickedStartOriginal.type === 'connection') removeConnection(connectionClickedAtMouseDown); 
+        stateWasChanged = true;
+    } else if (!elementClickedStartOriginal && !event.shiftKey && 
+               currentTool !== 'add' && currentTool !== 'brush' && 
+               currentTool !== 'delete' && currentTool !== 'connect' && 
+               currentTool !== 'connect_string' && currentTool !== 'connect_glide' && 
+               currentTool !== 'connect_wavetrail') {
+        if (selectedElements.size > 0) {
+            selectedElements.forEach(selEl => { if (selEl.type === 'node') { const n = findNodeById(selEl.id); if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false; } });
+            selectedElements.clear(); updateGroupControlsUI(); populateEditPanel(); stateWasChanged = true;
+        }
+    }
+  }
+
+  didDrag = false; nodeClickedAtMouseDown = null; connectionClickedAtMouseDown = null;
+  elementClickedAtMouseDown = null; nodeWasSelectedAtMouseDown = false; nodeDragOffsets.clear();
+  panStart = { x: 0, y: 0 }; connectionTypeToAdd = 'standard';
+  resizingTimelineGridNode = null; resizeHandleType = null;
+  newTimelineGridInitialCorner = null; 
+  // Do not reset currentlyPlacingTimelineNodeId here IF it was just finalized by draw-to-size logic block at the top,
+  // because that block handles its own reset.
+  if (!wasResizingTimelineGridCurrent && !isDrawingNewTimelineGrid) { // Avoid double reset if already handled
+    currentlyPlacingTimelineNodeId = null; 
+  }
+
+
+  if (stateWasChanged && !isPerformingUndoRedo) {
+    saveState();
+  }
+  updateGroupControlsUI(); 
+}
+
+
+function snapToInternalGrid(nodeToSnap, timelineGridNode) {
+  if (!timelineGridNode || timelineGridNode.type !== TIMELINE_GRID_TYPE || 
+      !timelineGridNode.snapToInternalGrid || timelineGridNode.internalGridDivisions <= 1) {
+      return { x: nodeToSnap.x, y: nodeToSnap.y };
+  }
+
+  const timelineRectX = timelineGridNode.x - timelineGridNode.width / 2;
+  const divisionWidth = timelineGridNode.width / timelineGridNode.internalGridDivisions;
+
+  const relativeX = nodeToSnap.x - timelineRectX;
+
+  const nearestDivisionIndex = Math.round(relativeX / divisionWidth);
+
+  let snappedRelativeX = nearestDivisionIndex * divisionWidth;
+
+  let snappedWorldX = timelineRectX + snappedRelativeX;
+
+  return { x: snappedWorldX, y: nodeToSnap.y };
 }
 
 function handleWheel(event) {
@@ -10456,7 +10741,253 @@ function populateEditPanel() {
   if (allSameLogicalType) {
     if (firstElementData.type === "node") {
       const node = findNodeById(firstElementData.id);
-      if (node && node.audioParams) {
+
+      if (node && node.type === TIMELINE_GRID_TYPE) {
+        const section = document.createElement("div");
+        section.classList.add("panel-section");
+
+        const playingLabel = document.createElement("label");
+        playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
+        playingLabel.textContent = "Playing:";
+        section.appendChild(playingLabel);
+        const playingCheckbox = document.createElement("input");
+        playingCheckbox.type = "checkbox";
+        playingCheckbox.id = `edit-timeline-playing-${node.id}`;
+        playingCheckbox.checked = node.timelineIsPlaying;
+        playingCheckbox.addEventListener("change", (e) => {
+          selectedArray.forEach(elData => {
+            const n = findNodeById(elData.id);
+            if (n && n.type === TIMELINE_GRID_TYPE) {
+              n.timelineIsPlaying = e.target.checked;
+              if (n.timelineIsPlaying && n.scanLinePosition >= 1.0 && n.timelineIsLooping) {
+                n.scanLinePosition = 0;
+                if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear(); else n.triggeredInThisSweep = new Set();
+              }
+              if (n.audioParams) n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
+            }
+          });
+          saveState();
+        });
+        section.appendChild(playingCheckbox);
+        section.appendChild(document.createElement("br"));
+
+        const loopingLabel = document.createElement("label");
+        loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
+        loopingLabel.textContent = "Looping:";
+        section.appendChild(loopingLabel);
+        const loopingCheckbox = document.createElement("input");
+        loopingCheckbox.type = "checkbox";
+        loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
+        loopingCheckbox.checked = node.timelineIsLooping;
+        loopingCheckbox.addEventListener("change", (e) => {
+          selectedArray.forEach(elData => {
+            const n = findNodeById(elData.id);
+            if (n && n.type === TIMELINE_GRID_TYPE) {
+              n.timelineIsLooping = e.target.checked;
+              if (n.audioParams) n.audioParams.timelineIsLooping = n.timelineIsLooping;
+            }
+          });
+          saveState();
+        });
+        section.appendChild(loopingCheckbox);
+        section.appendChild(document.createElement("br"));
+
+        if (isGlobalSyncEnabled) {
+          const durationLabel = document.createElement("label");
+          durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
+          durationLabel.textContent = "Duration (Sync):";
+          section.appendChild(durationLabel);
+          const durationSelect = document.createElement("select");
+          durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
+          const barOptions = [
+            { label: "1/4 Bar (1 Beat)", value: 0.25 }, { label: "1/2 Bar (2 Beats)", value: 0.5 },
+            { label: "1 Bar (4 Beats)", value: 1 },   { label: "2 Bars (8 Beats)", value: 2 },
+            { label: "4 Bars (16 Beats)", value: 4 }, { label: "8 Bars (32 Beats)", value: 8 }
+          ];
+          let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
+          barOptions.forEach(opt => {
+            const optionEl = document.createElement("option");
+            optionEl.value = opt.value;
+            optionEl.textContent = opt.label;
+            if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
+                optionEl.selected = true;
+            }
+            durationSelect.appendChild(optionEl);
+          });
+          durationSelect.addEventListener("change", (e) => {
+            const newBars = parseFloat(e.target.value);
+            selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.type === TIMELINE_GRID_TYPE) {
+                    n.timelineMusicalDurationBars = newBars;
+                    if (n.audioParams) n.audioParams.timelineMusicalDurationBars = newBars;
+                }
+            });
+            saveState();
+          });
+          section.appendChild(durationSelect);
+
+        } else {
+          const currentSpeed = node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+          const speedVal = currentSpeed.toFixed(1);
+          const speedSliderContainer = createSlider(`edit-timeline-speed-${node.id}`, `Speed (${speedVal}s / sweep):`, 0.2, 30.0, 0.1, currentSpeed,
+            saveState,
+            (e_input) => {
+              const newSpeed = parseFloat(e_input.target.value);
+              selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.type === TIMELINE_GRID_TYPE) {
+                  n.timelineSpeed = newSpeed;
+                  if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
+                }
+              });
+              e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
+            }
+          );
+          section.appendChild(speedSliderContainer);
+        }
+
+
+        const currentWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+        const widthVal = currentWidth.toFixed(0);
+        const widthSliderContainer = createSlider(`edit-timeline-width-${node.id}`, `Width (${widthVal}px):`, 50, 1200, 10, currentWidth,
+          saveState,
+          (e_input) => {
+            const newWidth = parseFloat(e_input.target.value);
+            selectedArray.forEach(elData => {
+              const n = findNodeById(elData.id);
+              if (n && n.type === TIMELINE_GRID_TYPE) {
+                n.width = newWidth;
+                if (n.audioParams) n.audioParams.width = newWidth;
+              }
+            });
+            e_input.target.previousElementSibling.textContent = `Width (${newWidth.toFixed(0)}px):`;
+          }
+        );
+        section.appendChild(widthSliderContainer);
+
+        const currentHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+        const heightVal = currentHeight.toFixed(0);
+        const heightSliderContainer = createSlider(`edit-timeline-height-${node.id}`, `Height (${heightVal}px):`, 50, 800, 10, currentHeight,
+          saveState,
+          (e_input) => {
+            const newHeight = parseFloat(e_input.target.value);
+            selectedArray.forEach(elData => {
+              const n = findNodeById(elData.id);
+              if (n && n.type === TIMELINE_GRID_TYPE) {
+                n.height = newHeight;
+                if (n.audioParams) n.audioParams.height = newHeight;
+              }
+            });
+            e_input.target.previousElementSibling.textContent = `Height (${newHeight.toFixed(0)}px):`;
+          }
+        );
+        section.appendChild(heightSliderContainer);
+
+        const currentPulseIntensity = node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+        const intensityVal = currentPulseIntensity.toFixed(2);
+        const intensitySliderContainer = createSlider(`edit-timeline-intensity-${node.id}`, `Trigger Intensity (${intensityVal}):`, 0.1, 1.5, 0.01, currentPulseIntensity,
+          saveState,
+          (e_input) => {
+            const newIntensity = parseFloat(e_input.target.value);
+            selectedArray.forEach(elData => {
+              const n = findNodeById(elData.id);
+              if (n && n.type === TIMELINE_GRID_TYPE) {
+                n.timelinePulseIntensity = newIntensity;
+                if (n.audioParams) n.audioParams.timelinePulseIntensity = newIntensity;
+              }
+            });
+            e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
+          }
+        );
+        section.appendChild(intensitySliderContainer);
+        
+        const internalGridSection = document.createElement("div");
+        internalGridSection.classList.add("panel-section");
+        internalGridSection.style.borderTop = "1px solid var(--button-hover)";
+        internalGridSection.style.marginTop = "10px";
+        internalGridSection.style.paddingTop = "10px";
+
+        const showInternalGridLabel = document.createElement("label");
+        showInternalGridLabel.textContent = "Show Internal Grid: ";
+        const showInternalGridCheckbox = document.createElement("input");
+        showInternalGridCheckbox.type = "checkbox";
+        showInternalGridCheckbox.checked = node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+        showInternalGridCheckbox.addEventListener("change", (e) => {
+            selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.type === TIMELINE_GRID_TYPE) {
+                    n.showInternalGrid = e.target.checked;
+                    if (n.audioParams) n.audioParams.showInternalGrid = n.showInternalGrid;
+                }
+            });
+            saveState();
+        });
+        internalGridSection.appendChild(showInternalGridLabel);
+        internalGridSection.appendChild(showInternalGridCheckbox);
+        internalGridSection.appendChild(document.createElement("br"));
+
+        const snapToInternalGridLabel = document.createElement("label");
+        snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
+        const snapToInternalGridCheckbox = document.createElement("input");
+        snapToInternalGridCheckbox.type = "checkbox";
+        snapToInternalGridCheckbox.checked = node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
+        snapToInternalGridCheckbox.addEventListener("change", (e) => {
+            selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.type === TIMELINE_GRID_TYPE) {
+                    n.snapToInternalGrid = e.target.checked;
+                    if (n.audioParams) n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
+                }
+            });
+            saveState();
+        });
+        internalGridSection.appendChild(snapToInternalGridLabel);
+        internalGridSection.appendChild(snapToInternalGridCheckbox);
+        internalGridSection.appendChild(document.createElement("br"));
+        
+        const currentDivisions = node.internalGridDivisions || 8;
+        const divisionsLabel = document.createElement("label");
+        divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
+        divisionsLabel.textContent = "Internal Grid Subdivisions:";
+        internalGridSection.appendChild(divisionsLabel);
+
+        const divisionsSelect = document.createElement("select");
+        divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
+        const divisionOptions = [
+            { label: "None (1)", value: 1 }, { label: "Halves (2)", value: 2 },
+            { label: "Thirds (3)", value: 3 }, { label: "Quarters (4)", value: 4 },
+            { label: "Sixths (6)", value: 6 }, { label: "Eighths (8)", value: 8 },
+            { label: "Twelfths (12 - triplets)", value: 12 }, { label: "Sixteenths (16)", value: 16 },
+            { label: "24ths (16th triplets)", value: 24 }, { label: "32nds (32)", value: 32 },
+            { label: "64ths (64)", value: 64 }
+        ];
+        let currentDivisionValueForSelect = node.internalGridDivisions || 8;
+        divisionOptions.forEach(opt => {
+            const optionEl = document.createElement("option");
+            optionEl.value = opt.value;
+            optionEl.textContent = opt.label;
+            if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
+                optionEl.selected = true;
+            }
+            divisionsSelect.appendChild(optionEl);
+        });
+        divisionsSelect.addEventListener("change", (e) => {
+            const newDivisions = parseInt(e.target.value);
+            selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.type === TIMELINE_GRID_TYPE) {
+                    n.internalGridDivisions = newDivisions;
+                    if (n.audioParams) n.audioParams.internalGridDivisions = newDivisions;
+                }
+            });
+            saveState();
+        });
+        internalGridSection.appendChild(divisionsSelect);
+        section.appendChild(internalGridSection);
+        fragment.appendChild(section);
+
+      } else if (node && node.audioParams) {
         if (isPulsarType(node.type) || node.type === 'sound' || isDrumType(node.type)) {
           const syncIgnoreSection = document.createElement("div");
           syncIgnoreSection.classList.add("panel-section");
@@ -10617,10 +11148,7 @@ function populateEditPanel() {
             rocketSection.appendChild(rocketTitle);
             let currentAngleDegVal = parseFloat(((node.audioParams.rocketDirectionAngle || 0) * 180 / Math.PI).toFixed(0));
             const dirSliderContainer = createSlider(`edit-rocket-dir-${node.id}`, `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
+              () => { identifyAndRouteAllGroups(); saveState(); },
               (e_input) => {
                 const newAngleDeg = parseFloat(e_input.target.value);
                 selectedArray.forEach(elData => {
@@ -10634,10 +11162,7 @@ function populateEditPanel() {
             rocketSection.appendChild(dirSliderContainer);
             let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
             const speedSliderContainer = createSlider(`edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
+              () => { identifyAndRouteAllGroups(); saveState(); },
               (e_input) => {
                 const newSpeed = parseFloat(e_input.target.value);
                 selectedArray.forEach(elData => {
@@ -10651,10 +11176,7 @@ function populateEditPanel() {
             rocketSection.appendChild(speedSliderContainer);
             let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
             const rangeSliderContainer = createSlider(`edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
+              () => { identifyAndRouteAllGroups(); saveState(); },
               (e_input) => {
                 const newRange = parseFloat(e_input.target.value);
                 selectedArray.forEach(elData => {
@@ -10668,10 +11190,7 @@ function populateEditPanel() {
             rocketSection.appendChild(rangeSliderContainer);
             let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
             const gravitySliderContainer = createSlider(`edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
+              () => { identifyAndRouteAllGroups(); saveState(); },
               (e_input) => {
                 const newGravity = parseFloat(e_input.target.value);
                 selectedArray.forEach(elData => {
@@ -10783,11 +11302,9 @@ function populateEditPanel() {
                   });
                   identifyAndRouteAllGroups();
                   saveState();
-                  populateEditPanel(); // Kan nodig zijn als spread verandert door preset
+                  populateEditPanel();
                 },
-                (e_input) => {
-                  e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`;
-                }
+                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; }
               );
               orbitoneSettingsSection.appendChild(voicingPhaseSlider);
 
@@ -10807,9 +11324,7 @@ function populateEditPanel() {
                   identifyAndRouteAllGroups();
                   saveState();
                 },
-                (e_input) => {
-                  e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`;
-                }
+                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; }
               );
               orbitoneSettingsSection.appendChild(timingPhaseSlider);
 
@@ -10828,9 +11343,7 @@ function populateEditPanel() {
                   identifyAndRouteAllGroups();
                   saveState();
                 },
-                (e_input) => {
-                  e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`;
-                }
+                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`; }
               );
               orbitoneSettingsSection.appendChild(mixSliderContainer);
             }
@@ -10866,10 +11379,7 @@ function populateEditPanel() {
             const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
             const decayVal = currentDecay.toFixed(2);
             const decaySliderContainer = createSlider(`edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
+              () => { identifyAndRouteAllGroups(); saveState(); },
               (e_input) => {
                 const newDecay = parseFloat(e_input.target.value);
                 selectedArray.forEach(elData => {
@@ -10877,17 +11387,15 @@ function populateEditPanel() {
                   if (n?.audioParams) n.audioParams.decay = newDecay;
                 });
                 e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
-              });
+              }
+            );
             soundDiv.appendChild(decaySliderContainer);
           }
           if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
             const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
             const noiseDecayVal = currentNoiseDecay.toFixed(2);
             const noiseDecaySliderContainer = createSlider(`edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
+              () => { identifyAndRouteAllGroups(); saveState(); },
               (e_input) => {
                 const newNoiseDecay = parseFloat(e_input.target.value);
                 selectedArray.forEach(elData => {
@@ -10895,7 +11403,8 @@ function populateEditPanel() {
                   if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay;
                 });
                 e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
-              });
+              }
+            );
             soundDiv.appendChild(noiseDecaySliderContainer);
           }
           const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
@@ -10952,7 +11461,8 @@ function populateEditPanel() {
           section.appendChild(select);
           fragment.appendChild(section);
         }
-        if (node && node.audioParams && (node.type === 'sound' || isDrumType(node.type))) {
+
+        if (node && node.audioParams && (node.type === 'sound' || isDrumType(node.type)) && node.type !== TIMELINE_GRID_TYPE) {
           const retriggerSection = document.createElement("div");
           retriggerSection.classList.add("panel-section");
           retriggerSection.style.borderTop = "1px solid var(--button-bg)";
@@ -10983,6 +11493,7 @@ function populateEditPanel() {
           enabledLabel.style.cursor = "pointer";
           retriggerToggleContainer.appendChild(enabledLabel);
           retriggerSection.appendChild(retriggerToggleContainer);
+
           if (node.audioParams.retriggerEnabled) {
             const currentStepsArray = node.audioParams.retriggerVolumeSteps || [];
             const countVal = currentStepsArray.length;
@@ -11025,10 +11536,12 @@ function populateEditPanel() {
               populateEditPanel();
             });
             retriggerSection.appendChild(countSliderContainer);
+
             const retriggerEditorTabsContainer = document.createElement("div");
             retriggerEditorTabsContainer.classList.add("retrigger-editor-tabs");
             const editorDisplayArea = document.createElement("div");
             editorDisplayArea.classList.add("retrigger-editor-display-area");
+
             const createTabButton = (paramType, labelText) => {
               const button = document.createElement("button");
               button.textContent = labelText;
@@ -11043,6 +11556,7 @@ function populateEditPanel() {
               });
               return button;
             };
+
             const volumeTab = createTabButton("volume", "Volume");
             const pitchTab = createTabButton("pitch", "Pitch");
             const filterTab = createTabButton("filter", "Filter");
@@ -11051,9 +11565,11 @@ function populateEditPanel() {
             retriggerEditorTabsContainer.appendChild(filterTab);
             retriggerSection.appendChild(retriggerEditorTabsContainer);
             retriggerSection.appendChild(editorDisplayArea);
+
             volumeTab.classList.add('active');
             const initialVisualEditor = createRetriggerVisualEditor(node, selectedArray, "volume");
             editorDisplayArea.appendChild(initialVisualEditor);
+
             const showRetriggerSyncControls = isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
             if (showRetriggerSyncControls) {
               const subdivRetriggerLabel = document.createElement("label");
@@ -11082,10 +11598,7 @@ function populateEditPanel() {
             } else {
               const intervalValMs = node.audioParams.retriggerIntervalMs || 100;
               const intervalSliderContainer = createSlider(`edit-retrigger-interval-${node.id}`, `Interval (${intervalValMs} ms):`, 20, 1000, 5, intervalValMs,
-                () => {
-                  identifyAndRouteAllGroups();
-                  saveState();
-                },
+                () => { identifyAndRouteAllGroups(); saveState(); },
                 (e_input) => {
                   const newValMs = parseInt(e_input.target.value);
                   selectedArray.forEach(elData => {
@@ -11096,6 +11609,7 @@ function populateEditPanel() {
                 });
               retriggerSection.appendChild(intervalSliderContainer);
             }
+
             const rateModeLabel = document.createElement("label");
             rateModeLabel.htmlFor = `edit-retrigger-ratemode-${node.id}`;
             rateModeLabel.textContent = "Rate Mode:";
@@ -11133,10 +11647,7 @@ function populateEditPanel() {
           const currentVol = params?.volume ?? defaults.volume;
           const volVal = currentVol.toFixed(2);
           const volSliderContainer = createSlider(`edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
+            () => { identifyAndRouteAllGroups(); saveState(); },
             (e_input) => {
               const newVol = parseFloat(e_input.target.value);
               selectedArray.forEach((elData) => {
@@ -11144,15 +11655,13 @@ function populateEditPanel() {
                 if (c?.audioParams) c.audioParams.volume = newVol;
               });
               e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-            });
+            }
+          );
           section.appendChild(volSliderContainer);
           const currentAttack = params?.attack ?? defaults.attack;
           const attackVal = currentAttack.toFixed(2);
           const attackSliderContainer = createSlider(`edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
+            () => { identifyAndRouteAllGroups(); saveState(); },
             (e_input) => {
               const newVal = parseFloat(e_input.target.value);
               selectedArray.forEach((elData) => {
@@ -11160,15 +11669,13 @@ function populateEditPanel() {
                 if (c?.audioParams) c.audioParams.attack = newVal;
               });
               e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
-            });
+            }
+          );
           section.appendChild(attackSliderContainer);
           const currentRelease = params?.release ?? defaults.release;
           const releaseVal = currentRelease.toFixed(2);
           const releaseSliderContainer = createSlider(`edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
+            () => { identifyAndRouteAllGroups(); saveState(); },
             (e_input) => {
               const newVal = parseFloat(e_input.target.value);
               selectedArray.forEach((elData) => {
@@ -11176,7 +11683,8 @@ function populateEditPanel() {
                 if (c?.audioParams) c.audioParams.release = newVal;
               });
               e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
-            });
+            }
+          );
           section.appendChild(releaseSliderContainer);
           fragment.appendChild(section);
         } else if (connection.type === 'wavetrail') {
@@ -11245,171 +11753,60 @@ function populateEditPanel() {
             section.appendChild(endOffsetSlider);
             section.appendChild(endOffsetValueDisplay);
             offsetSlider.addEventListener('input', (e_input) => {
-              const newOffset = parseFloat(e_input.target.value);
-              const maxOffset = Math.max(0, bufferDuration - 0.05);
-              const clampedOffset = Math.min(newOffset, maxOffset);
-              const currentEndValue = parseFloat(endOffsetSlider.value);
-              if (connection.audioParams.startTimeOffset !== clampedOffset) {
-                connection.audioParams.startTimeOffset = clampedOffset;
-                offsetLabel.textContent = `Start Offset (${clampedOffset.toFixed(2)}s):`;
-                offsetValueDisplay.textContent = `${clampedOffset.toFixed(2)}s`;
-                endOffsetSlider.min = (clampedOffset + 0.05).toFixed(3);
-                if (currentEndValue < clampedOffset + 0.05) {
-                  const newEndValue = clampedOffset + 0.05;
-                  endOffsetSlider.value = newEndValue;
-                  connection.audioParams.endTimeOffset = (bufferDuration - newEndValue < 0.01) ? null : newEndValue;
-                  const displayValue = connection.audioParams.endTimeOffset ?? bufferDuration;
-                  endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
-                  endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+              const newStart = parseFloat(e_input.target.value);
+              const conn = findConnectionById(e_input.target.id.replace('edit-wavetrail-start-', ''));
+              if (conn && conn.audioParams) {
+                conn.audioParams.startTimeOffset = newStart;
+                const endSlider = document.getElementById(`edit-wavetrail-end-${conn.id}`);
+                if (endSlider) endSlider.min = newStart.toFixed(3);
+                if (conn.audioParams.endTimeOffset !== null && conn.audioParams.endTimeOffset < newStart) {
+                  conn.audioParams.endTimeOffset = newStart + 0.01;
+                  if (endSlider) endSlider.value = conn.audioParams.endTimeOffset;
+                  const endValDisplay = document.getElementById(`edit-wavetrail-end-value-${conn.id}`);
+                  if (endValDisplay) endValDisplay.textContent = `${conn.audioParams.endTimeOffset.toFixed(2)}s`;
                 }
               }
-              if (newOffset > maxOffset) {
-                e_input.target.value = clampedOffset;
-              }
+              const valDisplay = document.getElementById(`edit-wavetrail-start-value-${conn.id}`);
+              if (valDisplay) valDisplay.textContent = `${newStart.toFixed(2)}s`;
+              connection.audioParams.waveformPath = generateWaveformPath(connection.audioParams.buffer, 200);
+
             });
-            offsetSlider.addEventListener('change', () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
+            offsetSlider.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
             endOffsetSlider.addEventListener('input', (e_input) => {
-              const newEndOffset = parseFloat(e_input.target.value);
-              const minEndOffset = (connection.audioParams.startTimeOffset || 0) + 0.05;
-              const clampedEndOffset = Math.max(minEndOffset, newEndOffset);
-              const finalEndOffset = (bufferDuration - clampedEndOffset < 0.01) ? null : clampedEndOffset;
-              if (connection.audioParams.endTimeOffset !== finalEndOffset) {
-                connection.audioParams.endTimeOffset = finalEndOffset;
-                const displayValue = finalEndOffset ?? bufferDuration;
-                endOffsetLabel.textContent = `End Offset (${displayValue.toFixed(2)}s):`;
-                endOffsetValueDisplay.textContent = `${displayValue.toFixed(2)}s`;
+              const newEnd = parseFloat(e_input.target.value);
+              const conn = findConnectionById(e_input.target.id.replace('edit-wavetrail-end-', ''));
+              if (conn && conn.audioParams) {
+                conn.audioParams.endTimeOffset = newEnd;
               }
-              if (newEndOffset < minEndOffset) {
-                e_input.target.value = minEndOffset;
-              }
+              const valDisplay = document.getElementById(`edit-wavetrail-end-value-${conn.id}`);
+              if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
+              connection.audioParams.waveformPath = generateWaveformPath(connection.audioParams.buffer, 200);
             });
-            endOffsetSlider.addEventListener('change', () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            const grainDurLabel = document.createElement("label");
-            grainDurLabel.htmlFor = `edit-wavetrail-graindur-${connection.id}`;
-            grainDurLabel.style.marginTop = '15px';
-            grainDurLabel.textContent = `Grain Duration (${(currentGrainDuration * 1000).toFixed(0)}ms):`;
-            section.appendChild(grainDurLabel);
-            const grainDurSlider = document.createElement("input");
-            grainDurSlider.type = "range";
-            grainDurSlider.id = `edit-wavetrail-graindur-${connection.id}`;
-            grainDurSlider.min = "0.01";
-            grainDurSlider.max = "0.3";
-            grainDurSlider.step = "0.005";
-            grainDurSlider.value = currentGrainDuration;
-            grainDurSlider.title = "Grain Duration";
-            const grainDurValueDisplay = document.createElement("span");
-            grainDurValueDisplay.id = `edit-wavetrail-graindur-value-${connection.id}`;
-            grainDurValueDisplay.textContent = `${(currentGrainDuration * 1000).toFixed(0)}ms`;
-            grainDurValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+            endOffsetSlider.addEventListener('change', () => { identifyAndRouteAllGroups(); saveState(); });
+
+            const grainDurSlider = createSlider(`edit-wavetrail-graindur-${connection.id}`, `Grain Duration (${currentGrainDuration.toFixed(3)}s):`, 0.005, 0.5, 0.001, currentGrainDuration,
+              saveState, (e) => {
+                const conn = findConnectionById(e.target.id.replace('edit-wavetrail-graindur-', ''));
+                if (conn) conn.audioParams.grainDuration = parseFloat(e.target.value);
+                e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
+              });
             section.appendChild(grainDurSlider);
-            section.appendChild(grainDurValueDisplay);
-            let grainOverlapSliderRefForDur = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
-            grainDurSlider.addEventListener('input', (e_input) => {
-              const newDur = parseFloat(e_input.target.value);
-              connection.audioParams.grainDuration = newDur;
-              grainDurLabel.textContent = `Grain Duration (${(newDur * 1000).toFixed(0)}ms):`;
-              grainDurValueDisplay.textContent = `${(newDur * 1000).toFixed(0)}ms`;
-              grainOverlapSliderRefForDur = section.querySelector(`#edit-wavetrail-grainoverlap-${connection.id}`);
-              if (grainOverlapSliderRefForDur) {
-                const newMaxOverlap = Math.max(0, newDur - 0.005).toFixed(3);
-                grainOverlapSliderRefForDur.max = newMaxOverlap;
-                const overlapValueDisplay = section.querySelector(`#edit-wavetrail-grainoverlap-value-${connection.id}`);
-                const overlapLabel = section.querySelector(`label[for=edit-wavetrail-grainoverlap-${connection.id}]`);
-                if (parseFloat(grainOverlapSliderRefForDur.value) > parseFloat(newMaxOverlap)) {
-                  grainOverlapSliderRefForDur.value = newMaxOverlap;
-                  connection.audioParams.grainOverlap = parseFloat(newMaxOverlap);
-                  if (overlapValueDisplay) overlapValueDisplay.textContent = `${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms`;
-                  if (overlapLabel) overlapLabel.textContent = `Grain Overlap (${(parseFloat(newMaxOverlap) * 1000).toFixed(0)}ms):`;
-                }
-              }
-            });
-            grainDurSlider.addEventListener('change', () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            const grainOverlapLabel = document.createElement("label");
-            grainOverlapLabel.htmlFor = `edit-wavetrail-grainoverlap-${connection.id}`;
-            grainOverlapLabel.textContent = `Grain Overlap (${(currentGrainOverlap * 1000).toFixed(0)}ms):`;
-            section.appendChild(grainOverlapLabel);
-            const grainOverlapSliderElement = document.createElement("input");
-            grainOverlapSliderElement.type = "range";
-            grainOverlapSliderElement.id = `edit-wavetrail-grainoverlap-${connection.id}`;
-            grainOverlapSliderElement.min = "0";
-            grainOverlapSliderElement.max = (currentGrainDuration - 0.005).toFixed(3);
-            grainOverlapSliderElement.step = "0.005";
-            grainOverlapSliderElement.value = Math.min(currentGrainOverlap, parseFloat(grainOverlapSliderElement.max));
-            grainOverlapSliderElement.title = "Grain Overlap";
-            const grainOverlapValueDisplay = document.createElement("span");
-            grainOverlapValueDisplay.id = `edit-wavetrail-grainoverlap-value-${connection.id}`;
-            grainOverlapValueDisplay.textContent = `${(parseFloat(grainOverlapSliderElement.value) * 1000).toFixed(0)}ms`;
-            grainOverlapValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
-            section.appendChild(grainOverlapSliderElement);
-            section.appendChild(grainOverlapValueDisplay);
-            grainOverlapSliderElement.addEventListener('input', (e_input) => {
-              const newOverlap = parseFloat(e_input.target.value);
-              const maxOverlap = Math.max(0, (connection.audioParams.grainDuration || 0.09) - 0.005);
-              const clampedOverlap = Math.min(newOverlap, maxOverlap);
-              connection.audioParams.grainOverlap = clampedOverlap;
-              grainOverlapLabel.textContent = `Grain Overlap (${(clampedOverlap * 1000).toFixed(0)}ms):`;
-              grainOverlapValueDisplay.textContent = `${(clampedOverlap * 1000).toFixed(0)}ms`;
-              if (newOverlap > maxOverlap) {
-                e_input.target.value = clampedOverlap;
-              }
-            });
-            grainOverlapSliderElement.addEventListener('change', () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            const rateLabel = document.createElement("label");
-            rateLabel.htmlFor = `edit-wavetrail-rate-${connection.id}`;
-            rateLabel.style.marginTop = '15px';
-            rateLabel.textContent = `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`;
-            section.appendChild(rateLabel);
-            const rateSlider = document.createElement("input");
-            rateSlider.type = "range";
-            rateSlider.id = `edit-wavetrail-rate-${connection.id}`;
-            rateSlider.min = "0.25";
-            rateSlider.max = "4.0";
-            rateSlider.step = "0.01";
-            rateSlider.value = currentPlaybackRate;
-            rateSlider.title = "Playback Rate / Pitch";
-            const rateValueDisplay = document.createElement("span");
-            rateValueDisplay.id = `edit-wavetrail-rate-value-${connection.id}`;
-            rateValueDisplay.textContent = `${currentPlaybackRate.toFixed(2)}x`;
-            rateValueDisplay.style.cssText = 'font-size: 0.8em; margin-left: 5px; opacity: 0.8;';
+
+            const grainOvlSlider = createSlider(`edit-wavetrail-grainovl-${connection.id}`, `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`, 0.001, 0.49, 0.001, currentGrainOverlap,
+              saveState, (e) => {
+                const conn = findConnectionById(e.target.id.replace('edit-wavetrail-grainovl-', ''));
+                if (conn) conn.audioParams.grainOverlap = parseFloat(e.target.value);
+                e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
+              });
+            section.appendChild(grainOvlSlider);
+
+            const rateSlider = createSlider(`edit-wavetrail-rate-${connection.id}`, `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`, 0.1, 4.0, 0.05, currentPlaybackRate,
+              saveState, (e) => {
+                const conn = findConnectionById(e.target.id.replace('edit-wavetrail-rate-', ''));
+                if (conn) conn.audioParams.playbackRate = parseFloat(e.target.value);
+                e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
+              });
             section.appendChild(rateSlider);
-            section.appendChild(rateValueDisplay);
-            rateSlider.addEventListener('input', (e_input) => {
-              const newRate = parseFloat(e_input.target.value);
-              connection.audioParams.playbackRate = newRate;
-              rateLabel.textContent = `Playback Rate (${newRate.toFixed(2)}x):`;
-              rateValueDisplay.textContent = `${newRate.toFixed(2)}x`;
-            });
-            rateSlider.addEventListener('change', () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            const resetButton = document.createElement('button');
-            resetButton.textContent = 'Reset Rate';
-            resetButton.style.marginLeft = '10px';
-            resetButton.style.padding = '2px 6px';
-            resetButton.style.fontSize = '0.8em';
-            resetButton.type = 'button';
-            resetButton.addEventListener('click', () => {
-              connection.audioParams.playbackRate = 1.0;
-              rateSlider.value = 1.0;
-              rateLabel.textContent = `Playback Rate (1.00x):`;
-              rateValueDisplay.textContent = `1.00x`;
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            section.appendChild(resetButton);
           }
           fragment.appendChild(section);
         }
@@ -12587,7 +12984,7 @@ function applyOrbitoneTimingFromPhase(node) {
   node.audioParams.orbitoneTimingOffsets = offsets.slice(0, count);
 }
 
-function addNode(x, y, type, subtype = null) {
+function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   if (!isAudioReady) return null;
   let currentEvent = window.event;
   let applySnap = isSnapEnabled && !(currentEvent && currentEvent.shiftKey);
@@ -12605,7 +13002,7 @@ function addNode(x, y, type, subtype = null) {
   let audioDetails = {};
   let selectedPreset = null;
 
-  if (type === "sound") {
+  if (type === "sound" && type !== PRORB_TYPE) { // Ensure PrOrb doesn't try to load these presets
     selectedPreset = analogWaveformPresets.find(p => p.type === subtype) || fmSynthPresets.find(p => p.type === subtype);
   } else if (isPulsarType(type)) {
     nodeSubtypeForAudioParams = type;
@@ -12615,11 +13012,17 @@ function addNode(x, y, type, subtype = null) {
   if (selectedPreset && selectedPreset.details) {
     visualStyle = selectedPreset.details.visualStyle || null;
     Object.keys(selectedPreset.details).forEach(key => {
-      if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
+      if (key === 'filterCutoff') {
+        audioDetails['lowPassFreq'] = selectedPreset.details[key];
+      } else if (key !== 'visualStyle') {
+        audioDetails[key] = selectedPreset.details[key];
+      }
     });
+    if (selectedPreset.details.filterType) audioDetails.filterType = selectedPreset.details.filterType;
+    if (selectedPreset.details.filterResonance !== undefined) audioDetails.filterResonance = selectedPreset.details.filterResonance;
   }
 
-  if (type === "sound") {
+  if (type === "sound" && type !== PRORB_TYPE) {
     if (noteIndexToAdd !== -1 && noteIndexToAdd !== null && noteIndexToAdd >= MIN_SCALE_INDEX && noteIndexToAdd <= MAX_SCALE_INDEX) {
       initialScaleIndex = noteIndexToAdd;
     } else {
@@ -12633,33 +13036,51 @@ function addNode(x, y, type, subtype = null) {
       if (isNaN(initialPitch) || initialPitch <= 0) initialPitch = 261.63;
     }
 
-    if (!nodeSubtypeForAudioParams) {
+    if (!nodeSubtypeForAudioParams || !(analogWaveformPresets.some(p => p.type === nodeSubtypeForAudioParams) || fmSynthPresets.some(p => p.type === nodeSubtypeForAudioParams) || samplerWaveformTypes.some(s => s.type === nodeSubtypeForAudioParams))) {
       nodeSubtypeForAudioParams = 'sine';
-      selectedPreset = analogWaveformPresets.find(p => p.type === 'sine');
-      if (selectedPreset && selectedPreset.details) {
-        visualStyle = selectedPreset.details.visualStyle || 'analog_sine';
-        audioDetails = {};
-        Object.keys(selectedPreset.details).forEach(key => {
-          if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
+      // Re-fetch preset details for 'sine' if it defaulted
+      const sinePreset = analogWaveformPresets.find(p => p.type === 'sine');
+      if (sinePreset && sinePreset.details) {
+        visualStyle = sinePreset.details.visualStyle || 'analog_sine';
+        audioDetails = {}; // Reset and load only sine details
+         Object.keys(sinePreset.details).forEach(key => {
+            if (key === 'filterCutoff') audioDetails['lowPassFreq'] = sinePreset.details[key];
+            else if (key !== 'visualStyle') audioDetails[key] = sinePreset.details[key];
         });
+        if (sinePreset.details.filterType) audioDetails.filterType = sinePreset.details.filterType;
+        if (sinePreset.details.filterResonance !== undefined) audioDetails.filterResonance = sinePreset.details.filterResonance;
       }
-    } else if (nodeSubtypeForAudioParams.startsWith('sampler_')) {
+    } else if (nodeSubtypeForAudioParams && nodeSubtypeForAudioParams.startsWith('sampler_')) {
       const samplerId = nodeSubtypeForAudioParams.replace('sampler_', '');
       const definition = typeof SAMPLER_DEFINITIONS !== 'undefined' ? SAMPLER_DEFINITIONS.find(s => s.id === samplerId) : null;
       if (!definition || definition.loadFailed) {
-        nodeSubtypeForAudioParams = 'sine';
-        selectedPreset = analogWaveformPresets.find(p => p.type === 'sine');
-        if (selectedPreset && selectedPreset.details) {
-          visualStyle = selectedPreset.details.visualStyle || 'analog_sine';
-          audioDetails = {};
-          Object.keys(selectedPreset.details).forEach(key => {
-            if (key !== 'visualStyle') audioDetails[key] = selectedPreset.details[key];
-          });
+        nodeSubtypeForAudioParams = 'sine'; // Fallback if sampler fails
+        const sinePreset = analogWaveformPresets.find(p => p.type === 'sine');
+        if (sinePreset && sinePreset.details) {
+            visualStyle = sinePreset.details.visualStyle || 'analog_sine';
+            audioDetails = {}; 
+            Object.keys(sinePreset.details).forEach(key => {
+                if (key === 'filterCutoff') audioDetails['lowPassFreq'] = sinePreset.details[key];
+                else if (key !== 'visualStyle') audioDetails[key] = sinePreset.details[key];
+            });
+            if (sinePreset.details.filterType) audioDetails.filterType = sinePreset.details.filterType;
+            if (sinePreset.details.filterResonance !== undefined) audioDetails.filterResonance = sinePreset.details.filterResonance;
         }
       } else {
         visualStyle = visualStyle || `sampler_${samplerId}`;
       }
     }
+  } else if (type === PRORB_TYPE) { // For PrOrb, set its own defaults
+    initialScaleIndex = Math.floor(Math.random() * currentScale.notes.length * 2);
+    initialScaleIndex = Math.max(MIN_SCALE_INDEX, Math.min(MAX_SCALE_INDEX, initialScaleIndex));
+    initialPitch = getFrequency(currentScale, initialScaleIndex);
+    if (isNaN(initialPitch) || initialPitch <= 0) {
+      initialScaleIndex = 0;
+      initialPitch = getFrequency(currentScale, 0);
+      if (isNaN(initialPitch) || initialPitch <= 0) initialPitch = 261.63;
+    }
+    visualStyle = 'prorb_default'; // A new visual style for PrOrbs
+    nodeSubtypeForAudioParams = null; // PrOrb doesn't have a 'subtype' in the old sense
   } else if (type === "nebula") {
     initialBaseHue = Math.random() * 360;
     nodeSubtypeForAudioParams = waveformToAdd || audioDetails.osc1Type || "sawtooth";
@@ -12677,14 +13098,15 @@ function addNode(x, y, type, subtype = null) {
   const drumDefaults = isDrumType(type) ? DRUM_ELEMENT_DEFAULTS[type] : {};
   if (isDrumType(type) && !visualStyle) visualStyle = type;
 
-  const randomSize = (isStartNodeType || isDrumType(type) || type === PORTAL_NEBULA_TYPE) ?
+  const randomSize = (isStartNodeType || isDrumType(type) || type === PORTAL_NEBULA_TYPE || type === PRORB_TYPE) ?
     MIN_NODE_SIZE + Math.random() * (MAX_NODE_SIZE - MIN_NODE_SIZE) * 0.7 :
-    (type === "relay" || type === "reflector" || type === "switch" ? 0.7 : 1.0);
+    (type === "relay" || type === "reflector" || type === "switch" || type === TIMELINE_GRID_TYPE ? 0.7 : 1.0);
   const starPoints = isStartNodeType ? 6 : 5;
   let defaultIsEnabled = true;
+
   const defaultVolumeSteps = [0.8, 0.65, 0.5];
   const numDefaultSteps = defaultVolumeSteps.length;
-  const defaultOrbitoneCount = 0; // Default geen *extra* orbitones
+  const defaultOrbitoneCount = 0;
 
   const newNode = {
     id: nodeIdCounter++,
@@ -12697,58 +13119,7 @@ function addNode(x, y, type, subtype = null) {
     connections: new Set(),
     isSelected: false,
     isInConstellation: false,
-    audioParams: {
-      waveform: nodeSubtypeForAudioParams,
-      visualStyle: visualStyle,
-      pitch: initialPitch,
-      scaleIndex: initialScaleIndex,
-      volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0),
-      reverbSend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_REVERB_SEND * 1.5) : DEFAULT_REVERB_SEND,
-      delaySend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_DELAY_SEND * 1.2) : DEFAULT_DELAY_SEND,
-      lowPassFreq: MAX_FILTER_FREQ,
-      ...audioDetails,
-      triggerInterval: audioDetails.triggerInterval || DEFAULT_TRIGGER_INTERVAL,
-      syncSubdivisionIndex: audioDetails.syncSubdivisionIndex || DEFAULT_SUBDIVISION_INDEX,
-      probability: audioDetails.probability || DEFAULT_PROBABILITY,
-      pulseIntensity: audioDetails.pulseIntensity || DEFAULT_PULSE_INTENSITY,
-      volLfoRate: audioDetails.volLfoRate || (0.1 + Math.random() * 0.2),
-      volLfoDepth: audioDetails.volLfoDepth || 0,
-      detune: audioDetails.detune || 7,
-      lfoDepthFactor: audioDetails.lfoDepthFactor || 1,
-      baseFreq: audioDetails.baseFreq || drumDefaults?.baseFreq,
-      decay: audioDetails.decay || drumDefaults?.decay,
-      noiseDecay: audioDetails.noiseDecay || drumDefaults?.noiseDecay,
-      pitchShiftIndex: type === "pitchShift" ? (audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX) : 0,
-      pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX] : 0,
-      pitchShiftAlternating: type === "pitchShift" ? (audioDetails.pitchShiftAlternating || false) : false,
-      pitchShiftDirection: type === "pitchShift" ? (audioDetails.pitchShiftDirection || 1) : 1,
-      gateModeIndex: type === "gate" ? (audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX) : 0,
-      gateCounter: 0,
-      lastRandomGateResult: true,
-      midiOutEnabled: false,
-      midiChannel: 1,
-      midiNote: 60,
-      osc1Type: nodeSubtypeForAudioParams,
-
-      orbitonesEnabled: false,
-      orbitoneCount: defaultOrbitoneCount,
-      orbitoneVoicingPhase: 0,
-      orbitoneTimingPhase: 0,
-      orbitoneMix: 0.5,
-      orbitoneIntervals: [],
-      orbitoneTimingOffsets: [],
-      orbitoneSpread: 0,
-
-      retriggerEnabled: false,
-      retriggerVolumeSteps: [...defaultVolumeSteps],
-      retriggerPitchSteps: Array(numDefaultSteps).fill(0),
-      retriggerFilterSteps: Array(numDefaultSteps).fill(0),
-      retriggerMuteSteps: Array(numDefaultSteps).fill(false),
-      retriggerIntervalMs: 100,
-      retriggerRateMode: "constant",
-      retriggerSyncSubdivisionIndex: DEFAULT_SUBDIVISION_INDEX,
-      ignoreGlobalSync: false,
-    },
+    audioParams: {}, // Initialize and populate below
     color: null,
     audioNodes: null,
     isStartNode: isStartNodeType,
@@ -12757,7 +13128,7 @@ function addNode(x, y, type, subtype = null) {
     animationState: 0,
     isEnabled: defaultIsEnabled,
     starPoints: starPoints,
-    currentAngle: (type === "gate" || (type === "sound" && nodeSubtypeForAudioParams?.startsWith("sampler_"))) ? Math.random() * Math.PI * 2 : 0,
+    currentAngle: (type === "gate" || (type === "sound" && type !== PRORB_TYPE && nodeSubtypeForAudioParams?.startsWith("sampler_"))) ? Math.random() * Math.PI * 2 : 0,
     innerAngle: 0,
     pulsePhase: type === "nebula" || type === PORTAL_NEBULA_TYPE ? Math.random() * Math.PI * 2 : 0,
     primaryInputConnectionId: type === "switch" ? null : undefined,
@@ -12766,6 +13137,104 @@ function addNode(x, y, type, subtype = null) {
     activeRetriggers: [],
     currentRetriggerVisualIndex: -1,
   };
+
+  if (type === PRORB_TYPE) {
+    newNode.audioParams = {
+      pitch: initialPitch, // PrOrbs also get a base pitch
+      scaleIndex: initialScaleIndex,
+      osc1Waveform: 'sawtooth',
+      osc1Octave: 0,
+      osc1Detune: 0,
+      osc1Level: 0.7,
+      osc2Enabled: false,
+      osc2Waveform: 'square',
+      osc2Octave: -1,
+      osc2Detune: 5,
+      osc2Level: 0.0,
+      fmEnabled: false,
+      fmModulatorWaveform: 'sine',
+      fmModulatorRatio: 2.0,
+      fmModulatorDepth: 100,
+      filterType: 'lowpass',
+      lowPassFreq: 8000,
+      filterResonance: 1.0,
+      filterEnvAttack: 0.01,
+      filterEnvDecay: 0.1,
+      filterEnvSustain: 0.5,
+      filterEnvRelease: 0.2,
+      filterEnvAmount: 0,
+      ampEnv: { attack: 0.02, decay: 0.2, sustain: 0.8, release: 0.3 },
+      lfo1Enabled: false,
+      lfo1Target: 'none',
+      lfo1Waveform: 'sine',
+      lfo1Rate: 2.0,
+      lfo1Depth: 0.0,
+      volume: 0.7, // Specific overall volume for PrOrb instance
+      reverbSend: 0.0,
+      delaySend: 0.0,
+      visualStyle: 'prorb_default',
+      // ensure other common params that might be expected by general logic are here
+      ignoreGlobalSync: false, // if PrOrbs are not pulsars but might have timed LFOs later
+    };
+  } else { // For other node types (sound, pulsar, nebula, etc.)
+      const initialLowPassFreq = (audioDetails.lowPassFreq !== undefined) ? audioDetails.lowPassFreq : MAX_FILTER_FREQ;
+      const initialFilterType = audioDetails.filterType || "lowpass";
+      const initialFilterResonance = (audioDetails.filterResonance !== undefined) ? audioDetails.filterResonance : 1.2;
+
+      newNode.audioParams = {
+        waveform: nodeSubtypeForAudioParams,
+        visualStyle: visualStyle,
+        pitch: initialPitch,
+        scaleIndex: initialScaleIndex,
+        volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0),
+        reverbSend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_REVERB_SEND * 1.5) : DEFAULT_REVERB_SEND,
+        delaySend: type === PORTAL_NEBULA_TYPE ? (DEFAULT_DELAY_SEND * 1.2) : DEFAULT_DELAY_SEND,
+        lowPassFreq: initialLowPassFreq,
+        filterType: initialFilterType,
+        filterResonance: initialFilterResonance,
+        ...audioDetails, // Spreads other preset details
+        triggerInterval: audioDetails.triggerInterval || DEFAULT_TRIGGER_INTERVAL,
+        syncSubdivisionIndex: audioDetails.syncSubdivisionIndex || DEFAULT_SUBDIVISION_INDEX,
+        probability: audioDetails.probability || DEFAULT_PROBABILITY,
+        pulseIntensity: audioDetails.pulseIntensity || DEFAULT_PULSE_INTENSITY,
+        volLfoRate: audioDetails.volLfoRate || (0.1 + Math.random() * 0.2),
+        volLfoDepth: audioDetails.volLfoDepth || 0,
+        detune: audioDetails.detune || 7,
+        lfoDepthFactor: audioDetails.lfoDepthFactor || 1,
+        baseFreq: audioDetails.baseFreq || drumDefaults?.baseFreq,
+        decay: audioDetails.decay || drumDefaults?.decay,
+        noiseDecay: audioDetails.noiseDecay || drumDefaults?.noiseDecay,
+        pitchShiftIndex: type === "pitchShift" ? (audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX) : 0,
+        pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX] : 0,
+        pitchShiftAlternating: type === "pitchShift" ? (audioDetails.pitchShiftAlternating || false) : false,
+        pitchShiftDirection: type === "pitchShift" ? (audioDetails.pitchShiftDirection || 1) : 1,
+        gateModeIndex: type === "gate" ? (audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX) : 0,
+        gateCounter: 0,
+        lastRandomGateResult: true,
+        midiOutEnabled: false,
+        midiChannel: 1,
+        midiNote: 60,
+        osc1Type: nodeSubtypeForAudioParams,
+        orbitonesEnabled: false,
+        orbitoneCount: defaultOrbitoneCount,
+        orbitoneVoicingPhase: 0,
+        orbitoneTimingPhase: 0,
+        orbitoneMix: 0.5,
+        orbitoneIntervals: [],
+        orbitoneTimingOffsets: [],
+        orbitoneSpread: 0,
+        retriggerEnabled: false,
+        retriggerVolumeSteps: [...defaultVolumeSteps],
+        retriggerPitchSteps: Array(numDefaultSteps).fill(0),
+        retriggerFilterSteps: Array(numDefaultSteps).fill(0),
+        retriggerMuteSteps: Array(numDefaultSteps).fill(false),
+        retriggerIntervalMs: 100,
+        retriggerRateMode: "constant",
+        retriggerSyncSubdivisionIndex: DEFAULT_SUBDIVISION_INDEX,
+        ignoreGlobalSync: false,
+      };
+  }
+
 
   applyOrbitoneVoicingFromPhase(newNode);
   applyOrbitoneTimingFromPhase(newNode);
@@ -12776,6 +13245,45 @@ function addNode(x, y, type, subtype = null) {
     newNode.audioParams.rocketRange = ROCKET_DEFAULT_RANGE;
     newNode.audioParams.rocketGravity = ROCKET_DEFAULT_GRAVITY;
   }
+
+  if (type === TIMELINE_GRID_TYPE) {
+    newNode.width = optionalDimensions ? optionalDimensions.width : TIMELINE_GRID_DEFAULT_WIDTH;
+    newNode.height = optionalDimensions ? optionalDimensions.height : TIMELINE_GRID_DEFAULT_HEIGHT;
+    newNode.timelineSpeed = TIMELINE_GRID_DEFAULT_SPEED; 
+    newNode.timelineMusicalDurationBars = 1; 
+    newNode.timelineIsPlaying = true;
+    newNode.timelineIsLooping = true;
+    newNode.scanLinePosition = 0;
+    newNode.triggeredInThisSweep = new Set();
+    newNode.timelinePulseIntensity = TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+    newNode.internalGridDivisions = 8;
+    newNode.showInternalGrid = true;
+    newNode.snapToInternalGrid = true;
+    newNode.isInResizeMode = optionalDimensions ? true : false;
+    newNode.scanlineDirection = 'forward'; 
+    newNode.isPingPongForward = true; 
+
+    if (!newNode.audioParams) newNode.audioParams = {}; // Should already exist from PRORB_TYPE or TIMELINE_GRID_TYPE path
+    newNode.audioParams.timelineSpeed = newNode.timelineSpeed;
+    newNode.audioParams.timelineMusicalDurationBars = newNode.timelineMusicalDurationBars;
+    newNode.audioParams.timelineIsPlaying = newNode.timelineIsPlaying;
+    newNode.audioParams.timelineIsLooping = newNode.timelineIsLooping;
+    newNode.audioParams.timelinePulseIntensity = newNode.timelinePulseIntensity;
+    newNode.audioParams.width = newNode.width;
+    newNode.audioParams.height = newNode.height;
+    newNode.audioParams.internalGridDivisions = newNode.internalGridDivisions;
+    newNode.audioParams.showInternalGrid = newNode.showInternalGrid;
+    newNode.audioParams.snapToInternalGrid = newNode.snapToInternalGrid;
+    newNode.audioParams.scanlineDirection = newNode.scanlineDirection;
+    newNode.audioParams.isInResizeMode = newNode.isInResizeMode;
+    
+    newNode.isStartNode = false;
+    newNode.audioNodes = null;
+    delete newNode.starPoints;
+    delete newNode.baseHue;
+    delete newNode.color; 
+  }
+
 
   if (isStartNodeType && newNode.isEnabled && audioContext) {
     const nowTime = audioContext.currentTime;
@@ -12797,16 +13305,24 @@ function addNode(x, y, type, subtype = null) {
           }
         }
       } else {
-        newNode.lastTriggerTime = nowTime - interval * (0.8 + Math.random() * 0.19);
+        newNode.lastTriggerTime = nowTime - (interval * (0.8 + Math.random() * 0.19));
       }
     }
   }
-  if (isAudioReady) {
+
+  if (isAudioReady && newNode.type !== TIMELINE_GRID_TYPE) {
     newNode.audioNodes = createAudioNodesForNode(newNode);
-    if (newNode.audioNodes) updateNodeAudioParams(newNode);
+    if (newNode.audioNodes) {
+      updateNodeAudioParams(newNode);
+    }
+  } else if (newNode.type === TIMELINE_GRID_TYPE) {
+    newNode.audioNodes = null;
   }
+
   nodes.push(newNode);
-  saveState();
+  if (!optionalDimensions || type !== TIMELINE_GRID_TYPE) { 
+      saveState();
+  }
   identifyAndRouteAllGroups();
   return newNode;
 }
