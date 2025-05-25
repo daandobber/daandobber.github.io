@@ -12133,6 +12133,24 @@
       "last_achievement_icon": null
     },
     {
+      "id": 3179730,
+      "name": "Deck of Haunts",
+      "image": null,
+      "thumbnail": "https://media.steampowered.com/steamcommunity/public/images/apps/3179730/82c8e4e8761a317dcf64a6c42d4132c50a537f67.jpg",
+      "release_date": null,
+      "developers": [],
+      "publishers": [],
+      "metacritic_score": null,
+      "genres": [],
+      "categories": [],
+      "achieved_count": 0,
+      "total_achievements": 0,
+      "achievement_percentage": null,
+      "last_achievement_unlock_time": 0,
+      "last_achievement_name": null,
+      "last_achievement_icon": null
+    },
+    {
       "id": 281990,
       "name": "Stellaris",
       "image": null,
