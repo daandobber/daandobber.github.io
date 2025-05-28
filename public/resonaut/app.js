@@ -197,6 +197,8 @@ let tapeLoopRecordBtnClickable = true;
 let userDefinedLoopStart = 0;
 let userDefinedLoopEnd = -1;
 let currentPlaybackRate = 1.0;
+let tapeDisplayStartTime = 0;
+let tapeDisplayEndTime = configuredTapeLoopDurationSeconds; 
 
 let nodes = [];
 let connections = [];
@@ -1754,70 +1756,6 @@ function getNextQuantizedTime(baseTime, beatsToQuantizeTo = 1) {
   return nextTime;
 }
 
-function stopTapeLoopPlayback() {
-  if (tapeLoopRecordBtn) tapeLoopRecordBtn.dataset.isArmed = "false";
-  tapeLoopRecordBtnClickable = true;
-  scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(
-    (e) =>
-      e.action !== "startRec" &&
-      e.action !== "startPlay" &&
-      e.action !== "stopRecAndPlay",
-  );
-
-  if (isTapeLoopPlaying && tapeLoopSourceNode) {
-    try {
-      tapeLoopSourceNode.stop(0);
-      tapeLoopSourceNode.disconnect();
-    } catch (e) {
-      console.warn("Fout bij stoppen/loskoppelen tapeLoopSourceNode:", e);
-    }
-  }
-  tapeLoopSourceNode = null;
-  isTapeLoopPlaying = false;
-
-  if (isTapeLoopRecording) {
-    isTapeLoopRecording = false;
-    if (scriptNodeForTapeLoop) {
-      try {
-        scriptNodeForTapeLoop.disconnect();
-      } catch (e) {}
-      if (tapeLoopInputGate && scriptNodeForTapeLoop) {
-        try {
-          tapeLoopInputGate.disconnect(scriptNodeForTapeLoop);
-        } catch (e) {}
-      }
-      scriptNodeForTapeLoop.onaudioprocess = null;
-      scriptNodeForTapeLoop = null;
-    }
-    if (tapeLoopInputGate) {
-      tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
-      tapeLoopInputGate.gain.setValueAtTime(0.0, audioContext.currentTime);
-    }
-  }
-
-  console.log("Tape loop playback/recording gestopt.");
-  updateTapeLooperUI();
-}
-
-function clearTapeLoop() {
-  stopTapeLoopPlayback();
-  tapeLoopBuffer = null;
-  tapeLoopWritePosition = 0;
-  userDefinedLoopStart = 0;
-  userDefinedLoopEnd = -1;
-  tapeLoopEffectivelyRecordedDuration = 0;
-  waveformPathData = null;
-  if (tapeWaveformCtx && tapeWaveformCanvas) {
-    tapeWaveformCtx.clearRect(
-      0,
-      0,
-      tapeWaveformCanvas.width,
-      tapeWaveformCanvas.height,
-    );
-  }
-  if (tapeLoopTimer) tapeLoopTimer.textContent = formatTime(0);
-  updateTapeLooperUI();
-}
 function stopTapeLoopRecordingAndPlay() {
   if (!isTapeLoopRecording) return;
   isTapeLoopRecording = false;
@@ -1828,9 +1766,27 @@ function stopTapeLoopRecordingAndPlay() {
     scriptNodeForTapeLoop = null;
   }
   console.log("Tape loop recording finished.");
-  updateTapeLooperUI();
-  playTapeLoop();
+
+  if (tapeLoopBuffer && tapeLoopWritePosition > (audioContext.sampleRate * 0.05)) {
+      const actualRecordedDuration = tapeLoopWritePosition / audioContext.sampleRate;
+      tapeLoopEffectivelyRecordedDuration = actualRecordedDuration;
+      userDefinedLoopStart = 0;
+      userDefinedLoopEnd = actualRecordedDuration; 
+
+      tapeDisplayStartTime = 0; 
+      tapeDisplayEndTime = actualRecordedDuration;
+
+      if (tapeLoopStartInput) tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
+      if (tapeLoopEndInput) tapeLoopEndInput.value = userDefinedLoopEnd.toFixed(2);
+      
+      waveformPathData = null; 
+      updateTapeLooperUI(); 
+      playTapeLoop(audioContext.currentTime); 
+  } else {
+      clearTapeLoop(); 
+  }
 }
+
 
 function playTapeLoop(scheduledPlayTime = 0, offsetInLoop = 0) {
   if (!audioContext || !tapeLoopBuffer || isTapeLoopPlaying) {
@@ -2316,7 +2272,7 @@ function createAudioNodesForNode(node) {
           currentScale,
           params.pitch,
         );
-        const actualOrbitoneFrequencies = allOutputFrequencies.slice(1);
+        const actualOrbitoneFrequencies = allFrequenciesForCreation.slice(1);
         const osc1BaseWaveformForOrbitones =
           params.osc1Type || params.waveform || "sine";
         const validOscTypesForOrbitones = [
@@ -4297,15 +4253,39 @@ function propagateTrigger(
       if (currentNode.type === "pulsar_triggerable") {
         if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) {
           currentNode.isEnabled = !currentNode.isEnabled;
-          if (currentNode.isEnabled) {
-            currentNode.lastTriggerTime = -1;
-            currentNode.nextSyncTriggerTime = 0;
-            const nowTime = audioContext
-              ? audioContext.currentTime
-              : performance.now() / 1000;
-            currentNode.nextRandomTriggerTime =
-              nowTime +
-              (Math.random() * 2) / PULSAR_RANDOM_TIMING_CHANCE_PER_SEC;
+          if (currentNode.isEnabled) { 
+            const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000;
+            currentNode.lastTriggerTime = -1; 
+            currentNode.nextSyncTriggerTime = 0;  
+            currentNode.nextRandomTriggerTime = 0; 
+
+            if (isGlobalSyncEnabled && !currentNode.audioParams.ignoreGlobalSync) {
+                const secondsPerBeat = 60.0 / (globalBPM || 120);
+                const subdivIndex = currentNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+                if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
+                    const subdiv = subdivisionOptions[subdivIndex];
+                    if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
+                        const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                        if (nodeIntervalSeconds > 0) {
+                            currentNode.nextSyncTriggerTime = Math.ceil(nowTime / nodeIntervalSeconds) * nodeIntervalSeconds;
+                            
+                            if (currentNode.nextSyncTriggerTime <= nowTime + 0.010) { 
+                                currentNode.nextSyncTriggerTime += nodeIntervalSeconds;
+                            }
+                        }
+                    }
+                }
+            } else { 
+                const interval = currentNode.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                
+                
+                currentNode.lastTriggerTime = nowTime - interval; 
+            }
+          } else { 
+            
+            
+            
+            
           }
           currentNode.animationState = 1;
         }
@@ -4551,44 +4531,27 @@ function propagateTrigger(
   }, actualTriggerDelay * 1000);
 }
 
-function playSingleRetrigger(
-  node,
-  retriggerIndex,
-  totalRetriggers,
-  basePulseData,
-  scheduledPlayTime,
-) {
+function playSingleRetrigger(node, retriggerIndex, totalRetriggers, basePulseData, scheduledPlayTime) {
   if (!audioContext || !node || !node.audioParams) return;
 
   const params = node.audioParams;
   const audioNodes = node.audioNodes;
-  const isMuted =
-    params.retriggerMuteSteps &&
-    params.retriggerMuteSteps[retriggerIndex] === true;
-  const activeTabButton = document.querySelector(
-    "#hamburgerMenuPanel .retrigger-tab-button.active",
-  );
-  const activeParamTypeForHighlight = activeTabButton
-    ? activeTabButton.dataset.paramType
-    : "volume";
-  const editorBarToHighlight = document.getElementById(
-    `retrigger-bar-node${node.id}-param${activeParamTypeForHighlight}-step${retriggerIndex}`,
-  );
+  const isMuted = params.retriggerMuteSteps && params.retriggerMuteSteps[retriggerIndex] === true;
+  const activeTabButton = document.querySelector('#hamburgerMenuPanel .retrigger-tab-button.active');
+  const activeParamTypeForHighlight = activeTabButton ? activeTabButton.dataset.paramType : "volume";
+  const editorBarToHighlight = document.getElementById(`retrigger-bar-node${node.id}-param${activeParamTypeForHighlight}-step${retriggerIndex}`);
 
   if (editorBarToHighlight) {
-    editorBarToHighlight.classList.add("playing");
+    editorBarToHighlight.classList.add('playing');
     if (isMuted) {
-      editorBarToHighlight.classList.add("muted-playing");
+      editorBarToHighlight.classList.add('muted-playing');
     }
-    setTimeout(
-      () => {
-        editorBarToHighlight.classList.remove("playing");
-        if (isMuted) {
-          editorBarToHighlight.classList.remove("muted-playing");
-        }
-      },
-      Math.min(150, (params.retriggerIntervalMs || 100) * 0.8),
-    );
+    setTimeout(() => {
+      editorBarToHighlight.classList.remove('playing');
+      if (isMuted) {
+        editorBarToHighlight.classList.remove('muted-playing');
+      }
+    }, Math.min(150, (params.retriggerIntervalMs || 100) * 0.8));
   }
 
   node.currentRetriggerVisualIndex = retriggerIndex;
@@ -4598,27 +4561,28 @@ function playSingleRetrigger(
     setTimeout(() => {
       const stillNode = findNodeById(node.id);
       if (stillNode && stillNode.animationState > 0) {
-        if (
-          !stillNode.isTriggered &&
-          (!stillNode.activeRetriggers ||
-            stillNode.activeRetriggers.length === 0)
-        ) {
+        if (!stillNode.isTriggered && (!stillNode.activeRetriggers || stillNode.activeRetriggers.length === 0)) {
           stillNode.animationState = 0;
         }
       }
-
       if (retriggerIndex === totalRetriggers - 1 && stillNode) {
-        setTimeout(
-          () => {
-            if (stillNode.currentRetriggerVisualIndex === retriggerIndex) {
-              stillNode.currentRetriggerVisualIndex = -1;
-            }
-          },
-          (params.retriggerIntervalMs || 100) * 0.9,
-        );
+        setTimeout(() => {
+          if (stillNode.currentRetriggerVisualIndex === retriggerIndex) {
+            stillNode.currentRetriggerVisualIndex = -1;
+          }
+        }, (params.retriggerIntervalMs || 100) * 0.9);
       }
     }, 120);
     return;
+  }
+
+  if (basePulseData) {
+    const retriggerIntensity = basePulseData.intensity ?? 1.0;
+    const particleMultiplier = basePulseData.particleMultiplier ?? 1.0;
+    const particleCountForRetrigger = Math.max(1, Math.round((2 + Math.floor(node.size * 1.5)) * particleMultiplier * retriggerIntensity));
+    createParticles(node.x, node.y, particleCountForRetrigger);
+  } else {
+    createParticles(node.x, node.y, 3); 
   }
 
   let currentVolume =
@@ -7550,51 +7514,29 @@ function drawTapeWaveform() {
     return;
   }
 
-  let effectiveVisStart = userDefinedLoopStart;
-  let effectiveVisEnd;
+  let displayStart = tapeDisplayStartTime;
+  let displayEnd = tapeDisplayEndTime;
+  const hasBuffer = !!tapeLoopBuffer;
+  const maxAvailableDuration = tapeLoopEffectivelyRecordedDuration > 0 
+                             ? tapeLoopEffectivelyRecordedDuration 
+                             : (hasBuffer ? tapeLoopBuffer.duration : configuredTapeLoopDurationSeconds);
 
-  if (tapeLoopBuffer) {
-    effectiveVisEnd =
-      userDefinedLoopEnd === -1 ||
-      userDefinedLoopEnd > tapeLoopBuffer.duration ||
-      userDefinedLoopEnd <= userDefinedLoopStart
-        ? tapeLoopEffectivelyRecordedDuration > 0
-          ? tapeLoopEffectivelyRecordedDuration
-          : tapeLoopBuffer.duration
-        : userDefinedLoopEnd;
-    if (
-      effectiveVisStart >= effectiveVisEnd &&
-      tapeLoopEffectivelyRecordedDuration > 0
-    ) {
-      effectiveVisStart = 0;
-      effectiveVisEnd = tapeLoopEffectivelyRecordedDuration;
-    } else if (effectiveVisStart >= effectiveVisEnd) {
-      effectiveVisStart = 0;
-      effectiveVisEnd =
-        tapeLoopBuffer.duration > 0.01 ? tapeLoopBuffer.duration : 0.01;
-    }
-  } else {
-    if (tapeWaveformCtx && tapeWaveformCanvas) {
-      tapeWaveformCtx.clearRect(
-        0,
-        0,
-        tapeWaveformCanvas.width,
-        tapeWaveformCanvas.height,
-      );
-    }
-    waveformPathData = null;
-    return;
+  if (displayEnd <= displayStart) {
+      displayEnd = displayStart + Math.max(0.1, maxAvailableDuration - displayStart);
   }
+  if (displayEnd > maxAvailableDuration && maxAvailableDuration > 0) displayEnd = maxAvailableDuration;
+  if (displayStart >= displayEnd && displayEnd > 0.01) displayStart = Math.max(0, displayEnd - 0.01);
+  else if (displayStart >= displayEnd) { 
+      displayStart = 0; 
+      displayEnd = maxAvailableDuration > 0.01 ? maxAvailableDuration : 0.01;
+  }
+  if (displayEnd <= displayStart) displayEnd = displayStart + 0.01; 
 
   let clientWidth = tapeWaveformCanvas.clientWidth;
   let clientHeight = tapeWaveformCanvas.clientHeight;
-  if (
-    tapeWaveformCanvas.parentElement &&
-    (clientWidth === 0 || clientHeight === 0)
-  ) {
+  if (tapeWaveformCanvas.parentElement && (clientWidth === 0 || clientHeight === 0)) {
     clientWidth = tapeWaveformCanvas.parentElement.clientWidth || clientWidth;
-    clientHeight =
-      tapeWaveformCanvas.parentElement.clientHeight || clientHeight;
+    clientHeight = tapeWaveformCanvas.parentElement.clientHeight || clientHeight;
   }
 
   let dimensionsChanged = false;
@@ -7615,21 +7557,20 @@ function drawTapeWaveform() {
     return;
   }
 
-  tapeWaveformCtx.clearRect(
-    0,
-    0,
-    tapeWaveformCanvas.width,
-    tapeWaveformCanvas.height,
-  );
+  tapeWaveformCtx.clearRect(0, 0, tapeWaveformCanvas.width, tapeWaveformCanvas.height);
 
-  if (!waveformPathData) {
+  if (!hasBuffer && configuredTapeLoopDurationSeconds <= 0) { 
+      waveformPathData = null;
+      return;
+  }
+
+  if (!waveformPathData && hasBuffer) { 
     const channelData = tapeLoopBuffer.getChannelData(0);
     const canvasWidth = tapeWaveformCanvas.width;
 
-    const startSampleAbs = Math.floor(
-      effectiveVisStart * audioContext.sampleRate,
-    );
-    const endSampleAbs = Math.floor(effectiveVisEnd * audioContext.sampleRate);
+    const currentSampleRate = audioContext?.sampleRate || 44100;
+    const startSampleAbs = Math.floor(displayStart * currentSampleRate);
+    const endSampleAbs = Math.floor(displayEnd * currentSampleRate);
     const samplesToVisualize = Math.max(1, endSampleAbs - startSampleAbs);
     const samplesPerPixel = samplesToVisualize / canvasWidth;
 
@@ -7638,14 +7579,9 @@ function drawTapeWaveform() {
       for (let i = 0; i < canvasWidth; i++) {
         let min = 1.0;
         let max = -1.0;
-        const sliceStartInBuffer =
-          startSampleAbs + Math.floor(i * samplesPerPixel);
-        const sliceEndInBuffer =
-          startSampleAbs + Math.floor((i + 1) * samplesPerPixel);
-        const actualSliceStart = Math.min(
-          sliceStartInBuffer,
-          channelData.length - 1,
-        );
+        const sliceStartInBuffer = startSampleAbs + Math.floor(i * samplesPerPixel);
+        const sliceEndInBuffer = startSampleAbs + Math.floor((i + 1) * samplesPerPixel);
+        const actualSliceStart = Math.min(sliceStartInBuffer, channelData.length - 1);
         const actualSliceEnd = Math.min(sliceEndInBuffer, channelData.length);
 
         if (actualSliceStart < actualSliceEnd) {
@@ -7654,42 +7590,42 @@ function drawTapeWaveform() {
             if (datum < min) min = datum;
             if (datum > max) max = datum;
           }
-        } else if (
-          actualSliceStart === actualSliceEnd &&
-          actualSliceStart < channelData.length
-        ) {
+        } else if (actualSliceStart === actualSliceEnd && actualSliceStart < channelData.length) {
           const datum = channelData[actualSliceStart];
-          min = datum;
-          max = datum;
+          min = datum; max = datum;
         } else {
-          min = 0;
-          max = 0;
+          min = 0; max = 0;
         }
         waveformPathData.push({ min, max });
       }
     }
+  } else if (!hasBuffer && !waveformPathData) { 
+     tapeWaveformCtx.strokeStyle = 'rgba(100, 100, 110, 0.5)';
+     tapeWaveformCtx.lineWidth = 1;
+     tapeWaveformCtx.beginPath();
+     tapeWaveformCtx.moveTo(0, tapeWaveformCanvas.height / 2);
+     tapeWaveformCtx.lineTo(tapeWaveformCanvas.width, tapeWaveformCanvas.height / 2);
+     tapeWaveformCtx.stroke();
+     return; 
   }
 
   if (!waveformPathData || waveformPathData.length === 0) {
     return;
   }
 
-  tapeWaveformCtx.strokeStyle = "rgba(150, 180, 220, 0.7)";
+  tapeWaveformCtx.strokeStyle = 'rgba(150, 180, 220, 0.7)';
   tapeWaveformCtx.lineWidth = 1;
   tapeWaveformCtx.beginPath();
 
   const amp = tapeWaveformCanvas.height / 2;
-  const verticalZoomFactor = 8;
+  const verticalZoomFactor = 8; 
 
   waveformPathData.forEach((point, i) => {
     const x = i;
-
     const scaledMin = Math.max(-1, Math.min(1, point.min * verticalZoomFactor));
     const scaledMax = Math.max(-1, Math.min(1, point.max * verticalZoomFactor));
-
     const yMin = (1 + scaledMin) * amp;
     const yMax = (1 + scaledMax) * amp;
-
     tapeWaveformCtx.moveTo(x, yMin);
     tapeWaveformCtx.lineTo(x, yMax);
   });
@@ -7698,51 +7634,55 @@ function drawTapeWaveform() {
 
 function updateLoopRegionAndInputs() {
   if (!tapeVisualLoopRegion || !tapeLoopStartInput || !tapeLoopEndInput) {
-    return;
+      return;
   }
 
   const hasBuffer = !!tapeLoopBuffer;
-  const maxDurationForUI =
-    tapeLoopEffectivelyRecordedDuration > 0
-      ? tapeLoopEffectivelyRecordedDuration
-      : hasBuffer
-        ? tapeLoopBuffer.duration
-        : configuredTapeLoopDurationSeconds;
+  const maxDurationForData = tapeLoopEffectivelyRecordedDuration > 0
+                            ? tapeLoopEffectivelyRecordedDuration
+                            : (hasBuffer ? tapeLoopBuffer.duration : configuredTapeLoopDurationSeconds);
 
-  let start = parseFloat(tapeLoopStartInput.value);
-  let end = parseFloat(tapeLoopEndInput.value);
-
-  start = Math.max(0, Math.min(start, maxDurationForUI - 0.01));
-  end = Math.max(start + 0.01, Math.min(end, maxDurationForUI));
-
-  if (Math.abs(userDefinedLoopStart - start) > 0.001) {
-    userDefinedLoopStart = start;
-    if (hasBuffer) waveformPathData = null;
+  userDefinedLoopStart = Math.max(0, Math.min(userDefinedLoopStart, maxDurationForData - 0.01));
+  if (userDefinedLoopEnd === -1 || userDefinedLoopEnd > maxDurationForData || userDefinedLoopEnd <= userDefinedLoopStart) {
+      userDefinedLoopEnd = maxDurationForData;
   }
-
-  let currentEffectiveEnd =
-    userDefinedLoopEnd === -1 && hasBuffer
-      ? tapeLoopBuffer.duration
-      : userDefinedLoopEnd;
-  currentEffectiveEnd =
-    userDefinedLoopEnd === -1 && !hasBuffer
-      ? configuredTapeLoopDurationSeconds
-      : currentEffectiveEnd;
-
-  if (Math.abs(currentEffectiveEnd - end) > 0.001) {
-    userDefinedLoopEnd = end;
-    if (hasBuffer) waveformPathData = null;
-  }
-
+  userDefinedLoopEnd = Math.max(userDefinedLoopStart + 0.01, Math.min(userDefinedLoopEnd, maxDurationForData));
+  
   tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
   tapeLoopEndInput.value = userDefinedLoopEnd.toFixed(2);
+  tapeLoopStartInput.max = maxDurationForData.toFixed(2);
+  tapeLoopEndInput.max = maxDurationForData.toFixed(2);
 
-  tapeVisualLoopRegion.style.left = `0%`;
-  tapeVisualLoopRegion.style.width = `100%`;
+  const currentDisplayStartTime = tapeDisplayStartTime;
+  let currentDisplayEndTime = tapeDisplayEndTime;
+  if (currentDisplayEndTime <= currentDisplayStartTime) { 
+      currentDisplayEndTime = currentDisplayStartTime + Math.max(0.1, maxDurationForData - currentDisplayStartTime);
+      if(currentDisplayEndTime <= currentDisplayStartTime) currentDisplayEndTime = currentDisplayStartTime + 0.1;
+  }
+  currentDisplayEndTime = Math.min(maxDurationForData, currentDisplayEndTime); 
+  if(currentDisplayStartTime >= currentDisplayEndTime) currentDisplayStartTime = Math.max(0, currentDisplayEndTime - 0.1);
+
+
+  const displayWindowDuration = Math.max(0.01, currentDisplayEndTime - currentDisplayStartTime);
+  
+  const loopRegionStartRel = (userDefinedLoopStart - currentDisplayStartTime) / displayWindowDuration;
+  const loopRegionEndRel = (userDefinedLoopEnd - currentDisplayStartTime) / displayWindowDuration;
+  
+  const loopRegionLeftPercent = Math.max(0, Math.min(100, loopRegionStartRel * 100));
+  const loopRegionWidthPercent = Math.max(0, Math.min(100 - loopRegionLeftPercent, (loopRegionEndRel - loopRegionStartRel) * 100));
+
+  tapeVisualLoopRegion.style.left = `${loopRegionLeftPercent}%`;
+  tapeVisualLoopRegion.style.width = `${loopRegionWidthPercent}%`;
+
+  const startHandleVisible = loopRegionStartRel >= -0.001 && loopRegionStartRel <= 1.001;
+  const endHandleVisible = loopRegionEndRel >= -0.001 && loopRegionEndRel <= 1.001;
+
+  tapeLoopHandleStart.style.display = (startHandleVisible && loopRegionWidthPercent > 0.1) ? 'block' : 'none';
+  tapeLoopHandleEnd.style.display = (endHandleVisible && loopRegionWidthPercent > 0.1) ? 'block' : 'none';
 
   if (isTapeLoopPlaying && tapeLoopSourceNode && hasBuffer) {
-    tapeLoopSourceNode.loopStart = userDefinedLoopStart;
-    tapeLoopSourceNode.loopEnd = userDefinedLoopEnd;
+      tapeLoopSourceNode.loopStart = userDefinedLoopStart;
+      tapeLoopSourceNode.loopEnd = userDefinedLoopEnd;
   }
 }
 
@@ -8207,49 +8147,84 @@ function snapToInternalGrid(positionToSnap, timelineGridNode) {
 }
 
 function handleLoopHandleMouseMove(event) {
-  if (!isDraggingLoopHandle || !tapeLoopBuffer || !tapeWaveformCanvas) return;
+  if (!isDraggingLoopHandle || (!tapeLoopBuffer && configuredTapeLoopDurationSeconds <= 0) || !tapeWaveformCanvas) return;
 
   const rect = tapeWaveformCanvas.getBoundingClientRect();
   const trackWidthPx = rect.width;
   if (trackWidthPx === 0) return;
 
-  const currentDisplayedDuration = Math.max(
-    0.01,
-    userDefinedLoopEnd - userDefinedLoopStart,
-  );
-
+  const currentDisplayStartTimeLocal = tapeDisplayStartTime;
+  const currentDisplayEndTimeLocal = (tapeDisplayEndTime <= tapeDisplayStartTime) ? tapeDisplayStartTime + 0.1 : tapeDisplayEndTime;
+  const currentDisplayDuration = Math.max(0.01, currentDisplayEndTimeLocal - currentDisplayStartTimeLocal);
+  
   const dx = event.clientX - loopHandleDragStartX;
-  const deltaTimeChange = (dx / trackWidthPx) * currentDisplayedDuration;
+  const deltaTimeChange = (dx / trackWidthPx) * currentDisplayDuration;
+  
   let newValue = initialLoopHandleValue + deltaTimeChange;
 
-  const maxInteractiveDuration =
-    tapeLoopEffectivelyRecordedDuration > 0
-      ? tapeLoopEffectivelyRecordedDuration
-      : tapeLoopBuffer.duration;
-  let oldStart = userDefinedLoopStart;
-  let oldEnd = userDefinedLoopEnd;
+  const maxBufferDuration = tapeLoopEffectivelyRecordedDuration > 0 
+                            ? tapeLoopEffectivelyRecordedDuration 
+                            : (tapeLoopBuffer ? tapeLoopBuffer.duration : configuredTapeLoopDurationSeconds);
 
-  if (isDraggingLoopHandle === "start") {
-    newValue = Math.max(0, Math.min(newValue, userDefinedLoopEnd - 0.01));
-    tapeLoopStartInput.value = newValue.toFixed(2);
+  if (isDraggingLoopHandle === 'start') {
+    const effectiveEnd = (userDefinedLoopEnd === -1 || userDefinedLoopEnd > maxBufferDuration || userDefinedLoopEnd <= userDefinedLoopStart) 
+                         ? maxBufferDuration 
+                         : userDefinedLoopEnd;
+    newValue = Math.max(0, Math.min(newValue, effectiveEnd - 0.01));
     userDefinedLoopStart = newValue;
-  } else {
-    newValue = Math.max(
-      userDefinedLoopStart + 0.01,
-      Math.min(newValue, maxInteractiveDuration),
-    );
-    tapeLoopEndInput.value = newValue.toFixed(2);
+    if (tapeLoopStartInput) tapeLoopStartInput.value = newValue.toFixed(2);
+  } else { 
+    newValue = Math.max(userDefinedLoopStart + 0.01, Math.min(newValue, maxBufferDuration));
     userDefinedLoopEnd = newValue;
+    if (tapeLoopEndInput) tapeLoopEndInput.value = newValue.toFixed(2);
   }
-
-  if (
-    Math.abs(userDefinedLoopStart - oldStart) > 0.005 ||
-    Math.abs(userDefinedLoopEnd - oldEnd) > 0.005
-  ) {
-    waveformPathData = null;
-    drawTapeWaveform();
-  }
+  
+  updateLoopRegionAndInputs(); 
 }
+
+function handleLoopHandleMouseUp(event) {
+  if (!isDraggingLoopHandle) return; 
+  
+  isDraggingLoopHandle = null;
+  document.body.style.userSelect = ''; 
+
+  document.removeEventListener('mousemove', handleLoopHandleMouseMove);
+  document.removeEventListener('mouseup', handleLoopHandleMouseUp);
+
+  if (isTapeLoopPlaying && tapeLoopSourceNode && tapeLoopBuffer) {
+    const effectiveStart = userDefinedLoopStart;
+    const effectiveEnd = (userDefinedLoopEnd === -1 || userDefinedLoopEnd > tapeLoopBuffer.duration || userDefinedLoopEnd <= userDefinedLoopStart) 
+                         ? tapeLoopBuffer.duration 
+                         : userDefinedLoopEnd;
+
+    tapeLoopSourceNode.loopStart = Math.max(0, Math.min(effectiveStart, tapeLoopBuffer.duration - 0.001));
+    tapeLoopSourceNode.loopEnd = Math.max(effectiveStart + 0.001, Math.min(effectiveEnd, tapeLoopBuffer.duration));
+  }
+  
+  updateLoopRegionAndInputs(); 
+  saveState();             
+}
+
+function handleLoopHandleMouseDown(event, type) {
+  if (!tapeLoopBuffer) return; 
+  event.stopPropagation(); 
+
+  isDraggingLoopHandle = type; 
+  loopHandleDragStartX = event.clientX; 
+  
+  
+  initialLoopHandleValue = (type === 'start') ? userDefinedLoopStart : userDefinedLoopEnd;
+  
+  
+  document.body.style.userSelect = 'none';
+
+  
+  document.addEventListener('mousemove', handleLoopHandleMouseMove);
+  document.addEventListener('mouseup', handleLoopHandleMouseUp);
+}
+
+
+
 
 function setupLoopHandles() {
   if (tapeLoopHandleStart) {
@@ -8540,17 +8515,54 @@ function clearTapeLoop() {
   tapeLoopBuffer = null;
   tapeLoopWritePosition = 0;
   userDefinedLoopStart = 0;
-  userDefinedLoopEnd = -1;
-  waveformPathData = null;
+  userDefinedLoopEnd = -1; 
+  tapeLoopEffectivelyRecordedDuration = 0;
+
+  tapeDisplayStartTime = 0;
+  tapeDisplayEndTime = configuredTapeLoopDurationSeconds; 
+
+  waveformPathData = null; 
   if (tapeWaveformCtx && tapeWaveformCanvas) {
-    tapeWaveformCtx.clearRect(
-      0,
-      0,
-      tapeWaveformCanvas.width,
-      tapeWaveformCanvas.height,
-    );
+    tapeWaveformCtx.clearRect(0, 0, tapeWaveformCanvas.width, tapeWaveformCanvas.height);
   }
   if (tapeLoopTimer) tapeLoopTimer.textContent = formatTime(0);
+  
+  updateTapeLooperUI(); 
+}
+
+function stopTapeLoopPlayback() {
+  if (tapeLoopRecordBtn) tapeLoopRecordBtn.dataset.isArmed = 'false';
+  tapeLoopRecordBtnClickable = true;
+  scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startRec' && e.action !== 'startPlay' && e.action !== 'stopRecAndPlay');
+
+  if (isTapeLoopPlaying && tapeLoopSourceNode) {
+    try {
+      tapeLoopSourceNode.stop(0);
+      tapeLoopSourceNode.disconnect();
+    } catch (e) {
+      console.warn("Fout bij stoppen/loskoppelen tapeLoopSourceNode:", e);
+    }
+  }
+  tapeLoopSourceNode = null;
+  isTapeLoopPlaying = false;
+
+  if (isTapeLoopRecording) {
+    isTapeLoopRecording = false; 
+    if (scriptNodeForTapeLoop) {
+      try { scriptNodeForTapeLoop.disconnect(); } catch (e) {}
+      if (tapeLoopInputGate && scriptNodeForTapeLoop) {
+          try { tapeLoopInputGate.disconnect(scriptNodeForTapeLoop); } catch (e) {}
+      }
+      scriptNodeForTapeLoop.onaudioprocess = null;
+      scriptNodeForTapeLoop = null;
+    }
+    if (tapeLoopInputGate) {
+        tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
+        tapeLoopInputGate.gain.setValueAtTime(0.0, audioContext.currentTime);
+    }
+  }
+  
+  console.log("Tape loop playback/recording gestopt.");
   updateTapeLooperUI();
 }
 
@@ -8843,15 +8855,12 @@ function animationLoop() {
 
   try {
     nodes.forEach((node) => {
-      if (
-        node.isStartNode &&
-        node.isEnabled &&
-        node.audioParams &&
-        (node.type === "pulsar_standard" ||
-          node.type === "pulsar_random_volume" ||
-          node.type === "pulsar_random_particles" ||
-          node.type === "pulsar_rocket")
-      ) {
+      if (node.isStartNode && node.isEnabled && node.audioParams &&
+        (node.type === "pulsar_standard" || 
+         node.type === "pulsar_random_volume" || 
+         node.type === "pulsar_random_particles" || 
+         node.type === "pulsar_rocket" ||
+         node.type === "pulsar_triggerable")) {
         let shouldPulse = false;
         let pulseData = {};
 
@@ -9193,7 +9202,47 @@ function animationLoop() {
                           : TIMELINE_GRID_DEFAULT_COLOR,
                       particleMultiplier: 0.6,
                     };
-                    triggerNodeEffect(otherNode, timelinePulseData);
+                    if (otherNode.type === 'pulsar_triggerable') {
+                      // Logic to toggle pulsar_triggerable by TimelineGrid
+                      otherNode.isEnabled = !otherNode.isEnabled;
+                      otherNode.animationState = 1; // Visual feedback for the toggle action
+
+                      if (otherNode.isEnabled) { // Just turned ON, so initialize its timers
+                          const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000;
+                          otherNode.lastTriggerTime = -1; 
+                          otherNode.nextSyncTriggerTime = 0;
+                          otherNode.nextRandomTriggerTime = 0; // Reset if it was ever used
+
+                          if (isGlobalSyncEnabled && !otherNode.audioParams.ignoreGlobalSync) {
+                              const secondsPerBeat = 60.0 / (globalBPM || 120);
+                              const subdivIndex = otherNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+                              if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
+                                  const subdiv = subdivisionOptions[subdivIndex];
+                                  if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
+                                      const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                                      if (nodeIntervalSeconds > 0) {
+                                          otherNode.nextSyncTriggerTime = Math.ceil(nowTime / nodeIntervalSeconds) * nodeIntervalSeconds;
+                                          if (otherNode.nextSyncTriggerTime <= nowTime + 0.010) { // Small epsilon
+                                              otherNode.nextSyncTriggerTime += nodeIntervalSeconds;
+                                          }
+                                      }
+                                  }
+                              }
+                          } else { // Interval timing
+                              const interval = otherNode.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
+                              otherNode.lastTriggerTime = nowTime - (interval * Math.random()); // Stagger start
+                          }
+                      }
+                      // When a timeline toggles a pulsar_triggerable, it doesn't propagate the timeline's "pulse" further.
+                      // The pulsar_triggerable will start its own pulsing if enabled.
+
+                  } else if ((otherNode.type === 'sound' || isDrumType(otherNode.type)) && 
+                      otherNode.audioParams && otherNode.audioParams.retriggerEnabled) {
+                      startRetriggerSequence(otherNode, timelinePulseData);
+                  } else {
+                      // For all other node types, or if retrigger is not enabled
+                      triggerNodeEffect(otherNode, timelinePulseData); 
+                  }
 
                     if (!node.triggeredInThisSweep)
                       node.triggeredInThisSweep = new Set();
@@ -9202,9 +9251,24 @@ function animationLoop() {
                     otherNode.animationState = 1.0;
                     setTimeout(() => {
                       const stillNode = findNodeById(otherNode.id);
-                      if (stillNode && !stillNode.isTriggered)
-                        stillNode.animationState = 0;
-                    }, 250);
+                      if (stillNode) {
+                          if (stillNode.type === 'pulsar_triggerable') {
+                              // For a triggerable pulsar, its animation is tied to its enabled state
+                              // or its own pulsing. The toggle itself provides brief feedback.
+                              // If it's OFF, the animation can fade. If ON, its own pulsing will animate.
+                              // We reset the "toggle flash" unless it's actively pulsing.
+                               if (stillNode.animationState === 1 && !stillNode.isPulsingActive) { // isPulsingActive would be a new temp flag or check based on its timers
+                                    // Simpler: just let its own pulse animation override, or fade if turned off.
+                                    // If it was just toggled, its animationState is 1. If it's now disabled, it can go to 0.
+                                    // If it's enabled, its normal pulsing will set animationState.
+                                    if(!stillNode.isEnabled) stillNode.animationState = 0;
+                                }
+                          } else if (!stillNode.isTriggered && 
+                              (!stillNode.activeRetriggers || stillNode.activeRetriggers.length === 0)) { 
+                              stillNode.animationState = 0;
+                          }
+                      }
+                  }, 250); // This timeout might still be a bit aggressive for the toggle visual.
                     break;
                   }
                 }
@@ -13307,8 +13371,14 @@ function handleMouseUp(event) {
         }
       }
     } else if (currentTool === "add" && nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
-      const clickedOnEmptySpace = !elementClickedStartOriginal;
-      if (clickedOnEmptySpace) {
+      const clickedOnTimelineGrid = elementClickedStartOriginal && 
+                                      elementClickedStartOriginal.type === 'node' && 
+                                      elementClickedStartOriginal.nodeRef && 
+                                      elementClickedStartOriginal.nodeRef.type === TIMELINE_GRID_TYPE;
+        const clickedOnEmptySpace = !elementClickedStartOriginal;
+        const canPlaceNodeHere = clickedOnEmptySpace || clickedOnTimelineGrid;
+
+        if (canPlaceNodeHere) {
         const canActuallyAddThisNode =
           (nodeTypeToAdd !== "sound" && nodeTypeToAdd !== "nebula") ||
           (nodeTypeToAdd === "sound" && waveformToAdd) ||
@@ -17073,18 +17143,6 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   const drumDefaults = isDrumType(type) ? DRUM_ELEMENT_DEFAULTS[type] : {};
   if (isDrumType(type) && !visualStyle) visualStyle = type;
 
-  const randomSize =
-    isStartNodeType ||
-    isDrumType(type) ||
-    type === PORTAL_NEBULA_TYPE ||
-    type === PRORB_TYPE
-      ? MIN_NODE_SIZE + Math.random() * (MAX_NODE_SIZE - MIN_NODE_SIZE) * 0.7
-      : type === "relay" ||
-          type === "reflector" ||
-          type === "switch" ||
-          type === TIMELINE_GRID_TYPE
-        ? 0.7
-        : 1.0;
   const starPoints = isStartNodeType ? 6 : 5;
   let defaultIsEnabled = true;
 
@@ -17092,11 +17150,18 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   const numDefaultSteps = defaultVolumeSteps.length;
   const defaultOrbitoneCount = 0;
 
+  let determinedNodeSize;
+  if (type === "relay" || type === "reflector" || type === "switch" || type === TIMELINE_GRID_TYPE) {
+    determinedNodeSize = 0.7;
+  } else {
+    determinedNodeSize = 1.0;
+  }
+
   const newNode = {
     id: nodeIdCounter++,
     x: finalPos.x,
     y: finalPos.y,
-    size: randomSize,
+    size: determinedNodeSize,
     radius: NODE_RADIUS_BASE,
     type: nodeTypeVisual,
     baseHue: initialBaseHue,
@@ -17130,6 +17195,10 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     activeRetriggers: [],
     currentRetriggerVisualIndex: -1,
   };
+
+  if (newNode.type === 'pulsar_triggerable') {
+    newNode.isEnabled = false; // Ensure triggerable pulsars start in the OFF state
+  }
 
   if (type === PRORB_TYPE) {
     newNode.audioParams = {
@@ -18750,6 +18819,53 @@ window.addEventListener("load", () => {
       if (!isGlobalSyncEnabled) saveState();
     });
   }
+
+  const tapeLoopFitToLoopBtn = document.getElementById('tapeLoopFitToLoopBtn');
+const tapeLoopResetZoomBtn = document.getElementById('tapeLoopResetZoomBtn');
+
+if (tapeLoopFitToLoopBtn) {
+    tapeLoopFitToLoopBtn.addEventListener('click', () => {
+        const hasContent = !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+        if (!hasContent) return;
+
+        const loopStartToUse = userDefinedLoopStart;
+        let loopEndToUse = userDefinedLoopEnd;
+        
+        const maxDuration = tapeLoopBuffer 
+                            ? (tapeLoopEffectivelyRecordedDuration > 0 ? tapeLoopEffectivelyRecordedDuration : tapeLoopBuffer.duration)
+                            : configuredTapeLoopDurationSeconds;
+
+        if (loopEndToUse === -1 || loopEndToUse > maxDuration || loopEndToUse <= loopStartToUse) {
+            loopEndToUse = maxDuration;
+        }
+        
+        if (loopEndToUse > loopStartToUse) {
+            tapeDisplayStartTime = loopStartToUse;
+            tapeDisplayEndTime = loopEndToUse;
+            waveformPathData = null; 
+            drawTapeWaveform();      
+            updateLoopRegionAndInputs(); 
+        }
+    });
+}
+
+if (tapeLoopResetZoomBtn) {
+    tapeLoopResetZoomBtn.addEventListener('click', () => {
+        const hasContent = !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+        if (!hasContent) return;
+        
+        tapeDisplayStartTime = 0;
+        tapeDisplayEndTime = tapeLoopBuffer 
+                              ? (tapeLoopEffectivelyRecordedDuration > 0 ? tapeLoopEffectivelyRecordedDuration : tapeLoopBuffer.duration) 
+                              : configuredTapeLoopDurationSeconds;
+        
+        if (tapeDisplayEndTime <= tapeDisplayStartTime) tapeDisplayEndTime = tapeDisplayStartTime + 0.1; 
+
+        waveformPathData = null; 
+        drawTapeWaveform();
+        updateLoopRegionAndInputs();
+    });
+}
 
   Object.keys(scales).forEach((key) => {
     const o = document.createElement("option");
