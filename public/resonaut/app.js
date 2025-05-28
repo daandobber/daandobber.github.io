@@ -163,6 +163,10 @@ let tapeReelAngle = 0;
 let isDrawingNewTimelineGrid = false;
 let newTimelineGridInitialCorner = null;
 let currentlyPlacingTimelineNodeId = null;
+let isRotatingTimelineGrid = false;
+let rotatingTimelineGridNode = null;
+let rotationTimelineGridStartAngle = 0;
+let initialTimelineGridRotation = 0;
 
 let isAbletonLinkActive = false;
 let unsavedChanges = false;
@@ -198,7 +202,7 @@ let userDefinedLoopStart = 0;
 let userDefinedLoopEnd = -1;
 let currentPlaybackRate = 1.0;
 let tapeDisplayStartTime = 0;
-let tapeDisplayEndTime = configuredTapeLoopDurationSeconds; 
+let tapeDisplayEndTime = configuredTapeLoopDurationSeconds;
 
 let nodes = [];
 let connections = [];
@@ -1767,26 +1771,31 @@ function stopTapeLoopRecordingAndPlay() {
   }
   console.log("Tape loop recording finished.");
 
-  if (tapeLoopBuffer && tapeLoopWritePosition > (audioContext.sampleRate * 0.05)) {
-      const actualRecordedDuration = tapeLoopWritePosition / audioContext.sampleRate;
-      tapeLoopEffectivelyRecordedDuration = actualRecordedDuration;
-      userDefinedLoopStart = 0;
-      userDefinedLoopEnd = actualRecordedDuration; 
+  if (
+    tapeLoopBuffer &&
+    tapeLoopWritePosition > audioContext.sampleRate * 0.05
+  ) {
+    const actualRecordedDuration =
+      tapeLoopWritePosition / audioContext.sampleRate;
+    tapeLoopEffectivelyRecordedDuration = actualRecordedDuration;
+    userDefinedLoopStart = 0;
+    userDefinedLoopEnd = actualRecordedDuration;
 
-      tapeDisplayStartTime = 0; 
-      tapeDisplayEndTime = actualRecordedDuration;
+    tapeDisplayStartTime = 0;
+    tapeDisplayEndTime = actualRecordedDuration;
 
-      if (tapeLoopStartInput) tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
-      if (tapeLoopEndInput) tapeLoopEndInput.value = userDefinedLoopEnd.toFixed(2);
-      
-      waveformPathData = null; 
-      updateTapeLooperUI(); 
-      playTapeLoop(audioContext.currentTime); 
+    if (tapeLoopStartInput)
+      tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
+    if (tapeLoopEndInput)
+      tapeLoopEndInput.value = userDefinedLoopEnd.toFixed(2);
+
+    waveformPathData = null;
+    updateTapeLooperUI();
+    playTapeLoop(audioContext.currentTime);
   } else {
-      clearTapeLoop(); 
+    clearTapeLoop();
   }
 }
-
 
 function playTapeLoop(scheduledPlayTime = 0, offsetInLoop = 0) {
   if (!audioContext || !tapeLoopBuffer || isTapeLoopPlaying) {
@@ -4253,39 +4262,49 @@ function propagateTrigger(
       if (currentNode.type === "pulsar_triggerable") {
         if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) {
           currentNode.isEnabled = !currentNode.isEnabled;
-          if (currentNode.isEnabled) { 
-            const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000;
-            currentNode.lastTriggerTime = -1; 
-            currentNode.nextSyncTriggerTime = 0;  
-            currentNode.nextRandomTriggerTime = 0; 
+          if (currentNode.isEnabled) {
+            const nowTime = audioContext
+              ? audioContext.currentTime
+              : performance.now() / 1000;
+            currentNode.lastTriggerTime = -1;
+            currentNode.nextSyncTriggerTime = 0;
+            currentNode.nextRandomTriggerTime = 0;
 
-            if (isGlobalSyncEnabled && !currentNode.audioParams.ignoreGlobalSync) {
-                const secondsPerBeat = 60.0 / (globalBPM || 120);
-                const subdivIndex = currentNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-                if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
-                    const subdiv = subdivisionOptions[subdivIndex];
-                    if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
-                        const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                        if (nodeIntervalSeconds > 0) {
-                            currentNode.nextSyncTriggerTime = Math.ceil(nowTime / nodeIntervalSeconds) * nodeIntervalSeconds;
-                            
-                            if (currentNode.nextSyncTriggerTime <= nowTime + 0.010) { 
-                                currentNode.nextSyncTriggerTime += nodeIntervalSeconds;
-                            }
-                        }
+            if (
+              isGlobalSyncEnabled &&
+              !currentNode.audioParams.ignoreGlobalSync
+            ) {
+              const secondsPerBeat = 60.0 / (globalBPM || 120);
+              const subdivIndex =
+                currentNode.audioParams.syncSubdivisionIndex ??
+                DEFAULT_SUBDIVISION_INDEX;
+              if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
+                const subdiv = subdivisionOptions[subdivIndex];
+                if (
+                  subdiv &&
+                  typeof subdiv.value === "number" &&
+                  secondsPerBeat > 0
+                ) {
+                  const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
+                  if (nodeIntervalSeconds > 0) {
+                    currentNode.nextSyncTriggerTime =
+                      Math.ceil(nowTime / nodeIntervalSeconds) *
+                      nodeIntervalSeconds;
+
+                    if (currentNode.nextSyncTriggerTime <= nowTime + 0.01) {
+                      currentNode.nextSyncTriggerTime += nodeIntervalSeconds;
                     }
+                  }
                 }
-            } else { 
-                const interval = currentNode.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
-                
-                
-                currentNode.lastTriggerTime = nowTime - interval; 
+              }
+            } else {
+              const interval =
+                currentNode.audioParams.triggerInterval ||
+                DEFAULT_TRIGGER_INTERVAL;
+
+              currentNode.lastTriggerTime = nowTime - interval;
             }
-          } else { 
-            
-            
-            
-            
+          } else {
           }
           currentNode.animationState = 1;
         }
@@ -4531,27 +4550,44 @@ function propagateTrigger(
   }, actualTriggerDelay * 1000);
 }
 
-function playSingleRetrigger(node, retriggerIndex, totalRetriggers, basePulseData, scheduledPlayTime) {
+function playSingleRetrigger(
+  node,
+  retriggerIndex,
+  totalRetriggers,
+  basePulseData,
+  scheduledPlayTime,
+) {
   if (!audioContext || !node || !node.audioParams) return;
 
   const params = node.audioParams;
   const audioNodes = node.audioNodes;
-  const isMuted = params.retriggerMuteSteps && params.retriggerMuteSteps[retriggerIndex] === true;
-  const activeTabButton = document.querySelector('#hamburgerMenuPanel .retrigger-tab-button.active');
-  const activeParamTypeForHighlight = activeTabButton ? activeTabButton.dataset.paramType : "volume";
-  const editorBarToHighlight = document.getElementById(`retrigger-bar-node${node.id}-param${activeParamTypeForHighlight}-step${retriggerIndex}`);
+  const isMuted =
+    params.retriggerMuteSteps &&
+    params.retriggerMuteSteps[retriggerIndex] === true;
+  const activeTabButton = document.querySelector(
+    "#hamburgerMenuPanel .retrigger-tab-button.active",
+  );
+  const activeParamTypeForHighlight = activeTabButton
+    ? activeTabButton.dataset.paramType
+    : "volume";
+  const editorBarToHighlight = document.getElementById(
+    `retrigger-bar-node${node.id}-param${activeParamTypeForHighlight}-step${retriggerIndex}`,
+  );
 
   if (editorBarToHighlight) {
-    editorBarToHighlight.classList.add('playing');
+    editorBarToHighlight.classList.add("playing");
     if (isMuted) {
-      editorBarToHighlight.classList.add('muted-playing');
+      editorBarToHighlight.classList.add("muted-playing");
     }
-    setTimeout(() => {
-      editorBarToHighlight.classList.remove('playing');
-      if (isMuted) {
-        editorBarToHighlight.classList.remove('muted-playing');
-      }
-    }, Math.min(150, (params.retriggerIntervalMs || 100) * 0.8));
+    setTimeout(
+      () => {
+        editorBarToHighlight.classList.remove("playing");
+        if (isMuted) {
+          editorBarToHighlight.classList.remove("muted-playing");
+        }
+      },
+      Math.min(150, (params.retriggerIntervalMs || 100) * 0.8),
+    );
   }
 
   node.currentRetriggerVisualIndex = retriggerIndex;
@@ -4561,16 +4597,23 @@ function playSingleRetrigger(node, retriggerIndex, totalRetriggers, basePulseDat
     setTimeout(() => {
       const stillNode = findNodeById(node.id);
       if (stillNode && stillNode.animationState > 0) {
-        if (!stillNode.isTriggered && (!stillNode.activeRetriggers || stillNode.activeRetriggers.length === 0)) {
+        if (
+          !stillNode.isTriggered &&
+          (!stillNode.activeRetriggers ||
+            stillNode.activeRetriggers.length === 0)
+        ) {
           stillNode.animationState = 0;
         }
       }
       if (retriggerIndex === totalRetriggers - 1 && stillNode) {
-        setTimeout(() => {
-          if (stillNode.currentRetriggerVisualIndex === retriggerIndex) {
-            stillNode.currentRetriggerVisualIndex = -1;
-          }
-        }, (params.retriggerIntervalMs || 100) * 0.9);
+        setTimeout(
+          () => {
+            if (stillNode.currentRetriggerVisualIndex === retriggerIndex) {
+              stillNode.currentRetriggerVisualIndex = -1;
+            }
+          },
+          (params.retriggerIntervalMs || 100) * 0.9,
+        );
       }
     }, 120);
     return;
@@ -4579,10 +4622,17 @@ function playSingleRetrigger(node, retriggerIndex, totalRetriggers, basePulseDat
   if (basePulseData) {
     const retriggerIntensity = basePulseData.intensity ?? 1.0;
     const particleMultiplier = basePulseData.particleMultiplier ?? 1.0;
-    const particleCountForRetrigger = Math.max(1, Math.round((2 + Math.floor(node.size * 1.5)) * particleMultiplier * retriggerIntensity));
+    const particleCountForRetrigger = Math.max(
+      1,
+      Math.round(
+        (2 + Math.floor(node.size * 1.5)) *
+          particleMultiplier *
+          retriggerIntensity,
+      ),
+    );
     createParticles(node.x, node.y, particleCountForRetrigger);
   } else {
-    createParticles(node.x, node.y, 3); 
+    createParticles(node.x, node.y, 3);
   }
 
   let currentVolume =
@@ -7517,26 +7567,36 @@ function drawTapeWaveform() {
   let displayStart = tapeDisplayStartTime;
   let displayEnd = tapeDisplayEndTime;
   const hasBuffer = !!tapeLoopBuffer;
-  const maxAvailableDuration = tapeLoopEffectivelyRecordedDuration > 0 
-                             ? tapeLoopEffectivelyRecordedDuration 
-                             : (hasBuffer ? tapeLoopBuffer.duration : configuredTapeLoopDurationSeconds);
+  const maxAvailableDuration =
+    tapeLoopEffectivelyRecordedDuration > 0
+      ? tapeLoopEffectivelyRecordedDuration
+      : hasBuffer
+        ? tapeLoopBuffer.duration
+        : configuredTapeLoopDurationSeconds;
 
   if (displayEnd <= displayStart) {
-      displayEnd = displayStart + Math.max(0.1, maxAvailableDuration - displayStart);
+    displayEnd =
+      displayStart + Math.max(0.1, maxAvailableDuration - displayStart);
   }
-  if (displayEnd > maxAvailableDuration && maxAvailableDuration > 0) displayEnd = maxAvailableDuration;
-  if (displayStart >= displayEnd && displayEnd > 0.01) displayStart = Math.max(0, displayEnd - 0.01);
-  else if (displayStart >= displayEnd) { 
-      displayStart = 0; 
-      displayEnd = maxAvailableDuration > 0.01 ? maxAvailableDuration : 0.01;
+  if (displayEnd > maxAvailableDuration && maxAvailableDuration > 0)
+    displayEnd = maxAvailableDuration;
+  if (displayStart >= displayEnd && displayEnd > 0.01)
+    displayStart = Math.max(0, displayEnd - 0.01);
+  else if (displayStart >= displayEnd) {
+    displayStart = 0;
+    displayEnd = maxAvailableDuration > 0.01 ? maxAvailableDuration : 0.01;
   }
-  if (displayEnd <= displayStart) displayEnd = displayStart + 0.01; 
+  if (displayEnd <= displayStart) displayEnd = displayStart + 0.01;
 
   let clientWidth = tapeWaveformCanvas.clientWidth;
   let clientHeight = tapeWaveformCanvas.clientHeight;
-  if (tapeWaveformCanvas.parentElement && (clientWidth === 0 || clientHeight === 0)) {
+  if (
+    tapeWaveformCanvas.parentElement &&
+    (clientWidth === 0 || clientHeight === 0)
+  ) {
     clientWidth = tapeWaveformCanvas.parentElement.clientWidth || clientWidth;
-    clientHeight = tapeWaveformCanvas.parentElement.clientHeight || clientHeight;
+    clientHeight =
+      tapeWaveformCanvas.parentElement.clientHeight || clientHeight;
   }
 
   let dimensionsChanged = false;
@@ -7557,14 +7617,19 @@ function drawTapeWaveform() {
     return;
   }
 
-  tapeWaveformCtx.clearRect(0, 0, tapeWaveformCanvas.width, tapeWaveformCanvas.height);
+  tapeWaveformCtx.clearRect(
+    0,
+    0,
+    tapeWaveformCanvas.width,
+    tapeWaveformCanvas.height,
+  );
 
-  if (!hasBuffer && configuredTapeLoopDurationSeconds <= 0) { 
-      waveformPathData = null;
-      return;
+  if (!hasBuffer && configuredTapeLoopDurationSeconds <= 0) {
+    waveformPathData = null;
+    return;
   }
 
-  if (!waveformPathData && hasBuffer) { 
+  if (!waveformPathData && hasBuffer) {
     const channelData = tapeLoopBuffer.getChannelData(0);
     const canvasWidth = tapeWaveformCanvas.width;
 
@@ -7579,9 +7644,14 @@ function drawTapeWaveform() {
       for (let i = 0; i < canvasWidth; i++) {
         let min = 1.0;
         let max = -1.0;
-        const sliceStartInBuffer = startSampleAbs + Math.floor(i * samplesPerPixel);
-        const sliceEndInBuffer = startSampleAbs + Math.floor((i + 1) * samplesPerPixel);
-        const actualSliceStart = Math.min(sliceStartInBuffer, channelData.length - 1);
+        const sliceStartInBuffer =
+          startSampleAbs + Math.floor(i * samplesPerPixel);
+        const sliceEndInBuffer =
+          startSampleAbs + Math.floor((i + 1) * samplesPerPixel);
+        const actualSliceStart = Math.min(
+          sliceStartInBuffer,
+          channelData.length - 1,
+        );
         const actualSliceEnd = Math.min(sliceEndInBuffer, channelData.length);
 
         if (actualSliceStart < actualSliceEnd) {
@@ -7590,35 +7660,43 @@ function drawTapeWaveform() {
             if (datum < min) min = datum;
             if (datum > max) max = datum;
           }
-        } else if (actualSliceStart === actualSliceEnd && actualSliceStart < channelData.length) {
+        } else if (
+          actualSliceStart === actualSliceEnd &&
+          actualSliceStart < channelData.length
+        ) {
           const datum = channelData[actualSliceStart];
-          min = datum; max = datum;
+          min = datum;
+          max = datum;
         } else {
-          min = 0; max = 0;
+          min = 0;
+          max = 0;
         }
         waveformPathData.push({ min, max });
       }
     }
-  } else if (!hasBuffer && !waveformPathData) { 
-     tapeWaveformCtx.strokeStyle = 'rgba(100, 100, 110, 0.5)';
-     tapeWaveformCtx.lineWidth = 1;
-     tapeWaveformCtx.beginPath();
-     tapeWaveformCtx.moveTo(0, tapeWaveformCanvas.height / 2);
-     tapeWaveformCtx.lineTo(tapeWaveformCanvas.width, tapeWaveformCanvas.height / 2);
-     tapeWaveformCtx.stroke();
-     return; 
+  } else if (!hasBuffer && !waveformPathData) {
+    tapeWaveformCtx.strokeStyle = "rgba(100, 100, 110, 0.5)";
+    tapeWaveformCtx.lineWidth = 1;
+    tapeWaveformCtx.beginPath();
+    tapeWaveformCtx.moveTo(0, tapeWaveformCanvas.height / 2);
+    tapeWaveformCtx.lineTo(
+      tapeWaveformCanvas.width,
+      tapeWaveformCanvas.height / 2,
+    );
+    tapeWaveformCtx.stroke();
+    return;
   }
 
   if (!waveformPathData || waveformPathData.length === 0) {
     return;
   }
 
-  tapeWaveformCtx.strokeStyle = 'rgba(150, 180, 220, 0.7)';
+  tapeWaveformCtx.strokeStyle = "rgba(150, 180, 220, 0.7)";
   tapeWaveformCtx.lineWidth = 1;
   tapeWaveformCtx.beginPath();
 
   const amp = tapeWaveformCanvas.height / 2;
-  const verticalZoomFactor = 8; 
+  const verticalZoomFactor = 8;
 
   waveformPathData.forEach((point, i) => {
     const x = i;
@@ -7634,20 +7712,33 @@ function drawTapeWaveform() {
 
 function updateLoopRegionAndInputs() {
   if (!tapeVisualLoopRegion || !tapeLoopStartInput || !tapeLoopEndInput) {
-      return;
+    return;
   }
 
   const hasBuffer = !!tapeLoopBuffer;
-  const maxDurationForData = tapeLoopEffectivelyRecordedDuration > 0
-                            ? tapeLoopEffectivelyRecordedDuration
-                            : (hasBuffer ? tapeLoopBuffer.duration : configuredTapeLoopDurationSeconds);
+  const maxDurationForData =
+    tapeLoopEffectivelyRecordedDuration > 0
+      ? tapeLoopEffectivelyRecordedDuration
+      : hasBuffer
+        ? tapeLoopBuffer.duration
+        : configuredTapeLoopDurationSeconds;
 
-  userDefinedLoopStart = Math.max(0, Math.min(userDefinedLoopStart, maxDurationForData - 0.01));
-  if (userDefinedLoopEnd === -1 || userDefinedLoopEnd > maxDurationForData || userDefinedLoopEnd <= userDefinedLoopStart) {
-      userDefinedLoopEnd = maxDurationForData;
+  userDefinedLoopStart = Math.max(
+    0,
+    Math.min(userDefinedLoopStart, maxDurationForData - 0.01),
+  );
+  if (
+    userDefinedLoopEnd === -1 ||
+    userDefinedLoopEnd > maxDurationForData ||
+    userDefinedLoopEnd <= userDefinedLoopStart
+  ) {
+    userDefinedLoopEnd = maxDurationForData;
   }
-  userDefinedLoopEnd = Math.max(userDefinedLoopStart + 0.01, Math.min(userDefinedLoopEnd, maxDurationForData));
-  
+  userDefinedLoopEnd = Math.max(
+    userDefinedLoopStart + 0.01,
+    Math.min(userDefinedLoopEnd, maxDurationForData),
+  );
+
   tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
   tapeLoopEndInput.value = userDefinedLoopEnd.toFixed(2);
   tapeLoopStartInput.max = maxDurationForData.toFixed(2);
@@ -7655,472 +7746,58 @@ function updateLoopRegionAndInputs() {
 
   const currentDisplayStartTime = tapeDisplayStartTime;
   let currentDisplayEndTime = tapeDisplayEndTime;
-  if (currentDisplayEndTime <= currentDisplayStartTime) { 
-      currentDisplayEndTime = currentDisplayStartTime + Math.max(0.1, maxDurationForData - currentDisplayStartTime);
-      if(currentDisplayEndTime <= currentDisplayStartTime) currentDisplayEndTime = currentDisplayStartTime + 0.1;
+  if (currentDisplayEndTime <= currentDisplayStartTime) {
+    currentDisplayEndTime =
+      currentDisplayStartTime +
+      Math.max(0.1, maxDurationForData - currentDisplayStartTime);
+    if (currentDisplayEndTime <= currentDisplayStartTime)
+      currentDisplayEndTime = currentDisplayStartTime + 0.1;
   }
-  currentDisplayEndTime = Math.min(maxDurationForData, currentDisplayEndTime); 
-  if(currentDisplayStartTime >= currentDisplayEndTime) currentDisplayStartTime = Math.max(0, currentDisplayEndTime - 0.1);
+  currentDisplayEndTime = Math.min(maxDurationForData, currentDisplayEndTime);
+  if (currentDisplayStartTime >= currentDisplayEndTime)
+    currentDisplayStartTime = Math.max(0, currentDisplayEndTime - 0.1);
 
+  const displayWindowDuration = Math.max(
+    0.01,
+    currentDisplayEndTime - currentDisplayStartTime,
+  );
 
-  const displayWindowDuration = Math.max(0.01, currentDisplayEndTime - currentDisplayStartTime);
-  
-  const loopRegionStartRel = (userDefinedLoopStart - currentDisplayStartTime) / displayWindowDuration;
-  const loopRegionEndRel = (userDefinedLoopEnd - currentDisplayStartTime) / displayWindowDuration;
-  
-  const loopRegionLeftPercent = Math.max(0, Math.min(100, loopRegionStartRel * 100));
-  const loopRegionWidthPercent = Math.max(0, Math.min(100 - loopRegionLeftPercent, (loopRegionEndRel - loopRegionStartRel) * 100));
+  const loopRegionStartRel =
+    (userDefinedLoopStart - currentDisplayStartTime) / displayWindowDuration;
+  const loopRegionEndRel =
+    (userDefinedLoopEnd - currentDisplayStartTime) / displayWindowDuration;
+
+  const loopRegionLeftPercent = Math.max(
+    0,
+    Math.min(100, loopRegionStartRel * 100),
+  );
+  const loopRegionWidthPercent = Math.max(
+    0,
+    Math.min(
+      100 - loopRegionLeftPercent,
+      (loopRegionEndRel - loopRegionStartRel) * 100,
+    ),
+  );
 
   tapeVisualLoopRegion.style.left = `${loopRegionLeftPercent}%`;
   tapeVisualLoopRegion.style.width = `${loopRegionWidthPercent}%`;
 
-  const startHandleVisible = loopRegionStartRel >= -0.001 && loopRegionStartRel <= 1.001;
-  const endHandleVisible = loopRegionEndRel >= -0.001 && loopRegionEndRel <= 1.001;
+  const startHandleVisible =
+    loopRegionStartRel >= -0.001 && loopRegionStartRel <= 1.001;
+  const endHandleVisible =
+    loopRegionEndRel >= -0.001 && loopRegionEndRel <= 1.001;
 
-  tapeLoopHandleStart.style.display = (startHandleVisible && loopRegionWidthPercent > 0.1) ? 'block' : 'none';
-  tapeLoopHandleEnd.style.display = (endHandleVisible && loopRegionWidthPercent > 0.1) ? 'block' : 'none';
+  tapeLoopHandleStart.style.display =
+    startHandleVisible && loopRegionWidthPercent > 0.1 ? "block" : "none";
+  tapeLoopHandleEnd.style.display =
+    endHandleVisible && loopRegionWidthPercent > 0.1 ? "block" : "none";
 
   if (isTapeLoopPlaying && tapeLoopSourceNode && hasBuffer) {
-      tapeLoopSourceNode.loopStart = userDefinedLoopStart;
-      tapeLoopSourceNode.loopEnd = userDefinedLoopEnd;
+    tapeLoopSourceNode.loopStart = userDefinedLoopStart;
+    tapeLoopSourceNode.loopEnd = userDefinedLoopEnd;
   }
 }
 
-function handleMouseDown(event) {
-  if (!isPlaying && event.target === canvas) {
-    togglePlayPause();
-    return;
-  }
-  if (!isAudioReady) return;
-
-  const targetIsPanelControl =
-    hamburgerMenuPanel.contains(event.target) ||
-    sideToolbar.contains(event.target) ||
-    transportControlsDiv.contains(event.target) ||
-    mixerPanel.contains(event.target);
-  if (targetIsPanelControl) {
-    return;
-  }
-
-  updateMousePos(event);
-
-  _tempWasSelectedAtMouseDown = false;
-  isDragging = false;
-  isConnecting = false;
-  isResizing = false;
-  isSelecting = false;
-  isPanning = false;
-  didDrag = false;
-  selectionRect.active = false;
-  isRotatingRocket = null;
-  isResizingTimelineGrid = false;
-  resizingTimelineGridNode = null;
-  resizeHandleType = null;
-
-  isDrawingNewTimelineGrid = false;
-  newTimelineGridInitialCorner = null;
-
-  nodeClickedAtMouseDown = null;
-  connectionClickedAtMouseDown = null;
-  elementClickedAtMouseDown = null;
-  mouseDownPos = { ...mousePos };
-
-  if (currentTool === "add" && nodeTypeToAdd === TIMELINE_GRID_TYPE) {
-    isDrawingNewTimelineGrid = true;
-    newTimelineGridInitialCorner = { ...mousePos };
-    const tempDimensions = { width: 5, height: 5 };
-    const newNode = addNode(
-      mousePos.x,
-      mousePos.y,
-      TIMELINE_GRID_TYPE,
-      null,
-      tempDimensions,
-    );
-    if (newNode) {
-      currentlyPlacingTimelineNodeId = newNode.id;
-      newNode.isInResizeMode = false;
-      selectedElements.clear();
-      selectedElements.add({ type: "node", id: newNode.id });
-      _tempWasSelectedAtMouseDown = true;
-      nodeClickedAtMouseDown = newNode;
-      elementClickedAtMouseDown = {
-        type: "node",
-        id: newNode.id,
-        nodeRef: newNode,
-      };
-    } else {
-      isDrawingNewTimelineGrid = false;
-    }
-    didDrag = false;
-    canvas.style.cursor = "crosshair";
-    return;
-  }
-
-  let activeSelectedNode = null;
-  if (currentTool === "edit" && selectedElements.size > 0) {
-    const firstSelectedElement = Array.from(selectedElements)[0];
-    if (firstSelectedElement && firstSelectedElement.type === "node") {
-      activeSelectedNode = findNodeById(firstSelectedElement.id);
-    }
-  }
-
-  if (
-    activeSelectedNode &&
-    activeSelectedNode.type === TIMELINE_GRID_TYPE &&
-    !isPanning
-  ) {
-    const node = activeSelectedNode;
-
-    if (
-      node.resizeToggleIconRect &&
-      mousePos.x >= node.resizeToggleIconRect.x1 &&
-      mousePos.x <= node.resizeToggleIconRect.x2 &&
-      mousePos.y >= node.resizeToggleIconRect.y1 &&
-      mousePos.y <= node.resizeToggleIconRect.y2
-    ) {
-      node.isInResizeMode = !node.isInResizeMode;
-      if (node.audioParams)
-        node.audioParams.isInResizeMode = node.isInResizeMode;
-      saveState();
-      nodeClickedAtMouseDown = node;
-      elementClickedAtMouseDown = { type: "node", id: node.id, nodeRef: node };
-      _tempWasSelectedAtMouseDown = true;
-      didDrag = false;
-      return;
-    }
-
-    if (
-      node.directionToggleIconRect &&
-      mousePos.x >= node.directionToggleIconRect.x1 &&
-      mousePos.x <= node.directionToggleIconRect.x2 &&
-      mousePos.y >= node.directionToggleIconRect.y1 &&
-      mousePos.y <= node.directionToggleIconRect.y2
-    ) {
-      const directions = ["forward", "backward", "ping-pong"];
-      let currentIndex = directions.indexOf(
-        node.scanlineDirection || "forward",
-      );
-      currentIndex = (currentIndex + 1) % directions.length;
-      node.scanlineDirection = directions[currentIndex];
-      if (node.scanlineDirection === "ping-pong") {
-        node.isPingPongForward = true;
-      }
-      if (node.audioParams)
-        node.audioParams.scanlineDirection = node.scanlineDirection;
-      saveState();
-      nodeClickedAtMouseDown = node;
-      elementClickedAtMouseDown = { type: "node", id: node.id, nodeRef: node };
-      _tempWasSelectedAtMouseDown = true;
-      didDrag = false;
-      return;
-    }
-
-    if (node.isInResizeMode) {
-      const handleDetectionPixelMargin = 12;
-      const handleHitAreaWorld = handleDetectionPixelMargin / viewScale;
-      const hArea = handleHitAreaWorld / 2;
-      const rX = node.x - node.width / 2;
-      const rY = node.y - node.height / 2;
-      const rCX = node.x;
-      const rCY = node.y;
-      const rXW = node.x + node.width / 2;
-      const rYH = node.y + node.height / 2;
-      const handles = [
-        { x: rX, y: rY, type: "top-left", cursor: "nwse-resize" },
-        { x: rCX, y: rY, type: "top", cursor: "ns-resize" },
-        { x: rXW, y: rY, type: "top-right", cursor: "nesw-resize" },
-        { x: rX, y: rCY, type: "left", cursor: "ew-resize" },
-        { x: rXW, y: rCY, type: "right", cursor: "ew-resize" },
-        { x: rX, y: rYH, type: "bottom-left", cursor: "nesw-resize" },
-        { x: rCX, y: rYH, type: "bottom", cursor: "ns-resize" },
-        { x: rXW, y: rYH, type: "bottom-right", cursor: "nwse-resize" },
-      ];
-      for (const handle of handles) {
-        if (
-          mousePos.x >= handle.x - hArea &&
-          mousePos.x <= handle.x + hArea &&
-          mousePos.y >= handle.y - hArea &&
-          mousePos.y <= handle.y + hArea
-        ) {
-          isResizingTimelineGrid = true;
-          resizingTimelineGridNode = node;
-          resizeHandleType = handle.type;
-          resizeStartMousePos = { ...mousePos };
-          initialNodeDimensions = {
-            x: node.x,
-            y: node.y,
-            width: node.width,
-            height: node.height,
-          };
-          nodeClickedAtMouseDown = node;
-          elementClickedAtMouseDown = {
-            type: "node",
-            id: node.id,
-            nodeRef: node,
-          };
-          _tempWasSelectedAtMouseDown = true;
-          didDrag = false;
-          canvas.style.cursor = handle.cursor;
-          return;
-        }
-      }
-    }
-  }
-
-  const potentialNodeClickedGeneral = findNodeAt(mousePos.x, mousePos.y);
-  const potentialConnectionClickedGeneral = !potentialNodeClickedGeneral
-    ? findConnectionNear(mousePos.x, mousePos.y)
-    : null;
-
-  if (potentialNodeClickedGeneral) {
-    elementClickedAtMouseDown = {
-      type: "node",
-      id: potentialNodeClickedGeneral.id,
-      nodeRef: potentialNodeClickedGeneral,
-    };
-    _tempWasSelectedAtMouseDown = isElementSelected(
-      "node",
-      potentialNodeClickedGeneral.id,
-    );
-  } else if (potentialConnectionClickedGeneral) {
-    elementClickedAtMouseDown = {
-      type: "connection",
-      id: potentialConnectionClickedGeneral.id,
-      connRef: potentialConnectionClickedGeneral,
-    };
-    _tempWasSelectedAtMouseDown = isElementSelected(
-      "connection",
-      potentialConnectionClickedGeneral.id,
-    );
-  }
-  nodeClickedAtMouseDown = potentialNodeClickedGeneral;
-  connectionClickedAtMouseDown = potentialConnectionClickedGeneral;
-
-  if (nodeClickedAtMouseDown) {
-    nodeWasSelectedAtMouseDown = _tempWasSelectedAtMouseDown;
-  }
-
-  if (
-    potentialNodeClickedGeneral &&
-    potentialNodeClickedGeneral.type === "pulsar_rocket" &&
-    isElementSelected("node", potentialNodeClickedGeneral.id) &&
-    currentTool === "edit"
-  ) {
-    const outerR =
-      NODE_RADIUS_BASE *
-      potentialNodeClickedGeneral.size *
-      (1 + potentialNodeClickedGeneral.animationState * 0.5);
-    const handleOrbitRadius = outerR * 1.6;
-    const handleGripRadius = 7 / viewScale;
-    const drawingAngleRad =
-      (potentialNodeClickedGeneral.audioParams.rocketDirectionAngle || 0) -
-      Math.PI / 2;
-    const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
-    const handleGripX_world =
-      potentialNodeClickedGeneral.x +
-      Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
-    const handleGripY_world =
-      potentialNodeClickedGeneral.y +
-      Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
-    const distToHandle = distance(
-      mousePos.x,
-      mousePos.y,
-      handleGripX_world,
-      handleGripY_world,
-    );
-
-    if (distToHandle < handleGripRadius) {
-      isRotatingRocket = potentialNodeClickedGeneral;
-      isDragging = false;
-      const initialMouseAngleToNodeCenterRad = Math.atan2(
-        mousePos.y - isRotatingRocket.y,
-        mousePos.x - isRotatingRocket.x,
-      );
-      rotationStartDetails = {
-        screenX: screenMousePos.x,
-        screenY: screenMousePos.y,
-        initialNodeUIAngleRad:
-          isRotatingRocket.audioParams.rocketDirectionAngle || 0,
-        initialMouseMathAngleRad: initialMouseAngleToNodeCenterRad,
-      };
-      canvas.style.cursor = "grabbing";
-      nodeClickedAtMouseDown = null;
-      elementClickedAtMouseDown = null;
-      connectionClickedAtMouseDown = null;
-      return;
-    }
-  }
-
-  if (event.button === 1 || (isSpacebarDown && event.button === 0)) {
-    isPanning = true;
-    panStart = { ...screenMousePos };
-    canvas.style.cursor = "grabbing";
-    nodeClickedAtMouseDown = null;
-    connectionClickedAtMouseDown = null;
-    elementClickedAtMouseDown = null;
-    isRotatingRocket = null;
-    isResizingTimelineGrid = false;
-    return;
-  }
-
-  if (isRotatingRocket || isResizingTimelineGrid) {
-    return;
-  }
-
-  if (elementClickedAtMouseDown) {
-    const element = elementClickedAtMouseDown;
-    const node = element.type === "node" ? nodeClickedAtMouseDown : null;
-
-    if (
-      event.shiftKey &&
-      currentTool === "edit" &&
-      node &&
-      node.type !== TIMELINE_GRID_TYPE
-    ) {
-      isResizing = true;
-      resizeStartSize = node.size;
-      resizeStartY = screenMousePos.y;
-      canvas.style.cursor = "ns-resize";
-    } else if (event.shiftKey && currentTool !== "edit") {
-      if (isElementSelected(element.type, element.id)) {
-        selectedElements = new Set(
-          [...selectedElements].filter(
-            (el) => !(el.type === element.type && el.id === element.id),
-          ),
-        );
-      } else {
-        selectedElements.add({ type: element.type, id: element.id });
-      }
-      if (currentTool === "edit") updateConstellationGroup();
-      updateGroupControlsUI();
-      populateEditPanel();
-      nodeClickedAtMouseDown = null;
-      connectionClickedAtMouseDown = null;
-      elementClickedAtMouseDown = null;
-    } else {
-      if (
-        currentTool === "connect" ||
-        currentTool === "connect_string" ||
-        currentTool === "connect_glide" ||
-        currentTool === "connect_wavetrail"
-      ) {
-        if (
-          node &&
-          !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(
-            node.type,
-          )
-        ) {
-          isConnecting = true;
-          connectingNode = node;
-          if (currentTool === "connect_string")
-            connectionTypeToAdd = "string_violin";
-          else if (currentTool === "connect_glide")
-            connectionTypeToAdd = "glide";
-          else if (currentTool === "connect_wavetrail")
-            connectionTypeToAdd = "wavetrail";
-          else connectionTypeToAdd = "standard";
-          canvas.style.cursor = "grabbing";
-        }
-      } else if (currentTool === "delete") {
-        if (node) removeNode(node);
-        else if (connectionClickedAtMouseDown)
-          removeConnection(connectionClickedAtMouseDown);
-        nodeClickedAtMouseDown = null;
-        connectionClickedAtMouseDown = null;
-        elementClickedAtMouseDown = null;
-      } else if (currentTool === "edit") {
-        let selectionChanged = false;
-        if (!isElementSelected(element.type, element.id)) {
-          selectedElements.forEach((selEl) => {
-            if (selEl.type === "node") {
-              const n = findNodeById(selEl.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
-            }
-          });
-          selectedElements.clear();
-          selectedElements.add({ type: element.type, id: element.id });
-          selectionChanged = true;
-        }
-        if (node) {
-          isDragging = true;
-          dragStartPos = { ...mousePos };
-          nodeDragOffsets.clear();
-          selectedElements.forEach((el) => {
-            if (el.type === "node") {
-              const n = findNodeById(el.id);
-              if (n)
-                nodeDragOffsets.set(el.id, {
-                  x: n.x - mousePos.x,
-                  y: n.y - mousePos.y,
-                });
-            }
-          });
-          canvas.style.cursor = "move";
-        }
-        if (selectionChanged) {
-          updateConstellationGroup();
-          populateEditPanel();
-        }
-      }
-    }
-  } else {
-    if (currentTool === "edit") {
-      isSelecting = true;
-      selectionRect = {
-        startX: mousePos.x,
-        startY: mousePos.y,
-        endX: mousePos.x,
-        endY: mousePos.y,
-        active: false,
-      };
-      if (!event.shiftKey) {
-        if (selectedElements.size > 0) {
-          selectedElements.forEach((selEl) => {
-            if (selEl.type === "node") {
-              const n = findNodeById(selEl.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
-            }
-          });
-          selectedElements.clear();
-          updateConstellationGroup();
-          populateEditPanel();
-        }
-      }
-    } else if (
-      currentTool === "add" &&
-      nodeTypeToAdd !== null &&
-      nodeTypeToAdd !== TIMELINE_GRID_TYPE
-    ) {
-      if (!event.shiftKey && selectedElements.size > 0) {
-        selectedElements.clear();
-        updateConstellationGroup();
-        populateEditPanel();
-      }
-    } else if (
-      ![
-        "connect",
-        "connect_string",
-        "connect_glide",
-        "connect_wavetrail",
-        "delete",
-      ].includes(currentTool) &&
-      !(currentTool === "add" && nodeTypeToAdd === TIMELINE_GRID_TYPE)
-    ) {
-      if (selectedElements.size > 0 && !event.shiftKey) {
-        selectedElements.forEach((selEl) => {
-          if (selEl.type === "node") {
-            const n = findNodeById(selEl.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
-          }
-        });
-        selectedElements.clear();
-        updateGroupControlsUI();
-        populateEditPanel();
-      }
-    }
-  }
-  hideOverlappingPanels();
-}
 function snapToInternalGrid(positionToSnap, timelineGridNode) {
   if (
     !timelineGridNode ||
@@ -8147,84 +7824,108 @@ function snapToInternalGrid(positionToSnap, timelineGridNode) {
 }
 
 function handleLoopHandleMouseMove(event) {
-  if (!isDraggingLoopHandle || (!tapeLoopBuffer && configuredTapeLoopDurationSeconds <= 0) || !tapeWaveformCanvas) return;
+  if (
+    !isDraggingLoopHandle ||
+    (!tapeLoopBuffer && configuredTapeLoopDurationSeconds <= 0) ||
+    !tapeWaveformCanvas
+  )
+    return;
 
   const rect = tapeWaveformCanvas.getBoundingClientRect();
   const trackWidthPx = rect.width;
   if (trackWidthPx === 0) return;
 
   const currentDisplayStartTimeLocal = tapeDisplayStartTime;
-  const currentDisplayEndTimeLocal = (tapeDisplayEndTime <= tapeDisplayStartTime) ? tapeDisplayStartTime + 0.1 : tapeDisplayEndTime;
-  const currentDisplayDuration = Math.max(0.01, currentDisplayEndTimeLocal - currentDisplayStartTimeLocal);
-  
+  const currentDisplayEndTimeLocal =
+    tapeDisplayEndTime <= tapeDisplayStartTime
+      ? tapeDisplayStartTime + 0.1
+      : tapeDisplayEndTime;
+  const currentDisplayDuration = Math.max(
+    0.01,
+    currentDisplayEndTimeLocal - currentDisplayStartTimeLocal,
+  );
+
   const dx = event.clientX - loopHandleDragStartX;
   const deltaTimeChange = (dx / trackWidthPx) * currentDisplayDuration;
-  
+
   let newValue = initialLoopHandleValue + deltaTimeChange;
 
-  const maxBufferDuration = tapeLoopEffectivelyRecordedDuration > 0 
-                            ? tapeLoopEffectivelyRecordedDuration 
-                            : (tapeLoopBuffer ? tapeLoopBuffer.duration : configuredTapeLoopDurationSeconds);
+  const maxBufferDuration =
+    tapeLoopEffectivelyRecordedDuration > 0
+      ? tapeLoopEffectivelyRecordedDuration
+      : tapeLoopBuffer
+        ? tapeLoopBuffer.duration
+        : configuredTapeLoopDurationSeconds;
 
-  if (isDraggingLoopHandle === 'start') {
-    const effectiveEnd = (userDefinedLoopEnd === -1 || userDefinedLoopEnd > maxBufferDuration || userDefinedLoopEnd <= userDefinedLoopStart) 
-                         ? maxBufferDuration 
-                         : userDefinedLoopEnd;
+  if (isDraggingLoopHandle === "start") {
+    const effectiveEnd =
+      userDefinedLoopEnd === -1 ||
+      userDefinedLoopEnd > maxBufferDuration ||
+      userDefinedLoopEnd <= userDefinedLoopStart
+        ? maxBufferDuration
+        : userDefinedLoopEnd;
     newValue = Math.max(0, Math.min(newValue, effectiveEnd - 0.01));
     userDefinedLoopStart = newValue;
     if (tapeLoopStartInput) tapeLoopStartInput.value = newValue.toFixed(2);
-  } else { 
-    newValue = Math.max(userDefinedLoopStart + 0.01, Math.min(newValue, maxBufferDuration));
+  } else {
+    newValue = Math.max(
+      userDefinedLoopStart + 0.01,
+      Math.min(newValue, maxBufferDuration),
+    );
     userDefinedLoopEnd = newValue;
     if (tapeLoopEndInput) tapeLoopEndInput.value = newValue.toFixed(2);
   }
-  
-  updateLoopRegionAndInputs(); 
+
+  updateLoopRegionAndInputs();
 }
 
 function handleLoopHandleMouseUp(event) {
-  if (!isDraggingLoopHandle) return; 
-  
-  isDraggingLoopHandle = null;
-  document.body.style.userSelect = ''; 
+  if (!isDraggingLoopHandle) return;
 
-  document.removeEventListener('mousemove', handleLoopHandleMouseMove);
-  document.removeEventListener('mouseup', handleLoopHandleMouseUp);
+  isDraggingLoopHandle = null;
+  document.body.style.userSelect = "";
+
+  document.removeEventListener("mousemove", handleLoopHandleMouseMove);
+  document.removeEventListener("mouseup", handleLoopHandleMouseUp);
 
   if (isTapeLoopPlaying && tapeLoopSourceNode && tapeLoopBuffer) {
     const effectiveStart = userDefinedLoopStart;
-    const effectiveEnd = (userDefinedLoopEnd === -1 || userDefinedLoopEnd > tapeLoopBuffer.duration || userDefinedLoopEnd <= userDefinedLoopStart) 
-                         ? tapeLoopBuffer.duration 
-                         : userDefinedLoopEnd;
+    const effectiveEnd =
+      userDefinedLoopEnd === -1 ||
+      userDefinedLoopEnd > tapeLoopBuffer.duration ||
+      userDefinedLoopEnd <= userDefinedLoopStart
+        ? tapeLoopBuffer.duration
+        : userDefinedLoopEnd;
 
-    tapeLoopSourceNode.loopStart = Math.max(0, Math.min(effectiveStart, tapeLoopBuffer.duration - 0.001));
-    tapeLoopSourceNode.loopEnd = Math.max(effectiveStart + 0.001, Math.min(effectiveEnd, tapeLoopBuffer.duration));
+    tapeLoopSourceNode.loopStart = Math.max(
+      0,
+      Math.min(effectiveStart, tapeLoopBuffer.duration - 0.001),
+    );
+    tapeLoopSourceNode.loopEnd = Math.max(
+      effectiveStart + 0.001,
+      Math.min(effectiveEnd, tapeLoopBuffer.duration),
+    );
   }
-  
-  updateLoopRegionAndInputs(); 
-  saveState();             
+
+  updateLoopRegionAndInputs();
+  saveState();
 }
 
 function handleLoopHandleMouseDown(event, type) {
-  if (!tapeLoopBuffer) return; 
-  event.stopPropagation(); 
+  if (!tapeLoopBuffer) return;
+  event.stopPropagation();
 
-  isDraggingLoopHandle = type; 
-  loopHandleDragStartX = event.clientX; 
-  
-  
-  initialLoopHandleValue = (type === 'start') ? userDefinedLoopStart : userDefinedLoopEnd;
-  
-  
-  document.body.style.userSelect = 'none';
+  isDraggingLoopHandle = type;
+  loopHandleDragStartX = event.clientX;
 
-  
-  document.addEventListener('mousemove', handleLoopHandleMouseMove);
-  document.addEventListener('mouseup', handleLoopHandleMouseUp);
+  initialLoopHandleValue =
+    type === "start" ? userDefinedLoopStart : userDefinedLoopEnd;
+
+  document.body.style.userSelect = "none";
+
+  document.addEventListener("mousemove", handleLoopHandleMouseMove);
+  document.addEventListener("mouseup", handleLoopHandleMouseUp);
 }
-
-
-
 
 function setupLoopHandles() {
   if (tapeLoopHandleStart) {
@@ -8515,25 +8216,35 @@ function clearTapeLoop() {
   tapeLoopBuffer = null;
   tapeLoopWritePosition = 0;
   userDefinedLoopStart = 0;
-  userDefinedLoopEnd = -1; 
+  userDefinedLoopEnd = -1;
   tapeLoopEffectivelyRecordedDuration = 0;
 
   tapeDisplayStartTime = 0;
-  tapeDisplayEndTime = configuredTapeLoopDurationSeconds; 
+  tapeDisplayEndTime = configuredTapeLoopDurationSeconds;
 
-  waveformPathData = null; 
+  waveformPathData = null;
   if (tapeWaveformCtx && tapeWaveformCanvas) {
-    tapeWaveformCtx.clearRect(0, 0, tapeWaveformCanvas.width, tapeWaveformCanvas.height);
+    tapeWaveformCtx.clearRect(
+      0,
+      0,
+      tapeWaveformCanvas.width,
+      tapeWaveformCanvas.height,
+    );
   }
   if (tapeLoopTimer) tapeLoopTimer.textContent = formatTime(0);
-  
-  updateTapeLooperUI(); 
+
+  updateTapeLooperUI();
 }
 
 function stopTapeLoopPlayback() {
-  if (tapeLoopRecordBtn) tapeLoopRecordBtn.dataset.isArmed = 'false';
+  if (tapeLoopRecordBtn) tapeLoopRecordBtn.dataset.isArmed = "false";
   tapeLoopRecordBtnClickable = true;
-  scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(e => e.action !== 'startRec' && e.action !== 'startPlay' && e.action !== 'stopRecAndPlay');
+  scheduledTapeLoopEvents = scheduledTapeLoopEvents.filter(
+    (e) =>
+      e.action !== "startRec" &&
+      e.action !== "startPlay" &&
+      e.action !== "stopRecAndPlay",
+  );
 
   if (isTapeLoopPlaying && tapeLoopSourceNode) {
     try {
@@ -8547,21 +8258,25 @@ function stopTapeLoopPlayback() {
   isTapeLoopPlaying = false;
 
   if (isTapeLoopRecording) {
-    isTapeLoopRecording = false; 
+    isTapeLoopRecording = false;
     if (scriptNodeForTapeLoop) {
-      try { scriptNodeForTapeLoop.disconnect(); } catch (e) {}
+      try {
+        scriptNodeForTapeLoop.disconnect();
+      } catch (e) {}
       if (tapeLoopInputGate && scriptNodeForTapeLoop) {
-          try { tapeLoopInputGate.disconnect(scriptNodeForTapeLoop); } catch (e) {}
+        try {
+          tapeLoopInputGate.disconnect(scriptNodeForTapeLoop);
+        } catch (e) {}
       }
       scriptNodeForTapeLoop.onaudioprocess = null;
       scriptNodeForTapeLoop = null;
     }
     if (tapeLoopInputGate) {
-        tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
-        tapeLoopInputGate.gain.setValueAtTime(0.0, audioContext.currentTime);
+      tapeLoopInputGate.gain.cancelScheduledValues(audioContext.currentTime);
+      tapeLoopInputGate.gain.setValueAtTime(0.0, audioContext.currentTime);
     }
   }
-  
+
   console.log("Tape loop playback/recording gestopt.");
   updateTapeLooperUI();
 }
@@ -8855,12 +8570,16 @@ function animationLoop() {
 
   try {
     nodes.forEach((node) => {
-      if (node.isStartNode && node.isEnabled && node.audioParams &&
-        (node.type === "pulsar_standard" || 
-         node.type === "pulsar_random_volume" || 
-         node.type === "pulsar_random_particles" || 
-         node.type === "pulsar_rocket" ||
-         node.type === "pulsar_triggerable")) {
+      if (
+        node.isStartNode &&
+        node.isEnabled &&
+        node.audioParams &&
+        (node.type === "pulsar_standard" ||
+          node.type === "pulsar_random_volume" ||
+          node.type === "pulsar_random_particles" ||
+          node.type === "pulsar_rocket" ||
+          node.type === "pulsar_triggerable")
+      ) {
         let shouldPulse = false;
         let pulseData = {};
 
@@ -9202,47 +8921,77 @@ function animationLoop() {
                           : TIMELINE_GRID_DEFAULT_COLOR,
                       particleMultiplier: 0.6,
                     };
-                    if (otherNode.type === 'pulsar_triggerable') {
+                    if (otherNode.type === "pulsar_triggerable") {
                       // Logic to toggle pulsar_triggerable by TimelineGrid
                       otherNode.isEnabled = !otherNode.isEnabled;
                       otherNode.animationState = 1; // Visual feedback for the toggle action
 
-                      if (otherNode.isEnabled) { // Just turned ON, so initialize its timers
-                          const nowTime = audioContext ? audioContext.currentTime : performance.now() / 1000;
-                          otherNode.lastTriggerTime = -1; 
-                          otherNode.nextSyncTriggerTime = 0;
-                          otherNode.nextRandomTriggerTime = 0; // Reset if it was ever used
+                      if (otherNode.isEnabled) {
+                        // Just turned ON, so initialize its timers
+                        const nowTime = audioContext
+                          ? audioContext.currentTime
+                          : performance.now() / 1000;
+                        otherNode.lastTriggerTime = -1;
+                        otherNode.nextSyncTriggerTime = 0;
+                        otherNode.nextRandomTriggerTime = 0; // Reset if it was ever used
 
-                          if (isGlobalSyncEnabled && !otherNode.audioParams.ignoreGlobalSync) {
-                              const secondsPerBeat = 60.0 / (globalBPM || 120);
-                              const subdivIndex = otherNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
-                              if (subdivIndex >= 0 && subdivIndex < subdivisionOptions.length) {
-                                  const subdiv = subdivisionOptions[subdivIndex];
-                                  if (subdiv && typeof subdiv.value === 'number' && secondsPerBeat > 0) {
-                                      const nodeIntervalSeconds = secondsPerBeat * subdiv.value;
-                                      if (nodeIntervalSeconds > 0) {
-                                          otherNode.nextSyncTriggerTime = Math.ceil(nowTime / nodeIntervalSeconds) * nodeIntervalSeconds;
-                                          if (otherNode.nextSyncTriggerTime <= nowTime + 0.010) { // Small epsilon
-                                              otherNode.nextSyncTriggerTime += nodeIntervalSeconds;
-                                          }
-                                      }
-                                  }
+                        if (
+                          isGlobalSyncEnabled &&
+                          !otherNode.audioParams.ignoreGlobalSync
+                        ) {
+                          const secondsPerBeat = 60.0 / (globalBPM || 120);
+                          const subdivIndex =
+                            otherNode.audioParams.syncSubdivisionIndex ??
+                            DEFAULT_SUBDIVISION_INDEX;
+                          if (
+                            subdivIndex >= 0 &&
+                            subdivIndex < subdivisionOptions.length
+                          ) {
+                            const subdiv = subdivisionOptions[subdivIndex];
+                            if (
+                              subdiv &&
+                              typeof subdiv.value === "number" &&
+                              secondsPerBeat > 0
+                            ) {
+                              const nodeIntervalSeconds =
+                                secondsPerBeat * subdiv.value;
+                              if (nodeIntervalSeconds > 0) {
+                                otherNode.nextSyncTriggerTime =
+                                  Math.ceil(nowTime / nodeIntervalSeconds) *
+                                  nodeIntervalSeconds;
+                                if (
+                                  otherNode.nextSyncTriggerTime <=
+                                  nowTime + 0.01
+                                ) {
+                                  // Small epsilon
+                                  otherNode.nextSyncTriggerTime +=
+                                    nodeIntervalSeconds;
+                                }
                               }
-                          } else { // Interval timing
-                              const interval = otherNode.audioParams.triggerInterval || DEFAULT_TRIGGER_INTERVAL;
-                              otherNode.lastTriggerTime = nowTime - (interval * Math.random()); // Stagger start
+                            }
                           }
+                        } else {
+                          // Interval timing
+                          const interval =
+                            otherNode.audioParams.triggerInterval ||
+                            DEFAULT_TRIGGER_INTERVAL;
+                          otherNode.lastTriggerTime =
+                            nowTime - interval * Math.random(); // Stagger start
+                        }
                       }
                       // When a timeline toggles a pulsar_triggerable, it doesn't propagate the timeline's "pulse" further.
                       // The pulsar_triggerable will start its own pulsing if enabled.
-
-                  } else if ((otherNode.type === 'sound' || isDrumType(otherNode.type)) && 
-                      otherNode.audioParams && otherNode.audioParams.retriggerEnabled) {
+                    } else if (
+                      (otherNode.type === "sound" ||
+                        isDrumType(otherNode.type)) &&
+                      otherNode.audioParams &&
+                      otherNode.audioParams.retriggerEnabled
+                    ) {
                       startRetriggerSequence(otherNode, timelinePulseData);
-                  } else {
+                    } else {
                       // For all other node types, or if retrigger is not enabled
-                      triggerNodeEffect(otherNode, timelinePulseData); 
-                  }
+                      triggerNodeEffect(otherNode, timelinePulseData);
+                    }
 
                     if (!node.triggeredInThisSweep)
                       node.triggeredInThisSweep = new Set();
@@ -9252,23 +9001,31 @@ function animationLoop() {
                     setTimeout(() => {
                       const stillNode = findNodeById(otherNode.id);
                       if (stillNode) {
-                          if (stillNode.type === 'pulsar_triggerable') {
-                              // For a triggerable pulsar, its animation is tied to its enabled state
-                              // or its own pulsing. The toggle itself provides brief feedback.
-                              // If it's OFF, the animation can fade. If ON, its own pulsing will animate.
-                              // We reset the "toggle flash" unless it's actively pulsing.
-                               if (stillNode.animationState === 1 && !stillNode.isPulsingActive) { // isPulsingActive would be a new temp flag or check based on its timers
-                                    // Simpler: just let its own pulse animation override, or fade if turned off.
-                                    // If it was just toggled, its animationState is 1. If it's now disabled, it can go to 0.
-                                    // If it's enabled, its normal pulsing will set animationState.
-                                    if(!stillNode.isEnabled) stillNode.animationState = 0;
-                                }
-                          } else if (!stillNode.isTriggered && 
-                              (!stillNode.activeRetriggers || stillNode.activeRetriggers.length === 0)) { 
+                        if (stillNode.type === "pulsar_triggerable") {
+                          // For a triggerable pulsar, its animation is tied to its enabled state
+                          // or its own pulsing. The toggle itself provides brief feedback.
+                          // If it's OFF, the animation can fade. If ON, its own pulsing will animate.
+                          // We reset the "toggle flash" unless it's actively pulsing.
+                          if (
+                            stillNode.animationState === 1 &&
+                            !stillNode.isPulsingActive
+                          ) {
+                            // isPulsingActive would be a new temp flag or check based on its timers
+                            // Simpler: just let its own pulse animation override, or fade if turned off.
+                            // If it was just toggled, its animationState is 1. If it's now disabled, it can go to 0.
+                            // If it's enabled, its normal pulsing will set animationState.
+                            if (!stillNode.isEnabled)
                               stillNode.animationState = 0;
                           }
+                        } else if (
+                          !stillNode.isTriggered &&
+                          (!stillNode.activeRetriggers ||
+                            stillNode.activeRetriggers.length === 0)
+                        ) {
+                          stillNode.animationState = 0;
+                        }
                       }
-                  }, 250); // This timeout might still be a bit aggressive for the toggle visual.
+                    }, 250); // This timeout might still be a bit aggressive for the toggle visual.
                     break;
                   }
                 }
@@ -12608,11 +12365,518 @@ function createExplosionAnimation(x, y, color) {
 
 let _tempWasSelectedAtMouseDown = false;
 
+function handleMouseDown(event) {
+  if (!isPlaying && event.target === canvas) {
+    togglePlayPause();
+    return;
+  }
+  if (!isAudioReady) return;
+
+  const targetIsPanelControl =
+    hamburgerMenuPanel.contains(event.target) ||
+    sideToolbar.contains(event.target) ||
+    transportControlsDiv.contains(event.target) ||
+    mixerPanel.contains(event.target);
+  if (targetIsPanelControl) {
+    return;
+  }
+
+  updateMousePos(event);
+
+  _tempWasSelectedAtMouseDown = false;
+  isDragging = false;
+  isConnecting = false;
+  isResizing = false;
+  isSelecting = false;
+  isPanning = false;
+  didDrag = false;
+  selectionRect.active = false;
+  isRotatingRocket = null;
+  isResizingTimelineGrid = false;
+  resizingTimelineGridNode = null;
+  resizeHandleType = null;
+
+  isDrawingNewTimelineGrid = false;
+  newTimelineGridInitialCorner = null;
+
+  nodeClickedAtMouseDown = null;
+  connectionClickedAtMouseDown = null;
+  elementClickedAtMouseDown = null;
+  mouseDownPos = { ...mousePos };
+
+  // Initialize TimelineGrid rotation-specific flags
+  isRotatingTimelineGrid = false;
+  rotatingTimelineGridNode = null;
+  rotationTimelineGridStartAngle = 0;
+  initialTimelineGridRotation = 0;
+
+  const potentialNodeClickedGeneral = findNodeAt(mousePos.x, mousePos.y);
+
+  // --- TimelineGrid Rotation Check ---
+  // This check should come before general node dragging/selection if it's a specific interaction mode.
+  if (
+    potentialNodeClickedGeneral &&
+    potentialNodeClickedGeneral.type === TIMELINE_GRID_TYPE &&
+    event.shiftKey &&
+    event.ctrlKey &&
+    currentTool === "edit"
+  ) {
+    isRotatingTimelineGrid = true;
+    rotatingTimelineGridNode = potentialNodeClickedGeneral;
+    const dx = mousePos.x - rotatingTimelineGridNode.x;
+    const dy = mousePos.y - rotatingTimelineGridNode.y;
+    rotationTimelineGridStartAngle = Math.atan2(dy, dx);
+    initialTimelineGridRotation =
+      rotatingTimelineGridNode.audioParams.rotation || 0;
+    didDrag = false;
+    canvas.style.cursor = "grabbing"; // Or a specific rotation cursor
+
+    // Prevent other actions
+    isDragging = false;
+    isResizing = false;
+    isConnecting = false;
+    isSelecting = false;
+    isResizingTimelineGrid = false; // Explicitly ensure this is false
+
+    nodeClickedAtMouseDown = potentialNodeClickedGeneral;
+    elementClickedAtMouseDown = {
+      type: "node",
+      id: potentialNodeClickedGeneral.id,
+      nodeRef: potentialNodeClickedGeneral,
+    };
+    _tempWasSelectedAtMouseDown = isElementSelected(
+      "node",
+      potentialNodeClickedGeneral.id,
+    );
+    return; //Rotation initiated, stop further mousedown processing
+  }
+  // --- End TimelineGrid Rotation Check ---
+
+  if (currentTool === "add" && nodeTypeToAdd === TIMELINE_GRID_TYPE) {
+    isDrawingNewTimelineGrid = true;
+    newTimelineGridInitialCorner = { ...mousePos };
+    const tempDimensions = { width: 5, height: 5 };
+    const newNode = addNode(
+      mousePos.x,
+      mousePos.y,
+      TIMELINE_GRID_TYPE,
+      null,
+      tempDimensions,
+    );
+    if (newNode) {
+      currentlyPlacingTimelineNodeId = newNode.id;
+      newNode.isInResizeMode = false;
+      selectedElements.clear();
+      selectedElements.add({ type: "node", id: newNode.id });
+      _tempWasSelectedAtMouseDown = true;
+      nodeClickedAtMouseDown = newNode;
+      elementClickedAtMouseDown = {
+        type: "node",
+        id: newNode.id,
+        nodeRef: newNode,
+      };
+    } else {
+      isDrawingNewTimelineGrid = false;
+    }
+    didDrag = false;
+    canvas.style.cursor = "crosshair";
+    return;
+  }
+
+  let activeSelectedNode = null;
+  if (currentTool === "edit" && selectedElements.size > 0) {
+    const firstSelectedElement = Array.from(selectedElements)[0];
+    if (firstSelectedElement && firstSelectedElement.type === "node") {
+      activeSelectedNode = findNodeById(firstSelectedElement.id);
+    }
+  }
+
+  if (
+    activeSelectedNode &&
+    activeSelectedNode.type === TIMELINE_GRID_TYPE &&
+    !isPanning // Make sure panning isn't also trying to happen
+  ) {
+    const node = activeSelectedNode;
+
+    if (
+      node.resizeToggleIconRect &&
+      mousePos.x >= node.resizeToggleIconRect.x1 &&
+      mousePos.x <= node.resizeToggleIconRect.x2 &&
+      mousePos.y >= node.resizeToggleIconRect.y1 &&
+      mousePos.y <= node.resizeToggleIconRect.y2
+    ) {
+      node.isInResizeMode = !node.isInResizeMode;
+      if (node.audioParams)
+        node.audioParams.isInResizeMode = node.isInResizeMode;
+      saveState();
+      nodeClickedAtMouseDown = node;
+      elementClickedAtMouseDown = { type: "node", id: node.id, nodeRef: node };
+      _tempWasSelectedAtMouseDown = true;
+      didDrag = false;
+      return;
+    }
+
+    if (
+      node.directionToggleIconRect &&
+      mousePos.x >= node.directionToggleIconRect.x1 &&
+      mousePos.x <= node.directionToggleIconRect.x2 &&
+      mousePos.y >= node.directionToggleIconRect.y1 &&
+      mousePos.y <= node.directionToggleIconRect.y2
+    ) {
+      const directions = ["forward", "backward", "ping-pong"];
+      let currentIndex = directions.indexOf(
+        node.scanlineDirection || "forward",
+      );
+      currentIndex = (currentIndex + 1) % directions.length;
+      node.scanlineDirection = directions[currentIndex];
+      if (node.scanlineDirection === "ping-pong") {
+        node.isPingPongForward = true;
+      }
+      if (node.audioParams)
+        node.audioParams.scanlineDirection = node.scanlineDirection;
+      saveState();
+      nodeClickedAtMouseDown = node;
+      elementClickedAtMouseDown = { type: "node", id: node.id, nodeRef: node };
+      _tempWasSelectedAtMouseDown = true;
+      didDrag = false;
+      return;
+    }
+
+    if (node.isInResizeMode) {
+      const handleDetectionPixelMargin = 12;
+      const handleHitAreaWorld = handleDetectionPixelMargin / viewScale;
+      const hArea = handleHitAreaWorld / 2;
+      const rX = node.x - node.width / 2;
+      const rY = node.y - node.height / 2;
+      const rCX = node.x;
+      const rCY = node.y;
+      const rXW = node.x + node.width / 2;
+      const rYH = node.y + node.height / 2;
+      const handles = [
+        { x: rX, y: rY, type: "top-left", cursor: "nwse-resize" },
+        { x: rCX, y: rY, type: "top", cursor: "ns-resize" },
+        { x: rXW, y: rY, type: "top-right", cursor: "nesw-resize" },
+        { x: rX, y: rCY, type: "left", cursor: "ew-resize" },
+        { x: rXW, y: rCY, type: "right", cursor: "ew-resize" },
+        { x: rX, y: rYH, type: "bottom-left", cursor: "nesw-resize" },
+        { x: rCX, y: rYH, type: "bottom", cursor: "ns-resize" },
+        { x: rXW, y: rYH, type: "bottom-right", cursor: "nwse-resize" },
+      ];
+      for (const handle of handles) {
+        if (
+          mousePos.x >= handle.x - hArea &&
+          mousePos.x <= handle.x + hArea &&
+          mousePos.y >= handle.y - hArea &&
+          mousePos.y <= handle.y + hArea
+        ) {
+          isResizingTimelineGrid = true;
+          resizingTimelineGridNode = node;
+          resizeHandleType = handle.type;
+          resizeStartMousePos = { ...mousePos };
+          initialNodeDimensions = {
+            x: node.x,
+            y: node.y,
+            width: node.width,
+            height: node.height,
+          };
+          nodeClickedAtMouseDown = node;
+          elementClickedAtMouseDown = {
+            type: "node",
+            id: node.id,
+            nodeRef: node,
+          };
+          _tempWasSelectedAtMouseDown = true;
+          didDrag = false;
+          canvas.style.cursor = handle.cursor;
+          return;
+        }
+      }
+    }
+  }
+
+  // This was the potentialNodeClickedGeneral from before the rotation check
+  const potentialConnectionClickedGeneral = !potentialNodeClickedGeneral
+    ? findConnectionNear(mousePos.x, mousePos.y)
+    : null;
+
+  if (potentialNodeClickedGeneral) {
+    elementClickedAtMouseDown = {
+      type: "node",
+      id: potentialNodeClickedGeneral.id,
+      nodeRef: potentialNodeClickedGeneral,
+    };
+    _tempWasSelectedAtMouseDown = isElementSelected(
+      "node",
+      potentialNodeClickedGeneral.id,
+    );
+  } else if (potentialConnectionClickedGeneral) {
+    elementClickedAtMouseDown = {
+      type: "connection",
+      id: potentialConnectionClickedGeneral.id,
+      connRef: potentialConnectionClickedGeneral,
+    };
+    _tempWasSelectedAtMouseDown = isElementSelected(
+      "connection",
+      potentialConnectionClickedGeneral.id,
+    );
+  }
+  nodeClickedAtMouseDown = potentialNodeClickedGeneral;
+  connectionClickedAtMouseDown = potentialConnectionClickedGeneral;
+
+  if (nodeClickedAtMouseDown) {
+    nodeWasSelectedAtMouseDown = _tempWasSelectedAtMouseDown;
+  }
+
+  if (
+    potentialNodeClickedGeneral &&
+    potentialNodeClickedGeneral.type === "pulsar_rocket" &&
+    isElementSelected("node", potentialNodeClickedGeneral.id) &&
+    currentTool === "edit"
+  ) {
+    const outerR =
+      NODE_RADIUS_BASE *
+      potentialNodeClickedGeneral.size *
+      (1 + potentialNodeClickedGeneral.animationState * 0.5);
+    const handleOrbitRadius = outerR * 1.6;
+    const handleGripRadius = 7 / viewScale;
+    const drawingAngleRad =
+      (potentialNodeClickedGeneral.audioParams.rocketDirectionAngle || 0) -
+      Math.PI / 2;
+    const handleDisplayAngleRad = drawingAngleRad + Math.PI / 4;
+    const handleGripX_world =
+      potentialNodeClickedGeneral.x +
+      Math.cos(handleDisplayAngleRad) * handleOrbitRadius;
+    const handleGripY_world =
+      potentialNodeClickedGeneral.y +
+      Math.sin(handleDisplayAngleRad) * handleOrbitRadius;
+    const distToHandle = distance(
+      mousePos.x,
+      mousePos.y,
+      handleGripX_world,
+      handleGripY_world,
+    );
+
+    if (distToHandle < handleGripRadius) {
+      isRotatingRocket = potentialNodeClickedGeneral;
+      isDragging = false; // Ensure dragging is off if rotation starts
+      const initialMouseAngleToNodeCenterRad = Math.atan2(
+        mousePos.y - isRotatingRocket.y,
+        mousePos.x - isRotatingRocket.x,
+      );
+      rotationStartDetails = {
+        screenX: screenMousePos.x,
+        screenY: screenMousePos.y,
+        initialNodeUIAngleRad:
+          isRotatingRocket.audioParams.rocketDirectionAngle || 0,
+        initialMouseMathAngleRad: initialMouseAngleToNodeCenterRad,
+      };
+      canvas.style.cursor = "grabbing";
+      nodeClickedAtMouseDown = null; // Clear this so general dragging logic doesn't interfere
+      elementClickedAtMouseDown = null;
+      connectionClickedAtMouseDown = null;
+      return; // Rotation initiated
+    }
+  }
+
+  if (event.button === 1 || (isSpacebarDown && event.button === 0)) {
+    isPanning = true;
+    panStart = { ...screenMousePos };
+    canvas.style.cursor = "grabbing";
+    nodeClickedAtMouseDown = null;
+    connectionClickedAtMouseDown = null;
+    elementClickedAtMouseDown = null;
+    isRotatingRocket = null;
+    isResizingTimelineGrid = false;
+    return;
+  }
+
+  // If any specific interaction mode was already started, return.
+  if (isRotatingRocket || isResizingTimelineGrid || isRotatingTimelineGrid) {
+    return;
+  }
+
+  if (elementClickedAtMouseDown) {
+    const element = elementClickedAtMouseDown;
+    const node = element.type === "node" ? nodeClickedAtMouseDown : null;
+
+    if (
+      event.shiftKey &&
+      currentTool === "edit" &&
+      node &&
+      node.type !== TIMELINE_GRID_TYPE // TimelineGrid resize is handled above
+    ) {
+      isResizing = true;
+      resizeStartSize = node.size;
+      resizeStartY = screenMousePos.y;
+      canvas.style.cursor = "ns-resize";
+    } else if (event.shiftKey && currentTool !== "edit") {
+      // Shift-click to toggle selection
+      if (isElementSelected(element.type, element.id)) {
+        selectedElements = new Set(
+          [...selectedElements].filter(
+            (el) => !(el.type === element.type && el.id === element.id),
+          ),
+        );
+      } else {
+        selectedElements.add({ type: element.type, id: element.id });
+      }
+      if (currentTool === "edit") updateConstellationGroup();
+      updateGroupControlsUI();
+      populateEditPanel();
+      // Prevent dragging if shift-selecting
+      nodeClickedAtMouseDown = null;
+      connectionClickedAtMouseDown = null;
+      elementClickedAtMouseDown = null;
+    } else {
+      // Regular click or non-shift specific tool actions
+      if (
+        currentTool === "connect" ||
+        currentTool === "connect_string" ||
+        currentTool === "connect_glide" ||
+        currentTool === "connect_wavetrail"
+      ) {
+        if (
+          node &&
+          !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(
+            node.type,
+          )
+        ) {
+          isConnecting = true;
+          connectingNode = node;
+          if (currentTool === "connect_string")
+            connectionTypeToAdd = "string_violin";
+          else if (currentTool === "connect_glide")
+            connectionTypeToAdd = "glide";
+          else if (currentTool === "connect_wavetrail")
+            connectionTypeToAdd = "wavetrail";
+          else connectionTypeToAdd = "standard";
+          canvas.style.cursor = "grabbing";
+        }
+      } else if (currentTool === "delete") {
+        if (node) removeNode(node);
+        else if (connectionClickedAtMouseDown)
+          removeConnection(connectionClickedAtMouseDown);
+        nodeClickedAtMouseDown = null;
+        connectionClickedAtMouseDown = null;
+        elementClickedAtMouseDown = null;
+      } else if (currentTool === "edit") {
+        let selectionChanged = false;
+        if (!isElementSelected(element.type, element.id)) {
+          selectedElements.forEach((selEl) => {
+            if (selEl.type === "node") {
+              const n = findNodeById(selEl.id);
+              if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+            }
+          });
+          selectedElements.clear();
+          selectedElements.add({ type: element.type, id: element.id });
+          selectionChanged = true;
+        }
+        if (node) {
+          // Only initiate dragging if a node was actually clicked
+          isDragging = true;
+          dragStartPos = { ...mousePos };
+          nodeDragOffsets.clear();
+          selectedElements.forEach((el) => {
+            if (el.type === "node") {
+              const n = findNodeById(el.id);
+              if (n)
+                nodeDragOffsets.set(el.id, {
+                  x: n.x - mousePos.x,
+                  y: n.y - mousePos.y,
+                });
+            }
+          });
+          canvas.style.cursor = "move";
+        }
+        if (selectionChanged) {
+          updateConstellationGroup();
+          populateEditPanel();
+        }
+      }
+    }
+  } else {
+    // Clicked on empty space
+    if (currentTool === "edit") {
+      isSelecting = true;
+      selectionRect = {
+        startX: mousePos.x,
+        startY: mousePos.y,
+        endX: mousePos.x,
+        endY: mousePos.y,
+        active: false,
+      };
+      if (!event.shiftKey) {
+        // Clear selection if not shift-clicking on empty space
+        if (selectedElements.size > 0) {
+          selectedElements.forEach((selEl) => {
+            if (selEl.type === "node") {
+              const n = findNodeById(selEl.id);
+              if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+            }
+          });
+          selectedElements.clear();
+          updateConstellationGroup();
+          populateEditPanel();
+        }
+      }
+    } else if (
+      currentTool === "add" &&
+      nodeTypeToAdd !== null &&
+      nodeTypeToAdd !== TIMELINE_GRID_TYPE // TIMELINE_GRID_TYPE drawing starts on mousedown
+    ) {
+      if (!event.shiftKey && selectedElements.size > 0) {
+        selectedElements.clear();
+        updateConstellationGroup();
+        populateEditPanel();
+      }
+      // Node addition itself happens on mouseup if not drawing a shape like TimelineGrid
+    } else if (
+      ![
+        "connect",
+        "connect_string",
+        "connect_glide",
+        "connect_wavetrail",
+        "delete",
+      ].includes(currentTool) &&
+      !(currentTool === "add" && nodeTypeToAdd === TIMELINE_GRID_TYPE)
+    ) {
+      // If no element clicked and not using a tool that requires interaction, clear selection
+      if (selectedElements.size > 0 && !event.shiftKey) {
+        selectedElements.forEach((selEl) => {
+          if (selEl.type === "node") {
+            const n = findNodeById(selEl.id);
+            if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+          }
+        });
+        selectedElements.clear();
+        updateGroupControlsUI();
+        populateEditPanel();
+      }
+    }
+  }
+  hideOverlappingPanels();
+}
+
 function handleMouseMove(event) {
   if (!isAudioReady) return;
   updateMousePos(event);
 
   const effectiveSnap = isSnapEnabled && !event.shiftKey;
+
+  if (isRotatingTimelineGrid && rotatingTimelineGridNode) {
+    const dx = mousePos.x - rotatingTimelineGridNode.x;
+    const dy = mousePos.y - rotatingTimelineGridNode.y;
+    const currentAngle = Math.atan2(dy, dx);
+    let angleChange = currentAngle - rotationTimelineGridStartAngle;
+    rotatingTimelineGridNode.audioParams.rotation =
+      initialTimelineGridRotation + angleChange;
+    rotatingTimelineGridNode.rotation =
+      rotatingTimelineGridNode.audioParams.rotation;
+    didDrag = true;
+    canvas.style.cursor = "grabbing";
+    return;
+  }
 
   if (isDrawingNewTimelineGrid && currentlyPlacingTimelineNodeId !== null) {
     didDrag = true;
@@ -12714,8 +12978,14 @@ function handleMouseMove(event) {
     let finalBottom =
       initialNodeDimensions.y + initialNodeDimensions.height / 2;
 
-    let currentMouseX = mousePos.x;
-    let currentMouseY = mousePos.y;
+    const initialLeft =
+      initialNodeDimensions.x - initialNodeDimensions.width / 2;
+    const initialRight =
+      initialNodeDimensions.x + initialNodeDimensions.width / 2;
+    const initialTop =
+      initialNodeDimensions.y - initialNodeDimensions.height / 2;
+    const initialBottom =
+      initialNodeDimensions.y + initialNodeDimensions.height / 2;
 
     if (resizeHandleType.includes("left")) {
       let targetLeft = initialLeft + dx;
@@ -12742,10 +13012,10 @@ function handleMouseMove(event) {
     newHeight = Math.max(minDim, finalBottom - finalTop);
 
     if (resizeHandleType.includes("left")) finalLeft = finalRight - newWidth;
-    else if (resizeHandleType.includes("right"))
+    else if (!resizeHandleType.includes("right"))
       finalRight = finalLeft + newWidth;
     if (resizeHandleType.includes("top")) finalTop = finalBottom - newHeight;
-    else if (resizeHandleType.includes("bottom"))
+    else if (!resizeHandleType.includes("bottom"))
       finalBottom = finalTop + newHeight;
 
     newX = finalLeft + newWidth / 2;
@@ -13045,6 +13315,9 @@ function handleMouseUp(event) {
   const wasResizingTimeline = isResizingTimelineGrid;
   const wasDrawingNewTimeline = isDrawingNewTimelineGrid;
 
+  const wasRotatingTimelineGridObject = isRotatingTimelineGrid; // Store state before reset
+  const rotatedTimelineGridNodeObject = rotatingTimelineGridNode; // Store node before reset
+
   isResizing = false;
   isConnecting = false;
   isDragging = false;
@@ -13054,6 +13327,10 @@ function handleMouseUp(event) {
   isResizingTimelineGrid = false;
   selectionRect.active = false;
   canvas.style.cursor = "crosshair";
+
+  // Reset TimelineGrid rotation flags
+  isRotatingTimelineGrid = false;
+  rotatingTimelineGridNode = null;
 
   const nodeClickedStart = nodeClickedAtMouseDown;
   const connectionClickedStart = connectionClickedAtMouseDown;
@@ -13085,7 +13362,15 @@ function handleMouseUp(event) {
       connRef: connectionUnderCursorOnUp,
     };
 
-  if (wasDrawingNewTimeline) {
+  if (wasRotatingTimelineGridObject) {
+    // Check stored state
+    if (didDrag && rotatedTimelineGridNodeObject) {
+      rotatedTimelineGridNodeObject.rotation =
+        rotatedTimelineGridNodeObject.audioParams.rotation;
+      stateWasChanged = true; // Mark state as changed
+    }
+    actionHandledInMainBlock = true; // Action was handled
+  } else if (wasDrawingNewTimeline) {
     actionHandledInMainBlock = true;
     const node = findNodeById(currentlyPlacingTimelineNodeId);
     if (node && node.type === TIMELINE_GRID_TYPE) {
@@ -13371,14 +13656,15 @@ function handleMouseUp(event) {
         }
       }
     } else if (currentTool === "add" && nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
-      const clickedOnTimelineGrid = elementClickedStartOriginal && 
-                                      elementClickedStartOriginal.type === 'node' && 
-                                      elementClickedStartOriginal.nodeRef && 
-                                      elementClickedStartOriginal.nodeRef.type === TIMELINE_GRID_TYPE;
-        const clickedOnEmptySpace = !elementClickedStartOriginal;
-        const canPlaceNodeHere = clickedOnEmptySpace || clickedOnTimelineGrid;
+      const clickedOnTimelineGrid =
+        elementClickedStartOriginal &&
+        elementClickedStartOriginal.type === "node" &&
+        elementClickedStartOriginal.nodeRef &&
+        elementClickedStartOriginal.nodeRef.type === TIMELINE_GRID_TYPE;
+      const clickedOnEmptySpace = !elementClickedStartOriginal;
+      const canPlaceNodeHere = clickedOnEmptySpace || clickedOnTimelineGrid;
 
-        if (canPlaceNodeHere) {
+      if (canPlaceNodeHere) {
         const canActuallyAddThisNode =
           (nodeTypeToAdd !== "sound" && nodeTypeToAdd !== "nebula") ||
           (nodeTypeToAdd === "sound" && waveformToAdd) ||
@@ -13443,15 +13729,17 @@ function handleMouseUp(event) {
       }
     }
   } else {
-    actionHandledInMainBlock = true;
+    // This 'else' corresponds to one of the major interaction modes being active and completing
+    actionHandledInMainBlock = true; // It was already handled by one of the was... flags
 
     if (currentTool === "brush" || isBrushing) {
+      // Reset brush if it was active
       isBrushing = false;
       lastBrushNode = null;
     }
   }
 
-  didDrag = false;
+  didDrag = false; // Reset for the next interaction sequence
 
   nodeClickedAtMouseDown = null;
   connectionClickedAtMouseDown = null;
@@ -13473,6 +13761,7 @@ function handleMouseUp(event) {
   resizeHandleType = null;
 
   if (!isDrawingNewTimelineGrid) {
+    // Only reset if not in the middle of drawing
     newTimelineGridInitialCorner = null;
     currentlyPlacingTimelineNodeId = null;
   }
@@ -17151,7 +17440,12 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   const defaultOrbitoneCount = 0;
 
   let determinedNodeSize;
-  if (type === "relay" || type === "reflector" || type === "switch" || type === TIMELINE_GRID_TYPE) {
+  if (
+    type === "relay" ||
+    type === "reflector" ||
+    type === "switch" ||
+    type === TIMELINE_GRID_TYPE
+  ) {
     determinedNodeSize = 0.7;
   } else {
     determinedNodeSize = 1.0;
@@ -17196,7 +17490,7 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     currentRetriggerVisualIndex: -1,
   };
 
-  if (newNode.type === 'pulsar_triggerable') {
+  if (newNode.type === "pulsar_triggerable") {
     newNode.isEnabled = false; // Ensure triggerable pulsars start in the OFF state
   }
 
@@ -17355,6 +17649,7 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     newNode.isInResizeMode = optionalDimensions ? true : false;
     newNode.scanlineDirection = "forward";
     newNode.isPingPongForward = true;
+    newNode.rotation = 0;
 
     if (!newNode.audioParams) newNode.audioParams = {};
     newNode.audioParams.timelineSpeed = newNode.timelineSpeed;
@@ -17370,6 +17665,7 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     newNode.audioParams.snapToInternalGrid = newNode.snapToInternalGrid;
     newNode.audioParams.scanlineDirection = newNode.scanlineDirection;
     newNode.audioParams.isInResizeMode = newNode.isInResizeMode;
+    newNode.audioParams.rotation = 0;
 
     newNode.isStartNode = false;
     newNode.audioNodes = null;
@@ -18820,52 +19116,63 @@ window.addEventListener("load", () => {
     });
   }
 
-  const tapeLoopFitToLoopBtn = document.getElementById('tapeLoopFitToLoopBtn');
-const tapeLoopResetZoomBtn = document.getElementById('tapeLoopResetZoomBtn');
+  const tapeLoopFitToLoopBtn = document.getElementById("tapeLoopFitToLoopBtn");
+  const tapeLoopResetZoomBtn = document.getElementById("tapeLoopResetZoomBtn");
 
-if (tapeLoopFitToLoopBtn) {
-    tapeLoopFitToLoopBtn.addEventListener('click', () => {
-        const hasContent = !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
-        if (!hasContent) return;
+  if (tapeLoopFitToLoopBtn) {
+    tapeLoopFitToLoopBtn.addEventListener("click", () => {
+      const hasContent =
+        !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+      if (!hasContent) return;
 
-        const loopStartToUse = userDefinedLoopStart;
-        let loopEndToUse = userDefinedLoopEnd;
-        
-        const maxDuration = tapeLoopBuffer 
-                            ? (tapeLoopEffectivelyRecordedDuration > 0 ? tapeLoopEffectivelyRecordedDuration : tapeLoopBuffer.duration)
-                            : configuredTapeLoopDurationSeconds;
+      const loopStartToUse = userDefinedLoopStart;
+      let loopEndToUse = userDefinedLoopEnd;
 
-        if (loopEndToUse === -1 || loopEndToUse > maxDuration || loopEndToUse <= loopStartToUse) {
-            loopEndToUse = maxDuration;
-        }
-        
-        if (loopEndToUse > loopStartToUse) {
-            tapeDisplayStartTime = loopStartToUse;
-            tapeDisplayEndTime = loopEndToUse;
-            waveformPathData = null; 
-            drawTapeWaveform();      
-            updateLoopRegionAndInputs(); 
-        }
-    });
-}
+      const maxDuration = tapeLoopBuffer
+        ? tapeLoopEffectivelyRecordedDuration > 0
+          ? tapeLoopEffectivelyRecordedDuration
+          : tapeLoopBuffer.duration
+        : configuredTapeLoopDurationSeconds;
 
-if (tapeLoopResetZoomBtn) {
-    tapeLoopResetZoomBtn.addEventListener('click', () => {
-        const hasContent = !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
-        if (!hasContent) return;
-        
-        tapeDisplayStartTime = 0;
-        tapeDisplayEndTime = tapeLoopBuffer 
-                              ? (tapeLoopEffectivelyRecordedDuration > 0 ? tapeLoopEffectivelyRecordedDuration : tapeLoopBuffer.duration) 
-                              : configuredTapeLoopDurationSeconds;
-        
-        if (tapeDisplayEndTime <= tapeDisplayStartTime) tapeDisplayEndTime = tapeDisplayStartTime + 0.1; 
+      if (
+        loopEndToUse === -1 ||
+        loopEndToUse > maxDuration ||
+        loopEndToUse <= loopStartToUse
+      ) {
+        loopEndToUse = maxDuration;
+      }
 
-        waveformPathData = null; 
+      if (loopEndToUse > loopStartToUse) {
+        tapeDisplayStartTime = loopStartToUse;
+        tapeDisplayEndTime = loopEndToUse;
+        waveformPathData = null;
         drawTapeWaveform();
         updateLoopRegionAndInputs();
+      }
     });
-}
+  }
+
+  if (tapeLoopResetZoomBtn) {
+    tapeLoopResetZoomBtn.addEventListener("click", () => {
+      const hasContent =
+        !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+      if (!hasContent) return;
+
+      tapeDisplayStartTime = 0;
+      tapeDisplayEndTime = tapeLoopBuffer
+        ? tapeLoopEffectivelyRecordedDuration > 0
+          ? tapeLoopEffectivelyRecordedDuration
+          : tapeLoopBuffer.duration
+        : configuredTapeLoopDurationSeconds;
+
+      if (tapeDisplayEndTime <= tapeDisplayStartTime)
+        tapeDisplayEndTime = tapeDisplayStartTime + 0.1;
+
+      waveformPathData = null;
+      drawTapeWaveform();
+      updateLoopRegionAndInputs();
+    });
+  }
 
   Object.keys(scales).forEach((key) => {
     const o = document.createElement("option");
