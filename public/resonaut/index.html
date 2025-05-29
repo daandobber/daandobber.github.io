@@ -225,6 +225,34 @@
              <label for="delayFeedbackSlider">Delay Feedback:</label>
             <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
             <span id="delayFeedbackValue">0.40</span>
+            <div class="mixer-control-item">
+    <label for="reverbIRSelect">Reverb Type (IR):</label>
+    <select id="reverbIRSelect"></select>
+</div>
+
+<div class="mixer-control-item">
+    <label for="reverbWetSlider">Reverb Wet Level:</label>
+    <input type="range" id="reverbWetSlider" min="0" max="1" step="0.01" value="0.5">
+    <span id="reverbWetValue">0.50</span>
+</div>
+
+<div class="mixer-control-item">
+    <label for="reverbPreDelaySlider">Pre-delay:</label>
+    <input type="range" id="reverbPreDelaySlider" min="0" max="0.5" step="0.001" value="0.020">
+    <span id="reverbPreDelayValue">0.020s</span>
+</div>
+
+<div class="mixer-control-item">
+    <label for="reverbDampingSlider">Damping (LPF):</label>
+    <input type="range" id="reverbDampingSlider" min="500" max="20000" step="100" value="8000">
+    <span id="reverbDampingValue">8000Hz</span>
+</div>
+
+<div class="mixer-control-item">
+    <label for="reverbLowCutSlider">Low Cut (HPF):</label>
+    <input type="range" id="reverbLowCutSlider" min="20" max="1000" step="10" value="100">
+    <span id="reverbLowCutValue">100Hz</span>
+</div>
         </div>
     </div>
 
