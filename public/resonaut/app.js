@@ -7808,17 +7808,23 @@ function snapToInternalGrid(positionToSnap, timelineGridNode) {
     return { x: positionToSnap.x, y: positionToSnap.y };
   }
 
-  const timelineRectX = timelineGridNode.x - timelineGridNode.width / 2;
+  const timelineLeftEdge = timelineGridNode.x - timelineGridNode.width / 2;
+  const timelineRightEdge = timelineGridNode.x + timelineGridNode.width / 2;
   const divisionWidth =
     timelineGridNode.width / timelineGridNode.internalGridDivisions;
 
-  const relativeX = positionToSnap.x - timelineRectX;
+  const relativeX = positionToSnap.x - timelineLeftEdge;
 
   const nearestDivisionIndex = Math.round(relativeX / divisionWidth);
 
   let snappedRelativeX = nearestDivisionIndex * divisionWidth;
 
-  let snappedWorldX = timelineRectX + snappedRelativeX;
+  let snappedWorldX = timelineLeftEdge + snappedRelativeX;
+
+  snappedWorldX = Math.max(
+    timelineLeftEdge,
+    Math.min(snappedWorldX, timelineRightEdge),
+  );
 
   return { x: snappedWorldX, y: positionToSnap.y };
 }
@@ -8751,6 +8757,10 @@ function animationLoop() {
       } else if (node.type === TIMELINE_GRID_TYPE) {
         if (node.timelineIsPlaying) {
           const prevScanLinePosition = node.scanLinePosition;
+          const gridRectX = node.x - node.width / 2;
+          const prevSweepPositionX =
+            gridRectX + prevScanLinePosition * node.width;
+
           const cappedDeltaTime = Math.min(deltaTime, 1.0 / 15);
           let currentTimelineDurationSeconds;
 
@@ -8771,11 +8781,13 @@ function animationLoop() {
                 : TIMELINE_GRID_DEFAULT_SPEED;
           }
 
-          if (currentTimelineDurationSeconds <= 0)
+          if (currentTimelineDurationSeconds <= 0) {
             currentTimelineDurationSeconds = TIMELINE_GRID_DEFAULT_SPEED;
+          }
 
           let effectiveSpeed = cappedDeltaTime / currentTimelineDurationSeconds;
           let boundaryReachedThisFrame = false;
+          const wasPingPongForward = node.isPingPongForward;
 
           if (node.scanlineDirection === "forward") {
             node.scanLinePosition += effectiveSpeed;
@@ -8795,7 +8807,7 @@ function animationLoop() {
               if (node.timelineIsLooping) {
                 node.scanLinePosition =
                   1.0 - (Math.abs(node.scanLinePosition) % 1.0);
-                if (node.scanLinePosition >= 0.9999)
+                if (node.scanLinePosition >= 0.99999)
                   node.scanLinePosition = 0.0;
               } else {
                 node.scanLinePosition = 0.0;
@@ -8822,57 +8834,74 @@ function animationLoop() {
                 }
               }
             }
-            if (boundaryReachedThisFrame && !node.timelineIsLooping) {
-            }
           }
 
-          if (boundaryReachedThisFrame && node.timelineIsLooping) {
-            if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear();
-            else node.triggeredInThisSweep = new Set();
+          if (!node.timelineIsLooping && boundaryReachedThisFrame) {
+            node.scanLinePosition = Math.max(
+              0.0,
+              Math.min(1.0, node.scanLinePosition),
+            );
           }
 
-          const gridRectX = node.x - node.width / 2;
-          const currentScanLineWorldX =
+          const actualCurrentScanLineWorldX =
             gridRectX + node.scanLinePosition * node.width;
-          const prevSweepPositionX =
-            gridRectX + prevScanLinePosition * node.width;
-
           const gridTopY = node.y - node.height / 2;
           const gridBottomY = node.y + node.height / 2;
 
           let segmentsToTest = [];
-          if (boundaryReachedThisFrame && node.timelineIsLooping) {
-            if (
-              node.scanlineDirection === "forward" ||
-              (node.scanlineDirection === "ping-pong" &&
-                !node.isPingPongForward)
-            ) {
+
+          if (boundaryReachedThisFrame) {
+            if (node.timelineIsLooping) {
+              if (node.scanlineDirection === "forward") {
+                segmentsToTest.push({
+                  min: prevSweepPositionX,
+                  max: gridRectX + node.width,
+                });
+                segmentsToTest.push({
+                  min: gridRectX,
+                  max: actualCurrentScanLineWorldX,
+                });
+              } else if (node.scanlineDirection === "backward") {
+                segmentsToTest.push({
+                  min: gridRectX,
+                  max: prevSweepPositionX,
+                });
+                segmentsToTest.push({
+                  min: actualCurrentScanLineWorldX,
+                  max: gridRectX + node.width,
+                });
+              } else if (node.scanlineDirection === "ping-pong") {
+                if (wasPingPongForward) {
+                  segmentsToTest.push({
+                    min: prevSweepPositionX,
+                    max: gridRectX + node.width,
+                  });
+                } else {
+                  segmentsToTest.push({
+                    min: gridRectX,
+                    max: prevSweepPositionX,
+                  });
+                }
+              }
+            } else {
               segmentsToTest.push({
-                min: prevSweepPositionX,
-                max: gridRectX + node.width,
-              });
-              segmentsToTest.push({
-                min: gridRectX,
-                max: currentScanLineWorldX,
-              });
-            } else if (
-              node.scanlineDirection === "backward" ||
-              (node.scanlineDirection === "ping-pong" && node.isPingPongForward)
-            ) {
-              segmentsToTest.push({ min: gridRectX, max: prevSweepPositionX });
-              segmentsToTest.push({
-                min: currentScanLineWorldX,
-                max: gridRectX + node.width,
+                min: Math.min(prevSweepPositionX, actualCurrentScanLineWorldX),
+                max: Math.max(prevSweepPositionX, actualCurrentScanLineWorldX),
               });
             }
+
+            if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear();
+            else node.triggeredInThisSweep = new Set();
           } else {
             segmentsToTest.push({
-              min: Math.min(prevSweepPositionX, currentScanLineWorldX),
-              max: Math.max(prevSweepPositionX, currentScanLineWorldX),
+              min: Math.min(prevSweepPositionX, actualCurrentScanLineWorldX),
+              max: Math.max(prevSweepPositionX, actualCurrentScanLineWorldX),
             });
           }
 
-          if (Math.abs(prevSweepPositionX - currentScanLineWorldX) > 0.001) {
+          if (
+            Math.abs(prevSweepPositionX - actualCurrentScanLineWorldX) > 0.0001
+          ) {
             nodes.forEach((otherNode) => {
               if (
                 otherNode.id === node.id ||
@@ -8916,30 +8945,30 @@ function animationLoop() {
                         node.timelinePulseIntensity ||
                         TIMELINE_GRID_DEFAULT_PULSE_INTENSITY,
                       color:
-                        node.audioParams && node.audioParams.color
+                        node.audioParams &&
+                        node.audioParams.color !== undefined &&
+                        node.audioParams.color !== null
                           ? node.audioParams.color
                           : TIMELINE_GRID_DEFAULT_COLOR,
                       particleMultiplier: 0.6,
                     };
-                    if (otherNode.type === "pulsar_triggerable") {
-                      // Logic to toggle pulsar_triggerable by TimelineGrid
-                      otherNode.isEnabled = !otherNode.isEnabled;
-                      otherNode.animationState = 1; // Visual feedback for the toggle action
 
+                    if (otherNode.type === "pulsar_triggerable") {
+                      otherNode.isEnabled = !otherNode.isEnabled;
+                      otherNode.animationState = 1;
                       if (otherNode.isEnabled) {
-                        // Just turned ON, so initialize its timers
                         const nowTime = audioContext
                           ? audioContext.currentTime
                           : performance.now() / 1000;
                         otherNode.lastTriggerTime = -1;
                         otherNode.nextSyncTriggerTime = 0;
-                        otherNode.nextRandomTriggerTime = 0; // Reset if it was ever used
-
+                        otherNode.nextRandomTriggerTime = 0;
                         if (
                           isGlobalSyncEnabled &&
                           !otherNode.audioParams.ignoreGlobalSync
                         ) {
-                          const secondsPerBeat = 60.0 / (globalBPM || 120);
+                          const pulsarSecondsPerBeat =
+                            60.0 / (globalBPM || 120);
                           const subdivIndex =
                             otherNode.audioParams.syncSubdivisionIndex ??
                             DEFAULT_SUBDIVISION_INDEX;
@@ -8951,10 +8980,10 @@ function animationLoop() {
                             if (
                               subdiv &&
                               typeof subdiv.value === "number" &&
-                              secondsPerBeat > 0
+                              pulsarSecondsPerBeat > 0
                             ) {
                               const nodeIntervalSeconds =
-                                secondsPerBeat * subdiv.value;
+                                pulsarSecondsPerBeat * subdiv.value;
                               if (nodeIntervalSeconds > 0) {
                                 otherNode.nextSyncTriggerTime =
                                   Math.ceil(nowTime / nodeIntervalSeconds) *
@@ -8963,7 +8992,6 @@ function animationLoop() {
                                   otherNode.nextSyncTriggerTime <=
                                   nowTime + 0.01
                                 ) {
-                                  // Small epsilon
                                   otherNode.nextSyncTriggerTime +=
                                     nodeIntervalSeconds;
                                 }
@@ -8971,16 +8999,13 @@ function animationLoop() {
                             }
                           }
                         } else {
-                          // Interval timing
                           const interval =
                             otherNode.audioParams.triggerInterval ||
                             DEFAULT_TRIGGER_INTERVAL;
                           otherNode.lastTriggerTime =
-                            nowTime - interval * Math.random(); // Stagger start
+                            nowTime - interval * Math.random();
                         }
                       }
-                      // When a timeline toggles a pulsar_triggerable, it doesn't propagate the timeline's "pulse" further.
-                      // The pulsar_triggerable will start its own pulsing if enabled.
                     } else if (
                       (otherNode.type === "sound" ||
                         isDrumType(otherNode.type)) &&
@@ -8989,7 +9014,6 @@ function animationLoop() {
                     ) {
                       startRetriggerSequence(otherNode, timelinePulseData);
                     } else {
-                      // For all other node types, or if retrigger is not enabled
                       triggerNodeEffect(otherNode, timelinePulseData);
                     }
 
@@ -9002,21 +9026,11 @@ function animationLoop() {
                       const stillNode = findNodeById(otherNode.id);
                       if (stillNode) {
                         if (stillNode.type === "pulsar_triggerable") {
-                          // For a triggerable pulsar, its animation is tied to its enabled state
-                          // or its own pulsing. The toggle itself provides brief feedback.
-                          // If it's OFF, the animation can fade. If ON, its own pulsing will animate.
-                          // We reset the "toggle flash" unless it's actively pulsing.
                           if (
-                            stillNode.animationState === 1 &&
-                            !stillNode.isPulsingActive
-                          ) {
-                            // isPulsingActive would be a new temp flag or check based on its timers
-                            // Simpler: just let its own pulse animation override, or fade if turned off.
-                            // If it was just toggled, its animationState is 1. If it's now disabled, it can go to 0.
-                            // If it's enabled, its normal pulsing will set animationState.
-                            if (!stillNode.isEnabled)
-                              stillNode.animationState = 0;
-                          }
+                            !stillNode.isEnabled &&
+                            stillNode.animationState === 1
+                          )
+                            stillNode.animationState = 0;
                         } else if (
                           !stillNode.isTriggered &&
                           (!stillNode.activeRetriggers ||
@@ -9025,7 +9039,7 @@ function animationLoop() {
                           stillNode.animationState = 0;
                         }
                       }
-                    }, 250); // This timeout might still be a bit aggressive for the toggle visual.
+                    }, 250);
                     break;
                   }
                 }
@@ -12404,7 +12418,6 @@ function handleMouseDown(event) {
   elementClickedAtMouseDown = null;
   mouseDownPos = { ...mousePos };
 
-  // Initialize TimelineGrid rotation-specific flags
   isRotatingTimelineGrid = false;
   rotatingTimelineGridNode = null;
   rotationTimelineGridStartAngle = 0;
@@ -12412,8 +12425,6 @@ function handleMouseDown(event) {
 
   const potentialNodeClickedGeneral = findNodeAt(mousePos.x, mousePos.y);
 
-  // --- TimelineGrid Rotation Check ---
-  // This check should come before general node dragging/selection if it's a specific interaction mode.
   if (
     potentialNodeClickedGeneral &&
     potentialNodeClickedGeneral.type === TIMELINE_GRID_TYPE &&
@@ -12429,14 +12440,13 @@ function handleMouseDown(event) {
     initialTimelineGridRotation =
       rotatingTimelineGridNode.audioParams.rotation || 0;
     didDrag = false;
-    canvas.style.cursor = "grabbing"; // Or a specific rotation cursor
+    canvas.style.cursor = "grabbing";
 
-    // Prevent other actions
     isDragging = false;
     isResizing = false;
     isConnecting = false;
     isSelecting = false;
-    isResizingTimelineGrid = false; // Explicitly ensure this is false
+    isResizingTimelineGrid = false;
 
     nodeClickedAtMouseDown = potentialNodeClickedGeneral;
     elementClickedAtMouseDown = {
@@ -12448,17 +12458,20 @@ function handleMouseDown(event) {
       "node",
       potentialNodeClickedGeneral.id,
     );
-    return; //Rotation initiated, stop further mousedown processing
+    return;
   }
-  // --- End TimelineGrid Rotation Check ---
 
   if (currentTool === "add" && nodeTypeToAdd === TIMELINE_GRID_TYPE) {
     isDrawingNewTimelineGrid = true;
-    newTimelineGridInitialCorner = { ...mousePos };
+
+    newTimelineGridInitialCorner = isSnapEnabled
+      ? snapToGrid(mousePos.x, mousePos.y)
+      : { ...mousePos };
+
     const tempDimensions = { width: 5, height: 5 };
     const newNode = addNode(
-      mousePos.x,
-      mousePos.y,
+      newTimelineGridInitialCorner.x,
+      newTimelineGridInitialCorner.y,
       TIMELINE_GRID_TYPE,
       null,
       tempDimensions,
@@ -12494,7 +12507,7 @@ function handleMouseDown(event) {
   if (
     activeSelectedNode &&
     activeSelectedNode.type === TIMELINE_GRID_TYPE &&
-    !isPanning // Make sure panning isn't also trying to happen
+    !isPanning
   ) {
     const node = activeSelectedNode;
 
@@ -12594,7 +12607,6 @@ function handleMouseDown(event) {
     }
   }
 
-  // This was the potentialNodeClickedGeneral from before the rotation check
   const potentialConnectionClickedGeneral = !potentialNodeClickedGeneral
     ? findConnectionNear(mousePos.x, mousePos.y)
     : null;
@@ -12658,7 +12670,7 @@ function handleMouseDown(event) {
 
     if (distToHandle < handleGripRadius) {
       isRotatingRocket = potentialNodeClickedGeneral;
-      isDragging = false; // Ensure dragging is off if rotation starts
+      isDragging = false;
       const initialMouseAngleToNodeCenterRad = Math.atan2(
         mousePos.y - isRotatingRocket.y,
         mousePos.x - isRotatingRocket.x,
@@ -12671,10 +12683,10 @@ function handleMouseDown(event) {
         initialMouseMathAngleRad: initialMouseAngleToNodeCenterRad,
       };
       canvas.style.cursor = "grabbing";
-      nodeClickedAtMouseDown = null; // Clear this so general dragging logic doesn't interfere
+      nodeClickedAtMouseDown = null;
       elementClickedAtMouseDown = null;
       connectionClickedAtMouseDown = null;
-      return; // Rotation initiated
+      return;
     }
   }
 
@@ -12690,7 +12702,6 @@ function handleMouseDown(event) {
     return;
   }
 
-  // If any specific interaction mode was already started, return.
   if (isRotatingRocket || isResizingTimelineGrid || isRotatingTimelineGrid) {
     return;
   }
@@ -12703,14 +12714,13 @@ function handleMouseDown(event) {
       event.shiftKey &&
       currentTool === "edit" &&
       node &&
-      node.type !== TIMELINE_GRID_TYPE // TimelineGrid resize is handled above
+      node.type !== TIMELINE_GRID_TYPE
     ) {
       isResizing = true;
       resizeStartSize = node.size;
       resizeStartY = screenMousePos.y;
       canvas.style.cursor = "ns-resize";
     } else if (event.shiftKey && currentTool !== "edit") {
-      // Shift-click to toggle selection
       if (isElementSelected(element.type, element.id)) {
         selectedElements = new Set(
           [...selectedElements].filter(
@@ -12723,12 +12733,11 @@ function handleMouseDown(event) {
       if (currentTool === "edit") updateConstellationGroup();
       updateGroupControlsUI();
       populateEditPanel();
-      // Prevent dragging if shift-selecting
+
       nodeClickedAtMouseDown = null;
       connectionClickedAtMouseDown = null;
       elementClickedAtMouseDown = null;
     } else {
-      // Regular click or non-shift specific tool actions
       if (
         currentTool === "connect" ||
         currentTool === "connect_string" ||
@@ -12773,7 +12782,6 @@ function handleMouseDown(event) {
           selectionChanged = true;
         }
         if (node) {
-          // Only initiate dragging if a node was actually clicked
           isDragging = true;
           dragStartPos = { ...mousePos };
           nodeDragOffsets.clear();
@@ -12796,7 +12804,6 @@ function handleMouseDown(event) {
       }
     }
   } else {
-    // Clicked on empty space
     if (currentTool === "edit") {
       isSelecting = true;
       selectionRect = {
@@ -12807,7 +12814,6 @@ function handleMouseDown(event) {
         active: false,
       };
       if (!event.shiftKey) {
-        // Clear selection if not shift-clicking on empty space
         if (selectedElements.size > 0) {
           selectedElements.forEach((selEl) => {
             if (selEl.type === "node") {
@@ -12823,14 +12829,13 @@ function handleMouseDown(event) {
     } else if (
       currentTool === "add" &&
       nodeTypeToAdd !== null &&
-      nodeTypeToAdd !== TIMELINE_GRID_TYPE // TIMELINE_GRID_TYPE drawing starts on mousedown
+      nodeTypeToAdd !== TIMELINE_GRID_TYPE
     ) {
       if (!event.shiftKey && selectedElements.size > 0) {
         selectedElements.clear();
         updateConstellationGroup();
         populateEditPanel();
       }
-      // Node addition itself happens on mouseup if not drawing a shape like TimelineGrid
     } else if (
       ![
         "connect",
@@ -12841,7 +12846,6 @@ function handleMouseDown(event) {
       ].includes(currentTool) &&
       !(currentTool === "add" && nodeTypeToAdd === TIMELINE_GRID_TYPE)
     ) {
-      // If no element clicked and not using a tool that requires interaction, clear selection
       if (selectedElements.size > 0 && !event.shiftKey) {
         selectedElements.forEach((selEl) => {
           if (selEl.type === "node") {
@@ -12862,7 +12866,7 @@ function handleMouseMove(event) {
   if (!isAudioReady) return;
   updateMousePos(event);
 
-  const effectiveSnap = isSnapEnabled && !event.shiftKey;
+  const effectiveGlobalSnap = isSnapEnabled && !event.shiftKey;
 
   if (isRotatingTimelineGrid && rotatingTimelineGridNode) {
     const dx = mousePos.x - rotatingTimelineGridNode.x;
@@ -12882,12 +12886,13 @@ function handleMouseMove(event) {
     didDrag = true;
     const node = findNodeById(currentlyPlacingTimelineNodeId);
     if (node && node.type === TIMELINE_GRID_TYPE) {
-      const startX = newTimelineGridInitialCorner.x;
-      const startY = newTimelineGridInitialCorner.y;
+      let startX = newTimelineGridInitialCorner.x;
+      let startY = newTimelineGridInitialCorner.y;
+
       let currentX = mousePos.x;
       let currentY = mousePos.y;
 
-      if (effectiveSnap) {
+      if (effectiveGlobalSnap) {
         const snappedCurrentPos = snapToGrid(currentX, currentY);
         currentX = snappedCurrentPos.x;
         currentY = snappedCurrentPos.y;
@@ -12916,10 +12921,17 @@ function handleMouseMove(event) {
     const dx = mousePos.x - isRotatingRocket.x;
     const dy = mousePos.y - isRotatingRocket.y;
     const currentMouseMathAngleRad = Math.atan2(dy, dx);
-    let newUIAngleRad = currentMouseMathAngleRad + Math.PI / 2;
+
+    let angleDiffRad =
+      currentMouseMathAngleRad - rotationStartDetails.initialMouseMathAngleRad;
+    let newUIAngleRad =
+      rotationStartDetails.initialNodeUIAngleRad + angleDiffRad;
+
     newUIAngleRad =
       ((newUIAngleRad % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+
     isRotatingRocket.audioParams.rocketDirectionAngle = newUIAngleRad;
+
     if (
       !hamburgerMenuPanel.classList.contains("hidden") &&
       selectedElements.has({
@@ -12987,33 +12999,55 @@ function handleMouseMove(event) {
     const initialBottom =
       initialNodeDimensions.y + initialNodeDimensions.height / 2;
 
+    let currentResizeMouseX = mousePos.x;
+    let currentResizeMouseY = mousePos.y;
+
+    if (effectiveGlobalSnap) {
+      const snappedResizeMouse = snapToGrid(mousePos.x, mousePos.y);
+      currentResizeMouseX = snappedResizeMouse.x;
+      currentResizeMouseY = snappedResizeMouse.y;
+    }
+    const snappedDx =
+      currentResizeMouseX -
+      (effectiveGlobalSnap
+        ? snapToGrid(resizeStartMousePos.x, resizeStartMousePos.y).x
+        : resizeStartMousePos.x);
+    const snappedDy =
+      currentResizeMouseY -
+      (effectiveGlobalSnap
+        ? snapToGrid(resizeStartMousePos.x, resizeStartMousePos.y).y
+        : resizeStartMousePos.y);
+
     if (resizeHandleType.includes("left")) {
-      let targetLeft = initialLeft + dx;
-      if (effectiveSnap) targetLeft = snapToGrid(targetLeft, 0).x;
-      finalLeft = Math.min(finalRight - minDim, targetLeft);
+      let targetLeft = initialLeft + snappedDx;
+      finalLeft = Math.min(initialRight - minDim, targetLeft);
     }
     if (resizeHandleType.includes("right")) {
-      let targetRight = initialRight + dx;
-      if (effectiveSnap) targetRight = snapToGrid(targetRight, 0).x;
-      finalRight = Math.max(finalLeft + minDim, targetRight);
+      let targetRight = initialRight + snappedDx;
+      finalRight = Math.max(initialLeft + minDim, targetRight);
     }
     if (resizeHandleType.includes("top")) {
-      let targetTop = initialTop + dy;
-      if (effectiveSnap) targetTop = snapToGrid(0, targetTop).y;
-      finalTop = Math.min(finalBottom - minDim, targetTop);
+      let targetTop = initialTop + snappedDy;
+      finalTop = Math.min(initialBottom - minDim, targetTop);
     }
     if (resizeHandleType.includes("bottom")) {
-      let targetBottom = initialBottom + dy;
-      if (effectiveSnap) targetBottom = snapToGrid(0, targetBottom).y;
-      finalBottom = Math.max(finalTop + minDim, targetBottom);
+      let targetBottom = initialBottom + snappedDy;
+      finalBottom = Math.max(initialTop + minDim, targetBottom);
     }
 
     newWidth = Math.max(minDim, finalRight - finalLeft);
     newHeight = Math.max(minDim, finalBottom - finalTop);
 
+    if (effectiveGlobalSnap) {
+      const spacing = calculateGridSpacing();
+      newWidth = Math.max(spacing, Math.round(newWidth / spacing) * spacing);
+      newHeight = Math.max(spacing, Math.round(newHeight / spacing) * spacing);
+    }
+
     if (resizeHandleType.includes("left")) finalLeft = finalRight - newWidth;
     else if (!resizeHandleType.includes("right"))
       finalRight = finalLeft + newWidth;
+
     if (resizeHandleType.includes("top")) finalTop = finalBottom - newHeight;
     else if (!resizeHandleType.includes("bottom"))
       finalBottom = finalTop + newHeight;
@@ -13031,17 +13065,9 @@ function handleMouseMove(event) {
       resizingTimelineGridNode.audioParams.height = newHeight;
     }
     populateEditPanel();
-    if (resizeHandleType === "top-left" || resizeHandleType === "bottom-right")
-      canvas.style.cursor = "nwse-resize";
-    else if (
-      resizeHandleType === "top-right" ||
-      resizeHandleType === "bottom-left"
-    )
-      canvas.style.cursor = "nesw-resize";
-    else if (resizeHandleType === "top" || resizeHandleType === "bottom")
-      canvas.style.cursor = "ns-resize";
-    else if (resizeHandleType === "left" || resizeHandleType === "right")
-      canvas.style.cursor = "ew-resize";
+    if (canvas.style.cursor !== resizeHandleType)
+      canvas.style.cursor =
+        handles.find((h) => h.type === resizeHandleType)?.cursor || "grabbing";
 
     return;
   } else if (isResizing && nodeClickedAtMouseDown) {
@@ -13065,6 +13091,7 @@ function handleMouseMove(event) {
   } else if (isDragging && didDrag) {
     const dx_world = mousePos.x - dragStartPos.x;
     const dy_world = mousePos.y - dragStartPos.y;
+
     selectedElements.forEach((el) => {
       if (el.type === "node") {
         const n = findNodeById(el.id);
@@ -13074,26 +13101,34 @@ function handleMouseMove(event) {
           let targetY = dragStartPos.y + offset.y + dy_world;
 
           let snappedToAnInternalGrid = false;
+
           if (n.type !== TIMELINE_GRID_TYPE) {
-            for (const timelineGrid of nodes) {
+            for (const timelineGridNode of nodes) {
               if (
-                timelineGrid.type === TIMELINE_GRID_TYPE &&
-                timelineGrid.snapToInternalGrid &&
-                timelineGrid.internalGridDivisions > 1
+                timelineGridNode.type === TIMELINE_GRID_TYPE &&
+                timelineGridNode.snapToInternalGrid &&
+                timelineGridNode.internalGridDivisions > 1
               ) {
-                const gridRectX = timelineGrid.x - timelineGrid.width / 2;
-                const gridRectY = timelineGrid.y - timelineGrid.height / 2;
-                const nodeIsInsideTimeline =
-                  targetX >= gridRectX &&
-                  targetX <= gridRectX + timelineGrid.width &&
-                  targetY >= gridRectY &&
-                  targetY <= gridRectY + timelineGrid.height;
-                if (nodeIsInsideTimeline) {
+                const tgRectX = timelineGridNode.x - timelineGridNode.width / 2;
+                const tgRectY =
+                  timelineGridNode.y - timelineGridNode.height / 2;
+                const tgRectXW =
+                  timelineGridNode.x + timelineGridNode.width / 2;
+                const tgRectYH =
+                  timelineGridNode.y + timelineGridNode.height / 2;
+
+                if (
+                  targetX >= tgRectX &&
+                  targetX <= tgRectXW &&
+                  targetY >= tgRectY &&
+                  targetY <= tgRectYH
+                ) {
                   const internalSnapPos = snapToInternalGrid(
                     { x: targetX, y: targetY },
-                    timelineGrid,
+                    timelineGridNode,
                   );
                   targetX = internalSnapPos.x;
+
                   snappedToAnInternalGrid = true;
                   break;
                 }
@@ -13101,7 +13136,7 @@ function handleMouseMove(event) {
             }
           }
 
-          if (!snappedToAnInternalGrid && effectiveSnap) {
+          if (!snappedToAnInternalGrid && effectiveGlobalSnap) {
             const globalSnapped = snapToGrid(targetX, targetY);
             targetX = globalSnapped.x;
             targetY = globalSnapped.y;
@@ -13142,6 +13177,7 @@ function handleMouseMove(event) {
           const handleDetectionPixelMargin = 12;
           const handleHitAreaWorld = handleDetectionPixelMargin / viewScale;
           const hArea = handleHitAreaWorld / 2;
+
           const nodeRectX = node.x - node.width / 2;
           const nodeRectY = node.y - node.height / 2;
           const nodeCX = node.x;
@@ -13149,7 +13185,7 @@ function handleMouseMove(event) {
           const nodeRXW = node.x + node.width / 2;
           const nodeRYH = node.y + node.height / 2;
 
-          const fullHandlesInfo = [
+          const handlesInfo = [
             {
               x: nodeRectX,
               y: nodeRectY,
@@ -13180,7 +13216,7 @@ function handleMouseMove(event) {
             },
           ];
 
-          for (const handle of fullHandlesInfo) {
+          for (const handle of handlesInfo) {
             if (
               mousePos.x >= handle.x - hArea &&
               mousePos.x <= handle.x + hArea &&
@@ -13205,7 +13241,8 @@ function handleMouseMove(event) {
         hN &&
         (hN.type === "sound" ||
           hN.type === "nebula" ||
-          hN.type === "pitchShift")
+          hN.type === "pitchShift" ||
+          hN.type === PRORB_TYPE)
       ) {
         canvas.style.cursor = "pointer";
       } else if (
@@ -13280,6 +13317,7 @@ function handleMouseUp(event) {
     sideToolbar.contains(event.target) ||
     transportControlsDiv.contains(event.target) ||
     mixerPanel.contains(event.target);
+
   if (targetIsPanelControl) {
     isDragging = false;
     isConnecting = false;
@@ -13315,8 +13353,8 @@ function handleMouseUp(event) {
   const wasResizingTimeline = isResizingTimelineGrid;
   const wasDrawingNewTimeline = isDrawingNewTimelineGrid;
 
-  const wasRotatingTimelineGridObject = isRotatingTimelineGrid; // Store state before reset
-  const rotatedTimelineGridNodeObject = rotatingTimelineGridNode; // Store node before reset
+  const wasRotatingTimelineGridObject = isRotatingTimelineGrid;
+  const rotatedTimelineGridNodeObject = rotatingTimelineGridNode;
 
   isResizing = false;
   isConnecting = false;
@@ -13328,7 +13366,6 @@ function handleMouseUp(event) {
   selectionRect.active = false;
   canvas.style.cursor = "crosshair";
 
-  // Reset TimelineGrid rotation flags
   isRotatingTimelineGrid = false;
   rotatingTimelineGridNode = null;
 
@@ -13363,36 +13400,76 @@ function handleMouseUp(event) {
     };
 
   if (wasRotatingTimelineGridObject) {
-    // Check stored state
+    actionHandledInMainBlock = true;
     if (didDrag && rotatedTimelineGridNodeObject) {
       rotatedTimelineGridNodeObject.rotation =
         rotatedTimelineGridNodeObject.audioParams.rotation;
-      stateWasChanged = true; // Mark state as changed
+      stateWasChanged = true;
     }
-    actionHandledInMainBlock = true; // Action was handled
   } else if (wasDrawingNewTimeline) {
     actionHandledInMainBlock = true;
     const node = findNodeById(currentlyPlacingTimelineNodeId);
     if (node && node.type === TIMELINE_GRID_TYPE) {
-      const startX = newTimelineGridInitialCorner.x;
-      const startY = newTimelineGridInitialCorner.y;
-      const currentX = mousePos.x;
-      const currentY = mousePos.y;
-      let finalWidth = Math.abs(currentX - startX);
-      let finalHeight = Math.abs(currentY - startY);
-      let finalCenterX = Math.min(startX, currentX) + finalWidth / 2;
-      let finalCenterY = Math.min(startY, currentY) + finalHeight / 2;
+      let startX = newTimelineGridInitialCorner.x;
+      let startY = newTimelineGridInitialCorner.y;
+
+      let currentX = mousePos.x;
+      let currentY = mousePos.y;
+
+      let finalWidth, finalHeight, finalLeft, finalTop;
+      const effectiveSnapOnDrawEnd =
+        isSnapEnabled && !(event && event.shiftKey);
+
+      if (effectiveSnapOnDrawEnd) {
+        const spacing = calculateGridSpacing();
+        const snappedCurrentPos = snapToGrid(currentX, currentY);
+        currentX = snappedCurrentPos.x;
+        currentY = snappedCurrentPos.y;
+
+        finalWidth = Math.abs(currentX - startX);
+        finalHeight = Math.abs(currentY - startY);
+
+        finalWidth = Math.max(
+          spacing,
+          Math.round(finalWidth / spacing) * spacing,
+        );
+        finalHeight = Math.max(
+          spacing,
+          Math.round(finalHeight / spacing) * spacing,
+        );
+
+        if (currentX < startX) {
+          finalLeft = startX - finalWidth;
+        } else {
+          finalLeft = startX;
+        }
+        if (currentY < startY) {
+          finalTop = startY - finalHeight;
+        } else {
+          finalTop = startY;
+        }
+      } else {
+        finalLeft = Math.min(startX, currentX);
+        finalTop = Math.min(startY, currentY);
+        finalWidth = Math.abs(currentX - startX);
+        finalHeight = Math.abs(currentY - startY);
+      }
+
       finalWidth = Math.max(20, finalWidth);
       finalHeight = Math.max(20, finalHeight);
-      node.x = finalCenterX;
-      node.y = finalCenterY;
+
+      node.x = finalLeft + finalWidth / 2;
+      node.y = finalTop + finalHeight / 2;
       node.width = finalWidth;
       node.height = finalHeight;
       node.isInResizeMode = true;
+
       if (node.audioParams) {
         node.audioParams.width = node.width;
         node.audioParams.height = node.height;
+        node.audioParams.isInResizeMode = node.isInResizeMode;
       }
+
       selectedElements.clear();
       selectedElements.add({ type: "node", id: node.id });
       populateEditPanel();
@@ -13402,6 +13479,7 @@ function handleMouseUp(event) {
     newTimelineGridInitialCorner = null;
     currentlyPlacingTimelineNodeId = null;
 
+    const addTimelineGridBtn = document.getElementById("addTimelineGridBtn");
     if (addTimelineGridBtn && addTimelineGridBtn.classList.contains("active")) {
       addTimelineGridBtn.classList.remove("active");
     }
@@ -13463,14 +13541,7 @@ function handleMouseUp(event) {
     stateWasChanged = true;
     updateConstellationGroup();
     populateEditPanel();
-  } else if (
-    !wasDraggingNode &&
-    !wasPanningView &&
-    !wasResizingNode &&
-    !wasRotatingARocketNode &&
-    !wasResizingTimeline &&
-    !didDrag
-  ) {
+  } else if (!didDrag) {
     actionHandledInMainBlock = true;
     if (currentTool === "brush") {
       if (!elementUnderCursorAtUp) {
@@ -13630,6 +13701,7 @@ function handleMouseUp(event) {
                   node.hasOwnProperty("isInResizeMode")
                 )
                   node.isInResizeMode = false;
+
                 updateConstellationGroup();
                 populateEditPanel();
                 stateWasChanged = true;
@@ -13655,16 +13727,22 @@ function handleMouseUp(event) {
           stateWasChanged = true;
         }
       }
-    } else if (currentTool === "add" && nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
-      const clickedOnTimelineGrid =
+    } else if (
+      currentTool === "add" &&
+      nodeTypeToAdd !== TIMELINE_GRID_TYPE &&
+      !didDrag
+    ) {
+      actionHandledInMainBlock = true;
+      const clickedOnTimelineGridOriginal =
         elementClickedStartOriginal &&
         elementClickedStartOriginal.type === "node" &&
         elementClickedStartOriginal.nodeRef &&
         elementClickedStartOriginal.nodeRef.type === TIMELINE_GRID_TYPE;
-      const clickedOnEmptySpace = !elementClickedStartOriginal;
-      const canPlaceNodeHere = clickedOnEmptySpace || clickedOnTimelineGrid;
+      const clickedOnEmptySpaceOriginal = !elementClickedStartOriginal;
+      const canPlaceNodeHereOriginal =
+        clickedOnEmptySpaceOriginal || clickedOnTimelineGridOriginal;
 
-      if (canPlaceNodeHere) {
+      if (canPlaceNodeHereOriginal) {
         const canActuallyAddThisNode =
           (nodeTypeToAdd !== "sound" && nodeTypeToAdd !== "nebula") ||
           (nodeTypeToAdd === "sound" && waveformToAdd) ||
@@ -13683,12 +13761,56 @@ function handleMouseUp(event) {
           ].includes(nodeTypeToAdd);
 
         if (canActuallyAddThisNode) {
-          const newNode = addNode(
-            mousePos.x,
-            mousePos.y,
-            nodeTypeToAdd,
-            waveformToAdd,
-          );
+          let finalX = mousePos.x;
+          let finalY = mousePos.y;
+          let snappedToAnInternalGrid = false;
+          const effectiveGlobalSnapForAdd =
+            isSnapEnabled && !(event && event.shiftKey);
+
+          if (nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
+            for (const timelineGridNode of nodes) {
+              if (
+                timelineGridNode.type === TIMELINE_GRID_TYPE &&
+                timelineGridNode.snapToInternalGrid &&
+                timelineGridNode.internalGridDivisions > 1
+              ) {
+                const tgRectLeft =
+                  timelineGridNode.x - timelineGridNode.width / 2;
+                const tgRectTop =
+                  timelineGridNode.y - timelineGridNode.height / 2;
+                const tgRectRight =
+                  timelineGridNode.x + timelineGridNode.width / 2;
+                const tgRectBottom =
+                  timelineGridNode.y + timelineGridNode.height / 2;
+
+                if (
+                  mousePos.x >= tgRectLeft &&
+                  mousePos.x <= tgRectRight &&
+                  mousePos.y >= tgRectTop &&
+                  mousePos.y <= tgRectBottom
+                ) {
+                  const internalSnapPos = snapToInternalGrid(
+                    { x: mousePos.x, y: mousePos.y },
+                    timelineGridNode,
+                  );
+                  finalX = internalSnapPos.x;
+                  finalY = internalSnapPos.y;
+                  snappedToAnInternalGrid = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!snappedToAnInternalGrid && effectiveGlobalSnapForAdd) {
+            if (nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
+              const globalSnapped = snapToGrid(mousePos.x, mousePos.y);
+              finalX = globalSnapped.x;
+              finalY = globalSnapped.y;
+            }
+          }
+
+          const newNode = addNode(finalX, finalY, nodeTypeToAdd, waveformToAdd);
           if (newNode) {
             if (!event.shiftKey) selectedElements.clear();
             selectedElements.add({ type: "node", id: newNode.id });
@@ -13698,7 +13820,12 @@ function handleMouseUp(event) {
           }
         }
       }
-    } else if (currentTool === "delete" && elementClickedStartOriginal) {
+    } else if (
+      currentTool === "delete" &&
+      elementClickedStartOriginal &&
+      !didDrag
+    ) {
+      actionHandledInMainBlock = true;
       if (elementClickedStartOriginal.type === "node")
         removeNode(nodeClickedStart);
       else if (elementClickedStartOriginal.type === "connection")
@@ -13707,6 +13834,7 @@ function handleMouseUp(event) {
     } else if (
       !elementClickedStartOriginal &&
       !event.shiftKey &&
+      !didDrag &&
       currentTool !== "add" &&
       currentTool !== "brush" &&
       currentTool !== "delete" &&
@@ -13715,6 +13843,7 @@ function handleMouseUp(event) {
       currentTool !== "connect_glide" &&
       currentTool !== "connect_wavetrail"
     ) {
+      actionHandledInMainBlock = true;
       if (selectedElements.size > 0) {
         selectedElements.forEach((selEl) => {
           if (selEl.type === "node") {
@@ -13728,18 +13857,9 @@ function handleMouseUp(event) {
         stateWasChanged = true;
       }
     }
-  } else {
-    // This 'else' corresponds to one of the major interaction modes being active and completing
-    actionHandledInMainBlock = true; // It was already handled by one of the was... flags
-
-    if (currentTool === "brush" || isBrushing) {
-      // Reset brush if it was active
-      isBrushing = false;
-      lastBrushNode = null;
-    }
   }
 
-  didDrag = false; // Reset for the next interaction sequence
+  didDrag = false;
 
   nodeClickedAtMouseDown = null;
   connectionClickedAtMouseDown = null;
@@ -13761,7 +13881,6 @@ function handleMouseUp(event) {
   resizeHandleType = null;
 
   if (!isDrawingNewTimelineGrid) {
-    // Only reset if not in the middle of drawing
     newTimelineGridInitialCorner = null;
     currentlyPlacingTimelineNodeId = null;
   }
@@ -14352,6 +14471,17 @@ function setActiveTool(toolName) {
   connectingNode = null;
   isConnecting = false;
 
+  if (toolName !== "edit") {
+    nodes.forEach((node) => {
+      if (node.type === TIMELINE_GRID_TYPE) {
+        node.isInResizeMode = false;
+        if (node.audioParams) {
+          node.audioParams.isInResizeMode = false;
+        }
+      }
+    });
+  }
+
   editBtn.classList.toggle("active", toolName === "edit");
   connectBtn.classList.toggle("active", toolName === "connect");
   connectStringBtn.classList.toggle("active", toolName === "connect_string");
@@ -14602,50 +14732,157 @@ function populateEditPanel() {
           section.appendChild(speedSliderContainer);
         }
 
-        const currentWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
-        const widthVal = currentWidth.toFixed(0);
+        const MIN_TIMELINE_PIXEL_WIDTH = 50;
+        const MAX_TIMELINE_PIXEL_WIDTH = 1200;
+        const MIN_TIMELINE_PIXEL_HEIGHT = 50;
+        const MAX_TIMELINE_PIXEL_HEIGHT = 800;
+        const PIXEL_STEP = 10;
+
+        const gridSpacing = calculateGridSpacing();
+        const halfGridSquare =
+          isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
+
+        let widthSliderMin,
+          widthSliderMax,
+          widthSliderStep,
+          currentWidthInUnits,
+          widthLabelUnitText;
+        const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+
+        if (isSnapEnabled && halfGridSquare > 0) {
+          widthSliderMin = Math.max(
+            1,
+            Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
+          );
+          widthSliderMax = Math.round(
+            MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
+          );
+          widthSliderStep = 1;
+          currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
+          widthLabelUnitText = " units";
+        } else {
+          widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
+          widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
+          widthSliderStep = PIXEL_STEP;
+          currentWidthInUnits = currentPixelWidth;
+          widthLabelUnitText = "px";
+        }
+
+        const widthDisplayValText =
+          isSnapEnabled && halfGridSquare > 0
+            ? currentWidthInUnits.toFixed(0)
+            : currentPixelWidth.toFixed(0);
         const widthSliderContainer = createSlider(
           `edit-timeline-width-${node.id}`,
-          `Width (${widthVal}px):`,
-          50,
-          1200,
-          10,
-          currentWidth,
+          `Width (${widthDisplayValText}${widthLabelUnitText}):`,
+          widthSliderMin,
+          widthSliderMax,
+          widthSliderStep,
+          currentWidthInUnits,
           saveState,
           (e_input) => {
-            const newWidth = parseFloat(e_input.target.value);
+            const newSliderValue = parseFloat(e_input.target.value);
+            let newPixelWidth;
+            if (isSnapEnabled && halfGridSquare > 0) {
+              newPixelWidth = newSliderValue * halfGridSquare;
+              newPixelWidth = Math.max(
+                halfGridSquare,
+                Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
+              );
+            } else {
+              newPixelWidth = newSliderValue;
+            }
+            newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
+
             selectedArray.forEach((elData) => {
               const n = findNodeById(elData.id);
               if (n && n.type === TIMELINE_GRID_TYPE) {
-                n.width = newWidth;
-                if (n.audioParams) n.audioParams.width = newWidth;
+                n.width = newPixelWidth;
+                if (n.audioParams) n.audioParams.width = newPixelWidth;
               }
             });
-            e_input.target.previousElementSibling.textContent = `Width (${newWidth.toFixed(0)}px):`;
+            const displayVal =
+              isSnapEnabled && halfGridSquare > 0
+                ? (newPixelWidth / halfGridSquare).toFixed(0)
+                : newPixelWidth.toFixed(0);
+            const displayUnit =
+              isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+            e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
           },
         );
         section.appendChild(widthSliderContainer);
 
-        const currentHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
-        const heightVal = currentHeight.toFixed(0);
+        let heightSliderMin,
+          heightSliderMax,
+          heightSliderStep,
+          currentHeightInUnits,
+          heightLabelUnitText;
+        const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+
+        if (isSnapEnabled && halfGridSquare > 0) {
+          heightSliderMin = Math.max(
+            1,
+            Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
+          );
+          heightSliderMax = Math.round(
+            MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
+          );
+          heightSliderStep = 1;
+          currentHeightInUnits = Math.round(
+            currentPixelHeight / halfGridSquare,
+          );
+          heightLabelUnitText = " units";
+        } else {
+          heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
+          heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
+          heightSliderStep = PIXEL_STEP;
+          currentHeightInUnits = currentPixelHeight;
+          heightLabelUnitText = "px";
+        }
+
+        const heightDisplayValText =
+          isSnapEnabled && halfGridSquare > 0
+            ? currentHeightInUnits.toFixed(0)
+            : currentPixelHeight.toFixed(0);
         const heightSliderContainer = createSlider(
           `edit-timeline-height-${node.id}`,
-          `Height (${heightVal}px):`,
-          50,
-          800,
-          10,
-          currentHeight,
+          `Height (${heightDisplayValText}${heightLabelUnitText}):`,
+          heightSliderMin,
+          heightSliderMax,
+          heightSliderStep,
+          currentHeightInUnits,
           saveState,
           (e_input) => {
-            const newHeight = parseFloat(e_input.target.value);
+            const newSliderValue = parseFloat(e_input.target.value);
+            let newPixelHeight;
+            if (isSnapEnabled && halfGridSquare > 0) {
+              newPixelHeight = newSliderValue * halfGridSquare;
+              newPixelHeight = Math.max(
+                halfGridSquare,
+                Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
+              );
+            } else {
+              newPixelHeight = newSliderValue;
+            }
+            newPixelHeight = Math.max(
+              MIN_TIMELINE_PIXEL_HEIGHT,
+              newPixelHeight,
+            );
+
             selectedArray.forEach((elData) => {
               const n = findNodeById(elData.id);
               if (n && n.type === TIMELINE_GRID_TYPE) {
-                n.height = newHeight;
-                if (n.audioParams) n.audioParams.height = newHeight;
+                n.height = newPixelHeight;
+                if (n.audioParams) n.audioParams.height = newPixelHeight;
               }
             });
-            e_input.target.previousElementSibling.textContent = `Height (${newHeight.toFixed(0)}px):`;
+            const displayVal =
+              isSnapEnabled && halfGridSquare > 0
+                ? (newPixelHeight / halfGridSquare).toFixed(0)
+                : newPixelHeight.toFixed(0);
+            const displayUnit =
+              isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+            e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
           },
         );
         section.appendChild(heightSliderContainer);
@@ -17273,14 +17510,7 @@ function applyOrbitoneTimingFromPhase(node) {
 
 function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   if (!isAudioReady) return null;
-  let currentEvent = window.event;
-  let applySnap = isSnapEnabled && !(currentEvent && currentEvent.shiftKey);
-  let finalPos = applySnap
-    ? snapToGrid(x, y)
-    : {
-        x: x,
-        y: y,
-      };
+
   const isStartNodeType = isPulsarType(type);
   let nodeTypeVisual = type;
   let initialScaleIndex = 0;
@@ -17350,7 +17580,6 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       )
     ) {
       nodeSubtypeForAudioParams = "sine";
-
       const sinePreset = analogWaveformPresets.find((p) => p.type === "sine");
       if (sinePreset && sinePreset.details) {
         visualStyle = sinePreset.details.visualStyle || "analog_sine";
@@ -17417,6 +17646,17 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     nodeSubtypeForAudioParams =
       waveformToAdd || audioDetails.osc1Type || "sawtooth";
     visualStyle = visualStyle || "nebula_default";
+    initialScaleIndex =
+      noteIndexToAdd !== -1 && noteIndexToAdd !== null
+        ? noteIndexToAdd
+        : Math.floor(
+            Math.random() * currentScale.notes.length * 2 -
+              currentScale.notes.length,
+          );
+    initialScaleIndex = Math.max(
+      MIN_SCALE_INDEX,
+      Math.min(MAX_SCALE_INDEX, initialScaleIndex),
+    );
     initialPitch = getFrequency(currentScale, initialScaleIndex);
     if (isNaN(initialPitch) || initialPitch <= 0)
       initialPitch = getFrequency(scales.major_pentatonic, 0);
@@ -17434,6 +17674,11 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
 
   const starPoints = isStartNodeType ? 6 : 5;
   let defaultIsEnabled = true;
+  if (type === "pulsar_triggerable") {
+    defaultIsEnabled = false;
+  } else if (type === "pulsar_manual") {
+    defaultIsEnabled = true;
+  }
 
   const defaultVolumeSteps = [0.8, 0.65, 0.5];
   const numDefaultSteps = defaultVolumeSteps.length;
@@ -17453,8 +17698,8 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
 
   const newNode = {
     id: nodeIdCounter++,
-    x: finalPos.x,
-    y: finalPos.y,
+    x: x,
+    y: y,
     size: determinedNodeSize,
     radius: NODE_RADIUS_BASE,
     type: nodeTypeVisual,
@@ -17491,7 +17736,7 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   };
 
   if (newNode.type === "pulsar_triggerable") {
-    newNode.isEnabled = false; // Ensure triggerable pulsars start in the OFF state
+    newNode.isEnabled = false;
   }
 
   if (type === PRORB_TYPE) {
@@ -17529,7 +17774,6 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       reverbSend: 0.0,
       delaySend: 0.0,
       visualStyle: "prorb_default",
-
       ignoreGlobalSync: false,
     };
   } else {
@@ -17720,9 +17964,6 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   }
 
   nodes.push(newNode);
-  if (!optionalDimensions || type !== TIMELINE_GRID_TYPE) {
-    saveState();
-  }
   identifyAndRouteAllGroups();
   return newNode;
 }
