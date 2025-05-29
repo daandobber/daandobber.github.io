@@ -3498,14 +3498,15 @@ function triggerNodeEffect(
   pulseData = {},
   startFrequency = null,
   glideDuration = 0.3,
+  transpositionOverride = null,
 ) {
   if (!isAudioReady || !node || !node.audioParams) return;
   const now = audioContext.currentTime;
   const params = node.audioParams;
   const intensity = pulseData.intensity ?? 1.0;
-  const baseVolume = 0.2;
-  const targetVolume = baseVolume * intensity;
-  const clampedVolume = Math.max(0.01, Math.min(1.0, targetVolume));
+
+  const baseVolumeSettingForFinalEnvelope = 0.2;
+  const oscillatorVolumeMultiplier = 0.75;
 
   const ampEnv = params.ampEnv || {
     attack: 0.01,
@@ -3513,6 +3514,25 @@ function triggerNodeEffect(
     sustain: 0.7,
     release: 0.3,
   };
+
+  let effectiveScaleIndex = params.scaleIndex;
+  let effectivePitch = params.pitch;
+
+  if (
+    transpositionOverride &&
+    typeof transpositionOverride.scaleIndexOverride === "number"
+  ) {
+    effectiveScaleIndex = transpositionOverride.scaleIndexOverride;
+
+    effectivePitch = getFrequency(currentScale, effectiveScaleIndex);
+    if (isNaN(effectivePitch) || effectivePitch <= 0) {
+      console.warn(
+        `Transposition override for node ${node.id} resulted in invalid pitch. Falling back to original.`,
+      );
+      effectiveScaleIndex = params.scaleIndex;
+      effectivePitch = params.pitch;
+    }
+  }
 
   if (node.type === "sound") {
     if (
@@ -3538,9 +3558,55 @@ function triggerNodeEffect(
       orbitoneModulatorOscs,
       orbitoneModulatorGains,
       orbitoneIndividualGains,
+      osc1Gain,
     } = node.audioNodes;
 
-    let peakVolumeForMainEnvelope = clampedVolume;
+    let finalEnvelopePeak;
+
+    if (params.waveform && params.waveform.startsWith("sampler_")) {
+      finalEnvelopePeak = baseVolumeSettingForFinalEnvelope * intensity;
+    } else {
+      finalEnvelopePeak =
+        baseVolumeSettingForFinalEnvelope *
+        intensity *
+        oscillatorVolumeMultiplier;
+    }
+    finalEnvelopePeak = Math.max(0.01, Math.min(1.0, finalEnvelopePeak));
+
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(
+      finalEnvelopePeak,
+      now + ampEnv.attack,
+    );
+    gainNode.gain.setTargetAtTime(
+      finalEnvelopePeak * ampEnv.sustain,
+      now + ampEnv.attack,
+      ampEnv.decay / 3 + 0.001,
+    );
+
+    const totalDurationForMainNodeEnvelope =
+      ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0);
+    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
+    setTimeout(() => {
+      const stillNode = findNodeById(node.id);
+      if (stillNode && stillNode.audioNodes?.gainNode) {
+        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
+        stillNode.audioNodes.gainNode.gain.cancelScheduledValues(
+          audioContext.currentTime,
+        );
+        stillNode.audioNodes.gainNode.gain.setValueAtTime(
+          currentGainVal,
+          audioContext.currentTime,
+        );
+        stillNode.audioNodes.gainNode.gain.setTargetAtTime(
+          0,
+          audioContext.currentTime,
+          mainNodeReleaseTimeConstant,
+        );
+      }
+      if (stillNode) stillNode.isTriggered = false;
+    }, totalDurationForMainNodeEnvelope * 1000);
 
     if (params.waveform && params.waveform.startsWith("sampler_")) {
       const samplerId = params.waveform.replace("sampler_", "");
@@ -3548,12 +3614,12 @@ function triggerNodeEffect(
 
       if (definition && definition.isLoaded && definition.buffer) {
         const allOutputFrequencies = getOrbitoneFrequencies(
-          params.scaleIndex,
+          effectiveScaleIndex,
           params.orbitonesEnabled ? params.orbitoneCount : 0,
           params.orbitoneIntervals,
           params.orbitoneSpread,
           currentScale,
-          params.pitch,
+          effectivePitch,
         );
 
         allOutputFrequencies.forEach((freq, index) => {
@@ -3568,7 +3634,6 @@ function triggerNodeEffect(
               ? params.orbitoneTimingOffsets[index - 1]
               : 0;
           const scheduledStartTime = now + timingOffsetMs / 1000.0;
-
           const source = audioContext.createBufferSource();
           source.buffer = definition.buffer;
           let targetRate = 1;
@@ -3576,12 +3641,10 @@ function triggerNodeEffect(
             targetRate = Math.max(0.1, Math.min(8, freq / definition.baseFreq));
           }
           source.playbackRate.setValueAtTime(targetRate, scheduledStartTime);
-
           const perNoteSamplerGain = audioContext.createGain();
           let noteVolumeFactor;
           const orbitoneBaseMixLevel =
             params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-
           if (!params.orbitonesEnabled || params.orbitoneCount === 0) {
             noteVolumeFactor = isMainNote ? 1.0 : 0;
           } else {
@@ -3591,66 +3654,62 @@ function triggerNodeEffect(
               ? mainNoteVolWhenMixedOut
               : orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount);
           }
-
-          const SAMPLER_VOLUME_BOOST_FACTOR = 4.0 / baseVolume;
-          let boostedSamplerNoteVolume =
-            clampedVolume * noteVolumeFactor * SAMPLER_VOLUME_BOOST_FACTOR;
-          boostedSamplerNoteVolume = Math.min(1.5, boostedSamplerNoteVolume);
-
-          const finalNoteVolumeForThisSamplerInstance =
-            boostedSamplerNoteVolume;
-
-          if (finalNoteVolumeForThisSamplerInstance < 0.001) {
-            if (isMainNote) {
-            }
+          let targetSamplerIndividualPeak = intensity * noteVolumeFactor;
+          targetSamplerIndividualPeak = Math.min(
+            1.0,
+            Math.max(0.001, targetSamplerIndividualPeak),
+          );
+          if (targetSamplerIndividualPeak < 0.001 && noteVolumeFactor > 0) {
             return;
           }
-
+          if (noteVolumeFactor === 0) return;
           perNoteSamplerGain.gain.setValueAtTime(0, scheduledStartTime);
           perNoteSamplerGain.gain.linearRampToValueAtTime(
-            finalNoteVolumeForThisSamplerInstance,
+            targetSamplerIndividualPeak,
             scheduledStartTime + 0.005,
           );
-
           source.connect(perNoteSamplerGain);
           perNoteSamplerGain.connect(lowPassFilter);
           source.start(scheduledStartTime);
-
-          const samplerReleaseFactor =
+          const samplerIntrinsicAttack = 0.005;
+          const samplerIntrinsicDecay =
+            params.samplerDecayFactor !== undefined
+              ? params.samplerDecayFactor * 0.15
+              : 0.15;
+          const samplerIntrinsicSustainLevel =
+            targetSamplerIndividualPeak *
+            (params.samplerSustainFactor !== undefined
+              ? params.samplerSustainFactor * 0.0
+              : 0.0);
+          const samplerIntrinsicRelease =
             params.samplerReleaseFactor !== undefined
-              ? params.samplerReleaseFactor
-              : 0.5;
-          const samplerSustainFactor =
-            params.samplerSustainFactor !== undefined
-              ? params.samplerSustainFactor
-              : 0.8;
-          const samplerSpecificReleaseTimeConstant =
-            samplerReleaseFactor * (ampEnv.release / 4 + 0.001);
-          const samplerEstimatedDuration =
-            samplerSustainFactor *
-            (ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0));
-
+              ? params.samplerReleaseFactor * 0.2
+              : 0.2;
           perNoteSamplerGain.gain.setTargetAtTime(
-            0.0001,
-            scheduledStartTime + samplerEstimatedDuration,
-            samplerSpecificReleaseTimeConstant,
+            samplerIntrinsicSustainLevel,
+            scheduledStartTime + samplerIntrinsicAttack,
+            samplerIntrinsicDecay / 3 + 0.001,
           );
-
+          const estimatedSamplerSoundDuration =
+            samplerIntrinsicAttack + samplerIntrinsicDecay + 0.05;
           const bufferActualDuration = definition.buffer.duration / targetRate;
-          const stopTime =
+          const naturalStopTime =
             scheduledStartTime +
             Math.min(
               bufferActualDuration,
-              samplerEstimatedDuration +
-                ampEnv.release * samplerReleaseFactor * 1.5,
+              estimatedSamplerSoundDuration + samplerIntrinsicRelease,
             );
+          perNoteSamplerGain.gain.setTargetAtTime(
+            0.0001,
+            scheduledStartTime + estimatedSamplerSoundDuration,
+            samplerIntrinsicRelease / 3 + 0.001,
+          );
           if (
             bufferActualDuration <
-            samplerEstimatedDuration + ampEnv.release * samplerReleaseFactor
+            estimatedSamplerSoundDuration + samplerIntrinsicRelease
           ) {
-            source.stop(stopTime);
+            source.stop(naturalStopTime);
           }
-
           source.onended = () => {
             try {
               perNoteSamplerGain.disconnect();
@@ -3658,33 +3717,94 @@ function triggerNodeEffect(
             } catch (e) {}
           };
         });
-
-        peakVolumeForMainEnvelope = clampedVolume;
       } else {
         if (oscillator1) {
-          const fallbackFreq = params.pitch;
+          const fallbackFreq = effectivePitch;
           oscillator1.frequency.cancelScheduledValues(now);
           oscillator1.frequency.setTargetAtTime(fallbackFreq, now, 0.005);
         }
       }
     } else if (oscillator1) {
-      peakVolumeForMainEnvelope = clampedVolume;
-
-      const targetFreq = params.pitch;
+      const targetFreq = effectivePitch;
       oscillator1.frequency.cancelScheduledValues(now);
       oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
 
+      let currentOsc1GainNode = node.audioNodes.osc1Gain;
+      if (!currentOsc1GainNode) {
+        currentOsc1GainNode = audioContext.createGain();
+        node.audioNodes.osc1Gain = currentOsc1GainNode;
+        if (oscillator1.numberOfOutputs > 0) {
+          try {
+            oscillator1.disconnect(lowPassFilter);
+          } catch (e) {}
+        }
+        oscillator1.connect(currentOsc1GainNode);
+        currentOsc1GainNode.connect(lowPassFilter);
+      }
+
+      let osc1TargetGainLevel = intensity;
+
       if (
+        params.orbitonesEnabled &&
+        orbitoneOscillators &&
+        orbitoneIndividualGains &&
+        orbitoneIndividualGains.length > 0
+      ) {
+        const orbitoneMix =
+          params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
+        osc1TargetGainLevel = intensity * (1.0 - orbitoneMix);
+
+        const numActiveOrbitones = orbitoneOscillators.length;
+        const levelPerOrbitone =
+          (intensity * orbitoneMix) / Math.max(1, numActiveOrbitones);
+
+        const allOutputFrequencies = getOrbitoneFrequencies(
+          effectiveScaleIndex,
+          params.orbitoneCount,
+          params.orbitoneIntervals,
+          params.orbitoneSpread,
+          currentScale,
+          effectivePitch,
+        );
+
+        allOutputFrequencies.slice(1).forEach((freq, i) => {
+          const orbitOsc = orbitoneOscillators[i];
+          const orbitIndGain = orbitoneIndividualGains[i];
+          if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
+            orbitOsc.frequency.cancelScheduledValues(now);
+            orbitOsc.frequency.setTargetAtTime(freq, now, 0.005);
+            let orbitoneIndividualTargetPeak = levelPerOrbitone;
+            orbitoneIndividualTargetPeak = Math.min(
+              1.0,
+              Math.max(0.001, orbitoneIndividualTargetPeak),
+            );
+            orbitIndGain.gain.cancelScheduledValues(now);
+            orbitIndGain.gain.setValueAtTime(orbitoneIndividualTargetPeak, now);
+          }
+        });
+      } else if (
         oscillator2 &&
         osc2Gain &&
         params.osc2Type &&
-        !params.carrierWaveform &&
-        !params.orbitonesEnabled
+        !params.carrierWaveform
       ) {
-        const osc2BaseFreq = targetFreq * Math.pow(2, params.osc2Octave || 0);
+        const osc2Mix = params.osc2Mix || 0.5;
+        osc1TargetGainLevel = intensity * (1.0 - osc2Mix);
+        osc2Gain.gain.cancelScheduledValues(now);
+        osc2Gain.gain.setValueAtTime(intensity * osc2Mix, now);
         oscillator2.frequency.cancelScheduledValues(now);
-        oscillator2.frequency.setTargetAtTime(osc2BaseFreq, now, 0.005);
+        oscillator2.frequency.setTargetAtTime(
+          targetFreq * Math.pow(2, params.osc2Octave || 0),
+          now,
+          0.005,
+        );
       }
+
+      currentOsc1GainNode.gain.cancelScheduledValues(now);
+      currentOsc1GainNode.gain.setValueAtTime(
+        Math.max(0.001, Math.min(1.0, osc1TargetGainLevel)),
+        now,
+      );
 
       if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) {
         const modRatio = params.modulatorRatio || 1.0;
@@ -3718,189 +3838,33 @@ function triggerNodeEffect(
           now + modEnv.attack,
           modEnv.decay / 3 + 0.001,
         );
-        const totalModDuration =
-          ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0);
-        setTimeout(() => {
-          if (
-            modulatorGain1 &&
-            audioContext &&
-            audioContext.state === "running"
-          ) {
-            const currentModGainVal = modulatorGain1.gain.value;
-            modulatorGain1.gain.cancelScheduledValues(audioContext.currentTime);
-            modulatorGain1.gain.setValueAtTime(
-              currentModGainVal,
-              audioContext.currentTime,
-            );
-            modulatorGain1.gain.setTargetAtTime(
-              0.0001,
-              audioContext.currentTime,
-              (modEnv.release || 0.2) / 3 + 0.001,
-            );
-          }
-        }, totalModDuration * 1000);
-      }
-      if (
-        params.orbitonesEnabled &&
-        orbitoneOscillators &&
-        orbitoneIndividualGains &&
-        !(params.waveform && params.waveform.startsWith("sampler_"))
-      ) {
-        const allOutputFrequencies = getOrbitoneFrequencies(
-          params.scaleIndex,
-          params.orbitoneCount,
-          params.orbitoneIntervals,
-          params.orbitoneSpread,
-          currentScale,
-          params.pitch,
-        );
-        allOutputFrequencies.slice(1).forEach((freq, i) => {
-          const orbitOsc = orbitoneOscillators[i];
-          const orbitIndGain = orbitoneIndividualGains[i];
-          const modOsc = orbitoneModulatorOscs
-            ? orbitoneModulatorOscs[i]
-            : null;
-          const modGain = orbitoneModulatorGains
-            ? orbitoneModulatorGains[i]
-            : null;
-          const timingOffsetMs =
-            params.orbitoneTimingOffsets &&
-            params.orbitoneTimingOffsets[i] !== undefined
-              ? params.orbitoneTimingOffsets[i]
-              : 0;
-          const scheduledOrbitoneStartTime = now + timingOffsetMs / 1000.0;
-
-          if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
-            orbitOsc.frequency.cancelScheduledValues(
-              scheduledOrbitoneStartTime,
-            );
-            orbitOsc.frequency.setTargetAtTime(
-              freq,
-              scheduledOrbitoneStartTime,
-              0.005,
-            );
-
-            const orbitoneBaseMixLevel =
-              params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-            let volMultiplier =
-              orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount);
-            orbitIndGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
-            orbitIndGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
-            orbitIndGain.gain.linearRampToValueAtTime(
-              Math.min(
-                1.0,
-                Math.max(0.01, volMultiplier * peakVolumeForMainEnvelope),
-              ),
-              scheduledOrbitoneStartTime + ampEnv.attack,
-            );
-            orbitIndGain.gain.setTargetAtTime(
-              0.0001,
-              scheduledOrbitoneStartTime +
-                totalDurationForMainNodeEnvelope -
-                mainNodeReleaseTimeConstant,
-              mainNodeReleaseTimeConstant,
-            );
-
-            if (modOsc && modGain && params.carrierWaveform) {
-              const modRatio = params.modulatorRatio || 1.0;
-              modOsc.frequency.cancelScheduledValues(
-                scheduledOrbitoneStartTime,
+        setTimeout(
+          () => {
+            if (
+              modulatorGain1 &&
+              audioContext &&
+              audioContext.state === "running"
+            ) {
+              const currentModGainVal = modulatorGain1.gain.value;
+              modulatorGain1.gain.cancelScheduledValues(
+                audioContext.currentTime,
               );
-              modOsc.frequency.setTargetAtTime(
-                freq * modRatio,
-                scheduledOrbitoneStartTime,
-                0.005,
+              modulatorGain1.gain.setValueAtTime(
+                currentModGainVal,
+                audioContext.currentTime,
               );
-              const modEnv = params.modulatorEnv || {
-                attack: 0.005,
-                decay: 0.15,
-                sustain: 0,
-                release: 0.2,
-              };
-              const fmDepthScale =
-                params.modulatorDepthScale !== undefined
-                  ? params.modulatorDepthScale
-                  : 2;
-              const modDepth = freq * fmDepthScale;
-              modGain.gain.cancelScheduledValues(scheduledOrbitoneStartTime);
-              modGain.gain.setValueAtTime(0, scheduledOrbitoneStartTime);
-              modGain.gain.linearRampToValueAtTime(
-                modDepth,
-                scheduledOrbitoneStartTime + modEnv.attack,
-              );
-              const modSustainLevel =
-                modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
-              modGain.gain.setTargetAtTime(
-                modSustainLevel,
-                scheduledOrbitoneStartTime + modEnv.attack,
-                modEnv.decay / 3 + 0.001,
-              );
-              const totalModDurationOrb =
-                ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.3 : 0);
-              setTimeout(
-                () => {
-                  if (
-                    modGain &&
-                    audioContext &&
-                    audioContext.state === "running"
-                  ) {
-                    const currentModGainVal = modGain.gain.value;
-                    modGain.gain.cancelScheduledValues(
-                      audioContext.currentTime,
-                    );
-                    modGain.gain.setValueAtTime(
-                      currentModGainVal,
-                      audioContext.currentTime,
-                    );
-                    modGain.gain.setTargetAtTime(
-                      0.0001,
-                      audioContext.currentTime,
-                      (modEnv.release || 0.2) / 3 + 0.001,
-                    );
-                  }
-                },
-                (totalModDurationOrb + timingOffsetMs) * 1000,
+              modulatorGain1.gain.setTargetAtTime(
+                0.0001,
+                audioContext.currentTime,
+                (modEnv.release || 0.2) / 3 + 0.001,
               );
             }
-          }
-        });
+          },
+          (modEnv.attack + modEnv.decay + (modEnv.sustain > 0 ? 0.1 : 0)) *
+            1000,
+        );
       }
     }
-
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(
-      peakVolumeForMainEnvelope,
-      now + ampEnv.attack,
-    );
-    gainNode.gain.setTargetAtTime(
-      peakVolumeForMainEnvelope * ampEnv.sustain,
-      now + ampEnv.attack,
-      ampEnv.decay / 3 + 0.001,
-    );
-
-    const totalDurationForMainNodeEnvelope =
-      ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0);
-    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
-    setTimeout(() => {
-      const stillNode = findNodeById(node.id);
-      if (stillNode && stillNode.audioNodes?.gainNode) {
-        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
-        stillNode.audioNodes.gainNode.gain.cancelScheduledValues(
-          audioContext.currentTime,
-        );
-        stillNode.audioNodes.gainNode.gain.setValueAtTime(
-          currentGainVal,
-          audioContext.currentTime,
-        );
-        stillNode.audioNodes.gainNode.gain.setTargetAtTime(
-          0,
-          audioContext.currentTime,
-          mainNodeReleaseTimeConstant,
-        );
-      }
-      if (stillNode) stillNode.isTriggered = false;
-    }, totalDurationForMainNodeEnvelope * 1000);
 
     const particleCount = Math.round(
       5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0),
@@ -4034,22 +3998,22 @@ function triggerNodeEffect(
         osc.stop(now + decay + 0.01);
       } else if (node.type === "drum_cowbell") {
         const decay = soundParams.decay ?? 0.3;
-        const osc1 = audioContext.createOscillator();
-        const osc2 = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc1.type = "square";
-        osc2.type = "square";
-        osc1.frequency.value = soundParams.baseFreq;
-        osc2.frequency.value = soundParams.baseFreq * 1.5;
-        gain.gain.setValueAtTime(finalVol * 0.6, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(mainGain);
-        osc1.start(now);
-        osc1.stop(now + decay);
-        osc2.start(now);
-        osc2.stop(now + decay);
+        const osc1_cb = audioContext.createOscillator();
+        const osc2_cb = audioContext.createOscillator();
+        const gain_cb = audioContext.createGain();
+        osc1_cb.type = "square";
+        osc2_cb.type = "square";
+        osc1_cb.frequency.value = soundParams.baseFreq;
+        osc2_cb.frequency.value = soundParams.baseFreq * 1.5;
+        gain_cb.gain.setValueAtTime(finalVol * 0.6, now);
+        gain_cb.gain.exponentialRampToValueAtTime(0.001, now + decay);
+        osc1_cb.connect(gain_cb);
+        osc2_cb.connect(gain_cb);
+        gain_cb.connect(mainGain);
+        osc1_cb.start(now);
+        osc1_cb.stop(now + decay);
+        osc2_cb.start(now);
+        osc2_cb.stop(now + decay);
       }
     } catch (e) {
       node.isTriggered = false;
@@ -5950,19 +5914,32 @@ function saveState() {
       const nodeCopy = { ...node };
       delete nodeCopy.triggeredInThisSweep;
       delete nodeCopy.audioNodes;
+
       if (node.type === TIMELINE_GRID_TYPE) {
         nodeCopy.scanlineDirection = node.scanlineDirection || "forward";
         nodeCopy.isPingPongForward =
           node.isPingPongForward !== undefined ? node.isPingPongForward : true;
         nodeCopy.timelineMusicalDurationBars =
           node.timelineMusicalDurationBars || 1;
+        nodeCopy.rotation = node.rotation || 0;
 
-        if (nodeCopy.audioParams) {
-          nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
-          nodeCopy.audioParams.timelineMusicalDurationBars =
-            nodeCopy.timelineMusicalDurationBars;
+        if (!nodeCopy.audioParams) {
+          nodeCopy.audioParams = {};
         }
+        nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
+        nodeCopy.audioParams.timelineMusicalDurationBars =
+          nodeCopy.timelineMusicalDurationBars;
+        nodeCopy.audioParams.rotation = nodeCopy.rotation;
+        nodeCopy.audioParams.isTransposeEnabled =
+          node.audioParams?.isTransposeEnabled ?? false;
+        nodeCopy.audioParams.transposeDirection =
+          node.audioParams?.transposeDirection ?? "+";
+        nodeCopy.audioParams.transposeAmount =
+          node.audioParams?.transposeAmount ?? 0;
+      } else if (node.audioParams) {
+        nodeCopy.audioParams = { ...node.audioParams };
       }
+
       return nodeCopy;
     }),
     connections: connections.map((conn) => {
@@ -5974,6 +5951,9 @@ function saveState() {
         connCopy.type === "wavetrail"
       ) {
         delete connCopy.audioParams.buffer;
+      }
+      if (conn.audioParams) {
+        connCopy.audioParams = { ...conn.audioParams };
       }
       return connCopy;
     }),
@@ -5996,8 +5976,10 @@ function saveState() {
     portalVolume: portalGroupGain?.gain.value ?? 0.7,
     originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8,
   };
+
   const copiedState = deepCopyState(currentState);
   if (!copiedState) return;
+
   if (historyIndex < historyStack.length - 1) {
     historyStack = historyStack.slice(0, historyIndex + 1);
   }
@@ -6139,6 +6121,7 @@ function loadState(stateToLoad) {
       node.scanlineDirection = node.scanlineDirection || "forward";
       node.isPingPongForward =
         node.isPingPongForward !== undefined ? node.isPingPongForward : true;
+      node.rotation = node.rotation || node.audioParams?.rotation || 0;
 
       if (!node.audioParams) node.audioParams = {};
       node.audioParams.timelineSpeed = node.timelineSpeed;
@@ -6154,6 +6137,12 @@ function loadState(stateToLoad) {
       node.audioParams.snapToInternalGrid = node.snapToInternalGrid;
       node.audioParams.scanlineDirection = node.scanlineDirection;
       node.audioParams.isInResizeMode = node.isInResizeMode;
+      node.audioParams.rotation = node.rotation;
+      node.audioParams.isTransposeEnabled =
+        node.audioParams.isTransposeEnabled ?? false;
+      node.audioParams.transposeDirection =
+        node.audioParams.transposeDirection ?? "+";
+      node.audioParams.transposeAmount = node.audioParams.transposeAmount ?? 0;
 
       node.isStartNode = false;
       node.audioNodes = null;
@@ -6485,520 +6474,6 @@ function stopStringSound(connection) {
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setTargetAtTime(0, now, releaseTime / 3);
   } catch (e) {}
-}
-
-function triggerNodeEffect(
-  node,
-  pulseData = {},
-  startFrequency = null,
-  glideDuration = 0.3,
-) {
-  if (!isAudioReady || !node || !node.audioParams) return;
-  const now = audioContext.currentTime;
-  const params = node.audioParams;
-  const intensity = pulseData.intensity ?? 1.0;
-
-  const baseVolumeSettingForFinalEnvelope = 0.2;
-  const oscillatorVolumeMultiplier = 0.75;
-
-  const ampEnv = params.ampEnv || {
-    attack: 0.01,
-    decay: 0.3,
-    sustain: 0.7,
-    release: 0.3,
-  };
-
-  if (node.type === "sound") {
-    if (
-      !node.audioNodes ||
-      !node.audioNodes.gainNode ||
-      !node.audioNodes.lowPassFilter
-    ) {
-      node.isTriggered = false;
-      node.animationState = 0;
-      return;
-    }
-    node.isTriggered = true;
-    node.animationState = 1;
-    const {
-      gainNode,
-      lowPassFilter,
-      oscillator1,
-      modulatorOsc1,
-      modulatorGain1,
-      oscillator2,
-      osc2Gain,
-      orbitoneOscillators,
-      orbitoneModulatorOscs,
-      orbitoneModulatorGains,
-      orbitoneIndividualGains,
-      osc1Gain,
-    } = node.audioNodes;
-
-    let finalEnvelopePeak;
-
-    if (params.waveform && params.waveform.startsWith("sampler_")) {
-      finalEnvelopePeak = baseVolumeSettingForFinalEnvelope * intensity;
-    } else {
-      finalEnvelopePeak =
-        baseVolumeSettingForFinalEnvelope *
-        intensity *
-        oscillatorVolumeMultiplier;
-    }
-    finalEnvelopePeak = Math.max(0.01, Math.min(1.0, finalEnvelopePeak));
-
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(
-      finalEnvelopePeak,
-      now + ampEnv.attack,
-    );
-    gainNode.gain.setTargetAtTime(
-      finalEnvelopePeak * ampEnv.sustain,
-      now + ampEnv.attack,
-      ampEnv.decay / 3 + 0.001,
-    );
-
-    const totalDurationForMainNodeEnvelope =
-      ampEnv.attack + ampEnv.decay + (ampEnv.sustain > 0 ? 0.5 : 0);
-    const mainNodeReleaseTimeConstant = ampEnv.release / 3 + 0.001;
-    setTimeout(() => {
-      const stillNode = findNodeById(node.id);
-      if (stillNode && stillNode.audioNodes?.gainNode) {
-        const currentGainVal = stillNode.audioNodes.gainNode.gain.value;
-        stillNode.audioNodes.gainNode.gain.cancelScheduledValues(
-          audioContext.currentTime,
-        );
-        stillNode.audioNodes.gainNode.gain.setValueAtTime(
-          currentGainVal,
-          audioContext.currentTime,
-        );
-        stillNode.audioNodes.gainNode.gain.setTargetAtTime(
-          0,
-          audioContext.currentTime,
-          mainNodeReleaseTimeConstant,
-        );
-      }
-      if (stillNode) stillNode.isTriggered = false;
-    }, totalDurationForMainNodeEnvelope * 1000);
-
-    if (params.waveform && params.waveform.startsWith("sampler_")) {
-      const samplerId = params.waveform.replace("sampler_", "");
-      const definition = SAMPLER_DEFINITIONS.find((s) => s.id === samplerId);
-
-      if (definition && definition.isLoaded && definition.buffer) {
-        const allOutputFrequencies = getOrbitoneFrequencies(
-          params.scaleIndex,
-          params.orbitonesEnabled ? params.orbitoneCount : 0,
-          params.orbitoneIntervals,
-          params.orbitoneSpread,
-          currentScale,
-          params.pitch,
-        );
-
-        allOutputFrequencies.forEach((freq, index) => {
-          if (isNaN(freq) || freq <= 0) {
-            return;
-          }
-          const isMainNote = index === 0;
-          const timingOffsetMs = isMainNote
-            ? 0
-            : params.orbitoneTimingOffsets &&
-                params.orbitoneTimingOffsets[index - 1] !== undefined
-              ? params.orbitoneTimingOffsets[index - 1]
-              : 0;
-          const scheduledStartTime = now + timingOffsetMs / 1000.0;
-          const source = audioContext.createBufferSource();
-          source.buffer = definition.buffer;
-          let targetRate = 1;
-          if (definition.baseFreq > 0) {
-            targetRate = Math.max(0.1, Math.min(8, freq / definition.baseFreq));
-          }
-          source.playbackRate.setValueAtTime(targetRate, scheduledStartTime);
-          const perNoteSamplerGain = audioContext.createGain();
-          let noteVolumeFactor;
-          const orbitoneBaseMixLevel =
-            params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-          if (!params.orbitonesEnabled || params.orbitoneCount === 0) {
-            noteVolumeFactor = isMainNote ? 1.0 : 0;
-          } else {
-            const mainNoteVolWhenMixedOut =
-              orbitoneBaseMixLevel >= 0.99 ? 0.0 : 1.0 - orbitoneBaseMixLevel;
-            noteVolumeFactor = isMainNote
-              ? mainNoteVolWhenMixedOut
-              : orbitoneBaseMixLevel / Math.max(1, params.orbitoneCount);
-          }
-          let targetSamplerIndividualPeak = intensity * noteVolumeFactor;
-          targetSamplerIndividualPeak = Math.min(
-            1.0,
-            Math.max(0.001, targetSamplerIndividualPeak),
-          );
-          if (targetSamplerIndividualPeak < 0.001 && noteVolumeFactor > 0) {
-            return;
-          }
-          if (noteVolumeFactor === 0) return;
-          perNoteSamplerGain.gain.setValueAtTime(0, scheduledStartTime);
-          perNoteSamplerGain.gain.linearRampToValueAtTime(
-            targetSamplerIndividualPeak,
-            scheduledStartTime + 0.005,
-          );
-          source.connect(perNoteSamplerGain);
-          perNoteSamplerGain.connect(lowPassFilter);
-          source.start(scheduledStartTime);
-          const samplerIntrinsicAttack = 0.005;
-          const samplerIntrinsicDecay =
-            params.samplerDecayFactor !== undefined
-              ? params.samplerDecayFactor * 0.15
-              : 0.15;
-          const samplerIntrinsicSustainLevel =
-            targetSamplerIndividualPeak *
-            (params.samplerSustainFactor !== undefined
-              ? params.samplerSustainFactor * 0.0
-              : 0.0);
-          const samplerIntrinsicRelease =
-            params.samplerReleaseFactor !== undefined
-              ? params.samplerReleaseFactor * 0.2
-              : 0.2;
-          perNoteSamplerGain.gain.setTargetAtTime(
-            samplerIntrinsicSustainLevel,
-            scheduledStartTime + samplerIntrinsicAttack,
-            samplerIntrinsicDecay / 3 + 0.001,
-          );
-          const estimatedSamplerSoundDuration =
-            samplerIntrinsicAttack + samplerIntrinsicDecay + 0.05;
-          const bufferActualDuration = definition.buffer.duration / targetRate;
-          const naturalStopTime =
-            scheduledStartTime +
-            Math.min(
-              bufferActualDuration,
-              estimatedSamplerSoundDuration + samplerIntrinsicRelease,
-            );
-          perNoteSamplerGain.gain.setTargetAtTime(
-            0.0001,
-            scheduledStartTime + estimatedSamplerSoundDuration,
-            samplerIntrinsicRelease / 3 + 0.001,
-          );
-          if (
-            bufferActualDuration <
-            estimatedSamplerSoundDuration + samplerIntrinsicRelease
-          ) {
-            source.stop(naturalStopTime);
-          }
-          source.onended = () => {
-            try {
-              perNoteSamplerGain.disconnect();
-              source.disconnect();
-            } catch (e) {}
-          };
-        });
-      } else {
-        if (oscillator1) {
-          const fallbackFreq = params.pitch;
-          oscillator1.frequency.cancelScheduledValues(now);
-          oscillator1.frequency.setTargetAtTime(fallbackFreq, now, 0.005);
-        }
-      }
-    } else if (oscillator1) {
-      const targetFreq = params.pitch;
-      oscillator1.frequency.cancelScheduledValues(now);
-      oscillator1.frequency.setTargetAtTime(targetFreq, now, 0.005);
-
-      let currentOsc1GainNode = node.audioNodes.osc1Gain;
-      if (!currentOsc1GainNode) {
-        currentOsc1GainNode = audioContext.createGain();
-        node.audioNodes.osc1Gain = currentOsc1GainNode;
-        if (oscillator1.numberOfOutputs > 0) {
-          try {
-            oscillator1.disconnect(lowPassFilter);
-          } catch (e) {}
-        }
-        oscillator1.connect(currentOsc1GainNode);
-        currentOsc1GainNode.connect(lowPassFilter);
-      }
-
-      let osc1TargetGainLevel = intensity;
-
-      if (
-        params.orbitonesEnabled &&
-        orbitoneOscillators &&
-        orbitoneIndividualGains &&
-        orbitoneIndividualGains.length > 0
-      ) {
-        const orbitoneMix =
-          params.orbitoneMix !== undefined ? params.orbitoneMix : 0.5;
-        osc1TargetGainLevel = intensity * (1.0 - orbitoneMix);
-
-        const numActiveOrbitones = orbitoneOscillators.length;
-        const levelPerOrbitone =
-          (intensity * orbitoneMix) / Math.max(1, numActiveOrbitones);
-
-        const allOutputFrequencies = getOrbitoneFrequencies(
-          params.scaleIndex,
-          params.orbitoneCount,
-          params.orbitoneIntervals,
-          params.orbitoneSpread,
-          currentScale,
-          params.pitch,
-        );
-
-        allOutputFrequencies.slice(1).forEach((freq, i) => {
-          const orbitOsc = orbitoneOscillators[i];
-          const orbitIndGain = orbitoneIndividualGains[i];
-          if (orbitOsc && orbitIndGain && !isNaN(freq) && freq > 0) {
-            orbitOsc.frequency.cancelScheduledValues(now);
-            orbitOsc.frequency.setTargetAtTime(freq, now, 0.005);
-            let orbitoneIndividualTargetPeak = levelPerOrbitone;
-            orbitoneIndividualTargetPeak = Math.min(
-              1.0,
-              Math.max(0.001, orbitoneIndividualTargetPeak),
-            );
-            orbitIndGain.gain.cancelScheduledValues(now);
-            orbitIndGain.gain.setValueAtTime(orbitoneIndividualTargetPeak, now);
-          }
-        });
-      } else if (
-        oscillator2 &&
-        osc2Gain &&
-        params.osc2Type &&
-        !params.carrierWaveform
-      ) {
-        const osc2Mix = params.osc2Mix || 0.5;
-        osc1TargetGainLevel = intensity * (1.0 - osc2Mix);
-        osc2Gain.gain.cancelScheduledValues(now);
-        osc2Gain.gain.setValueAtTime(intensity * osc2Mix, now);
-        oscillator2.frequency.cancelScheduledValues(now);
-        oscillator2.frequency.setTargetAtTime(
-          targetFreq * Math.pow(2, params.osc2Octave || 0),
-          now,
-          0.005,
-        );
-      }
-
-      currentOsc1GainNode.gain.cancelScheduledValues(now);
-      currentOsc1GainNode.gain.setValueAtTime(
-        Math.max(0.001, Math.min(1.0, osc1TargetGainLevel)),
-        now,
-      );
-
-      if (modulatorOsc1 && modulatorGain1 && params.carrierWaveform) {
-        const modRatio = params.modulatorRatio || 1.0;
-        modulatorOsc1.frequency.cancelScheduledValues(now);
-        modulatorOsc1.frequency.setTargetAtTime(
-          targetFreq * modRatio,
-          now,
-          0.005,
-        );
-        const modEnv = params.modulatorEnv || {
-          attack: 0.005,
-          decay: 0.15,
-          sustain: 0,
-          release: 0.2,
-        };
-        const fmDepthScale =
-          params.modulatorDepthScale !== undefined
-            ? params.modulatorDepthScale
-            : 2;
-        const modDepth = targetFreq * fmDepthScale;
-        modulatorGain1.gain.cancelScheduledValues(now);
-        modulatorGain1.gain.setValueAtTime(0, now);
-        modulatorGain1.gain.linearRampToValueAtTime(
-          modDepth,
-          now + modEnv.attack,
-        );
-        const modSustainLevel =
-          modEnv.sustain > 0 ? modDepth * modEnv.sustain : 0.0001;
-        modulatorGain1.gain.setTargetAtTime(
-          modSustainLevel,
-          now + modEnv.attack,
-          modEnv.decay / 3 + 0.001,
-        );
-        setTimeout(
-          () => {
-            if (
-              modulatorGain1 &&
-              audioContext &&
-              audioContext.state === "running"
-            ) {
-              const currentModGainVal = modulatorGain1.gain.value;
-              modulatorGain1.gain.cancelScheduledValues(
-                audioContext.currentTime,
-              );
-              modulatorGain1.gain.setValueAtTime(
-                currentModGainVal,
-                audioContext.currentTime,
-              );
-              modulatorGain1.gain.setTargetAtTime(
-                0.0001,
-                audioContext.currentTime,
-                (modEnv.release || 0.2) / 3 + 0.001,
-              );
-            }
-          },
-          (modEnv.attack + modEnv.decay + (modEnv.sustain > 0 ? 0.1 : 0)) *
-            1000,
-        );
-      }
-    }
-
-    const particleCount = Math.round(
-      5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0),
-    );
-    createParticles(node.x, node.y, particleCount);
-  } else if (isDrumType(node.type)) {
-    if (!node.audioNodes?.mainGain) return;
-    node.isTriggered = true;
-    node.animationState = 1;
-    const soundParams = params;
-    const mainGain = node.audioNodes.mainGain;
-    const finalVol = (soundParams.volume || 1.0) * intensity;
-    const targetFreq = soundParams.baseFreq;
-    try {
-      if (node.type === "drum_kick") {
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        const kickStartFreq = targetFreq * 2.5;
-        osc.frequency.setValueAtTime(kickStartFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.05);
-        gain.gain.setValueAtTime(finalVol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + soundParams.decay);
-        osc.connect(gain);
-        gain.connect(mainGain);
-        osc.start(now);
-        osc.stop(now + soundParams.decay + 0.05);
-      } else if (node.type === "drum_snare") {
-        const noiseDur = soundParams.noiseDecay ?? 0.15;
-        const bodyDecay = soundParams.decay ?? 0.2;
-        const noise = audioContext.createBufferSource();
-        const noiseBuffer = audioContext.createBuffer(
-          1,
-          audioContext.sampleRate * noiseDur,
-          audioContext.sampleRate,
-        );
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
-        noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter();
-        noiseFilter.type = "highpass";
-        noiseFilter.frequency.value = 1500;
-        const noiseGain = audioContext.createGain();
-        noiseGain.gain.setValueAtTime(finalVol * 0.8, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDur);
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(mainGain);
-        noise.start(now);
-        noise.stop(now + noiseDur + 0.01);
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(soundParams.baseFreq, now);
-        gain.gain.setValueAtTime(finalVol * 0.7, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + bodyDecay);
-        osc.connect(gain);
-        gain.connect(mainGain);
-        osc.start(now);
-        osc.stop(now + bodyDecay + 0.01);
-      } else if (node.type === "drum_hihat") {
-        const decay = soundParams.decay ?? 0.05;
-        const noise = audioContext.createBufferSource();
-        const noiseBuffer = audioContext.createBuffer(
-          1,
-          audioContext.sampleRate * decay,
-          audioContext.sampleRate,
-        );
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
-        noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter();
-        noiseFilter.type = "highpass";
-        noiseFilter.frequency.value = soundParams.baseFreq;
-        const noiseGain = audioContext.createGain();
-        noiseGain.gain.setValueAtTime(finalVol, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(mainGain);
-        noise.start(now);
-        noise.stop(now + decay + 0.01);
-      } else if (node.type === "drum_clap") {
-        const decay = soundParams.noiseDecay ?? 0.1;
-        const noise = audioContext.createBufferSource();
-        const noiseBuffer = audioContext.createBuffer(
-          1,
-          audioContext.sampleRate * decay * 1.5,
-          audioContext.sampleRate,
-        );
-        const output = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < output.length; i++) {
-          output[i] = Math.random() * 2 - 1;
-        }
-        noise.buffer = noiseBuffer;
-        const noiseFilter = audioContext.createBiquadFilter();
-        noiseFilter.type = "bandpass";
-        noiseFilter.frequency.value = soundParams.baseFreq ?? 1500;
-        noiseFilter.Q.value = 1.5;
-        const noiseGain = audioContext.createGain();
-        noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(finalVol, now + 0.002);
-        noiseGain.gain.setValueAtTime(finalVol, now + 0.002);
-        noiseGain.gain.linearRampToValueAtTime(finalVol * 0.7, now + 0.01);
-        noiseGain.gain.setValueAtTime(finalVol * 0.7, now + 0.01);
-        noiseGain.gain.linearRampToValueAtTime(finalVol * 0.9, now + 0.015);
-        noiseGain.gain.setValueAtTime(finalVol * 0.9, now + 0.015);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(mainGain);
-        noise.start(now);
-        noise.stop(now + decay + 0.05);
-      } else if (node.type === "drum_tom1" || node.type === "drum_tom2") {
-        const decay =
-          soundParams.decay ?? (node.type === "drum_tom1" ? 0.4 : 0.5);
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        osc.type = "sine";
-        const tomStartFreq = targetFreq * 1.8;
-        osc.frequency.setValueAtTime(tomStartFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.08);
-        gain.gain.setValueAtTime(finalVol, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        osc.connect(gain);
-        gain.connect(mainGain);
-        osc.start(now);
-        osc.stop(now + decay + 0.01);
-      } else if (node.type === "drum_cowbell") {
-        const decay = soundParams.decay ?? 0.3;
-        const osc1_cb = audioContext.createOscillator();
-        const osc2_cb = audioContext.createOscillator();
-        const gain_cb = audioContext.createGain();
-        osc1_cb.type = "square";
-        osc2_cb.type = "square";
-        osc1_cb.frequency.value = soundParams.baseFreq;
-        osc2_cb.frequency.value = soundParams.baseFreq * 1.5;
-        gain_cb.gain.setValueAtTime(finalVol * 0.6, now);
-        gain_cb.gain.exponentialRampToValueAtTime(0.001, now + decay);
-        osc1_cb.connect(gain_cb);
-        osc2_cb.connect(gain_cb);
-        gain_cb.connect(mainGain);
-        osc1_cb.start(now);
-        osc1_cb.stop(now + decay);
-        osc2_cb.start(now);
-        osc2_cb.stop(now + decay);
-      }
-    } catch (e) {
-      node.isTriggered = false;
-      node.animationState = 0;
-    }
-    setTimeout(() => {
-      const stillNode = findNodeById(node.id);
-      if (stillNode) stillNode.isTriggered = false;
-    }, 150);
-    createParticles(node.x, node.y, 3);
-  }
 }
 
 function stopNodeAudio(node) {
@@ -7808,25 +7283,45 @@ function snapToInternalGrid(positionToSnap, timelineGridNode) {
     return { x: positionToSnap.x, y: positionToSnap.y };
   }
 
-  const timelineLeftEdge = timelineGridNode.x - timelineGridNode.width / 2;
-  const timelineRightEdge = timelineGridNode.x + timelineGridNode.width / 2;
-  const divisionWidth =
-    timelineGridNode.width / timelineGridNode.internalGridDivisions;
+  const rotation = timelineGridNode.audioParams?.rotation || 0;
+  const { x: worldX, y: worldY } = positionToSnap;
+  const { x: gridCenterX, y: gridCenterY, width: gridWidth } = timelineGridNode;
 
-  const relativeX = positionToSnap.x - timelineLeftEdge;
+  const translatedX = worldX - gridCenterX;
+  const translatedY = worldY - gridCenterY;
 
-  const nearestDivisionIndex = Math.round(relativeX / divisionWidth);
+  const cosNegTheta = Math.cos(-rotation);
+  const sinNegTheta = Math.sin(-rotation);
+  const localX = translatedX * cosNegTheta - translatedY * sinNegTheta;
 
-  let snappedRelativeX = nearestDivisionIndex * divisionWidth;
+  const localGridLeftEdge = -gridWidth / 2;
 
-  let snappedWorldX = timelineLeftEdge + snappedRelativeX;
+  const divisionWidth = gridWidth / timelineGridNode.internalGridDivisions;
 
-  snappedWorldX = Math.max(
-    timelineLeftEdge,
-    Math.min(snappedWorldX, timelineRightEdge),
+  const relativeXFromLocalLeft = localX - localGridLeftEdge;
+
+  const nearestDivisionIndex = Math.round(
+    relativeXFromLocalLeft / divisionWidth,
   );
 
-  return { x: snappedWorldX, y: positionToSnap.y };
+  let snappedLocalX = localGridLeftEdge + nearestDivisionIndex * divisionWidth;
+
+  snappedLocalX = Math.max(
+    localGridLeftEdge,
+    Math.min(snappedLocalX, gridWidth / 2),
+  );
+
+  const snappedLocalY = translatedX * sinNegTheta + translatedY * cosNegTheta;
+
+  const cosTheta = Math.cos(rotation);
+  const sinTheta = Math.sin(rotation);
+  const rotatedSnappedX = snappedLocalX * cosTheta - snappedLocalY * sinTheta;
+  const rotatedSnappedY = snappedLocalX * sinTheta + snappedLocalY * cosTheta;
+
+  const snappedWorldX = rotatedSnappedX + gridCenterX;
+  const snappedWorldY = rotatedSnappedY + gridCenterY;
+
+  return { x: snappedWorldX, y: snappedWorldY };
 }
 
 function handleLoopHandleMouseMove(event) {
@@ -8756,10 +8251,8 @@ function animationLoop() {
         node.pulsePhase %= 2 * Math.PI;
       } else if (node.type === TIMELINE_GRID_TYPE) {
         if (node.timelineIsPlaying) {
-          const prevScanLinePosition = node.scanLinePosition;
-          const gridRectX = node.x - node.width / 2;
-          const prevSweepPositionX =
-            gridRectX + prevScanLinePosition * node.width;
+          const prevScanLinePositionRatio = node.scanLinePosition;
+          const gridRotation = node.audioParams?.rotation || 0;
 
           const cappedDeltaTime = Math.min(deltaTime, 1.0 / 15);
           let currentTimelineDurationSeconds;
@@ -8785,12 +8278,13 @@ function animationLoop() {
             currentTimelineDurationSeconds = TIMELINE_GRID_DEFAULT_SPEED;
           }
 
-          let effectiveSpeed = cappedDeltaTime / currentTimelineDurationSeconds;
+          let effectiveSpeedRatio =
+            cappedDeltaTime / currentTimelineDurationSeconds;
           let boundaryReachedThisFrame = false;
           const wasPingPongForward = node.isPingPongForward;
 
           if (node.scanlineDirection === "forward") {
-            node.scanLinePosition += effectiveSpeed;
+            node.scanLinePosition += effectiveSpeedRatio;
             if (node.scanLinePosition >= 1.0) {
               boundaryReachedThisFrame = true;
               if (node.timelineIsLooping) {
@@ -8801,7 +8295,7 @@ function animationLoop() {
               }
             }
           } else if (node.scanlineDirection === "backward") {
-            node.scanLinePosition -= effectiveSpeed;
+            node.scanLinePosition -= effectiveSpeedRatio;
             if (node.scanLinePosition <= 0.0) {
               boundaryReachedThisFrame = true;
               if (node.timelineIsLooping) {
@@ -8816,26 +8310,21 @@ function animationLoop() {
             }
           } else if (node.scanlineDirection === "ping-pong") {
             if (node.isPingPongForward) {
-              node.scanLinePosition += effectiveSpeed;
+              node.scanLinePosition += effectiveSpeedRatio;
               if (node.scanLinePosition >= 1.0) {
                 boundaryReachedThisFrame = true;
                 node.scanLinePosition = 1.0 - (node.scanLinePosition - 1.0);
                 node.isPingPongForward = false;
-                if (!node.timelineIsLooping && prevScanLinePosition < 1.0) {
-                }
               }
             } else {
-              node.scanLinePosition -= effectiveSpeed;
+              node.scanLinePosition -= effectiveSpeedRatio;
               if (node.scanLinePosition <= 0.0) {
                 boundaryReachedThisFrame = true;
                 node.scanLinePosition = Math.abs(node.scanLinePosition);
                 node.isPingPongForward = true;
-                if (!node.timelineIsLooping && prevScanLinePosition > 0.0) {
-                }
               }
             }
           }
-
           if (!node.timelineIsLooping && boundaryReachedThisFrame) {
             node.scanLinePosition = Math.max(
               0.0,
@@ -8843,65 +8332,54 @@ function animationLoop() {
             );
           }
 
-          const actualCurrentScanLineWorldX =
-            gridRectX + node.scanLinePosition * node.width;
-          const gridTopY = node.y - node.height / 2;
-          const gridBottomY = node.y + node.height / 2;
+          const prevScanLineLocalX =
+            -node.width / 2 + prevScanLinePositionRatio * node.width;
+          const currentScanLineLocalX =
+            -node.width / 2 + node.scanLinePosition * node.width;
 
-          let segmentsToTest = [];
-
+          let segmentsToTestLocal = [];
           if (boundaryReachedThisFrame) {
             if (node.timelineIsLooping) {
               if (node.scanlineDirection === "forward") {
-                segmentsToTest.push({
-                  min: prevSweepPositionX,
-                  max: gridRectX + node.width,
+                segmentsToTestLocal.push({
+                  min: prevScanLineLocalX,
+                  max: node.width / 2,
                 });
-                segmentsToTest.push({
-                  min: gridRectX,
-                  max: actualCurrentScanLineWorldX,
+                segmentsToTestLocal.push({
+                  min: -node.width / 2,
+                  max: currentScanLineLocalX,
                 });
               } else if (node.scanlineDirection === "backward") {
-                segmentsToTest.push({
-                  min: gridRectX,
-                  max: prevSweepPositionX,
+                segmentsToTestLocal.push({
+                  min: -node.width / 2,
+                  max: prevScanLineLocalX,
                 });
-                segmentsToTest.push({
-                  min: actualCurrentScanLineWorldX,
-                  max: gridRectX + node.width,
+                segmentsToTestLocal.push({
+                  min: currentScanLineLocalX,
+                  max: node.width / 2,
                 });
               } else if (node.scanlineDirection === "ping-pong") {
-                if (wasPingPongForward) {
-                  segmentsToTest.push({
-                    min: prevSweepPositionX,
-                    max: gridRectX + node.width,
-                  });
-                } else {
-                  segmentsToTest.push({
-                    min: gridRectX,
-                    max: prevSweepPositionX,
-                  });
-                }
+                segmentsToTestLocal.push({
+                  min: Math.min(prevScanLineLocalX, currentScanLineLocalX),
+                  max: Math.max(prevScanLineLocalX, currentScanLineLocalX),
+                });
               }
             } else {
-              segmentsToTest.push({
-                min: Math.min(prevSweepPositionX, actualCurrentScanLineWorldX),
-                max: Math.max(prevSweepPositionX, actualCurrentScanLineWorldX),
+              segmentsToTestLocal.push({
+                min: Math.min(prevScanLineLocalX, currentScanLineLocalX),
+                max: Math.max(prevScanLineLocalX, currentScanLineLocalX),
               });
             }
-
             if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear();
             else node.triggeredInThisSweep = new Set();
           } else {
-            segmentsToTest.push({
-              min: Math.min(prevSweepPositionX, actualCurrentScanLineWorldX),
-              max: Math.max(prevSweepPositionX, actualCurrentScanLineWorldX),
+            segmentsToTestLocal.push({
+              min: Math.min(prevScanLineLocalX, currentScanLineLocalX),
+              max: Math.max(prevScanLineLocalX, currentScanLineLocalX),
             });
           }
 
-          if (
-            Math.abs(prevSweepPositionX - actualCurrentScanLineWorldX) > 0.0001
-          ) {
+          if (Math.abs(prevScanLineLocalX - currentScanLineLocalX) > 0.0001) {
             nodes.forEach((otherNode) => {
               if (
                 otherNode.id === node.id ||
@@ -8918,23 +8396,29 @@ function animationLoop() {
                 return;
 
               const nodeApparentRadius = NODE_RADIUS_BASE * otherNode.size;
-              const nodeCenterX = otherNode.x;
-              const nodeCenterY = otherNode.y;
+              const translatedX = otherNode.x - node.x;
+              const translatedY = otherNode.y - node.y;
+              const cosTheta = Math.cos(-gridRotation);
+              const sinTheta = Math.sin(-gridRotation);
+              const otherNodeLocalX =
+                translatedX * cosTheta - translatedY * sinTheta;
+              const otherNodeLocalY =
+                translatedX * sinTheta + translatedY * cosTheta;
 
               if (
-                nodeCenterY + nodeApparentRadius < gridTopY ||
-                nodeCenterY - nodeApparentRadius > gridBottomY
+                otherNodeLocalY + nodeApparentRadius < -node.height / 2 ||
+                otherNodeLocalY - nodeApparentRadius > node.height / 2
               ) {
                 return;
               }
 
-              for (const segment of segmentsToTest) {
-                const nodeLeftEdge = nodeCenterX - nodeApparentRadius;
-                const nodeRightEdge = nodeCenterX + nodeApparentRadius;
+              for (const segment of segmentsToTestLocal) {
+                const nodeLocalLeftEdge = otherNodeLocalX - nodeApparentRadius;
+                const nodeLocalRightEdge = otherNodeLocalX + nodeApparentRadius;
 
                 if (
-                  Math.max(nodeLeftEdge, segment.min) <=
-                  Math.min(nodeRightEdge, segment.max)
+                  Math.max(nodeLocalLeftEdge, segment.min) <=
+                  Math.min(nodeLocalRightEdge, segment.max)
                 ) {
                   if (
                     !node.triggeredInThisSweep ||
@@ -8952,6 +8436,27 @@ function animationLoop() {
                           : TIMELINE_GRID_DEFAULT_COLOR,
                       particleMultiplier: 0.6,
                     };
+
+                    let transpositionOverride = null;
+                    if (
+                      node.audioParams?.isTransposeEnabled &&
+                      otherNode.audioParams?.hasOwnProperty("scaleIndex")
+                    ) {
+                      const amount = node.audioParams.transposeAmount || 0;
+                      const direction =
+                        node.audioParams.transposeDirection === "+" ? 1 : -1;
+                      const offset = direction * amount;
+                      const originalScaleIndex =
+                        otherNode.audioParams.scaleIndex;
+                      const newScaleIndex = originalScaleIndex + offset;
+
+                      transpositionOverride = {
+                        scaleIndexOverride: Math.max(
+                          MIN_SCALE_INDEX,
+                          Math.min(MAX_SCALE_INDEX, newScaleIndex),
+                        ),
+                      };
+                    }
 
                     if (otherNode.type === "pulsar_triggerable") {
                       otherNode.isEnabled = !otherNode.isEnabled;
@@ -9012,9 +8517,19 @@ function animationLoop() {
                       otherNode.audioParams &&
                       otherNode.audioParams.retriggerEnabled
                     ) {
-                      startRetriggerSequence(otherNode, timelinePulseData);
+                      startRetriggerSequence(
+                        otherNode,
+                        timelinePulseData,
+                        transpositionOverride,
+                      );
                     } else {
-                      triggerNodeEffect(otherNode, timelinePulseData);
+                      triggerNodeEffect(
+                        otherNode,
+                        timelinePulseData,
+                        null,
+                        0.3,
+                        transpositionOverride,
+                      );
                     }
 
                     if (!node.triggeredInThisSweep)
@@ -9088,18 +8603,33 @@ function animationLoop() {
             tapeLoopSourceNode.loopStart + currentPositionInLoopSegment;
 
           if (tapeVisualPlayhead && tapeLoopBuffer.duration > 0) {
-            const playheadPercent =
-              (absoluteBufferPosition / tapeLoopBuffer.duration) * 100;
-            tapeVisualPlayhead.style.left = `${Math.min(100, Math.max(0, playheadPercent))}%`;
+            const displayWindowDuration = Math.max(
+              0.01,
+              tapeDisplayEndTime - tapeDisplayStartTime,
+            );
+            const playheadRelToDisplay =
+              (absoluteBufferPosition - tapeDisplayStartTime) /
+              displayWindowDuration;
+            tapeVisualPlayhead.style.left = `${Math.min(100, Math.max(0, playheadRelToDisplay * 100))}%`;
           }
         } else if (isTapeLoopRecording) {
-          const recordPercent =
-            (tapeLoopWritePosition /
-              (audioContext.sampleRate * bufferDuration)) *
-            100;
-          tapeVisualPlayhead.style.left = `${Math.min(100, Math.max(0, recordPercent))}%`;
+          const displayWindowDuration = Math.max(
+            0.01,
+            tapeDisplayEndTime - tapeDisplayStartTime,
+          );
+          const recordedTime = tapeLoopWritePosition / audioContext.sampleRate;
+          const recordPercentRelToDisplay =
+            (recordedTime - tapeDisplayStartTime) / displayWindowDuration;
+          tapeVisualPlayhead.style.left = `${Math.min(100, Math.max(0, recordPercentRelToDisplay * 100))}%`;
         } else {
-          tapeVisualPlayhead.style.left = `0%`;
+          const displayWindowDuration = Math.max(
+            0.01,
+            tapeDisplayEndTime - tapeDisplayStartTime,
+          );
+          const startPercentRelToDisplay =
+            (userDefinedLoopStart - tapeDisplayStartTime) /
+            displayWindowDuration;
+          tapeVisualPlayhead.style.left = `${Math.min(100, Math.max(0, startPercentRelToDisplay * 100))}%`;
         }
       }
     }
@@ -9124,6 +8654,7 @@ function animationLoop() {
 
     draw();
   } catch (loopError) {
+    console.error("Error in animationLoop:", loopError);
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
@@ -9698,6 +9229,17 @@ function drawNode(node) {
 
   let needsRestore = false;
   if (
+    node.type === TIMELINE_GRID_TYPE &&
+    node.audioParams &&
+    typeof node.audioParams.rotation === "number" &&
+    node.audioParams.rotation !== 0
+  ) {
+    ctx.save();
+    ctx.translate(node.x, node.y);
+    ctx.rotate(node.audioParams.rotation);
+    ctx.translate(-node.x, -node.y);
+    needsRestore = true;
+  } else if (
     (node.type === "gate" ||
       (node.type === "sound" &&
         node.type !== PRORB_TYPE &&
@@ -9825,7 +9367,11 @@ function drawNode(node) {
     ctx.lineWidth = currentDefaultLineWidth;
 
     if (isSelectedAndOutlineNeeded || node.isInResizeMode) {
-      ctx.save();
+      const originalStrokeStyle = ctx.strokeStyle;
+      const originalLineWidth = ctx.lineWidth;
+      const originalShadowColor = ctx.shadowColor;
+      const originalShadowBlur = ctx.shadowBlur;
+
       ctx.strokeStyle = "rgba(255, 255, 0, 0.9)";
       ctx.lineWidth = Math.max(
         0.5 / viewScale,
@@ -9834,31 +9380,46 @@ function drawNode(node) {
       ctx.shadowColor = "rgba(255, 255, 0, 0.7)";
       ctx.shadowBlur = 10 / viewScale;
       ctx.strokeRect(rectX, rectY, node.width, node.height);
-      ctx.restore();
-      ctx.lineWidth = currentDefaultLineWidth;
-      ctx.strokeStyle = gridBoxStrokeActual;
+
+      ctx.strokeStyle = originalStrokeStyle;
+      ctx.lineWidth = originalLineWidth;
+      ctx.shadowColor = originalShadowColor;
+      ctx.shadowBlur = originalShadowBlur;
     } else {
       ctx.strokeRect(rectX, rectY, node.width, node.height);
     }
-    ctx.shadowBlur = 0;
+    if (
+      node.type !== TIMELINE_GRID_TYPE ||
+      (node.type === TIMELINE_GRID_TYPE &&
+        ctx.shadowBlur !== 0 &&
+        !(isSelectedAndOutlineNeeded || node.isInResizeMode))
+    ) {
+      ctx.shadowBlur = 0;
+    }
 
     if (node.showInternalGrid && node.internalGridDivisions > 1) {
-      const divisionWidth = node.width / node.internalGridDivisions;
-      ctx.save();
+      const originalStrokeStyleInternal = ctx.strokeStyle;
+      const originalLineWidthInternal = ctx.lineWidth;
       ctx.strokeStyle = internalGridLineColor;
       ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale);
       ctx.beginPath();
       for (let i = 1; i < node.internalGridDivisions; i++) {
-        const lineX = rectX + i * divisionWidth;
+        const lineX = rectX + i * (node.width / node.internalGridDivisions);
         ctx.moveTo(lineX, rectY);
         ctx.lineTo(lineX, rectY + node.height);
       }
       ctx.stroke();
-      ctx.restore();
+      ctx.strokeStyle = originalStrokeStyleInternal;
+      ctx.lineWidth = originalLineWidthInternal;
     }
 
     if (node.scanLinePosition >= 0 && node.scanLinePosition <= 1.0) {
       const scanLineX = rectX + node.scanLinePosition * node.width;
+      const originalStrokeStyleScan = ctx.strokeStyle;
+      const originalLineWidthScan = ctx.lineWidth;
+      const originalShadowColorScan = ctx.shadowColor;
+      const originalShadowBlurScan = ctx.shadowBlur;
+
       ctx.beginPath();
       ctx.moveTo(scanLineX, rectY);
       ctx.lineTo(scanLineX, rectY + node.height);
@@ -9867,11 +9428,22 @@ function drawNode(node) {
       ctx.shadowColor = scanlineColor;
       ctx.shadowBlur = 5 / viewScale;
       ctx.stroke();
-      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = originalStrokeStyleScan;
+      ctx.lineWidth = originalLineWidthScan;
+      ctx.shadowColor = originalShadowColorScan;
+      ctx.shadowBlur = originalShadowBlurScan;
     }
 
     const shouldShowControls = isSelectedAndOutlineNeeded;
     if (shouldShowControls) {
+      if (needsRestore) {
+        ctx.save();
+        ctx.translate(node.x, node.y);
+        ctx.rotate(-(node.audioParams.rotation || 0));
+        ctx.translate(-node.x, -node.y);
+      }
+
       const iconSizeScreen = 16;
       const iconSizeWorld = iconSizeScreen / viewScale;
       const paddingScreen = 5;
@@ -9882,7 +9454,11 @@ function drawNode(node) {
       const resizeIconBoxY = node.y - node.height / 2 + paddingWorld;
       const resizeIconCenterX = resizeIconBoxX + iconSizeWorld / 2;
       const resizeIconCenterY = resizeIconBoxY + iconSizeWorld / 2;
-      ctx.save();
+
+      const originalFillStyleIcon = ctx.fillStyle;
+      const originalStrokeStyleIcon = ctx.strokeStyle;
+      const originalLineWidthIcon = ctx.lineWidth;
+
       ctx.fillStyle = node.isInResizeMode
         ? "rgba(255, 200, 0, 0.85)"
         : "rgba(200, 200, 220, 0.65)";
@@ -9903,7 +9479,11 @@ function drawNode(node) {
         resizeIconCenterX,
         resizeIconCenterY + resizeIconFontSize * 0.05,
       );
-      ctx.restore();
+
+      ctx.fillStyle = originalFillStyleIcon;
+      ctx.strokeStyle = originalStrokeStyleIcon;
+      ctx.lineWidth = originalLineWidthIcon;
+
       node.resizeToggleIconRect = {
         x1: resizeIconBoxX,
         y1: resizeIconBoxY,
@@ -9915,7 +9495,11 @@ function drawNode(node) {
       const directionIconBoxY = node.y - node.height / 2 + paddingWorld;
       const directionIconCenterX = directionIconBoxX + iconSizeWorld / 2;
       const directionIconCenterY = directionIconBoxY + iconSizeWorld / 2;
-      ctx.save();
+
+      const originalFillStyleDir = ctx.fillStyle;
+      const originalStrokeStyleDir = ctx.strokeStyle;
+      const originalLineWidthDir = ctx.lineWidth;
+
       ctx.fillStyle = "rgba(200, 220, 255, 0.65)";
       ctx.strokeStyle = "rgba(50, 50, 50, 0.9)";
       ctx.lineWidth = 1 / viewScale;
@@ -9943,19 +9527,32 @@ function drawNode(node) {
         directionIconCenterX,
         directionIconCenterY + directionIconFontSize * 0.1,
       );
-      ctx.restore();
+
+      ctx.fillStyle = originalFillStyleDir;
+      ctx.strokeStyle = originalStrokeStyleDir;
+      ctx.lineWidth = originalLineWidthDir;
+
       node.directionToggleIconRect = {
         x1: directionIconBoxX,
         y1: directionIconBoxY,
         x2: directionIconBoxX + iconSizeWorld,
         y2: directionIconBoxY + iconSizeWorld,
       };
+      if (needsRestore) {
+        ctx.restore();
+      }
     } else {
       delete node.resizeToggleIconRect;
       delete node.directionToggleIconRect;
     }
 
     if (shouldShowControls && node.isInResizeMode) {
+      if (needsRestore) {
+        ctx.save();
+        ctx.translate(node.x, node.y);
+        ctx.rotate(-(node.audioParams.rotation || 0));
+        ctx.translate(-node.x, -node.y);
+      }
       const handleDrawSizeScreen = 8;
       const handleDrawSizeWorld = handleDrawSizeScreen / viewScale;
       const halfHandleDraw = handleDrawSizeWorld / 2;
@@ -9969,6 +9566,9 @@ function drawNode(node) {
         { x: rectX + node.width / 2, y: rectY + node.height },
         { x: rectX + node.width, y: rectY + node.height },
       ];
+      const originalFillStyleHandles = ctx.fillStyle;
+      const originalStrokeStyleHandles = ctx.strokeStyle;
+      const originalLineWidthHandles = ctx.lineWidth;
       ctx.fillStyle = "rgba(255, 255, 0, 0.7)";
       ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
       ctx.lineWidth = 1 / viewScale;
@@ -9983,6 +9583,12 @@ function drawNode(node) {
         ctx.fill();
         ctx.stroke();
       });
+      ctx.fillStyle = originalFillStyleHandles;
+      ctx.strokeStyle = originalStrokeStyleHandles;
+      ctx.lineWidth = originalLineWidthHandles;
+      if (needsRestore) {
+        ctx.restore();
+      }
     }
   } else if (node.type === "sound" && visualStyle) {
     const planetColorsInternal = {
@@ -10908,7 +10514,7 @@ function drawNode(node) {
     node.type !== TIMELINE_GRID_TYPE &&
     node.type !== PRORB_TYPE
   ) {
-    ctx.save();
+    const originalShadowBlur = ctx.shadowBlur;
     ctx.shadowBlur = 0;
     ctx.strokeStyle = "rgba(255, 255, 0, 0.9)";
     ctx.lineWidth = Math.max(0.5 / viewScale, 1.5 / viewScale);
@@ -10918,13 +10524,20 @@ function drawNode(node) {
     const finalOutlineY = node.y + wobbleY;
     ctx.arc(finalOutlineX, finalOutlineY, outlineRadius, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.restore();
+    ctx.shadowBlur = originalShadowBlur;
   }
 
   if (needsRestore) {
     ctx.restore();
   }
-  ctx.shadowBlur = 0;
+  if (
+    node.type !== TIMELINE_GRID_TYPE ||
+    (node.type === TIMELINE_GRID_TYPE &&
+      ctx.shadowBlur !== 0 &&
+      !(isSelectedAndOutlineNeeded || node.isInResizeMode))
+  ) {
+    ctx.shadowBlur = 0;
+  }
 
   if (
     params &&
@@ -11060,6 +10673,11 @@ function drawNode(node) {
   }
 
   if (isInfoTextVisible) {
+    const originalFillStyleText = ctx.fillStyle;
+    const originalFontText = ctx.font;
+    const originalTextAlign = ctx.textAlign;
+    const originalTextBaseline = ctx.textBaseline;
+
     const fontSize = Math.max(8 / viewScale, 10 / viewScale);
     ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textAlign = "center";
@@ -11182,21 +10800,58 @@ function drawNode(node) {
       else if (node.scanlineDirection === "backward") directionSymbol = " ←";
       else if (node.scanlineDirection === "ping-pong") directionSymbol = " ↔";
       secondLineText += directionSymbol;
+
+      if (
+        node.audioParams &&
+        typeof node.audioParams.rotation === "number" &&
+        node.audioParams.rotation !== 0
+      ) {
+        const rotationDeg = (
+          (node.audioParams.rotation * 180) /
+          Math.PI
+        ).toFixed(0);
+        secondLineText += ` (Rot: ${rotationDeg}°)`;
+      }
       labelYOffset = node.height / 2 + fontSize * 1.2;
     }
 
     const finalLabelX = node.x + wobbleX;
     const finalLabelYBase = node.y + wobbleY;
-    if (labelText) {
-      ctx.fillText(labelText, finalLabelX, finalLabelYBase + labelYOffset);
+
+    let textNeedsRestore = false;
+    if (
+      node.type === TIMELINE_GRID_TYPE &&
+      node.audioParams &&
+      typeof node.audioParams.rotation === "number" &&
+      node.audioParams.rotation !== 0
+    ) {
+      ctx.save();
+      ctx.translate(finalLabelX, finalLabelYBase + labelYOffset);
+      ctx.rotate(node.audioParams.rotation);
+      if (labelText) {
+        ctx.fillText(labelText, 0, 0);
+      }
+      if (secondLineText) {
+        ctx.fillText(secondLineText, 0, fontSize * 1.1);
+      }
+      ctx.restore();
+      textNeedsRestore = true;
+    } else {
+      if (labelText) {
+        ctx.fillText(labelText, finalLabelX, finalLabelYBase + labelYOffset);
+      }
+      if (secondLineText) {
+        ctx.fillText(
+          secondLineText,
+          finalLabelX,
+          finalLabelYBase + labelYOffset + fontSize * 1.1,
+        );
+      }
     }
-    if (secondLineText) {
-      ctx.fillText(
-        secondLineText,
-        finalLabelX,
-        finalLabelYBase + labelYOffset + fontSize * 1.1,
-      );
-    }
+    ctx.fillStyle = originalFillStyleText;
+    ctx.font = originalFontText;
+    ctx.textAlign = originalTextAlign;
+    ctx.textBaseline = originalTextBaseline;
   }
 }
 
@@ -13065,6 +12720,17 @@ function handleMouseMove(event) {
       resizingTimelineGridNode.audioParams.height = newHeight;
     }
     populateEditPanel();
+
+    const handles = [
+      { x: 0, y: 0, type: "top-left", cursor: "nwse-resize" },
+      { x: 0, y: 0, type: "top", cursor: "ns-resize" },
+      { x: 0, y: 0, type: "top-right", cursor: "nesw-resize" },
+      { x: 0, y: 0, type: "left", cursor: "ew-resize" },
+      { x: 0, y: 0, type: "right", cursor: "ew-resize" },
+      { x: 0, y: 0, type: "bottom-left", cursor: "nesw-resize" },
+      { x: 0, y: 0, type: "bottom", cursor: "ns-resize" },
+      { x: 0, y: 0, type: "bottom-right", cursor: "nwse-resize" },
+    ];
     if (canvas.style.cursor !== resizeHandleType)
       canvas.style.cursor =
         handles.find((h) => h.type === resizeHandleType)?.cursor || "grabbing";
@@ -13101,7 +12767,6 @@ function handleMouseMove(event) {
           let targetY = dragStartPos.y + offset.y + dy_world;
 
           let snappedToAnInternalGrid = false;
-
           if (n.type !== TIMELINE_GRID_TYPE) {
             for (const timelineGridNode of nodes) {
               if (
@@ -13109,28 +12774,46 @@ function handleMouseMove(event) {
                 timelineGridNode.snapToInternalGrid &&
                 timelineGridNode.internalGridDivisions > 1
               ) {
-                const tgRectX = timelineGridNode.x - timelineGridNode.width / 2;
-                const tgRectY =
-                  timelineGridNode.y - timelineGridNode.height / 2;
-                const tgRectXW =
-                  timelineGridNode.x + timelineGridNode.width / 2;
-                const tgRectYH =
-                  timelineGridNode.y + timelineGridNode.height / 2;
+                const distToTimelineCenter = distance(
+                  targetX,
+                  targetY,
+                  timelineGridNode.x,
+                  timelineGridNode.y,
+                );
+                const maxDist =
+                  Math.max(timelineGridNode.width, timelineGridNode.height) /
+                    2 +
+                  n.radius;
 
-                if (
-                  targetX >= tgRectX &&
-                  targetX <= tgRectXW &&
-                  targetY >= tgRectY &&
-                  targetY <= tgRectYH
-                ) {
-                  const internalSnapPos = snapToInternalGrid(
-                    { x: targetX, y: targetY },
-                    timelineGridNode,
+                if (distToTimelineCenter < maxDist) {
+                  const translatedNodeX = targetX - timelineGridNode.x;
+                  const translatedNodeY = targetY - timelineGridNode.y;
+                  const cosNegTheta = Math.cos(
+                    -(timelineGridNode.audioParams?.rotation || 0),
                   );
-                  targetX = internalSnapPos.x;
+                  const sinNegTheta = Math.sin(
+                    -(timelineGridNode.audioParams?.rotation || 0),
+                  );
+                  const localNodeX =
+                    translatedNodeX * cosNegTheta -
+                    translatedNodeY * sinNegTheta;
+                  const localNodeY =
+                    translatedNodeX * sinNegTheta +
+                    translatedNodeY * cosNegTheta;
 
-                  snappedToAnInternalGrid = true;
-                  break;
+                  if (
+                    Math.abs(localNodeX) <= timelineGridNode.width / 2 &&
+                    Math.abs(localNodeY) <= timelineGridNode.height / 2
+                  ) {
+                    const internalSnapPos = snapToInternalGrid(
+                      { x: targetX, y: targetY },
+                      timelineGridNode,
+                    );
+                    targetX = internalSnapPos.x;
+                    targetY = internalSnapPos.y;
+                    snappedToAnInternalGrid = true;
+                    break;
+                  }
                 }
               }
             }
@@ -13217,11 +12900,30 @@ function handleMouseMove(event) {
           ];
 
           for (const handle of handlesInfo) {
+            let checkX = handle.x;
+            let checkY = handle.y;
+            const gridRotation = node.audioParams?.rotation || 0;
+
+            if (gridRotation !== 0) {
+              const translatedHandleX = handle.x - node.x;
+              const translatedHandleY = handle.y - node.y;
+              const cosTheta = Math.cos(gridRotation);
+              const sinTheta = Math.sin(gridRotation);
+              checkX =
+                translatedHandleX * cosTheta -
+                translatedHandleY * sinTheta +
+                node.x;
+              checkY =
+                translatedHandleX * sinTheta +
+                translatedHandleY * cosTheta +
+                node.y;
+            }
+
             if (
-              mousePos.x >= handle.x - hArea &&
-              mousePos.x <= handle.x + hArea &&
-              mousePos.y >= handle.y - hArea &&
-              mousePos.y <= handle.y + hArea
+              mousePos.x >= checkX - hArea &&
+              mousePos.x <= checkX + hArea &&
+              mousePos.y >= checkY - hArea &&
+              mousePos.y <= checkY + hArea
             ) {
               canvas.style.cursor = handle.cursor;
               cursorSetByHandle = true;
@@ -13463,11 +13165,13 @@ function handleMouseUp(event) {
       node.width = finalWidth;
       node.height = finalHeight;
       node.isInResizeMode = true;
+      node.rotation = 0;
 
       if (node.audioParams) {
         node.audioParams.width = node.width;
         node.audioParams.height = node.height;
         node.audioParams.isInResizeMode = node.isInResizeMode;
+        node.audioParams.rotation = 0;
       }
 
       selectedElements.clear();
@@ -13490,6 +13194,8 @@ function handleMouseUp(event) {
     actionHandledInMainBlock = true;
     if (resizingTimelineGridNode) {
       resizingTimelineGridNode.isInResizeMode = true;
+      if (resizingTimelineGridNode.audioParams)
+        resizingTimelineGridNode.audioParams.isInResizeMode = true;
     }
     resizingTimelineGridNode = null;
     resizeHandleType = null;
@@ -13595,7 +13301,11 @@ function handleMouseUp(event) {
             elementUnderCursorAtUp.nodeRef?.type === TIMELINE_GRID_TYPE
           ) {
             const nodeRef = elementUnderCursorAtUp.nodeRef;
-            if (nodeRef) nodeRef.isInResizeMode = true;
+            if (nodeRef) {
+              nodeRef.isInResizeMode = true;
+              if (nodeRef.audioParams)
+                nodeRef.audioParams.isInResizeMode = true;
+            }
           }
           stateWasChanged = true;
         } else if (
@@ -13679,6 +13389,8 @@ function handleMouseUp(event) {
                 } else if (isDrumType(node.type)) triggerNodeEffect(node);
                 else if (node.type === TIMELINE_GRID_TYPE) {
                   node.isInResizeMode = !node.isInResizeMode;
+                  if (node.audioParams)
+                    node.audioParams.isInResizeMode = node.isInResizeMode;
                   stateWasChanged = true;
                   populateEditPanel();
                 }
@@ -13693,14 +13405,21 @@ function handleMouseUp(event) {
               ) {
                 selectedElements.clear();
                 selectedElements.add(targetElement);
-                if (node && node.type === TIMELINE_GRID_TYPE)
+                if (node && node.type === TIMELINE_GRID_TYPE) {
                   node.isInResizeMode = true;
-                else if (
+                  if (node.audioParams) node.audioParams.isInResizeMode = true;
+                } else if (
                   node &&
                   node.type !== TIMELINE_GRID_TYPE &&
                   node.hasOwnProperty("isInResizeMode")
                 )
                   node.isInResizeMode = false;
+                if (
+                  node &&
+                  node.audioParams &&
+                  node.audioParams.hasOwnProperty("isInResizeMode")
+                )
+                  node.audioParams.isInResizeMode = node.isInResizeMode;
 
                 updateConstellationGroup();
                 populateEditPanel();
@@ -13718,7 +13437,10 @@ function handleMouseUp(event) {
           selectedElements.forEach((selEl) => {
             if (selEl.type === "node") {
               const n = findNodeById(selEl.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+              if (n && n.type === TIMELINE_GRID_TYPE) {
+                n.isInResizeMode = false;
+                if (n.audioParams) n.audioParams.isInResizeMode = false;
+              }
             }
           });
           selectedElements.clear();
@@ -13763,7 +13485,6 @@ function handleMouseUp(event) {
         if (canActuallyAddThisNode) {
           let finalX = mousePos.x;
           let finalY = mousePos.y;
-          let snappedToAnInternalGrid = false;
           const effectiveGlobalSnapForAdd =
             isSnapEnabled && !(event && event.shiftKey);
 
@@ -13774,20 +13495,22 @@ function handleMouseUp(event) {
                 timelineGridNode.snapToInternalGrid &&
                 timelineGridNode.internalGridDivisions > 1
               ) {
-                const tgRectLeft =
-                  timelineGridNode.x - timelineGridNode.width / 2;
-                const tgRectTop =
-                  timelineGridNode.y - timelineGridNode.height / 2;
-                const tgRectRight =
-                  timelineGridNode.x + timelineGridNode.width / 2;
-                const tgRectBottom =
-                  timelineGridNode.y + timelineGridNode.height / 2;
+                const cosRot = Math.cos(
+                  -(timelineGridNode.audioParams?.rotation || 0),
+                );
+                const sinRot = Math.sin(
+                  -(timelineGridNode.audioParams?.rotation || 0),
+                );
+                const tX = mousePos.x - timelineGridNode.x;
+                const tY = mousePos.y - timelineGridNode.y;
+                const localMouseX = tX * cosRot - tY * sinRot;
+                const localMouseY = tX * sinRot + tY * cosRot;
 
                 if (
-                  mousePos.x >= tgRectLeft &&
-                  mousePos.x <= tgRectRight &&
-                  mousePos.y >= tgRectTop &&
-                  mousePos.y <= tgRectBottom
+                  localMouseX >= -timelineGridNode.width / 2 &&
+                  localMouseX <= timelineGridNode.width / 2 &&
+                  localMouseY >= -timelineGridNode.height / 2 &&
+                  localMouseY <= timelineGridNode.height / 2
                 ) {
                   const internalSnapPos = snapToInternalGrid(
                     { x: mousePos.x, y: mousePos.y },
@@ -13795,16 +13518,45 @@ function handleMouseUp(event) {
                   );
                   finalX = internalSnapPos.x;
                   finalY = internalSnapPos.y;
-                  snappedToAnInternalGrid = true;
                   break;
                 }
               }
             }
           }
 
-          if (!snappedToAnInternalGrid && effectiveGlobalSnapForAdd) {
-            if (nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
-              const globalSnapped = snapToGrid(mousePos.x, mousePos.y);
+          if (
+            effectiveGlobalSnapForAdd &&
+            nodeTypeToAdd !== TIMELINE_GRID_TYPE
+          ) {
+            let wasSnappedToInternal = false;
+            for (const timelineGridNode of nodes) {
+              if (
+                timelineGridNode.type === TIMELINE_GRID_TYPE &&
+                timelineGridNode.snapToInternalGrid
+              ) {
+                const cosRot = Math.cos(
+                  -(timelineGridNode.audioParams?.rotation || 0),
+                );
+                const sinRot = Math.sin(
+                  -(timelineGridNode.audioParams?.rotation || 0),
+                );
+                const tX = mousePos.x - timelineGridNode.x;
+                const tY = mousePos.y - timelineGridNode.y;
+                const localMouseX = tX * cosRot - tY * sinRot;
+                const localMouseY = tX * sinRot + tY * cosRot;
+                if (
+                  localMouseX >= -timelineGridNode.width / 2 &&
+                  localMouseX <= timelineGridNode.width / 2 &&
+                  localMouseY >= -timelineGridNode.height / 2 &&
+                  localMouseY <= timelineGridNode.height / 2
+                ) {
+                  wasSnappedToInternal = true;
+                  break;
+                }
+              }
+            }
+            if (!wasSnappedToInternal) {
+              const globalSnapped = snapToGrid(finalX, finalY);
               finalX = globalSnapped.x;
               finalY = globalSnapped.y;
             }
@@ -13848,7 +13600,10 @@ function handleMouseUp(event) {
         selectedElements.forEach((selEl) => {
           if (selEl.type === "node") {
             const n = findNodeById(selEl.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) n.isInResizeMode = false;
+            if (n && n.type === TIMELINE_GRID_TYPE) {
+              n.isInResizeMode = false;
+              if (n.audioParams) n.audioParams.isInResizeMode = false;
+            }
           }
         });
         selectedElements.clear();
@@ -13896,29 +13651,59 @@ function handleMouseUp(event) {
   updateGroupControlsUI();
 }
 
-function snapToInternalGrid(nodeToSnap, timelineGridNode) {
+function snapToInternalGrid(positionToSnap, timelineGridNode) {
   if (
     !timelineGridNode ||
     timelineGridNode.type !== TIMELINE_GRID_TYPE ||
     !timelineGridNode.snapToInternalGrid ||
     timelineGridNode.internalGridDivisions <= 1
   ) {
-    return { x: nodeToSnap.x, y: nodeToSnap.y };
+    return { x: positionToSnap.x, y: positionToSnap.y };
   }
 
-  const timelineRectX = timelineGridNode.x - timelineGridNode.width / 2;
-  const divisionWidth =
-    timelineGridNode.width / timelineGridNode.internalGridDivisions;
+  const rotation = timelineGridNode.audioParams?.rotation || 0;
+  const { x: worldX, y: worldY } = positionToSnap;
+  const {
+    x: gridCenterX,
+    y: gridCenterY,
+    width: gridWidth,
+    height: gridHeight,
+  } = timelineGridNode;
 
-  const relativeX = nodeToSnap.x - timelineRectX;
+  const translatedX = worldX - gridCenterX;
+  const translatedY = worldY - gridCenterY;
 
-  const nearestDivisionIndex = Math.round(relativeX / divisionWidth);
+  const cosNegTheta = Math.cos(-rotation);
+  const sinNegTheta = Math.sin(-rotation);
+  const localMouseX = translatedX * cosNegTheta - translatedY * sinNegTheta;
+  const localMouseY = translatedX * sinNegTheta + translatedY * cosNegTheta;
 
-  let snappedRelativeX = nearestDivisionIndex * divisionWidth;
+  const localGridLeftEdge = -gridWidth / 2;
+  const divisionWidth = gridWidth / timelineGridNode.internalGridDivisions;
+  const relativeXFromLocalLeft = localMouseX - localGridLeftEdge;
+  const nearestDivisionIndex = Math.round(
+    relativeXFromLocalLeft / divisionWidth,
+  );
+  let snappedLocalX = localGridLeftEdge + nearestDivisionIndex * divisionWidth;
+  snappedLocalX = Math.max(
+    localGridLeftEdge,
+    Math.min(snappedLocalX, gridWidth / 2),
+  );
 
-  let snappedWorldX = timelineRectX + snappedRelativeX;
+  const finalLocalY = Math.max(
+    -gridHeight / 2,
+    Math.min(localMouseY, gridHeight / 2),
+  );
 
-  return { x: snappedWorldX, y: nodeToSnap.y };
+  const cosTheta = Math.cos(rotation);
+  const sinTheta = Math.sin(rotation);
+  const rotatedSnappedX = snappedLocalX * cosTheta - finalLocalY * sinTheta;
+  const rotatedSnappedY = snappedLocalX * sinTheta + finalLocalY * cosTheta;
+
+  const snappedWorldX = rotatedSnappedX + gridCenterX;
+  const snappedWorldY = rotatedSnappedY + gridCenterY;
+
+  return { x: snappedWorldX, y: snappedWorldY };
 }
 
 function handleWheel(event) {
@@ -15008,6 +14793,135 @@ function populateEditPanel() {
         });
         internalGridSection.appendChild(divisionsSelect);
         section.appendChild(internalGridSection);
+
+        const transposeSection = document.createElement("div");
+        transposeSection.classList.add("panel-section");
+        transposeSection.style.borderTop = "1px solid var(--button-hover)";
+        transposeSection.style.marginTop = "10px";
+        transposeSection.style.paddingTop = "10px";
+        transposeSection.innerHTML =
+          "<p><strong>Timeline Transposition:</strong></p>";
+
+        const enableTransposeLabel = document.createElement("label");
+        enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
+        enableTransposeLabel.textContent = "Enable Transposition: ";
+        const enableTransposeCheckbox = document.createElement("input");
+        enableTransposeCheckbox.type = "checkbox";
+        enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
+        enableTransposeCheckbox.checked =
+          node.audioParams?.isTransposeEnabled || false;
+        enableTransposeCheckbox.addEventListener("change", (e) => {
+          console.log(
+            "[EDIT PANEL] Enable Transpose Checkbox changed:",
+            e.target.checked,
+          );
+          selectedArray.forEach((elData) => {
+            const n = findNodeById(elData.id);
+            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+              n.audioParams.isTransposeEnabled = e.target.checked;
+              console.log(
+                `[EDIT PANEL] Node ${n.id} isTransposeEnabled set to: ${n.audioParams.isTransposeEnabled}`,
+              );
+            }
+          });
+          saveState();
+          populateEditPanel();
+        });
+        transposeSection.appendChild(enableTransposeLabel);
+        transposeSection.appendChild(enableTransposeCheckbox);
+        transposeSection.appendChild(document.createElement("br"));
+
+        if (node.audioParams?.isTransposeEnabled) {
+          console.log(
+            `[EDIT PANEL] Node ${node.id}: Transposition is ENABLED. UI for direction/amount will be built. Current Direction: ${node.audioParams.transposeDirection}`,
+          );
+          const directionContainer = document.createElement("div");
+          directionContainer.style.marginBottom = "5px";
+          const directionLabel = document.createElement("label");
+          directionLabel.textContent = "Direction: ";
+          directionLabel.style.marginRight = "5px";
+          directionContainer.appendChild(directionLabel);
+
+          const plusButton = document.createElement("button");
+          plusButton.textContent = "+";
+          plusButton.classList.add("panel-button-like");
+          if (node.audioParams.transposeDirection === "+") {
+            plusButton.classList.add("active");
+          }
+          plusButton.addEventListener("click", () => {
+            console.log("[EDIT PANEL] + button clicked");
+            selectedArray.forEach((elData) => {
+              const n = findNodeById(elData.id);
+              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                n.audioParams.transposeDirection = "+";
+                console.log(
+                  `[EDIT PANEL] Node ${n.id} transposeDirection updated to: +`,
+                );
+              }
+            });
+            saveState();
+            populateEditPanel();
+          });
+          directionContainer.appendChild(plusButton);
+
+          const minusButton = document.createElement("button");
+          minusButton.textContent = "-";
+          minusButton.classList.add("panel-button-like");
+          if (node.audioParams.transposeDirection === "-") {
+            minusButton.classList.add("active");
+          }
+          minusButton.addEventListener("click", () => {
+            console.log("[EDIT PANEL] - button clicked");
+            selectedArray.forEach((elData) => {
+              const n = findNodeById(elData.id);
+              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                n.audioParams.transposeDirection = "-";
+                console.log(
+                  `[EDIT PANEL] Node ${n.id} transposeDirection updated to: -`,
+                );
+              }
+            });
+            saveState();
+            populateEditPanel();
+          });
+          directionContainer.appendChild(minusButton);
+          transposeSection.appendChild(directionContainer);
+
+          const currentTransposeAmount = node.audioParams.transposeAmount || 0;
+          const amountSliderContainer = createSlider(
+            `edit-timeline-transpose-amount-${node.id}`,
+            `Amount (${currentTransposeAmount} scale steps):`,
+            0,
+            24,
+            1,
+            currentTransposeAmount,
+            () => {
+              console.log(
+                "[EDIT PANEL] Transpose Amount Slider - CHANGED (on release)",
+              );
+              saveState();
+            },
+            (e_input) => {
+              const newAmount = parseInt(e_input.target.value);
+              selectedArray.forEach((elData) => {
+                const n = findNodeById(elData.id);
+                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                  n.audioParams.transposeAmount = newAmount;
+                }
+              });
+              const labelElement = e_input.target.previousElementSibling;
+              if (labelElement) {
+                labelElement.textContent = `Amount (${newAmount} scale steps):`;
+              }
+            },
+          );
+          transposeSection.appendChild(amountSliderContainer);
+        } else {
+          console.log(
+            `[EDIT PANEL] Node ${node.id}: Transposition is DISABLED. UI for direction/amount will NOT be built.`,
+          );
+        }
+        section.appendChild(transposeSection);
         fragment.appendChild(section);
       } else if (node && node.audioParams) {
         if (
@@ -15727,64 +15641,67 @@ function populateEditPanel() {
                 e_input.target.previousElementSibling.textContent = `Steps (${newCount}):`;
               },
             );
-            const countSliderInput =
-              countSliderContainer.querySelector("input");
-            countSliderInput.addEventListener("change", (e_change) => {
-              const newCount = parseInt(e_change.target.value);
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id);
-                if (n && n.audioParams) {
-                  const arraysToSync = [
-                    "retriggerVolumeSteps",
-                    "retriggerPitchSteps",
-                    "retriggerFilterSteps",
-                    "retriggerMuteSteps",
-                  ];
-                  const defaultValues = {
-                    retriggerVolumeSteps: 0.5,
-                    retriggerPitchSteps: 0,
-                    retriggerFilterSteps: 0,
-                    retriggerMuteSteps: false,
-                  };
-                  arraysToSync.forEach((arrayName) => {
-                    let currentLocalSteps = n.audioParams[arrayName] || [];
-                    const lastKnownValue =
-                      currentLocalSteps.length > 0
-                        ? currentLocalSteps[currentLocalSteps.length - 1]
-                        : defaultValues[arrayName];
-                    if (newCount > currentLocalSteps.length) {
-                      for (
-                        let i = currentLocalSteps.length;
-                        i < newCount;
-                        i++
-                      ) {
-                        let valToPush = defaultValues[arrayName];
-                        if (
-                          arrayName === "retriggerVolumeSteps" &&
-                          i > 0 &&
-                          currentLocalSteps.length > 0
-                        )
-                          valToPush = parseFloat(
-                            (
-                              currentLocalSteps[currentLocalSteps.length - 1] *
-                              0.85
-                            ).toFixed(2),
-                          );
-                        else if (arrayName === "retriggerVolumeSteps")
-                          valToPush = 0.6;
-                        currentLocalSteps.push(valToPush);
+            const countSliderInput = countSliderContainer.querySelector(
+              'input[type="range"]',
+            );
+            if (countSliderInput) {
+              countSliderInput.addEventListener("change", (e_change) => {
+                const newCount = parseInt(e_change.target.value);
+                selectedArray.forEach((elData) => {
+                  const n = findNodeById(elData.id);
+                  if (n && n.audioParams) {
+                    const arraysToSync = [
+                      "retriggerVolumeSteps",
+                      "retriggerPitchSteps",
+                      "retriggerFilterSteps",
+                      "retriggerMuteSteps",
+                    ];
+                    const defaultValues = {
+                      retriggerVolumeSteps: 0.5,
+                      retriggerPitchSteps: 0,
+                      retriggerFilterSteps: 0,
+                      retriggerMuteSteps: false,
+                    };
+                    arraysToSync.forEach((arrayName) => {
+                      let currentLocalSteps = n.audioParams[arrayName] || [];
+                      if (newCount > currentLocalSteps.length) {
+                        for (
+                          let i = currentLocalSteps.length;
+                          i < newCount;
+                          i++
+                        ) {
+                          let valToPush = defaultValues[arrayName];
+                          if (
+                            arrayName === "retriggerVolumeSteps" &&
+                            i > 0 &&
+                            currentLocalSteps.length > 0
+                          )
+                            valToPush = parseFloat(
+                              (
+                                currentLocalSteps[
+                                  currentLocalSteps.length - 1
+                                ] * 0.85
+                              ).toFixed(2),
+                            );
+                          else if (arrayName === "retriggerVolumeSteps")
+                            valToPush = 0.6;
+                          currentLocalSteps.push(valToPush);
+                        }
+                      } else if (newCount < currentLocalSteps.length) {
+                        currentLocalSteps = currentLocalSteps.slice(
+                          0,
+                          newCount,
+                        );
                       }
-                    } else if (newCount < currentLocalSteps.length) {
-                      currentLocalSteps = currentLocalSteps.slice(0, newCount);
-                    }
-                    n.audioParams[arrayName] = currentLocalSteps;
-                  });
-                }
+                      n.audioParams[arrayName] = currentLocalSteps;
+                    });
+                  }
+                });
+                identifyAndRouteAllGroups();
+                saveState();
+                populateEditPanel();
               });
-              identifyAndRouteAllGroups();
-              saveState();
-              populateEditPanel();
-            });
+            }
             retriggerSection.appendChild(countSliderContainer);
 
             const retriggerEditorTabsContainer = document.createElement("div");
@@ -15822,13 +15739,33 @@ function populateEditPanel() {
             retriggerSection.appendChild(retriggerEditorTabsContainer);
             retriggerSection.appendChild(editorDisplayArea);
 
-            volumeTab.classList.add("active");
+            let activeParamTypeForRetrigger = "volume";
+            const currentActiveTab = retriggerEditorTabsContainer.querySelector(
+              ".retrigger-tab-button.active",
+            );
+            if (currentActiveTab && currentActiveTab.dataset.paramType) {
+              activeParamTypeForRetrigger = currentActiveTab.dataset.paramType;
+            } else {
+              const firstActiveTab = retriggerEditorTabsContainer.querySelector(
+                ".retrigger-tab-button[data-param-type='volume']",
+              );
+              if (firstActiveTab) firstActiveTab.classList.add("active");
+            }
+
             const initialVisualEditor = createRetriggerVisualEditor(
               node,
               selectedArray,
-              "volume",
+              activeParamTypeForRetrigger,
             );
             editorDisplayArea.appendChild(initialVisualEditor);
+            retriggerEditorTabsContainer
+              .querySelectorAll(".retrigger-tab-button")
+              .forEach((btn) => {
+                btn.classList.toggle(
+                  "active",
+                  btn.dataset.paramType === activeParamTypeForRetrigger,
+                );
+              });
 
             const showRetriggerSyncControls =
               isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
@@ -17910,6 +17847,10 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     newNode.audioParams.scanlineDirection = newNode.scanlineDirection;
     newNode.audioParams.isInResizeMode = newNode.isInResizeMode;
     newNode.audioParams.rotation = 0;
+
+    newNode.audioParams.isTransposeEnabled = false;
+    newNode.audioParams.transposeDirection = "+";
+    newNode.audioParams.transposeAmount = 0;
 
     newNode.isStartNode = false;
     newNode.audioNodes = null;
