@@ -147,9 +147,9 @@ const TIMELINE_GRID_DEFAULT_SPEED = 4.0;
 const TIMELINE_GRID_DEFAULT_COLOR = "rgba(120, 220, 120, 0.7)";
 const TIMELINE_GRID_DEFAULT_PULSE_INTENSITY = 0.9;
 const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED = false;
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL = 0.005; 
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION = "clockwise"; 
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8; 
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL = 0.005; // Radians per frame, adjust as needed
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION = "clockwise"; // "clockwise" or "counter-clockwise"
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8; // Index for subdivisionOptions (e.g., 1/4 notes)
 const addTimelineGridBtn = document.getElementById("addTimelineGridBtn");
 if (addTimelineGridBtn) {
   addTimelineGridBtn.addEventListener("click", (e) => {
@@ -682,8 +682,8 @@ let activeMidiOutput = null;
 let activeMeteorShowers = [];
 let meteorShowerIdCounter = 0;
 const METEOR_SHOWER_DEFAULT_MAX_RADIUS = 250;
-const METEOR_SHOWER_DEFAULT_GROWTH_RATE = 100; 
-const MAX_METEOR_SHOWER_GENERATIONS = 2; 
+const METEOR_SHOWER_DEFAULT_GROWTH_RATE = 100; // pixels per second
+const MAX_METEOR_SHOWER_GENERATIONS = 2; // Try 2 or even 1 to see if it stops crashing
 let recentlyInteractedShowerPairs = new Map();
 const PAIR_INTERACTION_COOLDOWN_SECONDS = 5;
 const COLLISION_SPAWN_COOLDOWN_SECONDS = 5;
@@ -720,9 +720,9 @@ const pulsarTypes = [
     icon: "🚀",
   },
   {
-    type: "pulsar_meteorshower", 
-    label: "Meteor Shower",     
-    icon: "☄️",                 
+    type: "pulsar_meteorshower", // Added new type
+    label: "Meteor Shower",     // Name for UI
+    icon: "☄️",                 // Icon for the button
   },
 ];
 
@@ -8587,7 +8587,7 @@ function animationLoop() {
           node.type === "pulsar_random_particles" ||
           node.type === "pulsar_rocket" ||
           node.type === "pulsar_triggerable" ||
-          node.type === "pulsar_meteorshower") 
+          node.type === "pulsar_meteorshower") // Added pulsar_meteorshower here
       ) {
         let shouldPulse = false;
         let pulseData = {};
@@ -11539,7 +11539,7 @@ function draw() {
 
   updateAndDrawPulses(now);
 
-  
+  // Ensure this call is present and uses the correct arguments
   if (typeof updateAndDrawMeteorShowers === "function") {
     updateAndDrawMeteorShowers(localDeltaTime, now);
   }
@@ -11891,13 +11891,13 @@ function generateWaveformPath(audioBuffer, targetPointCount = 200) {
         }
 
         const points = Math.min(targetPointCount, totalSamples);
-        if (points <= 0) { 
+        if (points <= 0) { // Should not happen if totalSamples > 0
             console.warn("[Wavetrail Debug] generateWaveformPath: Calculated points <= 0. Returning minimal path.");
             return Array(targetPointCount).fill({ min: 0, max: 0 });
         }
 
         const waveformPath = [];
-        
+        // If totalSamples < points, samplesPerPoint might be 0. Calculate differently.
         const samplesPerPoint = totalSamples < points ? 1 : Math.floor(totalSamples / points);
         const actualPointsToGenerate = totalSamples < points ? totalSamples : points;
 
@@ -11913,11 +11913,11 @@ function generateWaveformPath(audioBuffer, targetPointCount = 200) {
             for (let j = chunkStart; j < chunkEnd && j < totalSamples; j++) {
                 const sample = channelData[j];
                 if (sample < chunkMin) chunkMin = sample;
-                if (sample > chunkMax) chunkMax = sample; 
+                if (sample > chunkMax) chunkMax = sample; // Corrected typo here (was 'max')
                 samplesInThisChunk++;
             }
 
-            if (samplesInThisChunk === 0) { 
+            if (samplesInThisChunk === 0) { // Should only happen if chunkStart >= chunkEnd or chunkStart >= totalSamples
                  const singleSampleIndex = Math.min(chunkStart, totalSamples - 1);
                  if (singleSampleIndex >= 0) {
                     chunkMin = channelData[singleSampleIndex] || 0;
@@ -11930,12 +11930,12 @@ function generateWaveformPath(audioBuffer, targetPointCount = 200) {
              waveformPath.push({ min: chunkMin, max: chunkMax });
         }
         
-        
+        // Pad if waveformPath is shorter than targetPointCount (e.g. short audio file)
         while (waveformPath.length < targetPointCount && waveformPath.length > 0) {
             waveformPath.push({ ...waveformPath[waveformPath.length - 1] });
         }
         
-        if (waveformPath.length === 0 && targetPointCount > 0) { 
+        if (waveformPath.length === 0 && targetPointCount > 0) { // Fallback for safety
              console.warn("[Wavetrail Debug] generateWaveformPath: WaveformPath ended up empty, returning minimal path.");
             return Array(targetPointCount).fill({min: 0, max: 0});
         }
@@ -14846,1767 +14846,1525 @@ function setActiveTool(toolName) {
 }
 
 function populateEditPanel() {
-    editPanelContent.innerHTML = "";
-    if (currentTool !== "edit" || selectedElements.size === 0) {
-        if (
-            hamburgerMenuPanel &&
-            !hamburgerMenuPanel.classList.contains("hidden") &&
-            selectedElements.size === 0
-        ) {
-            hamburgerMenuPanel.classList.add("hidden");
-            if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-        }
-        return;
-    }
+  editPanelContent.innerHTML = "";
+  if (currentTool !== "edit" || selectedElements.size === 0) {
+      if (
+          hamburgerMenuPanel &&
+          !hamburgerMenuPanel.classList.contains("hidden") &&
+          selectedElements.size === 0
+      ) {
+          hamburgerMenuPanel.classList.add("hidden");
+          if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+      }
+      return;
+  }
 
-    const selectedArray = Array.from(selectedElements);
-    const firstElementData = selectedArray[0];
-    const fragment = document.createDocumentFragment();
-    const title = document.createElement("p");
-    const nodeTypes = new Set(
-        selectedArray
-        .filter((el) => el.type === "node")
-        .map((el) => findNodeById(el.id)?.type),
-    );
-    const connectionTypesSet = new Set(
-        selectedArray
-        .filter((el) => el.type === "connection")
-        .map((el) => findConnectionById(el.id)?.type),
-    );
-    let titleText = "";
-    let allSameLogicalType = false;
-    let logicalType = "";
+  const selectedArray = Array.from(selectedElements);
+  const firstElementData = selectedArray[0];
+  const fragment = document.createDocumentFragment();
+  const title = document.createElement("p");
+  const nodeTypes = new Set(
+      selectedArray
+      .filter((el) => el.type === "node")
+      .map((el) => findNodeById(el.id)?.type),
+  );
+  const connectionTypesSet = new Set(
+      selectedArray
+      .filter((el) => el.type === "connection")
+      .map((el) => findConnectionById(el.id)?.type),
+  );
+  let titleText = "";
+  let allSameLogicalType = false;
+  let logicalType = "";
 
-    if (selectedArray.length === 1) {
-        const element =
-            firstElementData.type === "node" ?
-            findNodeById(firstElementData.id) :
-            findConnectionById(firstElementData.id);
-        if (element) {
-            logicalType = element.type.replace(/_/g, " ");
-            titleText = `Edit ${logicalType} #${element.id}`;
-            allSameLogicalType = true;
-        } else {
-            titleText = "Edit Element";
-        }
-    } else {
-        const types = new Set([...nodeTypes, ...connectionTypesSet]);
-        if (types.size === 1) {
-            logicalType = [...types][0].replace(/_/g, " ");
-            titleText = `Edit ${selectedArray.length} ${logicalType}s`;
-            allSameLogicalType = true;
-        } else {
-            titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
-            allSameLogicalType = false;
-        }
-    }
-    title.innerHTML = `<strong>${titleText}</strong>`;
-    fragment.appendChild(title);
+  if (selectedArray.length === 1) {
+      const element =
+          firstElementData.type === "node" ?
+          findNodeById(firstElementData.id) :
+          findConnectionById(firstElementData.id);
+      if (element) {
+          logicalType = element.type.replace(/_/g, " ");
+          titleText = `Edit ${logicalType} #${element.id}`;
+          allSameLogicalType = true;
+      } else {
+          titleText = "Edit Element";
+      }
+  } else {
+      const types = new Set([...nodeTypes, ...connectionTypesSet]);
+      if (types.size === 1) {
+          logicalType = [...types][0].replace(/_/g, " ");
+          titleText = `Edit ${selectedArray.length} ${logicalType}s`;
+          allSameLogicalType = true;
+      } else {
+          titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
+          allSameLogicalType = false;
+      }
+  }
+  title.innerHTML = `<strong>${titleText}</strong>`;
+  fragment.appendChild(title);
 
-    if (selectedArray.length > 1) {
-        let hasNodesSelected = false;
-        for (const elData of selectedArray) {
-            if (elData.type === 'node') {
-                hasNodesSelected = true;
-                break;
-            }
-        }
+  if (selectedArray.length > 1) {
+      let hasNodesSelected = false;
+      for (const elData of selectedArray) {
+          if (elData.type === 'node') {
+              hasNodesSelected = true;
+              break;
+          }
+      }
 
-        if (hasNodesSelected) {
-            const makeGroupButton = document.createElement("button");
-            makeGroupButton.textContent = "Make User-Defined Group";
-            makeGroupButton.id = "edit-panel-make-group-btn";
-            makeGroupButton.classList.add("panel-button-like");
-            makeGroupButton.style.marginTop = "10px";
-            makeGroupButton.style.marginBottom = "10px";
-            makeGroupButton.style.display = "block";
-            makeGroupButton.style.width = "100%";
+      if (hasNodesSelected) {
+          const makeGroupButton = document.createElement("button");
+          makeGroupButton.textContent = "Make User-Defined Group";
+          makeGroupButton.id = "edit-panel-make-group-btn";
+          makeGroupButton.classList.add("panel-button-like");
+          makeGroupButton.style.marginTop = "10px";
+          makeGroupButton.style.marginBottom = "10px";
+          makeGroupButton.style.display = "block";
+          makeGroupButton.style.width = "100%";
 
-            makeGroupButton.addEventListener("click", () => {
-                if (typeof makeUserDefinedGroup === "function") {
-                    makeUserDefinedGroup();
-                    populateEditPanel();
-                } else {
-                    console.error("makeUserDefinedGroup function is not defined.");
-                    alert("Error: Grouping function not available.");
-                }
-            });
-            fragment.appendChild(makeGroupButton);
-        }
-    }
 
-    const elementsWithNote = selectedArray.filter((elData) => {
-        const el =
-            elData.type === "node" ?
-            findNodeById(elData.id) :
-            findConnectionById(elData.id);
-        return (
-            el &&
-            (el.type === "sound" ||
-                el.type === "nebula" ||
-                (elData.type === "connection" && el.type === "string_violin"))
-        );
-    });
+          makeGroupButton.addEventListener("click", () => {
+              if (typeof makeUserDefinedGroup === "function") {
+                  makeUserDefinedGroup();
+                  populateEditPanel();
+              } else {
+                  console.error("makeUserDefinedGroup function is not defined.");
+                  alert("Error: Grouping function not available.");
+              }
+          });
+          fragment.appendChild(makeGroupButton);
+      }
+  }
 
-    if (elementsWithNote.length > 0) {
-        const targetDataForNoteSelector = elementsWithNote.map((el) => ({
-            type: el.type,
-            id: el.id,
-        }));
-        createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
-    }
 
-    if (allSameLogicalType) {
-        if (firstElementData.type === "node") {
-            const node = findNodeById(firstElementData.id);
-            let currentSection;
-
-            if (node && node.audioParams) {
-                const section = document.createElement("div");
+  const elementsWithNote = selectedArray.filter((elData) => {
+      const el =
+          elData.type === "node" ?
+          findNodeById(elData.id) :
+          findConnectionById(elData.id);
+      return (
+          el &&
+          (el.type === "sound" ||
+              el.type === "nebula" ||
+              (elData.type === "connection" && el.type === "string_violin"))
+      );
+  });
+  
+  if (elementsWithNote.length > 0) {
+      const targetDataForNoteSelector = elementsWithNote.map((el) => ({
+          type: el.type,
+          id: el.id,
+      }));
+      createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
+  }
+  
+  if (allSameLogicalType) {
+      if (firstElementData.type === "node") {
+          const node = findNodeById(firstElementData.id);
+  
+          if (node && node.type === TIMELINE_GRID_TYPE) {
+              const section = document.createElement("div");
+              section.classList.add("panel-section");
+  
+              const playingLabel = document.createElement("label");
+              playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
+              playingLabel.textContent = "Playing:";
+              section.appendChild(playingLabel);
+              const playingCheckbox = document.createElement("input");
+              playingCheckbox.type = "checkbox";
+              playingCheckbox.id = `edit-timeline-playing-${node.id}`;
+              playingCheckbox.checked = node.timelineIsPlaying;
+              playingCheckbox.addEventListener("change", (e) => {
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE) {
+                          n.timelineIsPlaying = e.target.checked;
+                          if (
+                              n.timelineIsPlaying &&
+                              n.scanLinePosition >= 1.0 &&
+                              n.timelineIsLooping
+                          ) {
+                              n.scanLinePosition = 0;
+                              if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear();
+                              else n.triggeredInThisSweep = new Set();
+                          }
+                          if (n.audioParams)
+                              n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
+                      }
+                  });
+                  saveState();
+              });
+              section.appendChild(playingCheckbox);
+              section.appendChild(document.createElement("br"));
+  
+              const loopingLabel = document.createElement("label");
+              loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
+              loopingLabel.textContent = "Looping:";
+              section.appendChild(loopingLabel);
+              const loopingCheckbox = document.createElement("input");
+              loopingCheckbox.type = "checkbox";
+              loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
+              loopingCheckbox.checked = node.timelineIsLooping;
+              loopingCheckbox.addEventListener("change", (e) => {
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE) {
+                          n.timelineIsLooping = e.target.checked;
+                          if (n.audioParams)
+                              n.audioParams.timelineIsLooping = n.timelineIsLooping;
+                      }
+                  });
+                  saveState();
+              });
+              section.appendChild(loopingCheckbox);
+              section.appendChild(document.createElement("br"));
+  
+              if (isGlobalSyncEnabled) {
+                  const durationLabel = document.createElement("label");
+                  durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
+                  durationLabel.textContent = "Duration (Sync):";
+                  section.appendChild(durationLabel);
+                  const durationSelect = document.createElement("select");
+                  durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
+                  const barOptions = [
+                      { label: "1/4 Bar (1 Beat)", value: 0.25 },
+                      { label: "1/2 Bar (2 Beats)", value: 0.5 },
+                      { label: "1 Bar (4 Beats)", value: 1 },
+                      { label: "2 Bars (8 Beats)", value: 2 },
+                      { label: "4 Bars (16 Beats)", value: 4 },
+                      { label: "8 Bars (32 Beats)", value: 8 },
+                  ];
+                  let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
+                  barOptions.forEach((opt) => {
+                      const optionEl = document.createElement("option");
+                      optionEl.value = opt.value;
+                      optionEl.textContent = opt.label;
+                      if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
+                          optionEl.selected = true;
+                      }
+                      durationSelect.appendChild(optionEl);
+                  });
+                  durationSelect.addEventListener("change", (e) => {
+                      const newBars = parseFloat(e.target.value);
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE) {
+                              n.timelineMusicalDurationBars = newBars;
+                              if (n.audioParams)
+                                  n.audioParams.timelineMusicalDurationBars = newBars;
+                          }
+                      });
+                      saveState();
+                  });
+                  section.appendChild(durationSelect);
+              } else {
+                  const currentSpeed =
+                      node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+                  const speedVal = currentSpeed.toFixed(1);
+                  const speedSliderContainer = createSlider(
+                      `edit-timeline-speed-${node.id}`,
+                      `Speed (${speedVal}s / sweep):`,
+                      0.2,
+                      30.0,
+                      0.1,
+                      currentSpeed,
+                      saveState,
+                      (e_input) => {
+                          const newSpeed = parseFloat(e_input.target.value);
+                          selectedArray.forEach((elData) => {
+                              const n = findNodeById(elData.id);
+                              if (n && n.type === TIMELINE_GRID_TYPE) {
+                                  n.timelineSpeed = newSpeed;
+                                  if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
+                              }
+                          });
+                          e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
+                      },
+                  );
+                  section.appendChild(speedSliderContainer);
+              }
+  
+              const MIN_TIMELINE_PIXEL_WIDTH = 50;
+              const MAX_TIMELINE_PIXEL_WIDTH = 1200;
+              const MIN_TIMELINE_PIXEL_HEIGHT = 50;
+              const MAX_TIMELINE_PIXEL_HEIGHT = 800;
+              const PIXEL_STEP = 10;
+  
+              const gridSpacing = calculateGridSpacing();
+              const halfGridSquare =
+                  isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
+  
+              let widthSliderMin,
+                  widthSliderMax,
+                  widthSliderStep,
+                  currentWidthInUnits,
+                  widthLabelUnitText;
+              const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+  
+              if (isSnapEnabled && halfGridSquare > 0) {
+                  widthSliderMin = Math.max(
+                      1,
+                      Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
+                  );
+                  widthSliderMax = Math.round(
+                      MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
+                  );
+                  widthSliderStep = 1;
+                  currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
+                  widthLabelUnitText = " units";
+              } else {
+                  widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
+                  widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
+                  widthSliderStep = PIXEL_STEP;
+                  currentWidthInUnits = currentPixelWidth;
+                  widthLabelUnitText = "px";
+              }
+  
+              const widthDisplayValText =
+                  isSnapEnabled && halfGridSquare > 0 ?
+                  currentWidthInUnits.toFixed(0) :
+                  currentPixelWidth.toFixed(0);
+              const widthSliderContainer = createSlider(
+                  `edit-timeline-width-${node.id}`,
+                  `Width (${widthDisplayValText}${widthLabelUnitText}):`,
+                  widthSliderMin,
+                  widthSliderMax,
+                  widthSliderStep,
+                  currentWidthInUnits,
+                  saveState,
+                  (e_input) => {
+                      const newSliderValue = parseFloat(e_input.target.value);
+                      let newPixelWidth;
+                      if (isSnapEnabled && halfGridSquare > 0) {
+                          newPixelWidth = newSliderValue * halfGridSquare;
+                          newPixelWidth = Math.max(
+                              halfGridSquare,
+                              Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
+                          );
+                      } else {
+                          newPixelWidth = newSliderValue;
+                      }
+                      newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
+  
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE) {
+                              n.width = newPixelWidth;
+                              if (n.audioParams) n.audioParams.width = newPixelWidth;
+                          }
+                      });
+                      const displayVal =
+                          isSnapEnabled && halfGridSquare > 0 ?
+                          (newPixelWidth / halfGridSquare).toFixed(0) :
+                          newPixelWidth.toFixed(0);
+                      const displayUnit =
+                          isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+                      e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
+                  },
+              );
+              section.appendChild(widthSliderContainer);
+  
+              let heightSliderMin,
+                  heightSliderMax,
+                  heightSliderStep,
+                  currentHeightInUnits,
+                  heightLabelUnitText;
+              const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+  
+              if (isSnapEnabled && halfGridSquare > 0) {
+                  heightSliderMin = Math.max(
+                      1,
+                      Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
+                  );
+                  heightSliderMax = Math.round(
+                      MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
+                  );
+                  heightSliderStep = 1;
+                  currentHeightInUnits = Math.round(
+                      currentPixelHeight / halfGridSquare,
+                  );
+                  heightLabelUnitText = " units";
+              } else {
+                  heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
+                  heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
+                  heightSliderStep = PIXEL_STEP;
+                  currentHeightInUnits = currentPixelHeight;
+                  heightLabelUnitText = "px";
+              }
+  
+              const heightDisplayValText =
+                  isSnapEnabled && halfGridSquare > 0 ?
+                  currentHeightInUnits.toFixed(0) :
+                  currentPixelHeight.toFixed(0);
+              const heightSliderContainer = createSlider(
+                  `edit-timeline-height-${node.id}`,
+                  `Height (${heightDisplayValText}${heightLabelUnitText}):`,
+                  heightSliderMin,
+                  heightSliderMax,
+                  heightSliderStep,
+                  currentHeightInUnits,
+                  saveState,
+                  (e_input) => {
+                      const newSliderValue = parseFloat(e_input.target.value);
+                      let newPixelHeight;
+                      if (isSnapEnabled && halfGridSquare > 0) {
+                          newPixelHeight = newSliderValue * halfGridSquare;
+                          newPixelHeight = Math.max(
+                              halfGridSquare,
+                              Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
+                          );
+                      } else {
+                          newPixelHeight = newSliderValue;
+                      }
+                      newPixelHeight = Math.max(
+                          MIN_TIMELINE_PIXEL_HEIGHT,
+                          newPixelHeight,
+                      );
+  
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE) {
+                              n.height = newPixelHeight;
+                              if (n.audioParams) n.audioParams.height = newPixelHeight;
+                          }
+                      });
+                      const displayVal =
+                          isSnapEnabled && halfGridSquare > 0 ?
+                          (newPixelHeight / halfGridSquare).toFixed(0) :
+                          newPixelHeight.toFixed(0);
+                      const displayUnit =
+                          isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+                      e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
+                  },
+              );
+              section.appendChild(heightSliderContainer);
+  
+              const currentPulseIntensity =
+                  node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+              const intensityVal = currentPulseIntensity.toFixed(2);
+              const intensitySliderContainer = createSlider(
+                  `edit-timeline-intensity-${node.id}`,
+                  `Trigger Intensity (${intensityVal}):`,
+                  0.1,
+                  1.5,
+                  0.01,
+                  currentPulseIntensity,
+                  saveState,
+                  (e_input) => {
+                      const newIntensity = parseFloat(e_input.target.value);
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE) {
+                              n.timelinePulseIntensity = newIntensity;
+                              if (n.audioParams)
+                                  n.audioParams.timelinePulseIntensity = newIntensity;
+                          }
+                      });
+                      e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
+                  },
+              );
+              section.appendChild(intensitySliderContainer);
+  
+              const internalGridSection = document.createElement("div");
+              internalGridSection.classList.add("panel-section");
+              internalGridSection.style.borderTop = "1px solid var(--button-hover)";
+              internalGridSection.style.marginTop = "10px";
+              internalGridSection.style.paddingTop = "10px";
+  
+              const showInternalGridLabel = document.createElement("label");
+              showInternalGridLabel.textContent = "Show Internal Grid: ";
+              const showInternalGridCheckbox = document.createElement("input");
+              showInternalGridCheckbox.type = "checkbox";
+              showInternalGridCheckbox.checked =
+                  node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+              showInternalGridCheckbox.addEventListener("change", (e) => {
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE) {
+                          n.showInternalGrid = e.target.checked;
+                          if (n.audioParams)
+                              n.audioParams.showInternalGrid = n.showInternalGrid;
+                      }
+                  });
+                  saveState();
+              });
+              internalGridSection.appendChild(showInternalGridLabel);
+              internalGridSection.appendChild(showInternalGridCheckbox);
+              internalGridSection.appendChild(document.createElement("br"));
+  
+              const snapToInternalGridLabel = document.createElement("label");
+              snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
+              const snapToInternalGridCheckbox = document.createElement("input");
+              snapToInternalGridCheckbox.type = "checkbox";
+              snapToInternalGridCheckbox.checked =
+                  node.snapToInternalGrid !== undefined ?
+                  node.snapToInternalGrid :
+                  true;
+              snapToInternalGridCheckbox.addEventListener("change", (e) => {
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE) {
+                          n.snapToInternalGrid = e.target.checked;
+                          if (n.audioParams)
+                              n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
+                      }
+                  });
+                  saveState();
+              });
+              internalGridSection.appendChild(snapToInternalGridLabel);
+              internalGridSection.appendChild(snapToInternalGridCheckbox);
+              internalGridSection.appendChild(document.createElement("br"));
+  
+              const currentDivisions = node.internalGridDivisions || 8;
+              const divisionsLabel = document.createElement("label");
+              divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
+              divisionsLabel.textContent = "Internal Grid Subdivisions:";
+              internalGridSection.appendChild(divisionsLabel);
+  
+              const divisionsSelect = document.createElement("select");
+              divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
+              const divisionOptions = [
+                  { label: "None (1)", value: 1 }, { label: "Halves (2)", value: 2 },
+                  { label: "Thirds (3)", value: 3 }, { label: "Quarters (4)", value: 4 },
+                  { label: "Sixths (6)", value: 6 }, { label: "Eighths (8)", value: 8 },
+                  { label: "Twelfths (12 - triplets)", value: 12 }, { label: "Sixteenths (16)", value: 16 },
+                  { label: "24ths (16th triplets)", value: 24 }, { label: "32nds (32)", value: 32 },
+                  { label: "64ths (64)", value: 64 },
+              ];
+              let currentDivisionValueForSelect = node.internalGridDivisions || 8;
+              divisionOptions.forEach((opt) => {
+                  const optionEl = document.createElement("option");
+                  optionEl.value = opt.value;
+                  optionEl.textContent = opt.label;
+                  if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
+                      optionEl.selected = true;
+                  }
+                  divisionsSelect.appendChild(optionEl);
+              });
+              divisionsSelect.addEventListener("change", (e) => {
+                  const newDivisions = parseInt(e.target.value);
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE) {
+                          n.internalGridDivisions = newDivisions;
+                          if (n.audioParams)
+                              n.audioParams.internalGridDivisions = newDivisions;
+                      }
+                  });
+                  saveState();
+              });
+              internalGridSection.appendChild(divisionsSelect);
+              section.appendChild(internalGridSection);
+  
+              const transposeSection = document.createElement("div");
+              transposeSection.classList.add("panel-section");
+              transposeSection.style.borderTop = "1px solid var(--button-hover)";
+              transposeSection.style.marginTop = "10px";
+              transposeSection.style.paddingTop = "10px";
+              transposeSection.innerHTML = "<p><strong>Timeline Transposition:</strong></p>";
+  
+              const enableTransposeLabel = document.createElement("label");
+              enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
+              enableTransposeLabel.textContent = "Enable Transposition: ";
+              const enableTransposeCheckbox = document.createElement("input");
+              enableTransposeCheckbox.type = "checkbox";
+              enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
+              enableTransposeCheckbox.checked =
+                  node.audioParams?.isTransposeEnabled || false;
+              enableTransposeCheckbox.addEventListener("change", (e) => {
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                          n.audioParams.isTransposeEnabled = e.target.checked;
+                      }
+                  });
+                  saveState();
+                  populateEditPanel();
+              });
+              transposeSection.appendChild(enableTransposeLabel);
+              transposeSection.appendChild(enableTransposeCheckbox);
+              transposeSection.appendChild(document.createElement("br"));
+  
+              if (node.audioParams?.isTransposeEnabled) {
+                  const directionContainer = document.createElement("div");
+                  directionContainer.style.marginBottom = "5px";
+                  const directionLabel = document.createElement("label");
+                  directionLabel.textContent = "Direction: ";
+                  directionLabel.style.marginRight = "5px";
+                  directionContainer.appendChild(directionLabel);
+  
+                  const plusButton = document.createElement("button");
+                  plusButton.textContent = "+";
+                  plusButton.classList.add("panel-button-like");
+                  if (node.audioParams.transposeDirection === "+") {
+                      plusButton.classList.add("active");
+                  }
+                  plusButton.addEventListener("click", () => {
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                              n.audioParams.transposeDirection = "+";
+                          }
+                      });
+                      saveState();
+                      populateEditPanel();
+                  });
+                  directionContainer.appendChild(plusButton);
+  
+                  const minusButton = document.createElement("button");
+                  minusButton.textContent = "-";
+                  minusButton.classList.add("panel-button-like");
+                  if (node.audioParams.transposeDirection === "-") {
+                      minusButton.classList.add("active");
+                  }
+                  minusButton.addEventListener("click", () => {
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                              n.audioParams.transposeDirection = "-";
+                          }
+                      });
+                      saveState();
+                      populateEditPanel();
+                  });
+                  directionContainer.appendChild(minusButton);
+                  transposeSection.appendChild(directionContainer);
+  
+                  const currentTransposeAmount = node.audioParams.transposeAmount || 0;
+                  const amountSliderContainer = createSlider(
+                      `edit-timeline-transpose-amount-${node.id}`,
+                      `Amount (${currentTransposeAmount} scale steps):`,
+                      0,
+                      24,
+                      1,
+                      currentTransposeAmount,
+                      () => {
+                          saveState();
+                      },
+                      (e_input) => {
+                          const newAmount = parseInt(e_input.target.value);
+                          selectedArray.forEach((elData) => {
+                              const n = findNodeById(elData.id);
+                              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                  n.audioParams.transposeAmount = newAmount;
+                              }
+                          });
+                          const labelElement = e_input.target.previousElementSibling;
+                          if (labelElement) {
+                              labelElement.textContent = `Amount (${newAmount} scale steps):`;
+                          }
+                      },
+                  );
+                  transposeSection.appendChild(amountSliderContainer);
+              }
+              section.appendChild(transposeSection);
+  
+              const autoRotateSection = document.createElement("div");
+              autoRotateSection.classList.add("panel-section");
+              autoRotateSection.style.borderTop = "1px solid var(--button-hover)";
+              autoRotateSection.style.marginTop = "10px";
+              autoRotateSection.style.paddingTop = "10px";
+              autoRotateSection.innerHTML = "<p><strong>Timeline Auto-Rotation:</strong></p>";
+  
+              const enableAutoRotateLabel = document.createElement("label");
+              enableAutoRotateLabel.htmlFor = `edit-timeline-autorotate-enable-${node.id}`;
+              enableAutoRotateLabel.textContent = "Enable Auto-Rotate: ";
+              const enableAutoRotateCheckbox = document.createElement("input");
+              enableAutoRotateCheckbox.type = "checkbox";
+              enableAutoRotateCheckbox.id = `edit-timeline-autorotate-enable-${node.id}`;
+              enableAutoRotateCheckbox.checked = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+              enableAutoRotateCheckbox.addEventListener("change", (e) => {
+                  selectedArray.forEach((elData) => {
+                      const n = findNodeById(elData.id);
+                      if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                          n.audioParams.autoRotateEnabled = e.target.checked;
+                      }
+                  });
+                  saveState();
+                  populateEditPanel();
+              });
+              autoRotateSection.appendChild(enableAutoRotateLabel);
+              autoRotateSection.appendChild(enableAutoRotateCheckbox);
+              autoRotateSection.appendChild(document.createElement("br"));
+  
+              if (node.audioParams?.autoRotateEnabled) {
+                  const directionRotateLabel = document.createElement("label");
+                  directionRotateLabel.htmlFor = `edit-timeline-autorotate-direction-${node.id}`;
+                  directionRotateLabel.textContent = "Direction: ";
+                  autoRotateSection.appendChild(directionRotateLabel);
+  
+                  const directionRotateSelect = document.createElement("select");
+                  directionRotateSelect.id = `edit-timeline-autorotate-direction-${node.id}`;
+                  ["clockwise", "counter-clockwise"].forEach(dir => {
+                      const option = document.createElement("option");
+                      option.value = dir;
+                      option.textContent = dir.charAt(0).toUpperCase() + dir.slice(1);
+                      if (dir === (node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION)) {
+                          option.selected = true;
+                      }
+                      directionRotateSelect.appendChild(option);
+                  });
+                  directionRotateSelect.addEventListener("change", (e) => {
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                              n.audioParams.autoRotateDirection = e.target.value;
+                          }
+                      });
+                      saveState();
+                  });
+                  autoRotateSection.appendChild(directionRotateSelect);
+                  autoRotateSection.appendChild(document.createElement("br"));
+  
+                  if (isGlobalSyncEnabled) {
+                      const syncSpeedLabel = document.createElement("label");
+                      syncSpeedLabel.htmlFor = `edit-timeline-autorotate-syncspeed-${node.id}`;
+                      syncSpeedLabel.textContent = "Synced Speed (Full Rotation per):";
+                      autoRotateSection.appendChild(syncSpeedLabel);
+  
+                      const syncSpeedSelect = document.createElement("select");
+                      syncSpeedSelect.id = `edit-timeline-autorotate-syncspeed-${node.id}`;
+  
+                      const syncSubdivisionForRotation = [
+                          { label: "1/8 Note", originalIndex: 2 },
+                          { label: "1/4 Note", originalIndex: 4 },
+                          { label: "1/2 Note", originalIndex: 6 },
+                          { label: "1 Beat", originalIndex: 8 },
+                          { label: "2 Beats", originalIndex: 9 },
+                          { label: "1 Bar", originalIndex: 10 },
+                          { label: "2 Bars", originalIndex: 10, multiplier: 2 },
+                          { label: "4 Bars", originalIndex: 10, multiplier: 4 },
+                          { label: "8 Bars", originalIndex: 10, multiplier: 8 },
+                      ];
+  
+                      syncSubdivisionForRotation.forEach((opt, pseudoIndex) => {
+                          const optionEl = document.createElement("option");
+                          optionEl.value = pseudoIndex;
+                          optionEl.textContent = opt.label;
+                          if (pseudoIndex === (node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX)) {
+                              optionEl.selected = true;
+                          }
+                          syncSpeedSelect.appendChild(optionEl);
+                      });
+                      syncSpeedSelect.addEventListener("change", (e) => {
+                          const newPseudoIndex = parseInt(e.target.value, 10);
+                          selectedArray.forEach((elData) => {
+                              const n = findNodeById(elData.id);
+                              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                  n.audioParams.autoRotateSyncSubdivisionIndex = newPseudoIndex;
+                              }
+                          });
+                          saveState();
+                      });
+                      autoRotateSection.appendChild(syncSpeedSelect);
+  
+                  } else {
+                      const currentManualSpeed = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+                      const speedValManual = currentManualSpeed.toFixed(4);
+                      const speedManualSlider = createSlider(
+                          `edit-timeline-autorotate-speedmanual-${node.id}`,
+                          `Manual Speed (${speedValManual} rad/update):`,
+                          0.0001, 0.02, 0.0001, currentManualSpeed,
+                          saveState,
+                          (e_input) => {
+                              const newSpeed = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                      n.audioParams.autoRotateSpeedManual = newSpeed;
+                                  }
+                              });
+                              e_input.target.previousElementSibling.textContent = `Manual Speed (${newSpeed.toFixed(4)} rad/update):`;
+                          }
+                      );
+                      autoRotateSection.appendChild(speedManualSlider);
+                  }
+              }
+              section.appendChild(autoRotateSection);
+              fragment.appendChild(section);
+  
+          } else if (node && node.audioParams) {
+              let sectionCreatedForThisType = false;
+              let currentSection;
+  
+              if (isPulsarType(node.type) || node.type === "sound" || isDrumType(node.type)) {
+                  currentSection = document.createElement("div");
+                  currentSection.classList.add("panel-section");
+                  sectionCreatedForThisType = true;
+  
+                  const syncIgnoreSection = document.createElement("div");
+                  syncIgnoreSection.classList.add("panel-section");
+                  const ignoreSyncLabel = document.createElement("label");
+                  ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
+                  ignoreSyncLabel.textContent = "Ignore Global Sync:";
+                  ignoreSyncLabel.style.marginRight = "5px";
+                  syncIgnoreSection.appendChild(ignoreSyncLabel);
+                  const ignoreSyncCheckbox = document.createElement("input");
+                  ignoreSyncCheckbox.type = "checkbox";
+                  ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`;
+                  ignoreSyncCheckbox.checked =
+                      node.audioParams.ignoreGlobalSync || false;
+                  ignoreSyncCheckbox.addEventListener("change", (e) => {
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.audioParams) {
+                              n.audioParams.ignoreGlobalSync = e.target.checked;
+                              if (isPulsarType(n.type)) {
+                                  n.lastTriggerTime = -1;
+                                  n.nextSyncTriggerTime = 0;
+                              }
+                          }
+                      });
+                      identifyAndRouteAllGroups();
+                      saveState();
+                      populateEditPanel();
+                  });
+                  syncIgnoreSection.appendChild(ignoreSyncCheckbox);
+                  currentSection.appendChild(syncIgnoreSection);
+              } else {
+                  currentSection = document.createElement("div");
+                  currentSection.classList.add("panel-section");
+                  sectionCreatedForThisType = true;
+              }
+  
+              if (isPulsarType(node.type)) {
+                  const enableLabel = document.createElement("label");
+                  enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
+                  enableLabel.textContent =
+                      node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
+                  currentSection.appendChild(enableLabel);
+                  const enableCheckbox = document.createElement("input");
+                  enableCheckbox.type = "checkbox";
+                  enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
+                  enableCheckbox.checked = node.isEnabled;
+                  enableCheckbox.disabled =
+                      selectedArray.length > 1 && node.type === "pulsar_triggerable";
+                  enableCheckbox.addEventListener("change", () => {
+                      handlePulsarTriggerToggle(node);
+                      identifyAndRouteAllGroups();
+                  });
+                  currentSection.appendChild(enableCheckbox);
+                  currentSection.appendChild(document.createElement("br"));
+                  const showSyncControls =
+                      isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
+                  if (
+                      node.type !== "pulsar_random_particles" &&
+                      node.type !== "pulsar_manual"
+                  ) {
+                      if (showSyncControls) {
+                          const subdivLabel = document.createElement("label");
+                          subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
+                          subdivLabel.textContent = "Sync Subdivision:";
+                          currentSection.appendChild(subdivLabel);
+                          const subdivSelect = document.createElement("select");
+                          subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
+                          subdivSelect.disabled = selectedArray.length > 1;
+                          subdivisionOptions.forEach((opt, index) => {
+                              const option = document.createElement("option");
+                              option.value = index;
+                              option.textContent = opt.label;
+                              if (
+                                  index ===
+                                  (node.audioParams.syncSubdivisionIndex ??
+                                      DEFAULT_SUBDIVISION_INDEX)
+                              )
+                                  option.selected = true;
+                              subdivSelect.appendChild(option);
+                          });
+                          subdivSelect.addEventListener("change", (e) => {
+                              const newIndex = parseInt(e.target.value, 10);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (
+                                      n &&
+                                      n.audioParams &&
+                                      isPulsarType(n.type) &&
+                                      n.type !== "pulsar_random_particles" &&
+                                      n.type !== "pulsar_manual"
+                                  ) {
+                                      n.audioParams.syncSubdivisionIndex = newIndex;
+                                      if (n.syncSubdivisionIndex !== undefined)
+                                          n.syncSubdivisionIndex = newIndex;
+                                      n.nextSyncTriggerTime = 0;
+                                  }
+                              });
+                              identifyAndRouteAllGroups();
+                              saveState();
+                          });
+                          currentSection.appendChild(subdivSelect);
+                      } else {
+                          const currentInterval =
+                              node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+                          const intervalVal = currentInterval.toFixed(1);
+                          const intervalSliderContainer = createSlider(
+                              `edit-pulsar-interval-${node.id}`,
+                              `Interval (${intervalVal}s):`,
+                              0.1,
+                              10.0,
+                              0.1,
+                              currentInterval,
+                              () => { identifyAndRouteAllGroups(); saveState(); },
+                              (e_input) => {
+                                  const newInterval = parseFloat(e_input.target.value);
+                                  selectedArray.forEach((elData) => {
+                                      const n = findNodeById(elData.id);
+                                      if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual")
+                                          n.audioParams.triggerInterval = newInterval;
+                                  });
+                                  e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
+                              },
+                          );
+                          currentSection.appendChild(intervalSliderContainer);
+                      }
+                  } else if (node.type === "pulsar_random_particles") {
+                      const timingInfo = document.createElement("small");
+                      timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
+                      currentSection.appendChild(timingInfo);
+                  }
+                  currentSection.appendChild(document.createElement("br"));
+                  if (node.type !== "pulsar_random_volume") {
+                      const currentIntensity =
+                          node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                      const intensityVal = currentIntensity.toFixed(2);
+                      const intensitySliderContainer = createSlider(
+                          `edit-pulsar-intensity-${node.id}`,
+                          `Pulse Intensity (${intensityVal}):`,
+                          MIN_PULSE_INTENSITY,
+                          MAX_PULSE_INTENSITY,
+                          0.01,
+                          currentIntensity,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newIntensity = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n?.audioParams && n.type !== "pulsar_random_volume")
+                                      n.audioParams.pulseIntensity = newIntensity;
+                              });
+                              e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
+                          },
+                      );
+                      currentSection.appendChild(intensitySliderContainer);
+                  } else {
+                      const intensityInfo = document.createElement("small");
+                      intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
+                      currentSection.appendChild(intensityInfo);
+                  }
+                  currentSection.appendChild(document.createElement("br"));
+  
+                  if (node.type === "pulsar_meteorshower") {
+                      const meteorSubSection = document.createElement("div");
+                      meteorSubSection.classList.add("panel-section");
+                      meteorSubSection.style.marginTop = "10px";
+                      meteorSubSection.style.borderTop = "1px dashed var(--button-hover)";
+                      const meteorTitle = document.createElement("p");
+                      meteorTitle.innerHTML = "<strong>Meteor Shower Settings:</strong>";
+                      meteorSubSection.appendChild(meteorTitle);
+  
+                      const currentMaxRadius = node.audioParams?.meteorMaxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS;
+                      const radiusSlider = createSlider(
+                          `edit-meteor-radius-${node.id}`,
+                          `Shower Max Radius (${currentMaxRadius.toFixed(0)}px):`,
+                          50, 800, 10, currentMaxRadius,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newVal = parseFloat(e_input.target.value);
+                              selectedArray.forEach(elData => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorMaxRadius = newVal;
+                              });
+                              e_input.target.previousElementSibling.textContent = `Shower Max Radius (${newVal.toFixed(0)}px):`;
+                          }
+                      );
+                      meteorSubSection.appendChild(radiusSlider);
+  
+                      const currentGrowthRate = node.audioParams?.meteorGrowthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE;
+                      const growthSlider = createSlider(
+                          `edit-meteor-growth-${node.id}`,
+                          `Shower Growth Rate (${currentGrowthRate.toFixed(0)}px/s):`,
+                          20, 500, 5, currentGrowthRate,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newVal = parseFloat(e_input.target.value);
+                              selectedArray.forEach(elData => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorGrowthRate = newVal;
+                              });
+                              e_input.target.previousElementSibling.textContent = `Shower Growth Rate (${newVal.toFixed(0)}px/s):`;
+                          }
+                      );
+                      meteorSubSection.appendChild(growthSlider);
+                      currentSection.appendChild(meteorSubSection);
+                  }
+  
+  
+                  const colorLabel = document.createElement("label");
+                  colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
+                  colorLabel.textContent = "Pulsar Color:";
+                  currentSection.appendChild(colorLabel);
+                  const colorInput = document.createElement("input");
+                  colorInput.type = "color";
+                  colorInput.id = `edit-pulsar-color-${node.id}`;
+                  const styles = getComputedStyle(document.documentElement);
+                  const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
+                  const fallbackColorVar = "--start-node-color";
+                  const defaultColorRgba =
+                      styles.getPropertyValue(defaultColorVar).trim() ||
+                      styles.getPropertyValue(fallbackColorVar).trim();
+                  const defaultColorHex = rgbaToHex(defaultColorRgba);
+                  colorInput.value = node.color ?
+                      rgbaToHex(node.color) :
+                      defaultColorHex;
+                  colorInput.addEventListener("input", (e) => {
+                      const newColor = hexToRgba(e.target.value, 0.9);
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n) n.color = newColor;
+                      });
+                  });
+                  colorInput.addEventListener("change", () => {
+                      identifyAndRouteAllGroups();
+                      saveState();
+                  });
+                  currentSection.appendChild(colorInput);
+  
+                  if (node.type === "pulsar_rocket") {
+                      const rocketSubSection = document.createElement("div");
+                      rocketSubSection.classList.add("panel-section");
+                      const rocketTitle = document.createElement("p");
+                      rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
+                      rocketSubSection.appendChild(rocketTitle);
+                      let currentAngleDegVal = parseFloat(
+                          (
+                              ((node.audioParams.rocketDirectionAngle || 0) * 180) /
+                              Math.PI
+                          ).toFixed(0),
+                      );
+                      const dirSliderContainer = createSlider(
+                          `edit-rocket-dir-${node.id}`,
+                          `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newAngleDeg = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                      n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
+                                  }
+                              });
+                              e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
+                          },
+                      );
+                      rocketSubSection.appendChild(dirSliderContainer);
+                      let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
+                      const speedSliderContainer = createSlider(
+                          `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newSpeed = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                      n.audioParams.rocketSpeed = newSpeed;
+                                  }
+                              });
+                              e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
+                          },
+                      );
+                      rocketSubSection.appendChild(speedSliderContainer);
+                      let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
+                      const rangeSliderContainer = createSlider(
+                          `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newRange = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                      n.audioParams.rocketRange = newRange;
+                                  }
+                              });
+                              e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
+                          },
+                      );
+                      rocketSubSection.appendChild(rangeSliderContainer);
+                      let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
+                      const gravitySliderContainer = createSlider(
+                          `edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newGravity = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                      n.audioParams.rocketGravity = newGravity;
+                                  }
+                              });
+                              e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
+                          },
+                      );
+                      rocketSubSection.appendChild(gravitySliderContainer);
+                      currentSection.appendChild(rocketSubSection);
+                  }
+  
+              } else if (node.type === "sound") {
+                  const orbitoneMainSection = document.createElement("div");
+                  orbitoneMainSection.classList.add("panel-section");
+                  orbitoneMainSection.innerHTML = "<p><strong>Orbitone Settings:</strong></p>";
+  
+                  const enableOrbitonesLabel = document.createElement("label");
+                  enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
+                  enableOrbitonesLabel.textContent = "Enable Orbitones:";
+                  enableOrbitonesLabel.style.marginRight = "8px";
+                  orbitoneMainSection.appendChild(enableOrbitonesLabel);
+  
+                  const enableOrbitonesCheckbox = document.createElement("input");
+                  enableOrbitonesCheckbox.type = "checkbox";
+                  enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
+                  enableOrbitonesCheckbox.checked = node.audioParams.orbitonesEnabled || false;
+                  enableOrbitonesCheckbox.addEventListener("change", (e) => {
+                      const isEnabled = e.target.checked;
+                      selectedArray.forEach((elData) => {
+                          const n = findNodeById(elData.id);
+                          if (n && n.audioParams && n.type === "sound") {
+                              n.audioParams.orbitonesEnabled = isEnabled;
+                              stopNodeAudio(n);
+                              n.audioNodes = createAudioNodesForNode(n);
+                              if (n.audioNodes) updateNodeAudioParams(n);
+                          }
+                      });
+                      identifyAndRouteAllGroups();
+                      saveState();
+                      populateEditPanel();
+                  });
+                  orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
+                  currentSection.appendChild(orbitoneMainSection);
+  
+                  if (node.audioParams.orbitonesEnabled) {
+                      const orbitoneSettingsSection = document.createElement("div");
+                      orbitoneSettingsSection.classList.add("panel-section");
+                      orbitoneSettingsSection.style.paddingLeft = "15px";
+                      orbitoneSettingsSection.style.borderLeft = "2px solid var(--button-bg)";
+                      orbitoneSettingsSection.style.marginTop = "5px";
+  
+                      const visualControllerPlaceholder = document.createElement("div");
+                      visualControllerPlaceholder.id = `orbitone-visual-controller-${node.id}`;
+                      visualControllerPlaceholder.innerHTML = "<em>Visual Orbitone Controller (Future)</em>";
+                      visualControllerPlaceholder.style.height = "auto";
+                      visualControllerPlaceholder.style.padding = "10px";
+                      visualControllerPlaceholder.style.border = "1px dashed var(--button-hover)";
+                      visualControllerPlaceholder.style.display = "flex";
+                      visualControllerPlaceholder.style.flexDirection = "column";
+                      visualControllerPlaceholder.style.alignItems = "center";
+                      visualControllerPlaceholder.style.justifyContent = "center";
+                      visualControllerPlaceholder.style.marginBottom = "15px";
+                      visualControllerPlaceholder.style.textAlign = "center";
+                      orbitoneSettingsSection.appendChild(visualControllerPlaceholder);
+  
+                      const currentOrbitoneCount = node.audioParams.orbitoneCount || 0;
+                      const orbitoneCountSliderContainer = createSlider(
+                          `edit-node-orbitone-count-${node.id}`,
+                          `Number of extra Orbitones (${currentOrbitoneCount}):`, 0, 5, 1, currentOrbitoneCount,
+                          (e_change_event) => {
+                              const newCount = parseInt(e_change_event.target.value);
+                              selectedArray.forEach((elData) => {
+                                  const n = findNodeById(elData.id);
+                                  if (n && n.audioParams && n.type === "sound") {
+                                      n.audioParams.orbitoneCount = newCount;
+                                      applyOrbitoneVoicingFromPhase(n);
+                                      applyOrbitoneTimingFromPhase(n);
+                                      stopNodeAudio(n);
+                                      n.audioNodes = createAudioNodesForNode(n);
+                                      if (n.audioNodes) updateNodeAudioParams(n);
+                                  }
+                              });
+                              identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+                          },
+                          (e_input) => {
+                              e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`;
+                          },
+                      );
+                      orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
+  
+                      if (node.audioParams.orbitoneCount > 0) {
+                          const currentVoicingPhase = node.audioParams.orbitoneVoicingPhase || 0;
+                          const voicingPhaseSlider = createSlider(
+                              `edit-orbitone-voicing-phase-${node.id}`, `Orbitone Voicing Style (${currentVoicingPhase}):`, 0, 100, 1, currentVoicingPhase,
+                              (e_change) => {
+                                  const val = parseInt(e_change.target.value);
+                                  selectedArray.forEach((el) => {
+                                      const n = findNodeById(el.id);
+                                      if (n && n.audioParams && n.type === "sound") {
+                                          n.audioParams.orbitoneVoicingPhase = val;
+                                          applyOrbitoneVoicingFromPhase(n);
+                                          stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); if (n.audioNodes) updateNodeAudioParams(n);
+                                      }
+                                  });
+                                  identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+                              },
+                              (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; },
+                          );
+                          orbitoneSettingsSection.appendChild(voicingPhaseSlider);
+  
+                          const currentTimingPhase = node.audioParams.orbitoneTimingPhase || 0;
+                          const timingPhaseSlider = createSlider(
+                              `edit-orbitone-timing-phase-${node.id}`, `Orbitone Timing Style (${currentTimingPhase}):`, 0, 100, 1, currentTimingPhase,
+                              (e_change) => {
+                                  const val = parseInt(e_change.target.value);
+                                  selectedArray.forEach((el) => {
+                                      const n = findNodeById(el.id);
+                                      if (n && n.audioParams && n.type === "sound") {
+                                          n.audioParams.orbitoneTimingPhase = val;
+                                          applyOrbitoneTimingFromPhase(n); updateNodeAudioParams(n);
+                                      }
+                                  });
+                                  identifyAndRouteAllGroups(); saveState();
+                              },
+                              (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; },
+                          );
+                          orbitoneSettingsSection.appendChild(timingPhaseSlider);
+  
+                          const currentMix = node.audioParams.orbitoneMix !== undefined ? node.audioParams.orbitoneMix : 0.5;
+                          const mixSliderContainer = createSlider(
+                              `edit-node-orbitone-mix-${node.id}`, `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`, 0, 1, 0.05, currentMix,
+                              (e_change_event) => {
+                                  const newMix = parseFloat(e_change_event.target.value);
+                                  selectedArray.forEach((elData) => {
+                                      const n = findNodeById(elData.id);
+                                      if (n && n.audioParams && n.type === "sound") {
+                                          n.audioParams.orbitoneMix = newMix; updateNodeAudioParams(n);
+                                      }
+                                  });
+                                  identifyAndRouteAllGroups(); saveState();
+                              },
+                              (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`; },
+                          );
+                          orbitoneSettingsSection.appendChild(mixSliderContainer);
+                      }
+                      currentSection.appendChild(orbitoneSettingsSection);
+                  }
+              } else if (isDrumType(node.type)) {
+                  const params = node.audioParams;
+                  const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
+                  const soundDiv = document.createElement("div");
+                  soundDiv.classList.add("edit-drum-sound");
+                  const soundLabel = document.createElement("strong");
+                  soundLabel.textContent = defaults.label;
+                  soundDiv.appendChild(soundLabel);
+  
+                  const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
+                  const tuneVal = currentBaseFreq.toFixed(0);
+                  const tuneSliderContainer = createSlider(
+                      `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20, node.type === "drum_hihat" ? 15000 : (node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000), 1, currentBaseFreq,
+                      () => { identifyAndRouteAllGroups(); saveState(); },
+                      (e_input) => {
+                          const newFreq = parseFloat(e_input.target.value);
+                          selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
+                          e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
+                      }
+                  );
+                  soundDiv.appendChild(tuneSliderContainer);
+  
+                  if (params?.decay !== undefined || defaults?.decay !== undefined) {
+                      const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
+                      const decayVal = currentDecay.toFixed(2);
+                      const decaySliderContainer = createSlider(
+                          `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newDecay = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
+                              e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
+                          }
+                      );
+                      soundDiv.appendChild(decaySliderContainer);
+                  }
+                  if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
+                      const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
+                      const noiseDecayVal = currentNoiseDecay.toFixed(2);
+                      const noiseDecaySliderContainer = createSlider(
+                          `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
+                          () => { identifyAndRouteAllGroups(); saveState(); },
+                          (e_input) => {
+                              const newNoiseDecay = parseFloat(e_input.target.value);
+                              selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
+                              e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
+                          }
+                      );
+                      soundDiv.appendChild(noiseDecaySliderContainer);
+                  }
+  
+                  const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
+                  const volVal = currentVolume.toFixed(2);
+                  const volSliderContainer = createSlider(
+                      `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
+                      () => { identifyAndRouteAllGroups(); saveState(); },
+                      (e_input) => {
+                          const newVol = parseFloat(e_input.target.value);
+                          selectedArray.forEach((elData) => {
+                              const n = findNodeById(elData.id);
+                              if (n?.audioParams) { n.audioParams.volume = newVol; updateNodeAudioParams(n); }
+                          });
+                          e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                      }
+                  );
+                  soundDiv.appendChild(volSliderContainer);
+                  currentSection.appendChild(soundDiv);
+              } else if (node.type === "switch" && selectedArray.length === 1) {
+                  const label = document.createElement("label");
+                  label.textContent = "Primary Input Connection:";
+                  currentSection.appendChild(label);
+  
+                  const select = document.createElement("select");
+                  select.id = `edit-switch-primary-${node.id}`;
+                  const noneOpt = document.createElement("option");
+                  noneOpt.value = "null";
+                  noneOpt.textContent = "None (Set on next pulse)";
+                  select.appendChild(noneOpt);
+                  node.connections.forEach(neighborId => {
+                      const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                      if (conn) {
+                          const otherNode = findNodeById(neighborId);
+                          const option = document.createElement("option");
+                          option.value = conn.id;
+                          option.textContent = `From Node #${neighborId} (${otherNode?.type || '?'})`;
+                          if (conn.id === node.primaryInputConnectionId) option.selected = true;
+                          select.appendChild(option);
+                      }
+                  });
+                  select.addEventListener("change", (e) => {
+                      node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                      identifyAndRouteAllGroups(); saveState();
+                  });
+                  currentSection.appendChild(select);
+              }
+  
+              if (sectionCreatedForThisType && currentSection.hasChildNodes()) {
+                  fragment.appendChild(currentSection);
+              }
+  
+          }
+      } else if (firstElementData.type === "connection") {
+          const connection = findConnectionById(firstElementData.id);
+          if (connection) {
+              const section = document.createElement("div");
+              section.classList.add("panel-section");
+  
+              if (connection.type === "string_violin") {
+                  const params = connection.audioParams;
+                  const defaults = STRING_VIOLIN_DEFAULTS;
+                  const currentVol = params?.volume ?? defaults.volume;
+                  const volVal = currentVol.toFixed(2);
+                  const volSliderContainer = createSlider(
+                      `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
+                      () => { identifyAndRouteAllGroups(); saveState(); },
+                      (e_input) => {
+                          const newVol = parseFloat(e_input.target.value);
+                          selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
+                          e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                      }
+                  );
+                  section.appendChild(volSliderContainer);
+                  const currentAttack = params?.attack ?? defaults.attack;
+                  const attackVal = currentAttack.toFixed(2);
+                  const attackSliderContainer = createSlider(
+                      `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
+                      () => { identifyAndRouteAllGroups(); saveState(); },
+                      (e_input) => {
+                          const newVal = parseFloat(e_input.target.value);
+                          selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
+                          e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
+                      }
+                  );
+                  section.appendChild(attackSliderContainer);
+                  const currentRelease = params?.release ?? defaults.release;
+                  const releaseVal = currentRelease.toFixed(2);
+                  const releaseSliderContainer = createSlider(
+                      `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
+                      () => { identifyAndRouteAllGroups(); saveState(); },
+                      (e_input) => {
+                          const newVal = parseFloat(e_input.target.value);
+                          selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
+                          e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
+                      }
+                  );
+                  section.appendChild(releaseSliderContainer);
+              
+            } else if (connection.type === "wavetrail") {
+                console.log(`[Wavetrail Debug] populateEditPanel: Processing Wavetrail connection ID ${connection.id}`);
                 section.classList.add("panel-section");
 
-                if (node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE) {
-                     const volParam = node.audioParams.volume !== undefined ? node.audioParams.volume : (isDrumType(node.type) ? (DRUM_ELEMENT_DEFAULTS[node.type]?.volume ?? 1.0) : (node.type === PRORB_TYPE ? 0.7 : 1.0));
-                     const volVal = volParam.toFixed(2);
-                     const volSliderContainer = createSlider(
-                         `edit-node-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, volParam,
-                         saveState,
-                         (e_input) => {
-                             const newVol = parseFloat(e_input.target.value);
-                             selectedArray.forEach(elData => {
-                                 const n = findNodeById(elData.id);
-                                 if (n && n.audioParams) {
-                                     n.audioParams.volume = newVol;
-                                     updateNodeAudioParams(n);
-                                 }
-                             });
-                             e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                         }
-                     );
-                     section.appendChild(volSliderContainer);
+                const fileLabel = document.createElement("label");
+                fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
+                fileLabel.textContent = "Audio File:";
+                section.appendChild(fileLabel);
+
+                const fileInput = document.createElement("input");
+                fileInput.type = "file";
+                fileInput.id = `edit-wavetrail-file-${connection.id}`;
+                fileInput.accept = ".wav,.mp3,audio/*";
+                fileInput.style.marginBottom = "5px";
+                // Ensure 'connection' here is the correctly scoped one from the outer 'populateEditPanel' call
+                fileInput.addEventListener("change", (e) => handleWaveTrailFileInputChange(e, connection));
+                section.appendChild(fileInput);
+
+                const fileNameDisplay = document.createElement("small");
+                fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
+                if (!connection.audioParams) {
+                    console.error(`[Wavetrail Debug] populateEditPanel: connection.audioParams is missing for ID ${connection.id}`);
+                    connection.audioParams = {}; // Initialize if missing to prevent further errors
                 }
+                fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || "None selected"}`;
+                fileNameDisplay.style.display = "block";
+                section.appendChild(fileNameDisplay);
 
+                console.log(`[Wavetrail Debug] populateEditPanel: Checking buffer for Wavetrail ${connection.id}. Buffer exists: ${!!connection.audioParams?.buffer}`);
 
-                if (node.type === "sound" || isDrumType(node.type) || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE || node.type === PRORB_TYPE) {
-                    const currentDelaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-                    const delaySendVal = currentDelaySend.toFixed(2);
-                    const delaySendSliderContainer = createSlider(
-                        `edit-node-delaysend-${node.id}`, `Delay Send (${delaySendVal}):`, 0, 1, 0.01, currentDelaySend,
-                        saveState,
-                        (e_input) => {
-                            const newVal = parseFloat(e_input.target.value);
-                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) { n.audioParams.delaySend = newVal; updateNodeAudioParams(n); } });
-                            e_input.target.previousElementSibling.textContent = `Delay Send (${newVal.toFixed(2)}):`;
-                        }
-                    );
-                    section.appendChild(delaySendSliderContainer);
+                if (connection.audioParams?.buffer) {
+                    console.log(`[Wavetrail Debug] populateEditPanel: Buffer found for Wavetrail ${connection.id}. Creating sliders.`);
+                    const bufferDuration = connection.audioParams.buffer.duration;
+                    const currentStartOffset = connection.audioParams.startTimeOffset || 0;
+                    // Use ?? to ensure endTimeOffset defaults to bufferDuration if it's null or undefined
+                    const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+                    const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
+                    const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
+                    const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
 
-                    const currentReverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-                    const reverbSendVal = currentReverbSend.toFixed(2);
-                    const reverbSendSliderContainer = createSlider(
-                        `edit-node-reverbsend-${node.id}`, `Reverb Send (${reverbSendVal}):`, 0, 1, 0.01, currentReverbSend,
-                        saveState,
-                        (e_input) => {
-                            const newVal = parseFloat(e_input.target.value);
-                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) { n.audioParams.reverbSend = newVal; updateNodeAudioParams(n); } });
-                            e_input.target.previousElementSibling.textContent = `Reverb Send (${newVal.toFixed(2)}):`;
-                        }
-                    );
-                    section.appendChild(reverbSendSliderContainer);
-                }
-                currentSection = section;
-            }
+                    const offsetLabel = document.createElement("label");
+                    offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
+                    offsetLabel.style.marginTop = "10px";
+                    offsetLabel.textContent = `Start Offset (${currentStartOffset.toFixed(2)}s):`;
+                    section.appendChild(offsetLabel);
+                    const offsetSlider = document.createElement("input");
+                    offsetSlider.type = "range";
+                    offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
+                    offsetSlider.min = "0";
+                    offsetSlider.max = bufferDuration.toFixed(3);
+                    offsetSlider.step = "0.01";
+                    offsetSlider.value = currentStartOffset;
+                    offsetSlider.title = "Scrub Start Time";
+                    const offsetValueDisplay = document.createElement("span");
+                    offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
+                    offsetValueDisplay.textContent = `${currentStartOffset.toFixed(2)}s`;
+                    offsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
+                    section.appendChild(offsetSlider);
+                    section.appendChild(offsetValueDisplay);
 
+                    const endOffsetLabel = document.createElement("label");
+                    endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
+                    endOffsetLabel.style.marginTop = "10px";
+                    endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
+                    section.appendChild(endOffsetLabel);
+                    const endOffsetSlider = document.createElement("input");
+                    endOffsetSlider.type = "range";
+                    endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
+                    endOffsetSlider.min = currentStartOffset.toFixed(3); // Initial min based on start
+                    endOffsetSlider.max = bufferDuration.toFixed(3);
+                    endOffsetSlider.step = "0.01";
+                    endOffsetSlider.value = currentEndOffset;
+                    endOffsetSlider.title = "Scrub End Time";
+                    const endOffsetValueDisplay = document.createElement("span");
+                    endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
+                    endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
+                    endOffsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
+                    section.appendChild(endOffsetSlider);
+                    section.appendChild(endOffsetValueDisplay);
 
-            if (node && node.type === TIMELINE_GRID_TYPE) {
-                const section = document.createElement("div");
-                section.classList.add("panel-section");
-
-                const playingLabel = document.createElement("label");
-                playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
-                playingLabel.textContent = "Playing:";
-                section.appendChild(playingLabel);
-                const playingCheckbox = document.createElement("input");
-                playingCheckbox.type = "checkbox";
-                playingCheckbox.id = `edit-timeline-playing-${node.id}`;
-                playingCheckbox.checked = node.timelineIsPlaying;
-                playingCheckbox.addEventListener("change", (e) => {
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE) {
-                            n.timelineIsPlaying = e.target.checked;
-                            if (
-                                n.timelineIsPlaying &&
-                                n.scanLinePosition >= 1.0 &&
-                                n.timelineIsLooping
-                            ) {
-                                n.scanLinePosition = 0;
-                                if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear();
-                                else n.triggeredInThisSweep = new Set();
+                    offsetSlider.addEventListener("input", (e_input) => {
+                        const newStart = parseFloat(e_input.target.value);
+                        // IMPORTANT: Use the 'connection' from the outer scope of populateEditPanel for consistency
+                        // if it's guaranteed to be the correct one, or re-fetch if necessary.
+                        // For safety, let's re-fetch within the listener scope.
+                        const localConn = findConnectionById(connection.id); // Re-fetch or use captured 'connection'
+                        if (localConn && localConn.audioParams) {
+                            localConn.audioParams.startTimeOffset = newStart;
+                            const endSlider = document.getElementById(`edit-wavetrail-end-${localConn.id}`);
+                            if (endSlider) endSlider.min = newStart.toFixed(3);
+                            if (localConn.audioParams.endTimeOffset !== null && localConn.audioParams.endTimeOffset < newStart) {
+                                localConn.audioParams.endTimeOffset = newStart + 0.01;
+                                if (endSlider) endSlider.value = localConn.audioParams.endTimeOffset;
+                                const endValDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn.id}`);
+                                if (endValDisplay) endValDisplay.textContent = `${localConn.audioParams.endTimeOffset.toFixed(2)}s`;
                             }
-                            if (n.audioParams)
-                                n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
+                        }
+                        const valDisplay = document.getElementById(`edit-wavetrail-start-value-${localConn ? localConn.id : connection.id}`);
+                        if (valDisplay) valDisplay.textContent = `${newStart.toFixed(2)}s`;
+                        if (localConn && localConn.audioParams?.buffer) {
+                            localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
                         }
                     });
-                    saveState();
-                });
-                section.appendChild(playingCheckbox);
-                section.appendChild(document.createElement("br"));
+                    offsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
 
-                const loopingLabel = document.createElement("label");
-                loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
-                loopingLabel.textContent = "Looping:";
-                section.appendChild(loopingLabel);
-                const loopingCheckbox = document.createElement("input");
-                loopingCheckbox.type = "checkbox";
-                loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
-                loopingCheckbox.checked = node.timelineIsLooping;
-                loopingCheckbox.addEventListener("change", (e) => {
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE) {
-                            n.timelineIsLooping = e.target.checked;
-                            if (n.audioParams)
-                                n.audioParams.timelineIsLooping = n.timelineIsLooping;
+                    endOffsetSlider.addEventListener("input", (e_input) => {
+                        const newEnd = parseFloat(e_input.target.value);
+                        const localConn = findConnectionById(connection.id);
+                        if (localConn && localConn.audioParams) {
+                            localConn.audioParams.endTimeOffset = newEnd;
+                        }
+                        const valDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn ? localConn.id : connection.id}`);
+                        if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
+                         if (localConn && localConn.audioParams?.buffer) {
+                            localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
                         }
                     });
-                    saveState();
-                });
-                section.appendChild(loopingCheckbox);
-                section.appendChild(document.createElement("br"));
+                    endOffsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
 
-                if (isGlobalSyncEnabled) {
-                    const durationLabel = document.createElement("label");
-                    durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
-                    durationLabel.textContent = "Duration (Sync):";
-                    section.appendChild(durationLabel);
-                    const durationSelect = document.createElement("select");
-                    durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
-                    const barOptions = [
-                        { label: "1/4 Bar (1 Beat)", value: 0.25 },
-                        { label: "1/2 Bar (2 Beats)", value: 0.5 },
-                        { label: "1 Bar (4 Beats)", value: 1 },
-                        { label: "2 Bars (8 Beats)", value: 2 },
-                        { label: "4 Bars (16 Beats)", value: 4 },
-                        { label: "8 Bars (32 Beats)", value: 8 },
-                    ];
-                    let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
-                    barOptions.forEach((opt) => {
-                        const optionEl = document.createElement("option");
-                        optionEl.value = opt.value;
-                        optionEl.textContent = opt.label;
-                        if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
-                            optionEl.selected = true;
-                        }
-                        durationSelect.appendChild(optionEl);
+                    const grainDurSlider = createSlider(`edit-wavetrail-graindur-${connection.id}`, `Grain Duration (${currentGrainDuration.toFixed(3)}s):`, 0.005, 0.5, 0.001, currentGrainDuration, saveState, (e) => {
+                        const localConn = findConnectionById(connection.id);
+                        if (localConn && localConn.audioParams) localConn.audioParams.grainDuration = parseFloat(e.target.value);
+                        e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
                     });
-                    durationSelect.addEventListener("change", (e) => {
-                        const newBars = parseFloat(e.target.value);
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE) {
-                                n.timelineMusicalDurationBars = newBars;
-                                if (n.audioParams)
-                                    n.audioParams.timelineMusicalDurationBars = newBars;
-                            }
-                        });
-                        saveState();
+                    section.appendChild(grainDurSlider);
+                    const grainOvlSlider = createSlider(`edit-wavetrail-grainovl-${connection.id}`, `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`, 0.001, 0.49, 0.001, currentGrainOverlap, saveState, (e) => {
+                        const localConn = findConnectionById(connection.id);
+                        if (localConn && localConn.audioParams) localConn.audioParams.grainOverlap = parseFloat(e.target.value);
+                        e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
                     });
-                    section.appendChild(durationSelect);
+                    section.appendChild(grainOvlSlider);
+                    const rateSlider = createSlider(`edit-wavetrail-rate-${connection.id}`, `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`, 0.1, 4.0, 0.05, currentPlaybackRate, saveState, (e) => {
+                        const localConn = findConnectionById(connection.id);
+                        if (localConn && localConn.audioParams) localConn.audioParams.playbackRate = parseFloat(e.target.value);
+                        e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
+                    });
+                    section.appendChild(rateSlider);
                 } else {
-                    const currentSpeed =
-                        node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
-                    const speedVal = currentSpeed.toFixed(1);
-                    const speedSliderContainer = createSlider(
-                        `edit-timeline-speed-${node.id}`,
-                        `Speed (${speedVal}s / sweep):`,
-                        0.2,
-                        30.0,
-                        0.1,
-                        currentSpeed,
-                        saveState,
-                        (e_input) => {
-                            const newSpeed = parseFloat(e_input.target.value);
-                            selectedArray.forEach((elData) => {
-                                const n = findNodeById(elData.id);
-                                if (n && n.type === TIMELINE_GRID_TYPE) {
-                                    n.timelineSpeed = newSpeed;
-                                    if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
-                                }
-                            });
-                            e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
-                        },
-                    );
-                    section.appendChild(speedSliderContainer);
-                }
-
-                const MIN_TIMELINE_PIXEL_WIDTH = 50;
-                const MAX_TIMELINE_PIXEL_WIDTH = 1200;
-                const MIN_TIMELINE_PIXEL_HEIGHT = 50;
-                const MAX_TIMELINE_PIXEL_HEIGHT = 800;
-                const PIXEL_STEP = 10;
-
-                const gridSpacing = calculateGridSpacing();
-                const halfGridSquare =
-                    isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
-
-                let widthSliderMin,
-                    widthSliderMax,
-                    widthSliderStep,
-                    currentWidthInUnits,
-                    widthLabelUnitText;
-                const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
-
-                if (isSnapEnabled && halfGridSquare > 0) {
-                    widthSliderMin = Math.max(
-                        1,
-                        Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
-                    );
-                    widthSliderMax = Math.round(
-                        MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
-                    );
-                    widthSliderStep = 1;
-                    currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
-                    widthLabelUnitText = " units";
-                } else {
-                    widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
-                    widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
-                    widthSliderStep = PIXEL_STEP;
-                    currentWidthInUnits = currentPixelWidth;
-                    widthLabelUnitText = "px";
-                }
-
-                const widthDisplayValText =
-                    isSnapEnabled && halfGridSquare > 0 ?
-                    currentWidthInUnits.toFixed(0) :
-                    currentPixelWidth.toFixed(0);
-                const widthSliderContainer = createSlider(
-                    `edit-timeline-width-${node.id}`,
-                    `Width (${widthDisplayValText}${widthLabelUnitText}):`,
-                    widthSliderMin,
-                    widthSliderMax,
-                    widthSliderStep,
-                    currentWidthInUnits,
-                    saveState,
-                    (e_input) => {
-                        const newSliderValue = parseFloat(e_input.target.value);
-                        let newPixelWidth;
-                        if (isSnapEnabled && halfGridSquare > 0) {
-                            newPixelWidth = newSliderValue * halfGridSquare;
-                            newPixelWidth = Math.max(
-                                halfGridSquare,
-                                Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
-                            );
-                        } else {
-                            newPixelWidth = newSliderValue;
-                        }
-                        newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
-
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE) {
-                                n.width = newPixelWidth;
-                                if (n.audioParams) n.audioParams.width = newPixelWidth;
-                            }
-                        });
-                        const displayVal =
-                            isSnapEnabled && halfGridSquare > 0 ?
-                            (newPixelWidth / halfGridSquare).toFixed(0) :
-                            newPixelWidth.toFixed(0);
-                        const displayUnit =
-                            isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
-                        e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
-                    },
-                );
-                section.appendChild(widthSliderContainer);
-
-                let heightSliderMin,
-                    heightSliderMax,
-                    heightSliderStep,
-                    currentHeightInUnits,
-                    heightLabelUnitText;
-                const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
-
-                if (isSnapEnabled && halfGridSquare > 0) {
-                    heightSliderMin = Math.max(
-                        1,
-                        Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
-                    );
-                    heightSliderMax = Math.round(
-                        MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
-                    );
-                    heightSliderStep = 1;
-                    currentHeightInUnits = Math.round(
-                        currentPixelHeight / halfGridSquare,
-                    );
-                    heightLabelUnitText = " units";
-                } else {
-                    heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
-                    heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
-                    heightSliderStep = PIXEL_STEP;
-                    currentHeightInUnits = currentPixelHeight;
-                    heightLabelUnitText = "px";
-                }
-
-                const heightDisplayValText =
-                    isSnapEnabled && halfGridSquare > 0 ?
-                    currentHeightInUnits.toFixed(0) :
-                    currentPixelHeight.toFixed(0);
-                const heightSliderContainer = createSlider(
-                    `edit-timeline-height-${node.id}`,
-                    `Height (${heightDisplayValText}${heightLabelUnitText}):`,
-                    heightSliderMin,
-                    heightSliderMax,
-                    heightSliderStep,
-                    currentHeightInUnits,
-                    saveState,
-                    (e_input) => {
-                        const newSliderValue = parseFloat(e_input.target.value);
-                        let newPixelHeight;
-                        if (isSnapEnabled && halfGridSquare > 0) {
-                            newPixelHeight = newSliderValue * halfGridSquare;
-                            newPixelHeight = Math.max(
-                                halfGridSquare,
-                                Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
-                            );
-                        } else {
-                            newPixelHeight = newSliderValue;
-                        }
-                        newPixelHeight = Math.max(
-                            MIN_TIMELINE_PIXEL_HEIGHT,
-                            newPixelHeight,
-                        );
-
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE) {
-                                n.height = newPixelHeight;
-                                if (n.audioParams) n.audioParams.height = newPixelHeight;
-                            }
-                        });
-                        const displayVal =
-                            isSnapEnabled && halfGridSquare > 0 ?
-                            (newPixelHeight / halfGridSquare).toFixed(0) :
-                            newPixelHeight.toFixed(0);
-                        const displayUnit =
-                            isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
-                        e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
-                    },
-                );
-                section.appendChild(heightSliderContainer);
-
-                const currentPulseIntensity =
-                    node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
-                const intensityVal = currentPulseIntensity.toFixed(2);
-                const intensitySliderContainer = createSlider(
-                    `edit-timeline-intensity-${node.id}`,
-                    `Trigger Intensity (${intensityVal}):`,
-                    0.1,
-                    1.5,
-                    0.01,
-                    currentPulseIntensity,
-                    saveState,
-                    (e_input) => {
-                        const newIntensity = parseFloat(e_input.target.value);
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE) {
-                                n.timelinePulseIntensity = newIntensity;
-                                if (n.audioParams)
-                                    n.audioParams.timelinePulseIntensity = newIntensity;
-                            }
-                        });
-                        e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
-                    },
-                );
-                section.appendChild(intensitySliderContainer);
-
-                const internalGridSection = document.createElement("div");
-                internalGridSection.classList.add("panel-section");
-                internalGridSection.style.borderTop = "1px solid var(--button-hover)";
-                internalGridSection.style.marginTop = "10px";
-                internalGridSection.style.paddingTop = "10px";
-
-                const showInternalGridLabel = document.createElement("label");
-                showInternalGridLabel.textContent = "Show Internal Grid: ";
-                const showInternalGridCheckbox = document.createElement("input");
-                showInternalGridCheckbox.type = "checkbox";
-                showInternalGridCheckbox.checked =
-                    node.showInternalGrid !== undefined ? node.showInternalGrid : true;
-                showInternalGridCheckbox.addEventListener("change", (e) => {
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE) {
-                            n.showInternalGrid = e.target.checked;
-                            if (n.audioParams)
-                                n.audioParams.showInternalGrid = n.showInternalGrid;
-                        }
-                    });
-                    saveState();
-                });
-                internalGridSection.appendChild(showInternalGridLabel);
-                internalGridSection.appendChild(showInternalGridCheckbox);
-                internalGridSection.appendChild(document.createElement("br"));
-
-                const snapToInternalGridLabel = document.createElement("label");
-                snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
-                const snapToInternalGridCheckbox = document.createElement("input");
-                snapToInternalGridCheckbox.type = "checkbox";
-                snapToInternalGridCheckbox.checked =
-                    node.snapToInternalGrid !== undefined ?
-                    node.snapToInternalGrid :
-                    true;
-                snapToInternalGridCheckbox.addEventListener("change", (e) => {
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE) {
-                            n.snapToInternalGrid = e.target.checked;
-                            if (n.audioParams)
-                                n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
-                        }
-                    });
-                    saveState();
-                });
-                internalGridSection.appendChild(snapToInternalGridLabel);
-                internalGridSection.appendChild(snapToInternalGridCheckbox);
-                internalGridSection.appendChild(document.createElement("br"));
-
-                const currentDivisions = node.internalGridDivisions || 8;
-                const divisionsLabel = document.createElement("label");
-                divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
-                divisionsLabel.textContent = "Internal Grid Subdivisions:";
-                internalGridSection.appendChild(divisionsLabel);
-
-                const divisionsSelect = document.createElement("select");
-                divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
-                const divisionOptions = [
-                    { label: "None (1)", value: 1 }, { label: "Halves (2)", value: 2 },
-                    { label: "Thirds (3)", value: 3 }, { label: "Quarters (4)", value: 4 },
-                    { label: "Sixths (6)", value: 6 }, { label: "Eighths (8)", value: 8 },
-                    { label: "Twelfths (12 - triplets)", value: 12 }, { label: "Sixteenths (16)", value: 16 },
-                    { label: "24ths (16th triplets)", value: 24 }, { label: "32nds (32)", value: 32 },
-                    { label: "64ths (64)", value: 64 },
-                ];
-                let currentDivisionValueForSelect = node.internalGridDivisions || 8;
-                divisionOptions.forEach((opt) => {
-                    const optionEl = document.createElement("option");
-                    optionEl.value = opt.value;
-                    optionEl.textContent = opt.label;
-                    if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
-                        optionEl.selected = true;
-                    }
-                    divisionsSelect.appendChild(optionEl);
-                });
-                divisionsSelect.addEventListener("change", (e) => {
-                    const newDivisions = parseInt(e.target.value);
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE) {
-                            n.internalGridDivisions = newDivisions;
-                            if (n.audioParams)
-                                n.audioParams.internalGridDivisions = newDivisions;
-                        }
-                    });
-                    saveState();
-                });
-                internalGridSection.appendChild(divisionsSelect);
-                section.appendChild(internalGridSection);
-
-                const transposeSection = document.createElement("div");
-                transposeSection.classList.add("panel-section");
-                transposeSection.style.borderTop = "1px solid var(--button-hover)";
-                transposeSection.style.marginTop = "10px";
-                transposeSection.style.paddingTop = "10px";
-                transposeSection.innerHTML = "<p><strong>Timeline Transposition:</strong></p>";
-
-                const enableTransposeLabel = document.createElement("label");
-                enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
-                enableTransposeLabel.textContent = "Enable Transposition: ";
-                const enableTransposeCheckbox = document.createElement("input");
-                enableTransposeCheckbox.type = "checkbox";
-                enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
-                enableTransposeCheckbox.checked =
-                    node.audioParams?.isTransposeEnabled || false;
-                enableTransposeCheckbox.addEventListener("change", (e) => {
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                            n.audioParams.isTransposeEnabled = e.target.checked;
-                        }
-                    });
-                    saveState();
-                    populateEditPanel();
-                });
-                transposeSection.appendChild(enableTransposeLabel);
-                transposeSection.appendChild(enableTransposeCheckbox);
-                transposeSection.appendChild(document.createElement("br"));
-
-                if (node.audioParams?.isTransposeEnabled) {
-                    const directionContainer = document.createElement("div");
-                    directionContainer.style.marginBottom = "5px";
-                    const directionLabel = document.createElement("label");
-                    directionLabel.textContent = "Direction: ";
-                    directionLabel.style.marginRight = "5px";
-                    directionContainer.appendChild(directionLabel);
-
-                    const plusButton = document.createElement("button");
-                    plusButton.textContent = "+";
-                    plusButton.classList.add("panel-button-like");
-                    if (node.audioParams.transposeDirection === "+") {
-                        plusButton.classList.add("active");
-                    }
-                    plusButton.addEventListener("click", () => {
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                n.audioParams.transposeDirection = "+";
-                            }
-                        });
-                        saveState();
-                        populateEditPanel();
-                    });
-                    directionContainer.appendChild(plusButton);
-
-                    const minusButton = document.createElement("button");
-                    minusButton.textContent = "-";
-                    minusButton.classList.add("panel-button-like");
-                    if (node.audioParams.transposeDirection === "-") {
-                        minusButton.classList.add("active");
-                    }
-                    minusButton.addEventListener("click", () => {
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                n.audioParams.transposeDirection = "-";
-                            }
-                        });
-                        saveState();
-                        populateEditPanel();
-                    });
-                    directionContainer.appendChild(minusButton);
-                    transposeSection.appendChild(directionContainer);
-
-                    const currentTransposeAmount = node.audioParams.transposeAmount || 0;
-                    const amountSliderContainer = createSlider(
-                        `edit-timeline-transpose-amount-${node.id}`,
-                        `Amount (${currentTransposeAmount} scale steps):`,
-                        0,
-                        24,
-                        1,
-                        currentTransposeAmount,
-                        () => {
-                            saveState();
-                        },
-                        (e_input) => {
-                            const newAmount = parseInt(e_input.target.value);
-                            selectedArray.forEach((elData) => {
-                                const n = findNodeById(elData.id);
-                                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                    n.audioParams.transposeAmount = newAmount;
-                                }
-                            });
-                            const labelElement = e_input.target.previousElementSibling;
-                            if (labelElement) {
-                                labelElement.textContent = `Amount (${newAmount} scale steps):`;
-                            }
-                        },
-                    );
-                    transposeSection.appendChild(amountSliderContainer);
-                }
-                section.appendChild(transposeSection);
-
-                const autoRotateSection = document.createElement("div");
-                autoRotateSection.classList.add("panel-section");
-                autoRotateSection.style.borderTop = "1px solid var(--button-hover)";
-                autoRotateSection.style.marginTop = "10px";
-                autoRotateSection.style.paddingTop = "10px";
-                autoRotateSection.innerHTML = "<p><strong>Timeline Auto-Rotation:</strong></p>";
-
-                const enableAutoRotateLabel = document.createElement("label");
-                enableAutoRotateLabel.htmlFor = `edit-timeline-autorotate-enable-${node.id}`;
-                enableAutoRotateLabel.textContent = "Enable Auto-Rotate: ";
-                const enableAutoRotateCheckbox = document.createElement("input");
-                enableAutoRotateCheckbox.type = "checkbox";
-                enableAutoRotateCheckbox.id = `edit-timeline-autorotate-enable-${node.id}`;
-                enableAutoRotateCheckbox.checked = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
-                enableAutoRotateCheckbox.addEventListener("change", (e) => {
-                    selectedArray.forEach((elData) => {
-                        const n = findNodeById(elData.id);
-                        if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                            n.audioParams.autoRotateEnabled = e.target.checked;
-                        }
-                    });
-                    saveState();
-                    populateEditPanel();
-                });
-                autoRotateSection.appendChild(enableAutoRotateLabel);
-                autoRotateSection.appendChild(enableAutoRotateCheckbox);
-                autoRotateSection.appendChild(document.createElement("br"));
-
-                if (node.audioParams?.autoRotateEnabled) {
-                    const directionRotateLabel = document.createElement("label");
-                    directionRotateLabel.htmlFor = `edit-timeline-autorotate-direction-${node.id}`;
-                    directionRotateLabel.textContent = "Direction: ";
-                    autoRotateSection.appendChild(directionRotateLabel);
-
-                    const directionRotateSelect = document.createElement("select");
-                    directionRotateSelect.id = `edit-timeline-autorotate-direction-${node.id}`;
-                    ["clockwise", "counter-clockwise"].forEach(dir => {
-                        const option = document.createElement("option");
-                        option.value = dir;
-                        option.textContent = dir.charAt(0).toUpperCase() + dir.slice(1);
-                        if (dir === (node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION)) {
-                            option.selected = true;
-                        }
-                        directionRotateSelect.appendChild(option);
-                    });
-                    directionRotateSelect.addEventListener("change", (e) => {
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                n.audioParams.autoRotateDirection = e.target.value;
-                            }
-                        });
-                        saveState();
-                    });
-                    autoRotateSection.appendChild(directionRotateSelect);
-                    autoRotateSection.appendChild(document.createElement("br"));
-
-                    if (isGlobalSyncEnabled) {
-                        const syncSpeedLabel = document.createElement("label");
-                        syncSpeedLabel.htmlFor = `edit-timeline-autorotate-syncspeed-${node.id}`;
-                        syncSpeedLabel.textContent = "Synced Speed (Full Rotation per):";
-                        autoRotateSection.appendChild(syncSpeedLabel);
-
-                        const syncSpeedSelect = document.createElement("select");
-                        syncSpeedSelect.id = `edit-timeline-autorotate-syncspeed-${node.id}`;
-
-                        const syncSubdivisionForRotation = [
-                            { label: "1/8 Note", originalIndex: 2 },
-                            { label: "1/4 Note", originalIndex: 4 },
-                            { label: "1/2 Note", originalIndex: 6 },
-                            { label: "1 Beat", originalIndex: 8 },
-                            { label: "2 Beats", originalIndex: 9 },
-                            { label: "1 Bar", originalIndex: 10 },
-                            { label: "2 Bars", originalIndex: 10, multiplier: 2 },
-                            { label: "4 Bars", originalIndex: 10, multiplier: 4 },
-                            { label: "8 Bars", originalIndex: 10, multiplier: 8 },
-                        ];
-
-                        syncSubdivisionForRotation.forEach((opt, pseudoIndex) => {
-                            const optionEl = document.createElement("option");
-                            optionEl.value = pseudoIndex;
-                            optionEl.textContent = opt.label;
-                            if (pseudoIndex === (node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX)) {
-                                optionEl.selected = true;
-                            }
-                            syncSpeedSelect.appendChild(optionEl);
-                        });
-                        syncSpeedSelect.addEventListener("change", (e) => {
-                            const newPseudoIndex = parseInt(e.target.value, 10);
-                            selectedArray.forEach((elData) => {
-                                const n = findNodeById(elData.id);
-                                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                    n.audioParams.autoRotateSyncSubdivisionIndex = newPseudoIndex;
-                                }
-                            });
-                            saveState();
-                        });
-                        autoRotateSection.appendChild(syncSpeedSelect);
-
-                    } else {
-                        const currentManualSpeed = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
-                        const speedValManual = currentManualSpeed.toFixed(4);
-                        const speedManualSlider = createSlider(
-                            `edit-timeline-autorotate-speedmanual-${node.id}`,
-                            `Manual Speed (${speedValManual} rad/update):`,
-                            0.0001, 0.02, 0.0001, currentManualSpeed,
-                            saveState,
-                            (e_input) => {
-                                const newSpeed = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                        n.audioParams.autoRotateSpeedManual = newSpeed;
-                                    }
-                                });
-                                e_input.target.previousElementSibling.textContent = `Manual Speed (${newSpeed.toFixed(4)} rad/update):`;
-                            }
-                        );
-                        autoRotateSection.appendChild(speedManualSlider);
-                    }
-                }
-                section.appendChild(autoRotateSection);
-                currentSection = section;
-
-
-            } else if (node && node.audioParams) {
-                let sectionCreatedForThisType = false;
-
-                if (isPulsarType(node.type) || node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE) {
-                     if(!currentSection || !fragment.contains(currentSection)) {
-                        currentSection = document.createElement("div");
-                        currentSection.classList.add("panel-section");
-                     }
-                    sectionCreatedForThisType = true;
-
-                    if (node.type !== PRORB_TYPE) {
-                        const syncIgnoreSection = document.createElement("div");
-                        syncIgnoreSection.classList.add("panel-section");
-                        const ignoreSyncLabel = document.createElement("label");
-                        ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
-                        ignoreSyncLabel.textContent = "Ignore Global Sync:";
-                        ignoreSyncLabel.style.marginRight = "5px";
-                        syncIgnoreSection.appendChild(ignoreSyncLabel);
-                        const ignoreSyncCheckbox = document.createElement("input");
-                        ignoreSyncCheckbox.type = "checkbox";
-                        ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`;
-                        ignoreSyncCheckbox.checked =
-                            node.audioParams.ignoreGlobalSync || false;
-                        ignoreSyncCheckbox.addEventListener("change", (e) => {
-                            selectedArray.forEach((elData) => {
-                                const n = findNodeById(elData.id);
-                                if (n && n.audioParams) {
-                                    n.audioParams.ignoreGlobalSync = e.target.checked;
-                                    if (isPulsarType(n.type)) {
-                                        n.lastTriggerTime = -1;
-                                        n.nextSyncTriggerTime = 0;
-                                    }
-                                }
-                            });
-                            identifyAndRouteAllGroups();
-                            saveState();
-                            populateEditPanel();
-                        });
-                        syncIgnoreSection.appendChild(ignoreSyncCheckbox);
-                        currentSection.appendChild(syncIgnoreSection);
-                    }
-                } else if (!currentSection || !fragment.contains(currentSection)) {
-                    currentSection = document.createElement("div");
-                    currentSection.classList.add("panel-section");
-                    sectionCreatedForThisType = true;
-                }
-
-
-                if (isPulsarType(node.type)) {
-                    const enableLabel = document.createElement("label");
-                    enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
-                    enableLabel.textContent =
-                        node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
-                    currentSection.appendChild(enableLabel);
-                    const enableCheckbox = document.createElement("input");
-                    enableCheckbox.type = "checkbox";
-                    enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
-                    enableCheckbox.checked = node.isEnabled;
-                    enableCheckbox.disabled =
-                        selectedArray.length > 1 && node.type === "pulsar_triggerable";
-                    enableCheckbox.addEventListener("change", () => {
-                        handlePulsarTriggerToggle(node);
-                        identifyAndRouteAllGroups();
-                    });
-                    currentSection.appendChild(enableCheckbox);
-                    currentSection.appendChild(document.createElement("br"));
-                    const showSyncControls =
-                        isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync && node.type !== PRORB_TYPE;
-                    if (
-                        node.type !== "pulsar_random_particles" &&
-                        node.type !== "pulsar_manual" &&
-                        node.type !== "pulsar_meteorshower" &&
-                        node.type !== PRORB_TYPE
-                    ) {
-                        if (showSyncControls) {
-                            const subdivLabel = document.createElement("label");
-                            subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
-                            subdivLabel.textContent = "Sync Subdivision:";
-                            currentSection.appendChild(subdivLabel);
-                            const subdivSelect = document.createElement("select");
-                            subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
-                            subdivSelect.disabled = selectedArray.length > 1;
-                            subdivisionOptions.forEach((opt, index) => {
-                                const option = document.createElement("option");
-                                option.value = index;
-                                option.textContent = opt.label;
-                                if (
-                                    index ===
-                                    (node.audioParams.syncSubdivisionIndex ??
-                                        DEFAULT_SUBDIVISION_INDEX)
-                                )
-                                    option.selected = true;
-                                subdivSelect.appendChild(option);
-                            });
-                            subdivSelect.addEventListener("change", (e) => {
-                                const newIndex = parseInt(e.target.value, 10);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (
-                                        n &&
-                                        n.audioParams &&
-                                        isPulsarType(n.type) &&
-                                        n.type !== "pulsar_random_particles" &&
-                                        n.type !== "pulsar_manual" &&
-                                        n.type !== "pulsar_meteorshower" &&
-                                        n.type !== PRORB_TYPE
-                                    ) {
-                                        n.audioParams.syncSubdivisionIndex = newIndex;
-                                        if (n.syncSubdivisionIndex !== undefined)
-                                            n.syncSubdivisionIndex = newIndex;
-                                        n.nextSyncTriggerTime = 0;
-                                    }
-                                });
-                                identifyAndRouteAllGroups();
-                                saveState();
-                            });
-                            currentSection.appendChild(subdivSelect);
-                        } else {
-                            const currentInterval =
-                                node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-                            const intervalVal = currentInterval.toFixed(1);
-                            const intervalSliderContainer = createSlider(
-                                `edit-pulsar-interval-${node.id}`,
-                                `Interval (${intervalVal}s):`,
-                                0.1,
-                                10.0,
-                                0.1,
-                                currentInterval,
-                                () => { identifyAndRouteAllGroups(); saveState(); },
-                                (e_input) => {
-                                    const newInterval = parseFloat(e_input.target.value);
-                                    selectedArray.forEach((elData) => {
-                                        const n = findNodeById(elData.id);
-                                        if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual" && n.type !== "pulsar_meteorshower" && n.type !== PRORB_TYPE)
-                                            n.audioParams.triggerInterval = newInterval;
-                                    });
-                                    e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
-                                },
-                            );
-                            currentSection.appendChild(intervalSliderContainer);
-                        }
-                    } else if (node.type === "pulsar_random_particles") {
-                        const timingInfo = document.createElement("small");
-                        timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
-                        currentSection.appendChild(timingInfo);
-                    }
-                    currentSection.appendChild(document.createElement("br"));
-                    if (node.type !== "pulsar_random_volume") {
-                        const currentIntensity =
-                            node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-                        const intensityVal = currentIntensity.toFixed(2);
-                        const intensitySliderContainer = createSlider(
-                            `edit-pulsar-intensity-${node.id}`,
-                            `Pulse Intensity (${intensityVal}):`,
-                            MIN_PULSE_INTENSITY,
-                            MAX_PULSE_INTENSITY,
-                            0.01,
-                            currentIntensity,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newIntensity = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n?.audioParams && n.type !== "pulsar_random_volume")
-                                        n.audioParams.pulseIntensity = newIntensity;
-                                });
-                                e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
-                            },
-                        );
-                        currentSection.appendChild(intensitySliderContainer);
-                    } else {
-                        const intensityInfo = document.createElement("small");
-                        intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
-                        currentSection.appendChild(intensityInfo);
-                    }
-                    currentSection.appendChild(document.createElement("br"));
-
-                    if (node.type === "pulsar_meteorshower") {
-                        const meteorSubSection = document.createElement("div");
-                        meteorSubSection.classList.add("panel-section");
-                        meteorSubSection.style.marginTop = "10px";
-                        meteorSubSection.style.borderTop = "1px dashed var(--button-hover)";
-                        const meteorTitle = document.createElement("p");
-                        meteorTitle.innerHTML = "<strong>Meteor Shower Settings:</strong>";
-                        meteorSubSection.appendChild(meteorTitle);
-
-                        const currentMaxRadius = node.audioParams?.meteorMaxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS;
-                        const radiusSlider = createSlider(
-                            `edit-meteor-radius-${node.id}`,
-                            `Shower Max Radius (${currentMaxRadius.toFixed(0)}px):`,
-                            50, 800, 10, currentMaxRadius,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newVal = parseFloat(e_input.target.value);
-                                selectedArray.forEach(elData => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorMaxRadius = newVal;
-                                });
-                                e_input.target.previousElementSibling.textContent = `Shower Max Radius (${newVal.toFixed(0)}px):`;
-                            }
-                        );
-                        meteorSubSection.appendChild(radiusSlider);
-
-                        const currentGrowthRate = node.audioParams?.meteorGrowthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE;
-                        const growthSlider = createSlider(
-                            `edit-meteor-growth-${node.id}`,
-                            `Shower Growth Rate (${currentGrowthRate.toFixed(0)}px/s):`,
-                            20, 500, 5, currentGrowthRate,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newVal = parseFloat(e_input.target.value);
-                                selectedArray.forEach(elData => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorGrowthRate = newVal;
-                                });
-                                e_input.target.previousElementSibling.textContent = `Shower Growth Rate (${newVal.toFixed(0)}px/s):`;
-                            }
-                        );
-                        meteorSubSection.appendChild(growthSlider);
-                        currentSection.appendChild(meteorSubSection);
-                    }
-
-                    const colorLabel = document.createElement("label");
-                    colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
-                    colorLabel.textContent = "Pulsar Color:";
-                    currentSection.appendChild(colorLabel);
-                    const colorInput = document.createElement("input");
-                    colorInput.type = "color";
-                    colorInput.id = `edit-pulsar-color-${node.id}`;
-                    const styles = getComputedStyle(document.documentElement);
-                    const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
-                    const fallbackColorVar = "--start-node-color";
-                    const defaultColorRgba =
-                        styles.getPropertyValue(defaultColorVar).trim() ||
-                        styles.getPropertyValue(fallbackColorVar).trim();
-                    const defaultColorHex = rgbaToHex(defaultColorRgba);
-                    colorInput.value = node.color ?
-                        rgbaToHex(node.color) :
-                        defaultColorHex;
-                    colorInput.addEventListener("input", (e) => {
-                        const newColor = hexToRgba(e.target.value, 0.9);
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n) n.color = newColor;
-                        });
-                    });
-                    colorInput.addEventListener("change", () => {
-                        identifyAndRouteAllGroups();
-                        saveState();
-                    });
-                    currentSection.appendChild(colorInput);
-
-                    if (node.type === "pulsar_rocket") {
-                        const rocketSubSection = document.createElement("div");
-                        rocketSubSection.classList.add("panel-section");
-                        const rocketTitle = document.createElement("p");
-                        rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
-                        rocketSubSection.appendChild(rocketTitle);
-                        let currentAngleDegVal = parseFloat(
-                            (
-                                ((node.audioParams.rocketDirectionAngle || 0) * 180) /
-                                Math.PI
-                            ).toFixed(0),
-                        );
-                        const dirSliderContainer = createSlider(
-                            `edit-rocket-dir-${node.id}`,
-                            `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newAngleDeg = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                        n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
-                                    }
-                                });
-                                e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
-                            },
-                        );
-                        rocketSubSection.appendChild(dirSliderContainer);
-                        let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
-                        const speedSliderContainer = createSlider(
-                            `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newSpeed = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                        n.audioParams.rocketSpeed = newSpeed;
-                                    }
-                                });
-                                e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
-                            },
-                        );
-                        rocketSubSection.appendChild(speedSliderContainer);
-                        let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
-                        const rangeSliderContainer = createSlider(
-                            `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newRange = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                        n.audioParams.rocketRange = newRange;
-                                    }
-                                });
-                                e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
-                            },
-                        );
-                        rocketSubSection.appendChild(rangeSliderContainer);
-                        let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
-                        const gravitySliderContainer = createSlider(
-                            `edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newGravity = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                        n.audioParams.rocketGravity = newGravity;
-                                    }
-                                });
-                                e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
-                            },
-                        );
-                        rocketSubSection.appendChild(gravitySliderContainer);
-                        currentSection.appendChild(rocketSubSection);
-                    }
-
-                } else if (node.type === "sound") {
-                    const orbitoneMainSection = document.createElement("div");
-                    orbitoneMainSection.classList.add("panel-section");
-                    orbitoneMainSection.innerHTML = "<p><strong>Orbitone Settings:</strong></p>";
-
-                    const enableOrbitonesLabel = document.createElement("label");
-                    enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
-                    enableOrbitonesLabel.textContent = "Enable Orbitones:";
-                    enableOrbitonesLabel.style.marginRight = "8px";
-                    orbitoneMainSection.appendChild(enableOrbitonesLabel);
-
-                    const enableOrbitonesCheckbox = document.createElement("input");
-                    enableOrbitonesCheckbox.type = "checkbox";
-                    enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
-                    enableOrbitonesCheckbox.checked = node.audioParams.orbitonesEnabled || false;
-                    enableOrbitonesCheckbox.addEventListener("change", (e) => {
-                        const isEnabled = e.target.checked;
-                        selectedArray.forEach((elData) => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.audioParams && n.type === "sound") {
-                                n.audioParams.orbitonesEnabled = isEnabled;
-                                stopNodeAudio(n);
-                                n.audioNodes = createAudioNodesForNode(n);
-                                if (n.audioNodes) updateNodeAudioParams(n);
-                            }
-                        });
-                        identifyAndRouteAllGroups();
-                        saveState();
-                        populateEditPanel();
-                    });
-                    orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
-                    currentSection.appendChild(orbitoneMainSection);
-
-                    if (node.audioParams.orbitonesEnabled) {
-                        const orbitoneSettingsSection = document.createElement("div");
-                        orbitoneSettingsSection.classList.add("panel-section");
-                        orbitoneSettingsSection.style.paddingLeft = "15px";
-                        orbitoneSettingsSection.style.borderLeft = "2px solid var(--button-bg)";
-                        orbitoneSettingsSection.style.marginTop = "5px";
-
-                        const visualControllerPlaceholder = document.createElement("div");
-                        visualControllerPlaceholder.id = `orbitone-visual-controller-${node.id}`;
-                        visualControllerPlaceholder.innerHTML = "<em>Visual Orbitone Controller (Future)</em>";
-                        visualControllerPlaceholder.style.height = "auto";
-                        visualControllerPlaceholder.style.padding = "10px";
-                        visualControllerPlaceholder.style.border = "1px dashed var(--button-hover)";
-                        visualControllerPlaceholder.style.display = "flex";
-                        visualControllerPlaceholder.style.flexDirection = "column";
-                        visualControllerPlaceholder.style.alignItems = "center";
-                        visualControllerPlaceholder.style.justifyContent = "center";
-                        visualControllerPlaceholder.style.marginBottom = "15px";
-                        visualControllerPlaceholder.style.textAlign = "center";
-                        orbitoneSettingsSection.appendChild(visualControllerPlaceholder);
-
-                        const currentOrbitoneCount = node.audioParams.orbitoneCount || 0;
-                        const orbitoneCountSliderContainer = createSlider(
-                            `edit-node-orbitone-count-${node.id}`,
-                            `Number of extra Orbitones (${currentOrbitoneCount}):`, 0, 5, 1, currentOrbitoneCount,
-                            (e_change_event) => {
-                                const newCount = parseInt(e_change_event.target.value);
-                                selectedArray.forEach((elData) => {
-                                    const n = findNodeById(elData.id);
-                                    if (n && n.audioParams && n.type === "sound") {
-                                        n.audioParams.orbitoneCount = newCount;
-                                        applyOrbitoneVoicingFromPhase(n);
-                                        applyOrbitoneTimingFromPhase(n);
-                                        stopNodeAudio(n);
-                                        n.audioNodes = createAudioNodesForNode(n);
-                                        if (n.audioNodes) updateNodeAudioParams(n);
-                                    }
-                                });
-                                identifyAndRouteAllGroups(); saveState(); populateEditPanel();
-                            },
-                            (e_input) => {
-                                e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`;
-                            },
-                        );
-                        orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
-
-                        if (node.audioParams.orbitoneCount > 0) {
-                            const currentVoicingPhase = node.audioParams.orbitoneVoicingPhase || 0;
-                            const voicingPhaseSlider = createSlider(
-                                `edit-orbitone-voicing-phase-${node.id}`, `Orbitone Voicing Style (${currentVoicingPhase}):`, 0, 100, 1, currentVoicingPhase,
-                                (e_change) => {
-                                    const val = parseInt(e_change.target.value);
-                                    selectedArray.forEach((el) => {
-                                        const n = findNodeById(el.id);
-                                        if (n && n.audioParams && n.type === "sound") {
-                                            n.audioParams.orbitoneVoicingPhase = val;
-                                            applyOrbitoneVoicingFromPhase(n);
-                                            stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); if (n.audioNodes) updateNodeAudioParams(n);
-                                        }
-                                    });
-                                    identifyAndRouteAllGroups(); saveState(); populateEditPanel();
-                                },
-                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; },
-                            );
-                            orbitoneSettingsSection.appendChild(voicingPhaseSlider);
-
-                            const currentTimingPhase = node.audioParams.orbitoneTimingPhase || 0;
-                            const timingPhaseSlider = createSlider(
-                                `edit-orbitone-timing-phase-${node.id}`, `Orbitone Timing Style (${currentTimingPhase}):`, 0, 100, 1, currentTimingPhase,
-                                (e_change) => {
-                                    const val = parseInt(e_change.target.value);
-                                    selectedArray.forEach((el) => {
-                                        const n = findNodeById(el.id);
-                                        if (n && n.audioParams && n.type === "sound") {
-                                            n.audioParams.orbitoneTimingPhase = val;
-                                            applyOrbitoneTimingFromPhase(n); updateNodeAudioParams(n);
-                                        }
-                                    });
-                                    identifyAndRouteAllGroups(); saveState();
-                                },
-                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; },
-                            );
-                            orbitoneSettingsSection.appendChild(timingPhaseSlider);
-
-                            const currentMix = node.audioParams.orbitoneMix !== undefined ? node.audioParams.orbitoneMix : 0.5;
-                            const mixSliderContainer = createSlider(
-                                `edit-node-orbitone-mix-${node.id}`, `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`, 0, 1, 0.05, currentMix,
-                                (e_change_event) => {
-                                    const newMix = parseFloat(e_change_event.target.value);
-                                    selectedArray.forEach((elData) => {
-                                        const n = findNodeById(elData.id);
-                                        if (n && n.audioParams && n.type === "sound") {
-                                            n.audioParams.orbitoneMix = newMix; updateNodeAudioParams(n);
-                                        }
-                                    });
-                                    identifyAndRouteAllGroups(); saveState();
-                                },
-                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`; },
-                            );
-                            orbitoneSettingsSection.appendChild(mixSliderContainer);
-                        }
-                        currentSection.appendChild(orbitoneSettingsSection);
-                    }
-                } else if (isDrumType(node.type)) {
-                    const params = node.audioParams;
-                    const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
-                    const soundDiv = document.createElement("div");
-                    soundDiv.classList.add("edit-drum-sound");
-                    const soundLabel = document.createElement("strong");
-                    soundLabel.textContent = defaults.label;
-                    soundDiv.appendChild(soundLabel);
-
-                    const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
-                    const tuneVal = currentBaseFreq.toFixed(0);
-                    const tuneSliderContainer = createSlider(
-                        `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20, node.type === "drum_hihat" ? 15000 : (node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000), 1, currentBaseFreq,
-                        () => { identifyAndRouteAllGroups(); saveState(); },
-                        (e_input) => {
-                            const newFreq = parseFloat(e_input.target.value);
-                            selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
-                            e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
-                        }
-                    );
-                    soundDiv.appendChild(tuneSliderContainer);
-
-                    if (params?.decay !== undefined || defaults?.decay !== undefined) {
-                        const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
-                        const decayVal = currentDecay.toFixed(2);
-                        const decaySliderContainer = createSlider(
-                            `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newDecay = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
-                                e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
-                            }
-                        );
-                        soundDiv.appendChild(decaySliderContainer);
-                    }
-                    if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
-                        const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
-                        const noiseDecayVal = currentNoiseDecay.toFixed(2);
-                        const noiseDecaySliderContainer = createSlider(
-                            `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
-                            () => { identifyAndRouteAllGroups(); saveState(); },
-                            (e_input) => {
-                                const newNoiseDecay = parseFloat(e_input.target.value);
-                                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
-                                e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
-                            }
-                        );
-                        soundDiv.appendChild(noiseDecaySliderContainer);
-                    }
-
-                    const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
-                    const volVal = currentVolume.toFixed(2);
-                    const volSliderContainer = createSlider(
-                        `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
-                        () => { identifyAndRouteAllGroups(); saveState(); },
-                        (e_input) => {
-                            const newVol = parseFloat(e_input.target.value);
-                            selectedArray.forEach((elData) => {
-                                const n = findNodeById(elData.id);
-                                if (n?.audioParams) { n.audioParams.volume = newVol; updateNodeAudioParams(n); }
-                            });
-                            e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                        }
-                    );
-                    soundDiv.appendChild(volSliderContainer);
-                    currentSection.appendChild(soundDiv);
-                } else if (node.type === "switch" && selectedArray.length === 1) {
-                    const label = document.createElement("label");
-                    label.textContent = "Primary Input Connection:";
-                    currentSection.appendChild(label);
-
-                    const select = document.createElement("select");
-                    select.id = `edit-switch-primary-${node.id}`;
-                    const noneOpt = document.createElement("option");
-                    noneOpt.value = "null";
-                    noneOpt.textContent = "None (Set on next pulse)";
-                    select.appendChild(noneOpt);
-                    node.connections.forEach(neighborId => {
-                        const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                        if (conn) {
-                            const otherNode = findNodeById(neighborId);
-                            const option = document.createElement("option");
-                            option.value = conn.id;
-                            option.textContent = `From Node #${neighborId} (${otherNode?.type || '?'})`;
-                            if (conn.id === node.primaryInputConnectionId) option.selected = true;
-                            select.appendChild(option);
-                        }
-                    });
-                    select.addEventListener("change", (e) => {
-                        node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
-                        identifyAndRouteAllGroups(); saveState();
-                    });
-                    currentSection.appendChild(select);
-                }
-
-                console.log(`[Retrigger Debug] Checking if retrigger section should be created for node ID ${node.id}, type: ${node.type}`);
-                if (node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE) {
-                     console.log(`[Retrigger Debug] Condition met for node type ${node.type}. audioParams present: ${!!node.audioParams}`);
-                    const retriggerSection = document.createElement("div");
-                    retriggerSection.classList.add("panel-section");
-                    retriggerSection.style.borderTop = "1px solid var(--button-hover)";
-                    retriggerSection.style.marginTop = "10px";
-                    retriggerSection.style.paddingTop = "10px";
-
-                    const retriggerTitle = document.createElement("p");
-                    retriggerTitle.innerHTML = "<strong>Retrigger / Step Sequencer:</strong>";
-                    retriggerSection.appendChild(retriggerTitle);
-                    
-                    console.log("[Retrigger Debug] Attempting to create 'Enable Retriggering' checkbox.");
-                    const enableRetriggerLabel = document.createElement("label");
-                    enableRetriggerLabel.htmlFor = `edit-retrigger-enabled-${node.id}`;
-                    enableRetriggerLabel.textContent = "Enable Retriggering: ";
-                    enableRetriggerLabel.style.marginRight = "5px";
-                    retriggerSection.appendChild(enableRetriggerLabel);
-
-                    const enableRetriggerCheckbox = document.createElement("input");
-                    enableRetriggerCheckbox.type = "checkbox";
-                    enableRetriggerCheckbox.id = `edit-retrigger-enabled-${node.id}`;
-                    if (node.audioParams) {
-                        enableRetriggerCheckbox.checked = node.audioParams.retriggerEnabled || false;
-                        console.log(`[Retrigger Debug] Retrigger enabled status for node ${node.id}: ${node.audioParams.retriggerEnabled}`);
-                    } else {
-                        enableRetriggerCheckbox.checked = false;
-                        console.warn(`[Retrigger Debug] node.audioParams missing for node ${node.id} when creating retrigger checkbox!`);
-                    }
-                    enableRetriggerCheckbox.addEventListener("change", (e) => {
-                        const isEnabled = e.target.checked;
-                        selectedArray.forEach(elData => {
-                            const n = findNodeById(elData.id);
-                            if (n && n.audioParams) {
-                                n.audioParams.retriggerEnabled = isEnabled;
-                                if (!isEnabled && n.activeRetriggers) {
-                                    n.activeRetriggers.forEach(clearTimeout);
-                                    n.activeRetriggers = [];
-                                    n.currentRetriggerVisualIndex = -1;
-                                }
-                            }
-                        });
-                        saveState();
-                        populateEditPanel();
-                    });
-                    retriggerSection.appendChild(enableRetriggerCheckbox);
-                    console.log("[Retrigger Debug] 'Enable Retriggering' checkbox created and added to retriggerSection.");
-
-                    if (node.audioParams && node.audioParams.retriggerEnabled) {
-                        console.log(`[Retrigger Debug] Retrigger is enabled for node ${node.id}, creating further controls.`);
-                        const tabsContainer = document.createElement("div");
-                        tabsContainer.classList.add("retrigger-editor-tabs");
-
-                        ["Volume", "Pitch", "Filter"].forEach(paramType => {
-                            const button = document.createElement("button");
-                            button.classList.add("retrigger-tab-button");
-                            button.textContent = paramType;
-                            button.dataset.paramType = paramType.toLowerCase();
-                            if (paramType.toLowerCase() === (retriggerSection.dataset.activeParamType || "volume")) {
-                                button.classList.add("active");
-                            }
-                            button.addEventListener("click", (e_click) => {
-                                const clickedParamType = e_click.target.dataset.paramType;
-                                retriggerSection.dataset.activeParamType = clickedParamType;
-                                const displayArea = retriggerSection.querySelector(".retrigger-editor-display-area");
-                                if (displayArea) {
-                                    displayArea.innerHTML = "";
-                                    displayArea.appendChild(createRetriggerVisualEditor(node, selectedArray, clickedParamType));
-                                }
-                                tabsContainer.querySelectorAll(".retrigger-tab-button").forEach(btn => btn.classList.remove("active"));
-                                e_click.target.classList.add("active");
-                            });
-                            tabsContainer.appendChild(button);
-                        });
-                        retriggerSection.appendChild(tabsContainer);
-
-                        const displayArea = document.createElement("div");
-                        displayArea.classList.add("retrigger-editor-display-area");
-                        displayArea.id = `retrigger-display-area-${node.id}`;
-                        const initialActiveParamType = retriggerSection.dataset.activeParamType || "volume";
-                        displayArea.appendChild(createRetriggerVisualEditor(node, selectedArray, initialActiveParamType));
-                        retriggerSection.appendChild(displayArea);
-
-
-                        const controlsDiv = document.createElement("div");
-                        controlsDiv.classList.add("retrigger-editor-controls");
-
-                        const stepCountLabel = document.createElement("label");
-                        stepCountLabel.textContent = "Steps: ";
-                        const stepCountInput = document.createElement("input");
-                        stepCountInput.type = "number";
-                        stepCountInput.min = "1";
-                        stepCountInput.max = "64";
-                        stepCountInput.value = node.audioParams.retriggerVolumeSteps?.length || 3;
-                        stepCountInput.style.width = "50px";
-                        stepCountInput.addEventListener("change", (e_steps) => {
-                            const newCount = parseInt(e_steps.target.value);
-                            if (isNaN(newCount) || newCount < 1 || newCount > 64) {
-                                e_steps.target.value = node.audioParams.retriggerVolumeSteps?.length || 3;
-                                return;
-                            }
-                            selectedArray.forEach(elData => {
-                                const n = findNodeById(elData.id);
-                                if (n && n.audioParams) {
-                                    const types = ["Volume", "Pitch", "Filter", "Mute"];
-                                    types.forEach(t => {
-                                        const key = `retrigger${t}Steps`;
-                                        const currentArray = n.audioParams[key] || [];
-                                        const defaultValue = t === "Mute" ? false : (t === "Volume" ? 0.5 : 0);
-                                        const newArray = Array(newCount).fill(null).map((_, i) => 
-                                            i < currentArray.length ? currentArray[i] : defaultValue
-                                        );
-                                        n.audioParams[key] = newArray;
-                                    });
-                                }
-                            });
-                            saveState();
-                            populateEditPanel();
-                        });
-                        controlsDiv.appendChild(stepCountLabel);
-                        controlsDiv.appendChild(stepCountInput);
-
-                        const intervalLabel = document.createElement("label");
-                        intervalLabel.textContent = "Interval(ms): ";
-                        intervalLabel.style.marginLeft = "10px";
-                        const intervalInput = document.createElement("input");
-                        intervalInput.type = "number";
-                        intervalInput.min = "10";
-                        intervalInput.max = "1000";
-                        intervalInput.step = "10";
-                        intervalInput.value = node.audioParams.retriggerIntervalMs || 100;
-                        intervalInput.style.width = "60px";
-                        intervalInput.addEventListener("change", (e_interval) => {
-                            const newInterval = parseInt(e_interval.target.value);
-                            if (isNaN(newInterval) || newInterval < 10 || newInterval > 1000) {
-                                e_interval.target.value = node.audioParams.retriggerIntervalMs || 100;
-                                return;
-                            }
-                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) n.audioParams.retriggerIntervalMs = newInterval; });
-                            saveState();
-                        });
-                        controlsDiv.appendChild(intervalLabel);
-                        controlsDiv.appendChild(intervalInput);
-
-                        const rateModeLabel = document.createElement("label");
-                        rateModeLabel.textContent = "Rate Mode: ";
-                        rateModeLabel.style.marginLeft = "10px";
-                        const rateModeSelect = document.createElement("select");
-                        const modes = ["constant", "accelerate", "decelerate", "random"];
-                        modes.forEach(mode => {
-                            const opt = document.createElement("option");
-                            opt.value = mode;
-                            opt.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-                            if (mode === (node.audioParams.retriggerRateMode || "constant")) opt.selected = true;
-                            rateModeSelect.appendChild(opt);
-                        });
-                        rateModeSelect.addEventListener("change", (e_rate) => {
-                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) n.audioParams.retriggerRateMode = e_rate.target.value; });
-                            saveState();
-                        });
-                        controlsDiv.appendChild(rateModeLabel);
-                        controlsDiv.appendChild(rateModeSelect);
-
-                        retriggerSection.appendChild(controlsDiv);
-                    } else if (node.audioParams) {
-                         console.log(`[Retrigger Debug] Retrigger is NOT enabled for node ${node.id}, further controls skipped.`);
-                    }
-
-                    if (retriggerSection.hasChildNodes()) {
-                        console.log("[Retrigger Debug] Appending retriggerSection to currentSection.");
-                        if (currentSection && typeof currentSection.appendChild === 'function') {
-                            currentSection.appendChild(retriggerSection);
-                        } else {
-                             console.warn("[Retrigger Debug] currentSection is not defined or not a DOM element, cannot append retriggerSection.");
-                             fragment.appendChild(retriggerSection);
-                        }
-                    } else {
-                         console.warn("[Retrigger Debug] retriggerSection has no children, not appending.");
-                    }
-                } else {
-                     console.log(`[Retrigger Debug] Condition NOT met for node type ${node.type} OR audioParams missing for retrigger section.`);
-                }
-
-
-                if (currentSection && currentSection.hasChildNodes() && !fragment.contains(currentSection)) {
-                    fragment.appendChild(currentSection);
-                }
-            }
-
-        } else if (firstElementData.type === "connection") {
-            const connection = findConnectionById(firstElementData.id);
-            if (connection) {
-                const section = document.createElement("div");
-                section.classList.add("panel-section");
-
-                if (connection.type === "string_violin") {
-                    const params = connection.audioParams;
-                    const defaults = STRING_VIOLIN_DEFAULTS;
-                    const currentVol = params?.volume ?? defaults.volume;
-                    const volVal = currentVol.toFixed(2);
-                    const volSliderContainer = createSlider(
-                        `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
-                        saveState,
-                        (e_input) => {
-                            const newVol = parseFloat(e_input.target.value);
-                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
-                            e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                        }
-                    );
-                    section.appendChild(volSliderContainer);
-                    const currentAttack = params?.attack ?? defaults.attack;
-                    const attackVal = currentAttack.toFixed(2);
-                    const attackSliderContainer = createSlider(
-                        `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
-                        saveState,
-                        (e_input) => {
-                            const newVal = parseFloat(e_input.target.value);
-                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
-                            e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
-                        }
-                    );
-                    section.appendChild(attackSliderContainer);
-                    const currentRelease = params?.release ?? defaults.release;
-                    const releaseVal = currentRelease.toFixed(2);
-                    const releaseSliderContainer = createSlider(
-                        `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
-                        saveState,
-                        (e_input) => {
-                            const newVal = parseFloat(e_input.target.value);
-                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
-                            e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
-                        }
-                    );
-                    section.appendChild(releaseSliderContainer);
-                } else if (connection.type === "wavetrail") {
-                    console.log(`[Wavetrail Debug] populateEditPanel: Processing Wavetrail connection ID ${connection.id}`);
-                    section.classList.add("panel-section");
-
-                    const fileLabel = document.createElement("label");
-                    fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
-                    fileLabel.textContent = "Audio File:";
-                    section.appendChild(fileLabel);
-
-                    const fileInput = document.createElement("input");
-                    fileInput.type = "file";
-                    fileInput.id = `edit-wavetrail-file-${connection.id}`;
-                    fileInput.accept = ".wav,.mp3,audio/*";
-                    fileInput.style.marginBottom = "5px";
-                    fileInput.addEventListener("change", (e) => handleWaveTrailFileInputChange(e, connection));
-                    section.appendChild(fileInput);
-
-                    const fileNameDisplay = document.createElement("small");
-                    fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
-                    if (!connection.audioParams) {
-                        console.error(`[Wavetrail Debug] populateEditPanel: connection.audioParams is missing for ID ${connection.id}`);
-                        connection.audioParams = {};
-                    }
-                    fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || "None selected"}`;
-                    fileNameDisplay.style.display = "block";
-                    section.appendChild(fileNameDisplay);
-                    console.log(`[Wavetrail Debug] populateEditPanel: Checking buffer for Wavetrail ${connection.id}. Buffer exists: ${!!connection.audioParams?.buffer}`);
-
-                    if (connection.audioParams?.buffer) {
-                        console.log(`[Wavetrail Debug] populateEditPanel: Buffer found for Wavetrail ${connection.id}. Creating sliders.`);
-                        const bufferDuration = connection.audioParams.buffer.duration;
-                        const currentStartOffset = connection.audioParams.startTimeOffset || 0;
-                        const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
-                        const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
-                        const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
-                        const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
-
-                        const offsetLabel = document.createElement("label");
-                        offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
-                        offsetLabel.style.marginTop = "10px";
-                        offsetLabel.textContent = `Start Offset (${currentStartOffset.toFixed(2)}s):`;
-                        section.appendChild(offsetLabel);
-                        const offsetSlider = document.createElement("input");
-                        offsetSlider.type = "range";
-                        offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
-                        offsetSlider.min = "0";
-                        offsetSlider.max = bufferDuration.toFixed(3);
-                        offsetSlider.step = "0.01";
-                        offsetSlider.value = currentStartOffset;
-                        offsetSlider.title = "Scrub Start Time";
-                        const offsetValueDisplay = document.createElement("span");
-                        offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
-                        offsetValueDisplay.textContent = `${currentStartOffset.toFixed(2)}s`;
-                        offsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
-                        section.appendChild(offsetSlider);
-                        section.appendChild(offsetValueDisplay);
-
-                        const endOffsetLabel = document.createElement("label");
-                        endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
-                        endOffsetLabel.style.marginTop = "10px";
-                        endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
-                        section.appendChild(endOffsetLabel);
-                        const endOffsetSlider = document.createElement("input");
-                        endOffsetSlider.type = "range";
-                        endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
-                        endOffsetSlider.min = currentStartOffset.toFixed(3);
-                        endOffsetSlider.max = bufferDuration.toFixed(3);
-                        endOffsetSlider.step = "0.01";
-                        endOffsetSlider.value = currentEndOffset;
-                        endOffsetSlider.title = "Scrub End Time";
-                        const endOffsetValueDisplay = document.createElement("span");
-                        endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
-                        endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
-                        endOffsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
-                        section.appendChild(endOffsetSlider);
-                        section.appendChild(endOffsetValueDisplay);
-
-                        offsetSlider.addEventListener("input", (e_input) => {
-                            const newStart = parseFloat(e_input.target.value);
-                            const localConn = findConnectionById(connection.id);
-                            if (localConn && localConn.audioParams) {
-                                localConn.audioParams.startTimeOffset = newStart;
-                                const endSlider = document.getElementById(`edit-wavetrail-end-${localConn.id}`);
-                                if (endSlider) endSlider.min = newStart.toFixed(3);
-                                if (localConn.audioParams.endTimeOffset !== null && localConn.audioParams.endTimeOffset < newStart) {
-                                    localConn.audioParams.endTimeOffset = newStart + 0.01;
-                                    if (endSlider) endSlider.value = localConn.audioParams.endTimeOffset;
-                                    const endValDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn.id}`);
-                                    if (endValDisplay) endValDisplay.textContent = `${localConn.audioParams.endTimeOffset.toFixed(2)}s`;
-                                }
-                            }
-                            const valDisplay = document.getElementById(`edit-wavetrail-start-value-${localConn ? localConn.id : connection.id}`);
-                            if (valDisplay) valDisplay.textContent = `${newStart.toFixed(2)}s`;
-                            if (localConn && localConn.audioParams?.buffer) {
-                                localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
-                            }
-                        });
-                        offsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
-
-                        endOffsetSlider.addEventListener("input", (e_input) => {
-                            const newEnd = parseFloat(e_input.target.value);
-                            const localConn = findConnectionById(connection.id);
-                            if (localConn && localConn.audioParams) {
-                                localConn.audioParams.endTimeOffset = newEnd;
-                            }
-                            const valDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn ? localConn.id : connection.id}`);
-                            if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
-                             if (localConn && localConn.audioParams?.buffer) {
-                                localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
-                            }
-                        });
-                        endOffsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
-
-                        const grainDurSlider = createSlider(`edit-wavetrail-graindur-${connection.id}`, `Grain Duration (${currentGrainDuration.toFixed(3)}s):`, 0.005, 0.5, 0.001, currentGrainDuration, saveState, (e) => {
-                            const localConn = findConnectionById(connection.id);
-                            if (localConn && localConn.audioParams) localConn.audioParams.grainDuration = parseFloat(e.target.value);
-                            e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
-                        });
-                        section.appendChild(grainDurSlider);
-                        const grainOvlSlider = createSlider(`edit-wavetrail-grainovl-${connection.id}`, `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`, 0.001, 0.49, 0.001, currentGrainOverlap, saveState, (e) => {
-                            const localConn = findConnectionById(connection.id);
-                            if (localConn && localConn.audioParams) localConn.audioParams.grainOverlap = parseFloat(e.target.value);
-                            e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
-                        });
-                        section.appendChild(grainOvlSlider);
-                        const rateSlider = createSlider(`edit-wavetrail-rate-${connection.id}`, `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`, 0.1, 4.0, 0.05, currentPlaybackRate, saveState, (e) => {
-                            const localConn = findConnectionById(connection.id);
-                            if (localConn && localConn.audioParams) localConn.audioParams.playbackRate = parseFloat(e.target.value);
-                            e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
-                        });
-                        section.appendChild(rateSlider);
-                    } else {
-                        console.log(`[Wavetrail Debug] populateEditPanel: Buffer NOT found for Wavetrail ${connection.id}. Not creating sliders.`);
-                        const noBufferMsg = document.createElement("small");
-                        noBufferMsg.textContent = " (Upload an audio file to enable more controls)";
-                        noBufferMsg.style.display = "block";
-                        noBufferMsg.style.opacity = "0.7";
-                        section.appendChild(noBufferMsg);
-                    }
+                    console.log(`[Wavetrail Debug] populateEditPanel: Buffer NOT found for Wavetrail ${connection.id}. Not creating sliders.`);
+                    const noBufferMsg = document.createElement("small");
+                    noBufferMsg.textContent = " (Upload an audio file to enable more controls)";
+                    noBufferMsg.style.display = "block";
+                    noBufferMsg.style.opacity = "0.7";
+                    section.appendChild(noBufferMsg);
                 }
                 if (section.hasChildNodes()) fragment.appendChild(section);
-            }
-        }
-    } else {
-        const multiInfo = document.createElement("small");
-        multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
-        fragment.appendChild(multiInfo);
-    }
+              }
+          }
+      }
+  } else {
+      const multiInfo = document.createElement("small");
+      multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
+      fragment.appendChild(multiInfo);
+  }
 
-    editPanelContent.appendChild(fragment);
+  editPanelContent.appendChild(fragment);
 
-    if (hamburgerMenuPanel && currentTool === "edit" && selectedElements.size > 0) {
-        if (hamburgerMenuPanel.classList.contains("hidden")) {
-            hamburgerMenuPanel.classList.remove("hidden");
-            if (hamburgerBtn) hamburgerBtn.classList.add("active");
-        }
-    } else if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden")) {
-        hamburgerMenuPanel.classList.add("hidden");
-        if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-    }
+  if (hamburgerMenuPanel && currentTool === "edit" && selectedElements.size > 0) {
+      if (hamburgerMenuPanel.classList.contains("hidden")) {
+           hamburgerMenuPanel.classList.remove("hidden");
+           if (hamburgerBtn) hamburgerBtn.classList.add("active");
+      }
+  } else if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden")) {
+      hamburgerMenuPanel.classList.add("hidden");
+      if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+  }
 
-    if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
-        sideToolbar.classList.add("hidden");
-        const addBrushButtons = toolbar.querySelectorAll(
-            "#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button"
-        );
-        addBrushButtons.forEach(btn => btn.classList.remove("active"));
-        if (brushBtn) brushBtn.classList.remove("active");
-    }
+  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
+      sideToolbar.classList.add("hidden");
+      const addBrushButtons = toolbar.querySelectorAll(
+          "#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button"
+      );
+      addBrushButtons.forEach(btn => btn.classList.remove("active"));
+      if (brushBtn) brushBtn.classList.remove("active");
+  }
 }
 
 function populateSideToolbar(contentType, title) {
@@ -17515,7 +17273,7 @@ function changeScale(scaleKey, skipNodeUpdate = false) {
   }
 
   if (!skipNodeUpdate) {
-      const newThemeMeteorColors = getThemeMeteorColors(); 
+      const newThemeMeteorColors = getThemeMeteorColors(); // Get colors for the new theme
 
       nodes.forEach((node) => {
           if (node.type === "sound" || node.type === "nebula") {
@@ -18265,12 +18023,12 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       newNode.audioParams.syncSubdivisionIndex = newNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
       newNode.audioParams.triggerInterval = newNode.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
       
-      
+      // --- ADD THIS FOR NODE COLOR ---
       const themeMeteorColorsForNode = getThemeMeteorColors();
       if (themeMeteorColorsForNode.length > 0) {
           newNode.color = themeMeteorColorsForNode[Math.floor(Math.random() * themeMeteorColorsForNode.length)];
       } else {
-          newNode.color = 'rgba(255, 150, 50, 0.7)'; 
+          newNode.color = 'rgba(255, 150, 50, 0.7)'; // Default meteor pulsar color
       }}
 
   applyOrbitoneVoicingFromPhase(newNode);
@@ -18388,7 +18146,7 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
 }
 
 function getThemeMeteorColors() {
-  const styles = getComputedStyle(document.body); 
+  const styles = getComputedStyle(document.body); // Get styles from the body (where theme class is applied)
   const colors = [];
   const color1 = styles.getPropertyValue('--meteorshower-style-color-1').trim();
   const color2 = styles.getPropertyValue('--meteorshower-style-color-2').trim();
@@ -18398,12 +18156,12 @@ function getThemeMeteorColors() {
   if (color2) colors.push(color2);
   if (color3) colors.push(color3);
 
-  
+  // Fallback if CSS variables are not defined for some reason
   if (colors.length === 0) {
       return [
-          'rgba(255,100,100,0.7)', 
-          'rgba(100,255,100,0.7)', 
-          'rgba(100,100,255,0.7)'  
+          'rgba(255,100,100,0.7)', // Default Reddish
+          'rgba(100,255,100,0.7)', // Default Greenish
+          'rgba(100,100,255,0.7)'  // Default Bluish
       ];
   }
   return colors;
@@ -18438,9 +18196,9 @@ function startMeteorShower(originConfig) {
       isCollisionProduct = false;
       canSpawnFromCollisionUntil = 0;
 
-      
+      // --- KERN VAN DE KLEUR CORRECTIE HIER ---
       if (originConfig.previousShowerColor && typeof originConfig.previousShowerColor === 'string' && originConfig.previousShowerColor.startsWith('rgba')) {
-          
+          // Dit is voor volgende regens die door node-hits worden veroorzaakt, kleur wordt overgeërfd/gemuteerd.
           try {
               const match = originConfig.previousShowerColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
               if (match) {
@@ -18448,14 +18206,14 @@ function startMeteorShower(originConfig) {
                   const newR = Math.min(255, Math.max(0, rVal + generation * 10 + 10));
                   const newG = Math.min(255, Math.max(0, gVal - generation * 15 - 10));
                   const newB = Math.min(255, Math.max(0, bVal + generation * 5 + 5));
-                  
+                  // Verminder alpha iets bij elke generatie voor propagatie, maar niet te veel
                   color = `rgba(${newR},${newG},${newB},${Math.max(0.1, parseFloat(aVal) * 0.85).toFixed(2)})`;
-              } else { color = 'rgba(225, 120, 150, 0.6)'; } 
+              } else { color = 'rgba(225, 120, 150, 0.6)'; } // Fallback
           } catch (e) { color = 'rgba(225, 120, 150, 0.6)'; }
       } else if (sourceNode.color && typeof sourceNode.color === 'string') {
-          
-          
-          const showerAlpha = 0.7; 
+          // Een node (INCLUSIEF pulsar_meteorshower) start een *nieuwe* regen.
+          // Gebruik de kleur van de node zelf, zorg voor juiste alpha voor de regen.
+          const showerAlpha = 0.7; // Standaard alpha voor een nieuwe regen
           if (sourceNode.color.startsWith('rgba')) {
               try {
                   const match = sourceNode.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
@@ -18466,22 +18224,22 @@ function startMeteorShower(originConfig) {
               } catch (e) { color = `rgba(200, 200, 200, ${showerAlpha})`; }
           } else if (sourceNode.color.startsWith('#')) {
               color = hexToRgba(sourceNode.color, showerAlpha) || `rgba(200, 200, 200, ${showerAlpha})`;
-          } else { 
-              
-              
+          } else { // Fallback voor onbekende node.color formaten
+              // Voor pulsar_meteorshower zou addNode en changeScale al een valide kleur moeten hebben ingesteld.
+              // Dit is een extra vangnet.
               const pulsarDef = pulsarTypes.find(p => p.type === sourceNode.type);
               if (pulsarDef && pulsarDef.type === 'pulsar_meteorshower') {
-                   color = `rgba(255, 150, 50, ${showerAlpha})`; 
+                   color = `rgba(255, 150, 50, ${showerAlpha})`; // Specifieke fallback voor meteorshower
               } else {
                    color = `rgba(200, 220, 255, ${showerAlpha})`;
               }
           }
       } else {
-          
+          // Ultieme fallback als sourceNode geen .color heeft (zou niet mogen voor pulsar_meteorshower)
           const defaultMeteorColors = [`rgba(255,100,100,0.7)`, `rgba(100,255,100,0.7)`, `rgba(100,100,255,0.7)`];
           color = defaultMeteorColors[Math.floor(Math.random() * defaultMeteorColors.length)];
       }
-      
+      // --- EINDE KLEUR CORRECTIE ---
 
   } else if (originConfig.type === 'collision') {
       if (originConfig.generation >= MAX_METEOR_SHOWER_GENERATIONS) {
@@ -18490,7 +18248,7 @@ function startMeteorShower(originConfig) {
       originX = originConfig.x;
       originY = originConfig.y;
       generation = originConfig.generation || 0;
-      
+      // De gemengde kleur wordt hier direct doorgegeven vanuit updateAndDrawMeteorShowers
       color = originConfig.color || 'rgba(180, 220, 255, 0.7)'; 
       maxRadius = originConfig.maxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS * 0.6;
       growthRate = originConfig.growthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE * 1.2;
@@ -18517,14 +18275,14 @@ function startMeteorShower(originConfig) {
       currentRadius: 0,
       maxRadius: maxRadius,
       growthRate: growthRate,
-      color: color, 
+      color: color, // De nu correct ingestelde kleur
       startTime: currentTime,
       sourceNodeId: sourceNodeIdForTracking,
       triggeredNodes: new Set(),
       generation: generation,
       pulseData: {
           intensity: pulseIntensity,
-          color: color 
+          color: color // Zorg dat pulseData ook de juiste kleur heeft
       },
       isCollisionProduct: isCollisionProduct,
       canSpawnFromCollisionUntil: canSpawnFromCollisionUntil
@@ -18535,7 +18293,7 @@ function updateAndDrawMeteorShowers(deltaTime, now) {
   const currentShowersToProcess = [...activeMeteorShowers];
   const survivors = [];
   const collisionSpawnConfigs = [];
-  
+  // const interactedShowerPairsThisFrame = new Set(); // Vervangen door recentlyInteractedShowerPairs
 
   if (Math.random() < 0.01) {
       for (const [key, expiry] of recentlyInteractedShowerPairs) {
@@ -18615,14 +18373,14 @@ function updateAndDrawMeteorShowers(deltaTime, now) {
                       shower1.triggeredNodes.add(node.id);
                       const pulseId = `meteor_${shower1.id}_${node.id}`;
 
-                      
+                      // ***** DYNAMISCHE INTENSITEIT BEREKENING *****
                       const initialIntensity = shower1.pulseData?.intensity || DEFAULT_PULSE_INTENSITY;
                       const expansionProgressForSound = Math.min(1.0, shower1.currentRadius / shower1.maxRadius);
-                      
+                      // Hoe stiller het wordt aan de rand: 0.1 = 10% volume, 0.3 = 30% volume
                       const minIntensityFactorAtEdge = 0.25; 
                       const dynamicIntensity = initialIntensity * (1.0 - expansionProgressForSound * (1.0 - minIntensityFactorAtEdge));
                       const finalSoundIntensity = Math.max(initialIntensity * minIntensityFactorAtEdge, dynamicIntensity);
-                      
+                      // ***** EINDE DYNAMISCHE INTENSITEIT *****
 
                       propagateTrigger(node, 0, pulseId, shower1.sourceNodeId, Infinity, {
                           type: "trigger",
@@ -18712,8 +18470,8 @@ function updateAndDrawMeteorShowers(deltaTime, now) {
 }
 
 function createCollisionImpactVisual(x, y, baseColorString) {
-    const numImpactParticles = 15 + Math.floor(Math.random() * 10); 
-    let particleColorForFlash = 'rgba(250, 250, 250, 0.9)'; 
+    const numImpactParticles = 15 + Math.floor(Math.random() * 10); // 15-24 deeltjes
+    let particleColorForFlash = 'rgba(250, 250, 250, 0.9)'; // Een helder wit als fallback
 
     if (baseColorString && typeof baseColorString === 'string') {
         if (baseColorString.startsWith('rgba')) {
@@ -18721,20 +18479,20 @@ function createCollisionImpactVisual(x, y, baseColorString) {
                 const match = baseColorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
                 if (match) {
                     const [r, g, b] = match.slice(1).map(Number);
-                    
+                    // Gebruik de RGB van de baseColorString (mergedColor), maar met een vaste hoge alpha voor de flits
                     particleColorForFlash = `rgba(${r},${g},${b},0.9)`; 
                 }
-                
+                // Als de regex faalt, wordt de fallback hierboven gebruikt.
             } catch (e) {
-                
+                // Fallback naar helder wit als er een parseerfout is.
                 particleColorForFlash = 'rgba(250, 250, 250, 0.9)';
             }
         } else if (baseColorString.startsWith('#')) {
-            
+            // Als mergedColor (onwaarschijnlijk) een hex is, converteer naar RGBA met hoge alpha
             particleColorForFlash = hexToRgba(baseColorString, 0.9) || 'rgba(250, 250, 250, 0.9)';
         } else {
-            
-            
+            // Als het een benoemde kleur is of een ander formaat, probeer het direct te gebruiken
+            // of gebruik de fallback. Voor nu, fallback voor onbekende formaten.
             particleColorForFlash = 'rgba(250, 250, 250, 0.9)';
         }
     }
@@ -18754,7 +18512,7 @@ function createCollisionImpactVisual(x, y, baseColorString) {
                 life: life,
                 maxLife: life,
                 radius: 1.8 + Math.random() * 2.2,
-                color: particleColorForFlash, 
+                color: particleColorForFlash, // Gebruik de aangepaste kleur
             });
         }
     }
@@ -19459,7 +19217,7 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
             const fileNameDisplay = document.getElementById(`edit-wavetrail-filename-${connection.id}`);
             if (fileNameDisplay) fileNameDisplay.textContent = `Error: Invalid data for ${connection.audioParams.fileName || "file"}`;
         }
-        populateEditPanel(); 
+        populateEditPanel(); // Ensure UI reflects potential failure
         return;
     }
 
@@ -19469,9 +19227,9 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
     try {
         console.log(`[Wavetrail Debug] loadAndDecodeAudio: Attempting to decode audio data for ${connection.id}...`);
         let decodedBuffer;
-        if (audioContext.decodeAudioData.length !== 1) { 
+        if (audioContext.decodeAudioData.length !== 1) { // Modern promise-based
             decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        } else { 
+        } else { // Older callback-based
             decodedBuffer = await new Promise((resolve, reject) => {
                 audioContext.decodeAudioData(arrayBuffer, resolve, reject);
             });
@@ -19492,7 +19250,7 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
             console.log(`[Wavetrail Debug] loadAndDecodeAudio: Waveform path generated for ${connection.id}, points: ${connection.audioParams.waveformPath.length}`);
         } else {
             console.warn(`[Wavetrail Debug] loadAndDecodeAudio: Failed to generate a valid waveform path for ${connection.id}. Buffer duration: ${decodedBuffer?.duration}`);
-            
+            // Keep buffer, but path might be minimal or null. UI might show dashed line.
         }
 
         if (fileNameDisplay) fileNameDisplay.textContent = `Current: ${connection.audioParams.fileName || "Unnamed"}`;
@@ -19502,7 +19260,7 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
         }
 
         populateEditPanel();
-        saveState(); 
+        saveState(); // This is for saving the fileName and other params, not the buffer itself to JSON.
 
     } catch (error) {
         console.error(`[Wavetrail Debug] Error in loadAndDecodeAudio for connection ${connection.id} (${connection.audioParams.fileName || 'unknown file'}):`, error);
@@ -19794,11 +19552,11 @@ function hexToRgba(hex, alpha = 1) {
 function hexToRgbForGradient(hex) {
   if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return null;
   let r = 0, g = 0, b = 0;
-  if (hex.length === 4) { 
+  if (hex.length === 4) { // #RGB
       r = parseInt(hex[1] + hex[1], 16);
       g = parseInt(hex[2] + hex[2], 16);
       b = parseInt(hex[3] + hex[3], 16);
-  } else if (hex.length === 7) { 
+  } else if (hex.length === 7) { // #RRGGBB
       r = parseInt(hex.substring(1, 3), 16);
       g = parseInt(hex.substring(3, 5), 16);
       b = parseInt(hex.substring(5, 7), 16);
