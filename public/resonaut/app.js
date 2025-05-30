@@ -60,6 +60,14 @@ const addSoundStarBtn = document.getElementById("addSoundStarBtn");
 const addSamplerBtn = document.getElementById("addSamplerBtn");
 const addNebulaBtn = document.getElementById("addNebulaBtn");
 const addPulsarBtn = document.getElementById("addPulsarBtn");
+const addMeteorShowerBtn = document.getElementById("addMeteorShowerBtn");
+if (addMeteorShowerBtn) {
+    addMeteorShowerBtn.addEventListener("click", (e) => {
+        setupAddTool(e.currentTarget, "pulsar_meteorshower", false);
+    });
+} else {
+    console.warn("#addMeteorShowerBtn not found in DOM!");
+}
 const addAnalogSynthBtn = document.getElementById("addAnalogSynthBtn");
 const addFmSynthBtn = document.getElementById("addFmSynthBtn");
 const addDrumElementBtn = document.getElementById("addDrumElementBtn");
@@ -138,6 +146,10 @@ const TIMELINE_GRID_DEFAULT_HEIGHT = 400;
 const TIMELINE_GRID_DEFAULT_SPEED = 4.0;
 const TIMELINE_GRID_DEFAULT_COLOR = "rgba(120, 220, 120, 0.7)";
 const TIMELINE_GRID_DEFAULT_PULSE_INTENSITY = 0.9;
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED = false;
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL = 0.005; 
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION = "clockwise"; 
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8; 
 const addTimelineGridBtn = document.getElementById("addTimelineGridBtn");
 if (addTimelineGridBtn) {
   addTimelineGridBtn.addEventListener("click", (e) => {
@@ -189,6 +201,7 @@ const reverbDampingSlider = document.getElementById("reverbDampingSlider");
 const reverbDampingValue = document.getElementById("reverbDampingValue");
 const reverbLowCutSlider = document.getElementById("reverbLowCutSlider");
 const reverbLowCutValue = document.getElementById("reverbLowCutValue");
+
 
 let reverbPreDelayNode;
 let reverbLowPass;
@@ -415,65 +428,61 @@ let brushStartWithPulse = true;
 let isBrushing = false;
 let lastBrushNode = null;
 
-let userDefinedGroups = [];
-let userGroupIdCounter = 0;
+let userDefinedGroups = []; 
+let userGroupIdCounter = 0; 
 
 function makeUserDefinedGroup() {
-  if (!isAudioReady || !audioContext) {
-    alert("Audio context not ready.");
-    return;
-  }
+    if (!isAudioReady || !audioContext) {
+        alert("Audio context not ready.");
+        return;
+    }
 
-  const selectedNodeIds = Array.from(selectedElements)
-    .filter((el) => el.type === "node")
-    .map((el) => el.id);
+    const selectedNodeIds = Array.from(selectedElements)
+        .filter(el => el.type === 'node')
+        .map(el => el.id);
 
-  if (selectedNodeIds.length === 0) {
-    alert("Select some nodes to group first.");
-    return;
-  }
+    if (selectedNodeIds.length === 0) {
+        alert("Select some nodes to group first.");
+        return;
+    }
 
-  userDefinedGroups.forEach((group) => {
-    selectedNodeIds.forEach((nodeId) => {
-      group.nodeIds.delete(nodeId);
+    userDefinedGroups.forEach(group => {
+        selectedNodeIds.forEach(nodeId => {
+            group.nodeIds.delete(nodeId);
+        });
     });
-  });
-  userDefinedGroups = userDefinedGroups.filter(
-    (group) => group.nodeIds.size > 0,
-  );
+    userDefinedGroups = userDefinedGroups.filter(group => group.nodeIds.size > 0);
 
-  const newGroupId = `userGroup_${userGroupIdCounter++}`;
-  const newMainGroupGainNode = audioContext.createGain();
-  newMainGroupGainNode.gain.value = 1.0;
+    const newGroupId = `userGroup_${userGroupIdCounter++}`;
+    const newMainGroupGainNode = audioContext.createGain();
+    newMainGroupGainNode.gain.value = 1.0; 
 
-  const groupDelaySendGain = audioContext.createGain();
-  groupDelaySendGain.gain.value = DEFAULT_DELAY_SEND;
+    
+    const groupDelaySendGain = audioContext.createGain();
+    groupDelaySendGain.gain.value = DEFAULT_DELAY_SEND; 
 
-  const groupReverbSendGain = audioContext.createGain();
-  groupReverbSendGain.gain.value = DEFAULT_REVERB_SEND;
+    const groupReverbSendGain = audioContext.createGain();
+    groupReverbSendGain.gain.value = DEFAULT_REVERB_SEND; 
+    
+    const newNodeIdSet = new Set(selectedNodeIds);
+    userDefinedGroups.push({
+        id: newGroupId,
+        nodeIds: newNodeIdSet,
+        gainNode: newMainGroupGainNode, 
+        delaySendGainNode: groupDelaySendGain,
+        reverbSendGainNode: groupReverbSendGain,
+        
+        volume: 1.0, 
+        delaySendLevel: DEFAULT_DELAY_SEND,
+        reverbSendLevel: DEFAULT_REVERB_SEND,
+        userDefined: true
+    });
 
-  const newNodeIdSet = new Set(selectedNodeIds);
-  userDefinedGroups.push({
-    id: newGroupId,
-    nodeIds: newNodeIdSet,
-    gainNode: newMainGroupGainNode,
-    delaySendGainNode: groupDelaySendGain,
-    reverbSendGainNode: groupReverbSendGain,
+    console.log(`Created user-defined group ${newGroupId} with nodes:`, selectedNodeIds);
 
-    volume: 1.0,
-    delaySendLevel: DEFAULT_DELAY_SEND,
-    reverbSendLevel: DEFAULT_REVERB_SEND,
-    userDefined: true,
-  });
-
-  console.log(
-    `Created user-defined group ${newGroupId} with nodes:`,
-    selectedNodeIds,
-  );
-
-  identifyAndRouteAllGroups();
-  updateMixerGUI();
-  saveState();
+    identifyAndRouteAllGroups();
+    updateMixerGUI();
+    saveState();
 }
 
 const HUE_STEP = 30;
@@ -670,6 +679,14 @@ let lastBeatTime = 0;
 let midiAccess = null;
 let activeMidiInput = null;
 let activeMidiOutput = null;
+let activeMeteorShowers = [];
+let meteorShowerIdCounter = 0;
+const METEOR_SHOWER_DEFAULT_MAX_RADIUS = 250;
+const METEOR_SHOWER_DEFAULT_GROWTH_RATE = 100; 
+const MAX_METEOR_SHOWER_GENERATIONS = 2; 
+let recentlyInteractedShowerPairs = new Map();
+const PAIR_INTERACTION_COOLDOWN_SECONDS = 5;
+const COLLISION_SPAWN_COOLDOWN_SECONDS = 5;
 
 const pulsarTypes = [
   {
@@ -701,6 +718,11 @@ const pulsarTypes = [
     type: "pulsar_rocket",
     label: "Rocket",
     icon: "🚀",
+  },
+  {
+    type: "pulsar_meteorshower", 
+    label: "Meteor Shower",     
+    icon: "☄️",                 
   },
 ];
 
@@ -1535,314 +1557,277 @@ async function loadSample(url, sampleName) {
 }
 
 const impulseResponses = [
-  { name: "Default Reverb", url: "reverb.wav" },
-  { name: "Factory Hall", url: "Factory-Hall.wav" },
-  { name: "Church", url: "church.wav" },
+    { name: "Default Reverb", url: "reverb.wav" },
+    { name: "Factory Hall", url: "Factory-Hall.wav" }, 
+    { name: "Church", url: "church.wav" }  
 ];
 let currentIRUrl = impulseResponses[0].url;
 
 async function setupAudio() {
-  if (audioContext) return audioContext;
-  try {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    originalMasterGainDestination = audioContext.destination;
-
-    masterGain = audioContext.createGain();
-    masterGain.gain.value = parseFloat(masterVolumeSlider.value);
-    masterGain.connect(originalMasterGainDestination);
-
-    portalGroupGain = audioContext.createGain();
-    portalGroupGain.gain.value = 0.7;
-    portalGroupGain.connect(masterGain);
-
-    originalNebulaGroupGain = audioContext.createGain();
-    originalNebulaGroupGain.gain.value = 0.8;
-    originalNebulaGroupGain.connect(masterGain);
-
-    reverbPreDelayNode = audioContext.createDelay(1.0);
-    reverbPreDelayNode.delayTime.value = 0.02;
-
-    reverbNode = audioContext.createConvolver();
-
-    reverbLowPass = audioContext.createBiquadFilter();
-    reverbLowPass.type = "lowpass";
-    reverbLowPass.frequency.value = 8000;
-
-    reverbHighPass = audioContext.createBiquadFilter();
-    reverbHighPass.type = "highpass";
-    reverbHighPass.frequency.value = 100;
-
-    reverbWetGain = audioContext.createGain();
-    reverbWetGain.gain.value = 0.5;
-
-    reverbPreDelayNode.connect(reverbNode);
-    reverbNode.connect(reverbHighPass);
-    reverbHighPass.connect(reverbLowPass);
-    reverbLowPass.connect(reverbWetGain);
-    reverbWetGain.connect(masterGain);
-
-    delayNode = audioContext.createDelay(1.0);
-    delayFeedbackGain = audioContext.createGain();
-    masterDelaySendGain = audioContext.createGain();
-    masterDelaySendGain.gain.value = parseFloat(delaySendSlider.value);
-    delayNode.delayTime.value = parseFloat(delayTimeSlider.value);
-    delayFeedbackGain.gain.value = parseFloat(delayFeedbackSlider.value);
-    masterDelaySendGain.connect(delayNode);
-    delayNode.connect(delayFeedbackGain);
-    delayFeedbackGain.connect(delayNode);
-    delayNode.connect(masterGain);
-    isDelayReady = true;
-
+    if (audioContext) return audioContext;
     try {
-      const r = await fetch(currentIRUrl);
-      if (!r.ok)
-        throw new Error(`HTTP error! status: ${r.status} for ${currentIRUrl}`);
-      const ab = await r.arrayBuffer();
-      if (audioContext.decodeAudioData.length === 1) {
-        await new Promise((res, rej) => {
-          audioContext.decodeAudioData(
-            ab,
-            (b) => {
-              reverbNode.buffer = b;
-              isReverbReady = true;
-              res();
-            },
-            (e) => {
-              isReverbReady = false;
-              console.error(
-                `Failed to decode reverb IR (callback): ${currentIRUrl}`,
-                e,
-              );
-              rej(e);
-            },
-          );
-        });
-      } else {
-        const b = await audioContext.decodeAudioData(ab);
-        reverbNode.buffer = b;
-        isReverbReady = true;
-      }
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        originalMasterGainDestination = audioContext.destination;
+
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = parseFloat(masterVolumeSlider.value);
+        masterGain.connect(originalMasterGainDestination);
+
+        portalGroupGain = audioContext.createGain();
+        portalGroupGain.gain.value = 0.7;
+        portalGroupGain.connect(masterGain);
+
+        originalNebulaGroupGain = audioContext.createGain();
+        originalNebulaGroupGain.gain.value = 0.8;
+        originalNebulaGroupGain.connect(masterGain);
+
+        
+        reverbPreDelayNode = audioContext.createDelay(1.0);
+        reverbPreDelayNode.delayTime.value = 0.02; 
+
+        reverbNode = audioContext.createConvolver();
+
+        reverbLowPass = audioContext.createBiquadFilter();
+        reverbLowPass.type = "lowpass";
+        reverbLowPass.frequency.value = 8000; 
+
+        reverbHighPass = audioContext.createBiquadFilter();
+        reverbHighPass.type = "highpass";
+        reverbHighPass.frequency.value = 100; 
+
+        reverbWetGain = audioContext.createGain();
+        reverbWetGain.gain.value = 0.5; 
+
+        
+        
+        
+        reverbPreDelayNode.connect(reverbNode);
+        reverbNode.connect(reverbHighPass);
+        reverbHighPass.connect(reverbLowPass);
+        reverbLowPass.connect(reverbWetGain);
+        reverbWetGain.connect(masterGain);
+        
+
+        delayNode = audioContext.createDelay(1.0);
+        delayFeedbackGain = audioContext.createGain();
+        masterDelaySendGain = audioContext.createGain();
+        masterDelaySendGain.gain.value = parseFloat(delaySendSlider.value);
+        delayNode.delayTime.value = parseFloat(delayTimeSlider.value);
+        delayFeedbackGain.gain.value = parseFloat(delayFeedbackSlider.value);
+        masterDelaySendGain.connect(delayNode);
+        delayNode.connect(delayFeedbackGain);
+        delayFeedbackGain.connect(delayNode);
+        delayNode.connect(masterGain);
+        isDelayReady = true;
+
+        try {
+            const r = await fetch(currentIRUrl); 
+            if (!r.ok)
+                throw new Error(`HTTP error! status: ${r.status} for ${currentIRUrl}`);
+            const ab = await r.arrayBuffer();
+            if (audioContext.decodeAudioData.length === 1) {
+                await new Promise((res, rej) => {
+                    audioContext.decodeAudioData(
+                        ab,
+                        (b) => {
+                            reverbNode.buffer = b;
+                            isReverbReady = true;
+                            res();
+                        },
+                        (e) => {
+                            isReverbReady = false;
+                            console.error(`Failed to decode reverb IR (callback): ${currentIRUrl}`, e);
+                            rej(e);
+                        },
+                    );
+                });
+            } else {
+                const b = await audioContext.decodeAudioData(ab);
+                reverbNode.buffer = b;
+                isReverbReady = true;
+            }
+        } catch (e) {
+            console.error(`Failed to load or process reverb IR: ${currentIRUrl}`, e);
+            isReverbReady = false;
+        }
+
+        samplesLoadedCount = 0;
+        totalSamples =
+            typeof SAMPLER_DEFINITIONS !== "undefined"
+                ? SAMPLER_DEFINITIONS.length
+                : 0;
+        updateLoadingIndicator();
+
+        const sampleLoadPromises =
+            typeof SAMPLER_DEFINITIONS !== "undefined"
+                ? SAMPLER_DEFINITIONS.map((sampler) =>
+                    loadSample(sampler.url, sampler.id),
+                )
+                : [];
+
+        if (sampleLoadPromises.length === 0 && totalSamples > 0) {
+            console.error(
+                "Kon geen sample laad-promises maken, maar totalSamples > 0. Is samplers.js geladen?",
+            );
+        }
+
+        const loadResults = await Promise.all(sampleLoadPromises);
+
+        if (typeof SAMPLER_DEFINITIONS !== "undefined") {
+            loadResults.forEach((result) => {
+                const definition = SAMPLER_DEFINITIONS.find(
+                    (s) => s.id === result.name,
+                );
+                if (!definition) {
+                    console.error(
+                        `Kon sampler definitie niet vinden voor geladen sample: ${result.name}`,
+                    );
+                    return;
+                }
+                if (result.success) {
+                    definition.buffer = result.buffer;
+                    definition.isLoaded = true;
+                    definition.loadFailed = false;
+                } else {
+                    definition.buffer = null;
+                    definition.isLoaded = false;
+                    definition.loadFailed = true;
+                    const wfType = samplerWaveformTypes.find(
+                        (w) => w.type === `sampler_${definition.id}`,
+                    );
+                    if (wfType) wfType.loadFailed = true;
+                    console.warn(
+                        `Failed to load sample: ${definition.label} from ${definition.url}`,
+                    );
+                }
+            });
+        }
+
+        updateLoadingIndicator();
+        isAudioReady = true;
+        resetSideToolbars();
+        changeScale(scaleSelectTransport.value, true);
+        updateSyncUI();
+        updateGroupControlsUI();
+        updateInfoToggleUI();
+        setupMIDI();
+
+        if (historyStack.length === 0) {
+            saveState();
+        }
+        identifyAndRouteAllGroups();
+        updateMixerGUI();
+        drawPianoRoll();
+
+        return audioContext;
     } catch (e) {
-      console.error(`Failed to load or process reverb IR: ${currentIRUrl}`, e);
-      isReverbReady = false;
+        startMessage.textContent = "Audio Context Error";
+        startMessage.style.display = "block";
+        console.error("Fout tijdens setupAudio:", e);
+        isAudioReady = false;
+        return null;
     }
-
-    samplesLoadedCount = 0;
-    totalSamples =
-      typeof SAMPLER_DEFINITIONS !== "undefined"
-        ? SAMPLER_DEFINITIONS.length
-        : 0;
-    updateLoadingIndicator();
-
-    const sampleLoadPromises =
-      typeof SAMPLER_DEFINITIONS !== "undefined"
-        ? SAMPLER_DEFINITIONS.map((sampler) =>
-            loadSample(sampler.url, sampler.id),
-          )
-        : [];
-
-    if (sampleLoadPromises.length === 0 && totalSamples > 0) {
-      console.error(
-        "Kon geen sample laad-promises maken, maar totalSamples > 0. Is samplers.js geladen?",
-      );
-    }
-
-    const loadResults = await Promise.all(sampleLoadPromises);
-
-    if (typeof SAMPLER_DEFINITIONS !== "undefined") {
-      loadResults.forEach((result) => {
-        const definition = SAMPLER_DEFINITIONS.find(
-          (s) => s.id === result.name,
-        );
-        if (!definition) {
-          console.error(
-            `Kon sampler definitie niet vinden voor geladen sample: ${result.name}`,
-          );
-          return;
-        }
-        if (result.success) {
-          definition.buffer = result.buffer;
-          definition.isLoaded = true;
-          definition.loadFailed = false;
-        } else {
-          definition.buffer = null;
-          definition.isLoaded = false;
-          definition.loadFailed = true;
-          const wfType = samplerWaveformTypes.find(
-            (w) => w.type === `sampler_${definition.id}`,
-          );
-          if (wfType) wfType.loadFailed = true;
-          console.warn(
-            `Failed to load sample: ${definition.label} from ${definition.url}`,
-          );
-        }
-      });
-    }
-
-    updateLoadingIndicator();
-    isAudioReady = true;
-    resetSideToolbars();
-    changeScale(scaleSelectTransport.value, true);
-    updateSyncUI();
-    updateGroupControlsUI();
-    updateInfoToggleUI();
-    setupMIDI();
-
-    if (historyStack.length === 0) {
-      saveState();
-    }
-    identifyAndRouteAllGroups();
-    updateMixerGUI();
-    drawPianoRoll();
-
-    return audioContext;
-  } catch (e) {
-    startMessage.textContent = "Audio Context Error";
-    startMessage.style.display = "block";
-    console.error("Fout tijdens setupAudio:", e);
-    isAudioReady = false;
-    return null;
-  }
 }
+
 
 function populateReverbIRSelect() {
-  if (!reverbIRSelect) return;
-  reverbIRSelect.innerHTML = "";
-  impulseResponses.forEach((ir) => {
-    const option = document.createElement("option");
-    option.value = ir.url;
-    option.textContent = ir.name;
-    reverbIRSelect.appendChild(option);
-  });
-  reverbIRSelect.value = currentIRUrl;
+    if (!reverbIRSelect) return;
+    reverbIRSelect.innerHTML = ""; 
+    impulseResponses.forEach(ir => {
+        const option = document.createElement("option");
+        option.value = ir.url;
+        option.textContent = ir.name;
+        reverbIRSelect.appendChild(option);
+    });
+    reverbIRSelect.value = currentIRUrl; 
 }
+
 
 async function updateReverbIR(newIRUrl) {
-  if (!audioContext || !reverbNode) return;
-  currentIRUrl = newIRUrl;
-  isReverbReady = false;
-  try {
-    const r = await fetch(currentIRUrl);
-    if (!r.ok)
-      throw new Error(`HTTP error! status: ${r.status} for ${currentIRUrl}`);
-    const ab = await r.arrayBuffer();
-    let decodedBuffer;
-    if (audioContext.decodeAudioData.length === 1) {
-      decodedBuffer = await new Promise((res, rej) => {
-        audioContext.decodeAudioData(
-          ab,
-          (buffer) => res(buffer),
-          (error) => rej(error),
-        );
-      });
-    } else {
-      decodedBuffer = await audioContext.decodeAudioData(ab);
+    if (!audioContext || !reverbNode) return;
+    currentIRUrl = newIRUrl;
+    isReverbReady = false; 
+    try {
+        const r = await fetch(currentIRUrl);
+        if (!r.ok) throw new Error(`HTTP error! status: ${r.status} for ${currentIRUrl}`);
+        const ab = await r.arrayBuffer();
+        let decodedBuffer;
+        if (audioContext.decodeAudioData.length === 1) { 
+            decodedBuffer = await new Promise((res, rej) => {
+                audioContext.decodeAudioData(ab, buffer => res(buffer), error => rej(error));
+            });
+        } else {
+            decodedBuffer = await audioContext.decodeAudioData(ab);
+        }
+        reverbNode.buffer = decodedBuffer;
+        isReverbReady = true;
+        console.log(`Reverb IR updated to: ${currentIRUrl}`);
+        saveState(); 
+    } catch (e) {
+        console.error(`Failed to load or process new reverb IR: ${currentIRUrl}`, e);
+        
+        isReverbReady = false;
     }
-    reverbNode.buffer = decodedBuffer;
-    isReverbReady = true;
-    console.log(`Reverb IR updated to: ${currentIRUrl}`);
-    saveState();
-  } catch (e) {
-    console.error(
-      `Failed to load or process new reverb IR: ${currentIRUrl}`,
-      e,
-    );
-
-    isReverbReady = false;
-  }
 }
 
+
+
+
+
 if (reverbIRSelect) {
-  populateReverbIRSelect();
-  reverbIRSelect.addEventListener("change", (e) => {
-    updateReverbIR(e.target.value);
-  });
+    populateReverbIRSelect(); 
+    reverbIRSelect.addEventListener("change", (e) => {
+        updateReverbIR(e.target.value);
+    });
 }
 
 if (reverbWetSlider && reverbWetValue && reverbWetGain) {
-  reverbWetSlider.value = reverbWetGain.gain.value;
-  reverbWetValue.textContent = parseFloat(reverbWetSlider.value).toFixed(2);
-  reverbWetSlider.addEventListener("input", (e) => {
-    if (reverbWetGain) {
-      reverbWetGain.gain.setTargetAtTime(
-        parseFloat(e.target.value),
-        audioContext.currentTime,
-        0.01,
-      );
-    }
-    if (reverbWetValue)
-      reverbWetValue.textContent = parseFloat(e.target.value).toFixed(2);
-  });
-  reverbWetSlider.addEventListener("change", saveState);
+    reverbWetSlider.value = reverbWetGain.gain.value; 
+    reverbWetValue.textContent = parseFloat(reverbWetSlider.value).toFixed(2);
+    reverbWetSlider.addEventListener("input", (e) => {
+        if (reverbWetGain) {
+            reverbWetGain.gain.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
+        }
+        if (reverbWetValue) reverbWetValue.textContent = parseFloat(e.target.value).toFixed(2);
+    });
+    reverbWetSlider.addEventListener("change", saveState);
 }
 
-if (
-  reverbPreDelaySlider &&
-  reverbPreDelayValue &&
-  typeof reverbPreDelayNode !== "undefined"
-) {
-  reverbPreDelaySlider.value = reverbPreDelayNode.delayTime.value;
-  reverbPreDelayValue.textContent =
-    parseFloat(reverbPreDelaySlider.value).toFixed(3) + "s";
-  reverbPreDelaySlider.addEventListener("input", (e) => {
-    if (reverbPreDelayNode) {
-      reverbPreDelayNode.delayTime.setTargetAtTime(
-        parseFloat(e.target.value),
-        audioContext.currentTime,
-        0.01,
-      );
-    }
-    if (reverbPreDelayValue)
-      reverbPreDelayValue.textContent =
-        parseFloat(e.target.value).toFixed(3) + "s";
-  });
-  reverbPreDelaySlider.addEventListener("change", saveState);
+
+if (reverbPreDelaySlider && reverbPreDelayValue && typeof reverbPreDelayNode !== 'undefined') {
+    reverbPreDelaySlider.value = reverbPreDelayNode.delayTime.value;
+    reverbPreDelayValue.textContent = parseFloat(reverbPreDelaySlider.value).toFixed(3) + "s";
+    reverbPreDelaySlider.addEventListener("input", (e) => {
+        if (reverbPreDelayNode) {
+            reverbPreDelayNode.delayTime.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
+        }
+        if (reverbPreDelayValue) reverbPreDelayValue.textContent = parseFloat(e.target.value).toFixed(3) + "s";
+    });
+    reverbPreDelaySlider.addEventListener("change", saveState);
 }
 
-if (
-  reverbDampingSlider &&
-  reverbDampingValue &&
-  typeof reverbLowPass !== "undefined"
-) {
-  reverbDampingSlider.value = reverbLowPass.frequency.value;
-  reverbDampingValue.textContent =
-    parseFloat(reverbDampingSlider.value).toFixed(0) + "Hz";
-  reverbDampingSlider.addEventListener("input", (e) => {
-    if (reverbLowPass) {
-      reverbLowPass.frequency.setTargetAtTime(
-        parseFloat(e.target.value),
-        audioContext.currentTime,
-        0.01,
-      );
-    }
-    if (reverbDampingValue)
-      reverbDampingValue.textContent =
-        parseFloat(e.target.value).toFixed(0) + "Hz";
-  });
-  reverbDampingSlider.addEventListener("change", saveState);
+if (reverbDampingSlider && reverbDampingValue && typeof reverbLowPass !== 'undefined') {
+    reverbDampingSlider.value = reverbLowPass.frequency.value;
+    reverbDampingValue.textContent = parseFloat(reverbDampingSlider.value).toFixed(0) + "Hz";
+    reverbDampingSlider.addEventListener("input", (e) => {
+        if (reverbLowPass) {
+            reverbLowPass.frequency.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
+        }
+        if (reverbDampingValue) reverbDampingValue.textContent = parseFloat(e.target.value).toFixed(0) + "Hz";
+    });
+    reverbDampingSlider.addEventListener("change", saveState);
 }
 
-if (
-  reverbLowCutSlider &&
-  reverbLowCutValue &&
-  typeof reverbHighPass !== "undefined"
-) {
-  reverbLowCutSlider.value = reverbHighPass.frequency.value;
-  reverbLowCutValue.textContent =
-    parseFloat(reverbLowCutSlider.value).toFixed(0) + "Hz";
-  reverbLowCutSlider.addEventListener("input", (e) => {
-    if (reverbHighPass) {
-      reverbHighPass.frequency.setTargetAtTime(
-        parseFloat(e.target.value),
-        audioContext.currentTime,
-        0.01,
-      );
-    }
-    if (reverbLowCutValue)
-      reverbLowCutValue.textContent =
-        parseFloat(e.target.value).toFixed(0) + "Hz";
-  });
-  reverbLowCutSlider.addEventListener("change", saveState);
+if (reverbLowCutSlider && reverbLowCutValue && typeof reverbHighPass !== 'undefined') {
+    reverbLowCutSlider.value = reverbHighPass.frequency.value;
+    reverbLowCutValue.textContent = parseFloat(reverbLowCutSlider.value).toFixed(0) + "Hz";
+    reverbLowCutSlider.addEventListener("input", (e) => {
+        if (reverbHighPass) {
+            reverbHighPass.frequency.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
+        }
+        if (reverbLowCutValue) reverbLowCutValue.textContent = parseFloat(e.target.value).toFixed(0) + "Hz";
+    });
+    reverbLowCutSlider.addEventListener("change", saveState);
 }
 
 function startRecording() {
@@ -2148,721 +2133,706 @@ function setGroupVolume(volume, sourceSliderId) {
 }
 
 function identifyAndRouteAllGroups() {
-  if (!isAudioReady || !audioContext) return;
+    if (!isAudioReady || !audioContext) return;
 
-  const nodesInUserGroups = new Set();
-  if (userDefinedGroups && Array.isArray(userDefinedGroups)) {
-    userDefinedGroups.forEach((ug) => {
-      if (ug.nodeIds && ug.gainNode) {
-        ug.nodeIds.forEach((nodeId) => nodesInUserGroups.add(nodeId));
-        try {
-          ug.gainNode.disconnect();
-        } catch (e) {}
+    const nodesInUserGroups = new Set();
+    if (userDefinedGroups && Array.isArray(userDefinedGroups)) {
+        userDefinedGroups.forEach(ug => {
+            if (ug.nodeIds && ug.gainNode) { 
+                ug.nodeIds.forEach(nodeId => nodesInUserGroups.add(nodeId));
+                try { ug.gainNode.disconnect(); } catch (e) {} 
+                
+                
+                ug.gainNode.connect(masterGain); 
 
-        ug.gainNode.connect(masterGain);
+                
+                if (ug.delaySendGainNode && masterDelaySendGain) {
+                    try { ug.delaySendGainNode.disconnect(); } catch(e){}
+                    ug.gainNode.connect(ug.delaySendGainNode);
+                    ug.delaySendGainNode.connect(masterDelaySendGain); 
+                }
+                if (ug.reverbSendGainNode && reverbPreDelayNode) {
+                    try { ug.reverbSendGainNode.disconnect(); } catch(e){}
+                    ug.gainNode.connect(ug.reverbSendGainNode);
+                    ug.reverbSendGainNode.connect(reverbPreDelayNode); 
+                }
 
-        if (ug.delaySendGainNode && masterDelaySendGain) {
-          try {
-            ug.delaySendGainNode.disconnect();
-          } catch (e) {}
-          ug.gainNode.connect(ug.delaySendGainNode);
-          ug.delaySendGainNode.connect(masterDelaySendGain);
-        }
-        if (ug.reverbSendGainNode && reverbPreDelayNode) {
-          try {
-            ug.reverbSendGainNode.disconnect();
-          } catch (e) {}
-          ug.gainNode.connect(ug.reverbSendGainNode);
-          ug.reverbSendGainNode.connect(reverbPreDelayNode);
-        }
-      } else if (ug.nodeIds && !ug.gainNode && audioContext) {
-        ug.gainNode = audioContext.createGain();
-        ug.gainNode.gain.value = ug.volume !== undefined ? ug.volume : 1.0;
-        ug.gainNode.connect(masterGain);
+            } else if (ug.nodeIds && !ug.gainNode && audioContext) { 
+                
+                ug.gainNode = audioContext.createGain();
+                ug.gainNode.gain.value = ug.volume !== undefined ? ug.volume : 1.0;
+                ug.gainNode.connect(masterGain);
 
-        ug.delaySendGainNode = audioContext.createGain();
-        ug.delaySendGainNode.gain.value =
-          ug.delaySendLevel !== undefined
-            ? ug.delaySendLevel
-            : DEFAULT_DELAY_SEND;
-
-        ug.reverbSendGainNode = audioContext.createGain();
-        ug.reverbSendGainNode.gain.value =
-          ug.reverbSendLevel !== undefined
-            ? ug.reverbSendLevel
-            : DEFAULT_REVERB_SEND;
-      }
-    });
-  }
-
-  const existingAutoGroupSettings = new Map();
-  identifiedGroups.forEach((group) => {
-    if (
-      group.gainNode &&
-      group.nodeIds &&
-      group.nodeIds.size > 0 &&
-      !group.userDefined
-    ) {
-      const sortedNodeIds = Array.from(group.nodeIds).sort((a, b) => a - b);
-      const canonicalKey = sortedNodeIds.join(",");
-      existingAutoGroupSettings.set(canonicalKey, {
-        volume: group.gainNode.gain.value,
-      });
-      try {
-        group.gainNode.disconnect();
-      } catch (e) {}
-    }
-  });
-
-  const newAutoGroups = [];
-  const visitedNodesForAutoGrouping = new Set(nodesInUserGroups);
-  let nextAutoGroupId = 0;
-
-  nodes.forEach((node) => {
-    if (
-      CONSTELLATION_NODE_TYPES.includes(node.type) &&
-      !visitedNodesForAutoGrouping.has(node.id)
-    ) {
-      const constellationNodeIds = findConstellation(node.id);
-      const validConstellationMembers = new Set();
-      constellationNodeIds.forEach((id) => {
-        if (!nodesInUserGroups.has(id)) {
-          validConstellationMembers.add(id);
-        }
-      });
-
-      if (validConstellationMembers.size > 0) {
-        validConstellationMembers.forEach((id) =>
-          visitedNodesForAutoGrouping.add(id),
-        );
-        const newGainNode = audioContext.createGain();
-        const sortedNewNodeIds = Array.from(validConstellationMembers).sort(
-          (a, b) => a - b,
-        );
-        const newCanonicalKey = sortedNewNodeIds.join(",");
-        const savedSettings = existingAutoGroupSettings.get(newCanonicalKey);
-        newGainNode.gain.value = savedSettings ? savedSettings.volume : 1.0;
-        newGainNode.connect(masterGain);
-        newAutoGroups.push({
-          id: `autoGroup_${nextAutoGroupId++}`,
-          nodeIds: validConstellationMembers,
-          gainNode: newGainNode,
-          userDefined: false,
+                ug.delaySendGainNode = audioContext.createGain();
+                ug.delaySendGainNode.gain.value = ug.delaySendLevel !== undefined ? ug.delaySendLevel : DEFAULT_DELAY_SEND;
+                
+                ug.reverbSendGainNode = audioContext.createGain();
+                ug.reverbSendGainNode.gain.value = ug.reverbSendLevel !== undefined ? ug.reverbSendLevel : DEFAULT_REVERB_SEND;
+                
+            }
         });
-      }
     }
-  });
 
-  identifiedGroups = [...(userDefinedGroups || []), ...newAutoGroups];
-
-  nodes.forEach((node) => {
-    const isRoutableAudioNode =
-      (CONSTELLATION_NODE_TYPES.includes(node.type) ||
-        node.type === "nebula" ||
-        node.type === PORTAL_NEBULA_TYPE ||
-        node.type === PRORB_TYPE) &&
-      node.audioNodes;
-
-    if (isRoutableAudioNode) {
-      const outputNode = node.audioNodes.gainNode || node.audioNodes.mainGain;
-      if (!outputNode) return;
-
-      let destinationNode = masterGain;
-      const userGroup = (userDefinedGroups || []).find((ug) =>
-        ug.nodeIds.has(node.id),
-      );
-      const autoGroup = newAutoGroups.find((ag) => ag.nodeIds.has(node.id));
-
-      if (userGroup && userGroup.gainNode) {
-        destinationNode = userGroup.gainNode;
-
-        if (node.audioNodes.delaySendGain) {
-          node.audioNodes.delaySendGain.gain.value = 0;
+    const existingAutoGroupSettings = new Map();
+    identifiedGroups.forEach((group) => {
+        if (group.gainNode && group.nodeIds && group.nodeIds.size > 0 && !group.userDefined) {
+            const sortedNodeIds = Array.from(group.nodeIds).sort((a, b) => a - b);
+            const canonicalKey = sortedNodeIds.join(",");
+            existingAutoGroupSettings.set(canonicalKey, {
+                volume: group.gainNode.gain.value,
+                
+            });
+            try { group.gainNode.disconnect(); } catch (e) {}
         }
-        if (node.audioNodes.reverbSendGain) {
-          node.audioNodes.reverbSendGain.gain.value = 0;
-        }
-      } else if (autoGroup && autoGroup.gainNode) {
-        destinationNode = autoGroup.gainNode;
-      } else if (node.type === "nebula") {
-        destinationNode = originalNebulaGroupGain || masterGain;
-      } else if (node.type === PORTAL_NEBULA_TYPE) {
-        destinationNode = portalGroupGain || masterGain;
-      }
-      rerouteAudioForNode(node, destinationNode);
-    }
-  });
+    });
 
-  connections.forEach((conn) => {
-    if (conn.type === "string_violin" && conn.audioNodes) {
-      const outputNode = conn.audioNodes.gainNode;
-      if (!outputNode) return;
-      const nodeA = findNodeById(conn.nodeAId);
-      const nodeB = findNodeById(conn.nodeBId);
-      let destinationNodeForConn = masterGain;
-      let sharedUserGroup = null;
+    const newAutoGroups = [];
+    const visitedNodesForAutoGrouping = new Set(nodesInUserGroups); 
+    let nextAutoGroupId = 0;
 
-      if (nodeA && nodeB && userDefinedGroups) {
-        for (const ug of userDefinedGroups) {
-          if (ug.nodeIds.has(nodeA.id) && ug.nodeIds.has(nodeB.id)) {
-            sharedUserGroup = ug;
-            break;
-          }
-        }
-      }
-
-      if (sharedUserGroup && sharedUserGroup.gainNode) {
-        destinationNodeForConn = sharedUserGroup.gainNode;
-
-        if (conn.audioNodes.delaySendGain)
-          conn.audioNodes.delaySendGain.gain.value = 0;
-        if (conn.audioNodes.reverbSendGain)
-          conn.audioNodes.reverbSendGain.gain.value = 0;
-      } else if (nodeA && nodeB) {
-        const autoGroupA = newAutoGroups.find((ag) => ag.nodeIds.has(nodeA.id));
-        const autoGroupB = newAutoGroups.find((ag) => ag.nodeIds.has(nodeB.id));
+    nodes.forEach((node) => {
         if (
-          autoGroupA &&
-          autoGroupA === autoGroupB &&
-          autoGroupA.gainNode &&
-          CONSTELLATION_NODE_TYPES.includes(nodeA.type) &&
-          CONSTELLATION_NODE_TYPES.includes(nodeB.type)
+            CONSTELLATION_NODE_TYPES.includes(node.type) &&
+            !visitedNodesForAutoGrouping.has(node.id)
         ) {
-          destinationNodeForConn = autoGroupA.gainNode;
-        }
-      }
+            const constellationNodeIds = findConstellation(node.id);
+            const validConstellationMembers = new Set();
+            constellationNodeIds.forEach(id => {
+                if (!nodesInUserGroups.has(id)) { 
+                    validConstellationMembers.add(id);
+                }
+            });
 
-      rerouteAudioForNode(conn, destinationNodeForConn);
-    }
-  });
-  updateMixerGUI();
+            if (validConstellationMembers.size > 0) {
+                validConstellationMembers.forEach((id) => visitedNodesForAutoGrouping.add(id));
+                const newGainNode = audioContext.createGain();
+                const sortedNewNodeIds = Array.from(validConstellationMembers).sort((a, b) => a - b);
+                const newCanonicalKey = sortedNewNodeIds.join(",");
+                const savedSettings = existingAutoGroupSettings.get(newCanonicalKey);
+                newGainNode.gain.value = savedSettings ? savedSettings.volume : 1.0;
+                newGainNode.connect(masterGain); 
+                newAutoGroups.push({
+                    id: `autoGroup_${nextAutoGroupId++}`,
+                    nodeIds: validConstellationMembers,
+                    gainNode: newGainNode,
+                    userDefined: false
+                    
+                });
+            }
+        }
+    });
+    
+    identifiedGroups = [ ...(userDefinedGroups || []), ...newAutoGroups ];
+
+    nodes.forEach((node) => {
+        const isRoutableAudioNode =
+            (CONSTELLATION_NODE_TYPES.includes(node.type) ||
+                node.type === "nebula" ||
+                node.type === PORTAL_NEBULA_TYPE ||
+                node.type === PRORB_TYPE) &&
+            node.audioNodes;
+
+        if (isRoutableAudioNode) {
+            const outputNode = node.audioNodes.gainNode || node.audioNodes.mainGain;
+            if (!outputNode) return;
+
+            let destinationNode = masterGain; 
+            const userGroup = (userDefinedGroups || []).find(ug => ug.nodeIds.has(node.id));
+            const autoGroup = newAutoGroups.find(ag => ag.nodeIds.has(node.id));
+
+            if (userGroup && userGroup.gainNode) {
+                destinationNode = userGroup.gainNode; 
+                
+                
+                if (node.audioNodes.delaySendGain) {
+                    node.audioNodes.delaySendGain.gain.value = 0; 
+                }
+                if (node.audioNodes.reverbSendGain) {
+                    node.audioNodes.reverbSendGain.gain.value = 0; 
+                }
+            } else if (autoGroup && autoGroup.gainNode) {
+                destinationNode = autoGroup.gainNode;
+                
+                
+            } else if (node.type === "nebula") {
+                destinationNode = originalNebulaGroupGain || masterGain;
+            } else if (node.type === PORTAL_NEBULA_TYPE) {
+                destinationNode = portalGroupGain || masterGain;
+            }
+            rerouteAudioForNode(node, destinationNode); 
+                                                        
+                                                        
+        }
+    });
+
+    connections.forEach((conn) => {
+        if (conn.type === "string_violin" && conn.audioNodes) {
+            const outputNode = conn.audioNodes.gainNode;
+            if (!outputNode) return;
+            const nodeA = findNodeById(conn.nodeAId);
+            const nodeB = findNodeById(conn.nodeBId);
+            let destinationNodeForConn = masterGain;
+            let sharedUserGroup = null;
+
+            if (nodeA && nodeB && userDefinedGroups) {
+                for (const ug of userDefinedGroups) {
+                    if (ug.nodeIds.has(nodeA.id) && ug.nodeIds.has(nodeB.id)) {
+                        sharedUserGroup = ug;
+                        break;
+                    }
+                }
+            }
+
+            if (sharedUserGroup && sharedUserGroup.gainNode) {
+                destinationNodeForConn = sharedUserGroup.gainNode;
+                 
+                if (conn.audioNodes.delaySendGain) conn.audioNodes.delaySendGain.gain.value = 0;
+                if (conn.audioNodes.reverbSendGain) conn.audioNodes.reverbSendGain.gain.value = 0;
+
+            } else if (nodeA && nodeB) { 
+                const autoGroupA = newAutoGroups.find(ag => ag.nodeIds.has(nodeA.id));
+                const autoGroupB = newAutoGroups.find(ag => ag.nodeIds.has(nodeB.id));
+                if (autoGroupA && autoGroupA === autoGroupB && autoGroupA.gainNode &&
+                    CONSTELLATION_NODE_TYPES.includes(nodeA.type) &&
+                    CONSTELLATION_NODE_TYPES.includes(nodeB.type) ) {
+                     destinationNodeForConn = autoGroupA.gainNode;
+                }
+            }
+            
+            
+            
+            rerouteAudioForNode(conn, destinationNodeForConn);
+        }
+    });
+    updateMixerGUI();
 }
 
 function createAudioNodesForNode(node) {
-  if (!audioContext) {
-    console.warn(
-      "AudioContext not ready, cannot create audio nodes for node ID:",
-      node.id,
-    );
-    return null;
-  }
-  if (node.type === TIMELINE_GRID_TYPE) {
-    return null;
-  }
-
-  if (
-    ![PRORB_TYPE, "sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) &&
-    !isDrumType(node.type)
-  ) {
-    return null;
-  }
-
-  const params = node.audioParams;
-  const now = audioContext.currentTime;
-  const startDelay = now + 0.02;
-
-  try {
-    if (node.type === PRORB_TYPE) {
-      const audioNodes = {
-        oscillator1: audioContext.createOscillator(),
-        osc1Gain: audioContext.createGain(),
-        oscillator2: null,
-        osc2Gain: null,
-        fmModulator: null,
-        fmModulatorGain: null,
-        filterNode: audioContext.createBiquadFilter(),
-        mainGain: audioContext.createGain(),
-        lfo1Osc: null,
-        lfo1Gain: null,
-        reverbSendGain: null,
-        delaySendGain: null,
-      };
-
-      audioNodes.oscillator1.type = params.osc1Waveform || "sawtooth";
-      audioNodes.oscillator1.connect(audioNodes.osc1Gain);
-      audioNodes.osc1Gain.connect(audioNodes.filterNode);
-      audioNodes.osc1Gain.gain.value =
-        params.osc1Level !== undefined ? params.osc1Level : 0.7;
-
-      if (params.osc2Enabled) {
-        audioNodes.oscillator2 = audioContext.createOscillator();
-        audioNodes.oscillator2.type = params.osc2Waveform || "square";
-        audioNodes.osc2Gain = audioContext.createGain();
-        audioNodes.osc2Gain.gain.value =
-          params.osc2Level !== undefined ? params.osc2Level : 0.0;
-        audioNodes.oscillator2.connect(audioNodes.osc2Gain);
-        audioNodes.osc2Gain.connect(audioNodes.filterNode);
-      }
-
-      if (params.fmEnabled) {
-        audioNodes.fmModulator = audioContext.createOscillator();
-        audioNodes.fmModulator.type = params.fmModulatorWaveform || "sine";
-        audioNodes.fmModulatorGain = audioContext.createGain();
-        audioNodes.fmModulatorGain.gain.value = 0;
-        audioNodes.fmModulator.connect(audioNodes.fmModulatorGain);
-        audioNodes.fmModulatorGain.connect(audioNodes.oscillator1.frequency);
-      }
-
-      audioNodes.filterNode.type = params.filterType || "lowpass";
-      audioNodes.filterNode.frequency.value =
-        params.lowPassFreq !== undefined ? params.lowPassFreq : 8000;
-      audioNodes.filterNode.Q.value =
-        params.filterResonance !== undefined ? params.filterResonance : 1.0;
-      audioNodes.filterNode.connect(audioNodes.mainGain);
-      audioNodes.mainGain.gain.value = 0;
-
-      if (params.lfo1Enabled) {
-        audioNodes.lfo1Osc = audioContext.createOscillator();
-        audioNodes.lfo1Osc.type = params.lfo1Waveform || "sine";
-        audioNodes.lfo1Osc.frequency.setValueAtTime(
-          params.lfo1Rate || 2.0,
-          now,
+    if (!audioContext) {
+        console.warn(
+            "AudioContext not ready, cannot create audio nodes for node ID:",
+            node.id,
         );
-        audioNodes.lfo1Gain = audioContext.createGain();
-        audioNodes.lfo1Gain.gain.value = params.lfo1Depth || 0;
-        audioNodes.lfo1Osc.connect(audioNodes.lfo1Gain);
-      }
-
-      try {
-        audioNodes.oscillator1.start(startDelay);
-      } catch (e) {}
-      if (audioNodes.oscillator2) {
-        try {
-          audioNodes.oscillator2.start(startDelay);
-        } catch (e) {}
-      }
-      if (audioNodes.fmModulator) {
-        try {
-          audioNodes.fmModulator.start(startDelay);
-        } catch (e) {}
-      }
-      if (audioNodes.lfo1Osc) {
-        try {
-          audioNodes.lfo1Osc.start(startDelay);
-        } catch (e) {}
-      }
-
-      if (isReverbReady && reverbPreDelayNode) {
-        audioNodes.reverbSendGain = audioContext.createGain();
-        audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
-        audioNodes.mainGain.connect(audioNodes.reverbSendGain);
-        audioNodes.reverbSendGain.connect(reverbPreDelayNode);
-      }
-      if (isDelayReady && masterDelaySendGain) {
-        audioNodes.delaySendGain = audioContext.createGain();
-        audioNodes.delaySendGain.gain.value = params.delaySend || 0;
-        audioNodes.mainGain.connect(audioNodes.delaySendGain);
-        audioNodes.delaySendGain.connect(masterDelaySendGain);
-      }
-
-      audioNodes.mainGain.connect(masterGain);
-      return audioNodes;
-    } else if (node.type === "sound") {
-      const audioNodes = {
-        gainNode: audioContext.createGain(),
-        lowPassFilter: audioContext.createBiquadFilter(),
-        reverbSendGain: null,
-        delaySendGain: null,
-        volLfo: audioContext.createOscillator(),
-        volLfoGain: audioContext.createGain(),
-        oscillator1: null,
-        osc1Gain: audioContext.createGain(),
-        modulatorOsc1: null,
-        modulatorGain1: null,
-        oscillator2: null,
-        osc2Gain: null,
-        orbitoneOscillators: [],
-        orbitoneIndividualGains: [],
-        orbitoneModulatorOscs: [],
-        orbitoneModulatorGains: [],
-      };
-
-      audioNodes.gainNode.gain.setValueAtTime(0, now);
-      audioNodes.lowPassFilter.type = params.filterType || "lowpass";
-      audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2;
-      audioNodes.lowPassFilter.frequency.value =
-        params.lowPassFreq || MAX_FILTER_FREQ;
-
-      if (params.waveform && !params.waveform.startsWith("sampler_")) {
-        audioNodes.oscillator1 = audioContext.createOscillator();
-        const osc1BaseWaveform =
-          params.osc1Type ||
-          params.baseSoundType ||
-          params.carrierWaveform ||
-          params.actualOscillatorType ||
-          params.waveform ||
-          "sine";
-        const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
-        audioNodes.oscillator1.type = validOscTypes.includes(osc1BaseWaveform)
-          ? osc1BaseWaveform
-          : osc1BaseWaveform === "pulse"
-            ? "square"
-            : "sine";
-        audioNodes.oscillator1.frequency.setValueAtTime(params.pitch, now);
-        audioNodes.oscillator1.connect(audioNodes.osc1Gain);
-      }
-      audioNodes.osc1Gain.gain.value = 1.0;
-      audioNodes.osc1Gain.connect(audioNodes.lowPassFilter);
-      audioNodes.lowPassFilter.connect(audioNodes.gainNode);
-
-      if (isReverbReady && reverbPreDelayNode) {
-        audioNodes.reverbSendGain = audioContext.createGain();
-        audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
-        audioNodes.gainNode.connect(audioNodes.reverbSendGain);
-        audioNodes.reverbSendGain.connect(reverbPreDelayNode);
-      }
-      if (isDelayReady && masterDelaySendGain) {
-        audioNodes.delaySendGain = audioContext.createGain();
-        audioNodes.delaySendGain.gain.value = params.delaySend || 0;
-        audioNodes.gainNode.connect(audioNodes.delaySendGain);
-        audioNodes.delaySendGain.connect(masterDelaySendGain);
-      }
-
-      audioNodes.volLfo.type = params.lfo1Type || "sine";
-      audioNodes.volLfo.frequency.setValueAtTime(params.volLfoRate || 0.2, now);
-      audioNodes.volLfoGain.gain.value = fluctuatingGroupNodeIDs.has(node.id)
-        ? parseFloat(groupFluctuateAmount.value)
-        : params.volLfoDepth || 0;
-      audioNodes.volLfo.connect(audioNodes.volLfoGain);
-      audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
-      try {
-        audioNodes.volLfo.start(startDelay);
-      } catch (e) {}
-
-      if (audioNodes.oscillator1) {
-        try {
-          audioNodes.oscillator1.start(startDelay);
-        } catch (e) {}
-        if (params.carrierWaveform && params.modulatorWaveform) {
-          audioNodes.modulatorOsc1 = audioContext.createOscillator();
-          audioNodes.modulatorOsc1.type = params.modulatorWaveform;
-          const modRatio = params.modulatorRatio || 1.0;
-          audioNodes.modulatorOsc1.frequency.setValueAtTime(
-            params.pitch * modRatio,
-            now,
-          );
-          audioNodes.modulatorGain1 = audioContext.createGain();
-          audioNodes.modulatorGain1.gain.setValueAtTime(0, now);
-          audioNodes.modulatorOsc1.connect(audioNodes.modulatorGain1);
-          audioNodes.modulatorGain1.connect(audioNodes.oscillator1.frequency);
-          try {
-            audioNodes.modulatorOsc1.start(startDelay);
-          } catch (e) {}
-        }
-        if (
-          !params.orbitonesEnabled &&
-          params.osc2Type &&
-          !params.carrierWaveform
-        ) {
-          audioNodes.oscillator2 = audioContext.createOscillator();
-          const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
-          audioNodes.oscillator2.type = validOscTypes.includes(params.osc2Type)
-            ? params.osc2Type
-            : params.osc2Type === "pulse"
-              ? "square"
-              : "sine";
-          if (params.osc2Detune)
-            audioNodes.oscillator2.detune.setValueAtTime(
-              params.osc2Detune,
-              now,
-            );
-          const osc2BaseFreq =
-            params.pitch * Math.pow(2, params.osc2Octave || 0);
-          audioNodes.oscillator2.frequency.setValueAtTime(osc2BaseFreq, now);
-          audioNodes.osc2Gain = audioContext.createGain();
-          audioNodes.osc2Gain.gain.value = params.osc2Mix || 0.5;
-          audioNodes.oscillator2.connect(audioNodes.osc2Gain);
-          audioNodes.osc2Gain.connect(audioNodes.lowPassFilter);
-          try {
-            audioNodes.oscillator2.start(startDelay);
-          } catch (e) {}
-        }
-      }
-
-      if (
-        params.orbitonesEnabled &&
-        params.orbitoneCount > 0 &&
-        params.orbitoneIntervals &&
-        !(params.waveform && params.waveform.startsWith("sampler_"))
-      ) {
-        const allFrequenciesForCreation = getOrbitoneFrequencies(
-          params.scaleIndex,
-          params.orbitoneCount,
-          params.orbitoneIntervals,
-          params.orbitoneSpread,
-          currentScale,
-          params.pitch,
-        );
-        const actualOrbitoneFrequencies = allFrequenciesForCreation.slice(1);
-        const osc1BaseWaveformForOrbitones =
-          params.osc1Type || params.waveform || "sine";
-        const validOscTypesForOrbitones = [
-          "sine",
-          "square",
-          "sawtooth",
-          "triangle",
-        ];
-        const finalOrbitoneWaveform = validOscTypesForOrbitones.includes(
-          osc1BaseWaveformForOrbitones,
-        )
-          ? osc1BaseWaveformForOrbitones
-          : "sine";
-
-        for (let i = 0; i < actualOrbitoneFrequencies.length; i++) {
-          const freq = actualOrbitoneFrequencies[i];
-          if (isNaN(freq) || freq <= 0) continue;
-          const orbitOsc = audioContext.createOscillator();
-          orbitOsc.type = finalOrbitoneWaveform;
-          orbitOsc.frequency.setValueAtTime(freq, now);
-          const orbitIndividualGainNode = audioContext.createGain();
-          orbitIndividualGainNode.gain.setValueAtTime(0, now);
-          orbitOsc.connect(orbitIndividualGainNode);
-          orbitIndividualGainNode.connect(audioNodes.lowPassFilter);
-          try {
-            orbitOsc.start(startDelay);
-          } catch (e) {}
-          audioNodes.orbitoneOscillators.push(orbitOsc);
-          audioNodes.orbitoneIndividualGains.push(orbitIndividualGainNode);
-          if (
-            params.carrierWaveform &&
-            params.modulatorWaveform &&
-            audioNodes.fmModulatorGain
-          ) {
-            const modOsc = audioContext.createOscillator();
-            modOsc.type = params.modulatorWaveform;
-            const modRatio = params.modulatorRatio || 1.0;
-            modOsc.frequency.setValueAtTime(freq * modRatio, now);
-            const modGain = audioContext.createGain();
-            modGain.gain.setValueAtTime(0, now);
-            modOsc.connect(modGain);
-            modGain.connect(orbitOsc.frequency);
-            try {
-              modOsc.start(startDelay);
-            } catch (e) {}
-            audioNodes.orbitoneModulatorOscs.push(modOsc);
-            audioNodes.orbitoneModulatorGains.push(modGain);
-          }
-        }
-      }
-      return audioNodes;
-    } else if (node.type === "nebula") {
-      const audioNodes = {};
-      audioNodes.gainNode = audioContext.createGain();
-      audioNodes.gainNode.gain.value = 0;
-      audioNodes.filterNode = audioContext.createBiquadFilter();
-      audioNodes.filterNode.type = params.filterType || "lowpass";
-      audioNodes.filterNode.Q.value = params.filterResonance || NEBULA_FILTER_Q;
-      const baseFreq = params.pitch;
-      audioNodes.filterLfo = audioContext.createOscillator();
-      audioNodes.filterLfo.type = "sine";
-      audioNodes.filterLfo.frequency.setValueAtTime(
-        NEBULA_FILTER_LFO_RATE,
-        now,
-      );
-      audioNodes.filterLfoGain = audioContext.createGain();
-      audioNodes.filterLfoGain.gain.setValueAtTime(
-        baseFreq *
-          NEBULA_FILTER_LFO_DEPTH_FACTOR *
-          (params.lfoDepthFactor || 1),
-        now,
-      );
-      audioNodes.filterLfo.connect(audioNodes.filterLfoGain);
-      audioNodes.filterLfoGain.connect(audioNodes.filterNode.frequency);
-      audioNodes.volLfo = audioContext.createOscillator();
-      audioNodes.volLfo.type = "sine";
-      audioNodes.volLfo.frequency.setValueAtTime(NEBULA_VOL_LFO_RATE, now);
-      audioNodes.volLfoGain = audioContext.createGain();
-      audioNodes.volLfoGain.gain.value = NEBULA_VOL_LFO_DEPTH;
-      audioNodes.volLfo.connect(audioNodes.volLfoGain);
-      audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
-      audioNodes.oscillators = [];
-      const baseWaveformForNebula =
-        params.osc1Type || params.waveform || "sawtooth";
-      const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
-      let waveformType = validOscTypes.includes(baseWaveformForNebula)
-        ? baseWaveformForNebula
-        : "sawtooth";
-      if (
-        baseWaveformForNebula === "fmBell" ||
-        baseWaveformForNebula === "fmXylo"
-      )
-        waveformType = "sine";
-      NEBULA_OSC_INTERVALS.forEach((interval, i) => {
-        const osc = audioContext.createOscillator();
-        const freq = baseFreq * Math.pow(2, interval / 12);
-        osc.frequency.setValueAtTime(freq, now);
-        osc.detune.setValueAtTime(
-          (i % 2 === 0 ? 1 : -1) *
-            (params.detune || NEBULA_OSC_DETUNE) *
-            (i + 1),
-          now,
-        );
-        osc.type = waveformType;
-        osc.connect(audioNodes.filterNode);
-        audioNodes.oscillators.push(osc);
-      });
-      audioNodes.filterNode.connect(audioNodes.gainNode);
-      if (isReverbReady && reverbPreDelayNode) {
-        audioNodes.reverbSendGain = audioContext.createGain();
-        audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
-        audioNodes.gainNode.connect(audioNodes.reverbSendGain);
-        audioNodes.reverbSendGain.connect(reverbPreDelayNode);
-      }
-      if (isDelayReady && masterDelaySendGain) {
-        audioNodes.delaySendGain = audioContext.createGain();
-        audioNodes.delaySendGain.gain.value = params.delaySend || 0;
-        audioNodes.gainNode.connect(audioNodes.delaySendGain);
-        audioNodes.delaySendGain.connect(masterDelaySendGain);
-      }
-      const initialVol = Math.min(
-        NEBULA_MAX_VOL,
-        node.size * NEBULA_VOL_SCALING,
-      );
-      const initialFilterFreq =
-        params.filterCutoff ||
-        baseFreq * 2 +
-          ((node.size - MIN_NODE_SIZE) / (MAX_NODE_SIZE - MIN_NODE_SIZE || 1)) *
-            baseFreq *
-            (params.filterFreqFactor || 12);
-      audioNodes.filterNode.frequency.setValueAtTime(initialFilterFreq, now);
-      audioNodes.gainNode.gain.linearRampToValueAtTime(initialVol, now + 0.5);
-      try {
-        audioNodes.filterLfo.start(startDelay);
-      } catch (e) {}
-      try {
-        audioNodes.volLfo.start(startDelay);
-      } catch (e) {}
-      audioNodes.oscillators.forEach((osc) => {
-        try {
-          osc.start(startDelay);
-        } catch (e) {}
-      });
-      if (originalNebulaGroupGain) {
-        audioNodes.gainNode.connect(originalNebulaGroupGain);
-      } else {
-        audioNodes.gainNode.connect(masterGain);
-      }
-      return audioNodes;
-    } else if (node.type === PORTAL_NEBULA_TYPE) {
-      const audioNodes = {};
-      const defaults = PORTAL_NEBULA_DEFAULTS;
-      audioNodes.mainGain = audioContext.createGain();
-      audioNodes.mainGain.gain.setValueAtTime(0, now);
-      audioNodes.mainGain.gain.linearRampToValueAtTime(
-        params.volume,
-        now + 1.0,
-      );
-      audioNodes.droneOsc = audioContext.createOscillator();
-      audioNodes.droneOsc.type = params.actualOscillatorType || "triangle";
-      audioNodes.droneOsc.frequency.setValueAtTime(params.pitch, now);
-      audioNodes.droneFreqLfo = audioContext.createOscillator();
-      audioNodes.droneFreqLfo.type = "sine";
-      audioNodes.droneFreqLfo.frequency.setValueAtTime(
-        0.05 + Math.random() * 0.05,
-        now,
-      );
-      audioNodes.droneFreqLfoGain = audioContext.createGain();
-      audioNodes.droneFreqLfoGain.gain.setValueAtTime(
-        0.5 + Math.random() * 0.5,
-        now,
-      );
-      audioNodes.droneFreqLfo.connect(audioNodes.droneFreqLfoGain);
-      audioNodes.droneFreqLfoGain.connect(audioNodes.droneOsc.frequency);
-      audioNodes.droneOsc.connect(audioNodes.mainGain);
-      audioNodes.harmonics = [];
-      audioNodes.harmonicGain = audioContext.createGain();
-      audioNodes.harmonicGain.gain.setValueAtTime(
-        defaults.harmonicBaseGain,
-        now,
-      );
-      audioNodes.shimmerLfo = audioContext.createOscillator();
-      audioNodes.shimmerLfo.type = "sine";
-      audioNodes.shimmerLfo.frequency.setValueAtTime(defaults.shimmerRate, now);
-      audioNodes.shimmerLfoGain = audioContext.createGain();
-      audioNodes.shimmerLfoGain.gain.setValueAtTime(defaults.shimmerDepth, now);
-      audioNodes.shimmerLfo.connect(audioNodes.shimmerLfoGain);
-      audioNodes.shimmerLfoGain.connect(audioNodes.harmonicGain.gain);
-      for (let i = 0; i < defaults.numHarmonics; i++) {
-        const harmonicOsc = audioContext.createOscillator();
-        harmonicOsc.type = "sine";
-        const freqMultiplier = Math.pow(
-          2,
-          (i + 1) * defaults.harmonicSpread * 0.5 + Math.random() * 0.1,
-        );
-        harmonicOsc.frequency.setValueAtTime(
-          params.pitch * freqMultiplier,
-          now,
-        );
-        harmonicOsc.detune.setValueAtTime((Math.random() - 0.5) * 15, now);
-        harmonicOsc.connect(audioNodes.harmonicGain);
-        audioNodes.harmonics.push(harmonicOsc);
-      }
-      audioNodes.harmonicGain.connect(audioNodes.mainGain);
-      if (isReverbReady && reverbPreDelayNode) {
-        audioNodes.reverbSendGain = audioContext.createGain();
-        audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
-        audioNodes.mainGain.connect(audioNodes.reverbSendGain);
-        audioNodes.reverbSendGain.connect(reverbPreDelayNode);
-      }
-      if (isDelayReady && masterDelaySendGain) {
-        audioNodes.delaySendGain = audioContext.createGain();
-        audioNodes.delaySendGain.gain.value = params.delaySend || 0;
-        audioNodes.mainGain.connect(audioNodes.delaySendGain);
-        audioNodes.delaySendGain.connect(masterDelaySendGain);
-      }
-      try {
-        audioNodes.droneOsc.start(startDelay);
-      } catch (e) {}
-      try {
-        audioNodes.droneFreqLfo.start(startDelay);
-      } catch (e) {}
-      try {
-        audioNodes.shimmerLfo.start(startDelay);
-      } catch (e) {}
-      audioNodes.harmonics.forEach((osc) => {
-        try {
-          osc.start(startDelay);
-        } catch (e) {}
-      });
-      if (portalGroupGain) {
-        audioNodes.mainGain.connect(portalGroupGain);
-      } else {
-        audioNodes.mainGain.connect(masterGain);
-      }
-      return audioNodes;
-    } else if (isDrumType(node.type)) {
-      const audioNodes = {};
-      audioNodes.mainGain = audioContext.createGain();
-      audioNodes.mainGain.gain.value = params.volume || 1.0;
-      if (isReverbReady && reverbPreDelayNode) {
-        audioNodes.reverbSendGain = audioContext.createGain();
-        audioNodes.reverbSendGain.gain.value =
-          params.reverbSend ?? DEFAULT_REVERB_SEND;
-        audioNodes.mainGain.connect(audioNodes.reverbSendGain);
-        audioNodes.reverbSendGain.connect(reverbPreDelayNode);
-      }
-      if (isDelayReady && masterDelaySendGain) {
-        audioNodes.delaySendGain = audioContext.createGain();
-        audioNodes.delaySendGain.gain.value =
-          params.delaySend ?? DEFAULT_DELAY_SEND;
-        audioNodes.mainGain.connect(audioNodes.delaySendGain);
-        audioNodes.delaySendGain.connect(masterDelaySendGain);
-      }
-      audioNodes.mainGain.connect(masterGain);
-      return audioNodes;
+        return null;
     }
-  } catch (e) {
-    console.error(
-      "Error creating audio nodes for node type:",
-      node.type,
-      "ID:",
-      node.id,
-      e,
-    );
+    if (node.type === TIMELINE_GRID_TYPE) {
+        return null;
+    }
+
+    if (
+        ![PRORB_TYPE, "sound", "nebula", PORTAL_NEBULA_TYPE].includes(node.type) &&
+        !isDrumType(node.type)
+    ) {
+        return null;
+    }
+
+    const params = node.audioParams;
+    const now = audioContext.currentTime;
+    const startDelay = now + 0.02;
+
+    try {
+        if (node.type === PRORB_TYPE) {
+            const audioNodes = {
+                oscillator1: audioContext.createOscillator(),
+                osc1Gain: audioContext.createGain(),
+                oscillator2: null,
+                osc2Gain: null,
+                fmModulator: null,
+                fmModulatorGain: null,
+                filterNode: audioContext.createBiquadFilter(),
+                mainGain: audioContext.createGain(),
+                lfo1Osc: null,
+                lfo1Gain: null,
+                reverbSendGain: null,
+                delaySendGain: null,
+            };
+
+            audioNodes.oscillator1.type = params.osc1Waveform || "sawtooth";
+            audioNodes.oscillator1.connect(audioNodes.osc1Gain);
+            audioNodes.osc1Gain.connect(audioNodes.filterNode);
+            audioNodes.osc1Gain.gain.value =
+                params.osc1Level !== undefined ? params.osc1Level : 0.7;
+
+            if (params.osc2Enabled) {
+                audioNodes.oscillator2 = audioContext.createOscillator();
+                audioNodes.oscillator2.type = params.osc2Waveform || "square";
+                audioNodes.osc2Gain = audioContext.createGain();
+                audioNodes.osc2Gain.gain.value =
+                    params.osc2Level !== undefined ? params.osc2Level : 0.0;
+                audioNodes.oscillator2.connect(audioNodes.osc2Gain);
+                audioNodes.osc2Gain.connect(audioNodes.filterNode);
+            }
+
+            if (params.fmEnabled) {
+                audioNodes.fmModulator = audioContext.createOscillator();
+                audioNodes.fmModulator.type = params.fmModulatorWaveform || "sine";
+                audioNodes.fmModulatorGain = audioContext.createGain();
+                audioNodes.fmModulatorGain.gain.value = 0;
+                audioNodes.fmModulator.connect(audioNodes.fmModulatorGain);
+                audioNodes.fmModulatorGain.connect(audioNodes.oscillator1.frequency);
+            }
+
+            audioNodes.filterNode.type = params.filterType || "lowpass";
+            audioNodes.filterNode.frequency.value =
+                params.lowPassFreq !== undefined ? params.lowPassFreq : 8000;
+            audioNodes.filterNode.Q.value =
+                params.filterResonance !== undefined ? params.filterResonance : 1.0;
+            audioNodes.filterNode.connect(audioNodes.mainGain);
+            audioNodes.mainGain.gain.value = 0;
+
+            if (params.lfo1Enabled) {
+                audioNodes.lfo1Osc = audioContext.createOscillator();
+                audioNodes.lfo1Osc.type = params.lfo1Waveform || "sine";
+                audioNodes.lfo1Osc.frequency.setValueAtTime(
+                    params.lfo1Rate || 2.0,
+                    now,
+                );
+                audioNodes.lfo1Gain = audioContext.createGain();
+                audioNodes.lfo1Gain.gain.value = params.lfo1Depth || 0;
+                audioNodes.lfo1Osc.connect(audioNodes.lfo1Gain);
+            }
+
+            try {
+                audioNodes.oscillator1.start(startDelay);
+            } catch (e) {}
+            if (audioNodes.oscillator2) {
+                try {
+                    audioNodes.oscillator2.start(startDelay);
+                } catch (e) {}
+            }
+            if (audioNodes.fmModulator) {
+                try {
+                    audioNodes.fmModulator.start(startDelay);
+                } catch (e) {}
+            }
+            if (audioNodes.lfo1Osc) {
+                try {
+                    audioNodes.lfo1Osc.start(startDelay);
+                } catch (e) {}
+            }
+
+            if (isReverbReady && reverbPreDelayNode) {
+                audioNodes.reverbSendGain = audioContext.createGain();
+                audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
+                audioNodes.mainGain.connect(audioNodes.reverbSendGain);
+                audioNodes.reverbSendGain.connect(reverbPreDelayNode);
+            }
+            if (isDelayReady && masterDelaySendGain) {
+                audioNodes.delaySendGain = audioContext.createGain();
+                audioNodes.delaySendGain.gain.value = params.delaySend || 0;
+                audioNodes.mainGain.connect(audioNodes.delaySendGain);
+                audioNodes.delaySendGain.connect(masterDelaySendGain);
+            }
+
+            audioNodes.mainGain.connect(masterGain);
+            return audioNodes;
+        } else if (node.type === "sound") {
+            const audioNodes = {
+                gainNode: audioContext.createGain(),
+                lowPassFilter: audioContext.createBiquadFilter(),
+                reverbSendGain: null,
+                delaySendGain: null,
+                volLfo: audioContext.createOscillator(),
+                volLfoGain: audioContext.createGain(),
+                oscillator1: null,
+                osc1Gain: audioContext.createGain(),
+                modulatorOsc1: null,
+                modulatorGain1: null,
+                oscillator2: null,
+                osc2Gain: null,
+                orbitoneOscillators: [],
+                orbitoneIndividualGains: [],
+                orbitoneModulatorOscs: [],
+                orbitoneModulatorGains: [],
+            };
+
+            audioNodes.gainNode.gain.setValueAtTime(0, now);
+            audioNodes.lowPassFilter.type = params.filterType || "lowpass";
+            audioNodes.lowPassFilter.Q.value = params.filterResonance || 1.2;
+            audioNodes.lowPassFilter.frequency.value =
+                params.lowPassFreq || MAX_FILTER_FREQ;
+
+            if (params.waveform && !params.waveform.startsWith("sampler_")) {
+                audioNodes.oscillator1 = audioContext.createOscillator();
+                const osc1BaseWaveform =
+                    params.osc1Type ||
+                    params.baseSoundType ||
+                    params.carrierWaveform ||
+                    params.actualOscillatorType ||
+                    params.waveform ||
+                    "sine";
+                const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
+                audioNodes.oscillator1.type = validOscTypes.includes(osc1BaseWaveform) ?
+                    osc1BaseWaveform :
+                    osc1BaseWaveform === "pulse" ?
+                    "square" :
+                    "sine";
+                audioNodes.oscillator1.frequency.setValueAtTime(params.pitch, now);
+                audioNodes.oscillator1.connect(audioNodes.osc1Gain);
+            }
+            audioNodes.osc1Gain.gain.value = 1.0;
+            audioNodes.osc1Gain.connect(audioNodes.lowPassFilter);
+            audioNodes.lowPassFilter.connect(audioNodes.gainNode);
+
+            if (isReverbReady && reverbPreDelayNode) {
+                audioNodes.reverbSendGain = audioContext.createGain();
+                audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
+                audioNodes.gainNode.connect(audioNodes.reverbSendGain);
+                audioNodes.reverbSendGain.connect(reverbPreDelayNode);
+            }
+            if (isDelayReady && masterDelaySendGain) {
+                audioNodes.delaySendGain = audioContext.createGain();
+                audioNodes.delaySendGain.gain.value = params.delaySend || 0;
+                audioNodes.gainNode.connect(audioNodes.delaySendGain);
+                audioNodes.delaySendGain.connect(masterDelaySendGain);
+            }
+
+            audioNodes.volLfo.type = params.lfo1Type || "sine";
+            audioNodes.volLfo.frequency.setValueAtTime(params.volLfoRate || 0.2, now);
+            audioNodes.volLfoGain.gain.value = fluctuatingGroupNodeIDs.has(node.id) ?
+                parseFloat(groupFluctuateAmount.value) :
+                params.volLfoDepth || 0;
+            audioNodes.volLfo.connect(audioNodes.volLfoGain);
+            audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
+            try {
+                audioNodes.volLfo.start(startDelay);
+            } catch (e) {}
+
+            if (audioNodes.oscillator1) {
+                try {
+                    audioNodes.oscillator1.start(startDelay);
+                } catch (e) {}
+                if (params.carrierWaveform && params.modulatorWaveform) {
+                    audioNodes.modulatorOsc1 = audioContext.createOscillator();
+                    audioNodes.modulatorOsc1.type = params.modulatorWaveform;
+                    const modRatio = params.modulatorRatio || 1.0;
+                    audioNodes.modulatorOsc1.frequency.setValueAtTime(
+                        params.pitch * modRatio,
+                        now,
+                    );
+                    audioNodes.modulatorGain1 = audioContext.createGain();
+                    audioNodes.modulatorGain1.gain.setValueAtTime(0, now);
+                    audioNodes.modulatorOsc1.connect(audioNodes.modulatorGain1);
+                    audioNodes.modulatorGain1.connect(audioNodes.oscillator1.frequency);
+                    try {
+                        audioNodes.modulatorOsc1.start(startDelay);
+                    } catch (e) {}
+                }
+                if (
+                    !params.orbitonesEnabled &&
+                    params.osc2Type &&
+                    !params.carrierWaveform
+                ) {
+                    audioNodes.oscillator2 = audioContext.createOscillator();
+                    const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
+                    audioNodes.oscillator2.type = validOscTypes.includes(params.osc2Type) ?
+                        params.osc2Type :
+                        params.osc2Type === "pulse" ?
+                        "square" :
+                        "sine";
+                    if (params.osc2Detune)
+                        audioNodes.oscillator2.detune.setValueAtTime(
+                            params.osc2Detune,
+                            now,
+                        );
+                    const osc2BaseFreq =
+                        params.pitch * Math.pow(2, params.osc2Octave || 0);
+                    audioNodes.oscillator2.frequency.setValueAtTime(osc2BaseFreq, now);
+                    audioNodes.osc2Gain = audioContext.createGain();
+                    audioNodes.osc2Gain.gain.value = params.osc2Mix || 0.5;
+                    audioNodes.oscillator2.connect(audioNodes.osc2Gain);
+                    audioNodes.osc2Gain.connect(audioNodes.lowPassFilter);
+                    try {
+                        audioNodes.oscillator2.start(startDelay);
+                    } catch (e) {}
+                }
+            }
+
+            if (
+                params.orbitonesEnabled &&
+                params.orbitoneCount > 0 &&
+                params.orbitoneIntervals &&
+                !(params.waveform && params.waveform.startsWith("sampler_"))
+            ) {
+                const allFrequenciesForCreation = getOrbitoneFrequencies(
+                    params.scaleIndex,
+                    params.orbitoneCount,
+                    params.orbitoneIntervals,
+                    params.orbitoneSpread,
+                    currentScale,
+                    params.pitch,
+                );
+                const actualOrbitoneFrequencies = allFrequenciesForCreation.slice(1);
+                const osc1BaseWaveformForOrbitones =
+                    params.osc1Type || params.waveform || "sine";
+                const validOscTypesForOrbitones = [
+                    "sine",
+                    "square",
+                    "sawtooth",
+                    "triangle",
+                ];
+                const finalOrbitoneWaveform = validOscTypesForOrbitones.includes(
+                        osc1BaseWaveformForOrbitones,
+                    ) ?
+                    osc1BaseWaveformForOrbitones :
+                    "sine";
+
+                for (let i = 0; i < actualOrbitoneFrequencies.length; i++) {
+                    const freq = actualOrbitoneFrequencies[i];
+                    if (isNaN(freq) || freq <= 0) continue;
+                    const orbitOsc = audioContext.createOscillator();
+                    orbitOsc.type = finalOrbitoneWaveform;
+                    orbitOsc.frequency.setValueAtTime(freq, now);
+                    const orbitIndividualGainNode = audioContext.createGain();
+                    orbitIndividualGainNode.gain.setValueAtTime(0, now);
+                    orbitOsc.connect(orbitIndividualGainNode);
+                    orbitIndividualGainNode.connect(audioNodes.lowPassFilter);
+                    try {
+                        orbitOsc.start(startDelay);
+                    } catch (e) {}
+                    audioNodes.orbitoneOscillators.push(orbitOsc);
+                    audioNodes.orbitoneIndividualGains.push(orbitIndividualGainNode);
+                    if (
+                        params.carrierWaveform &&
+                        params.modulatorWaveform &&
+                        audioNodes.fmModulatorGain
+                    ) {
+                        const modOsc = audioContext.createOscillator();
+                        modOsc.type = params.modulatorWaveform;
+                        const modRatio = params.modulatorRatio || 1.0;
+                        modOsc.frequency.setValueAtTime(freq * modRatio, now);
+                        const modGain = audioContext.createGain();
+                        modGain.gain.setValueAtTime(0, now);
+                        modOsc.connect(modGain);
+                        modGain.connect(orbitOsc.frequency);
+                        try {
+                            modOsc.start(startDelay);
+                        } catch (e) {}
+                        audioNodes.orbitoneModulatorOscs.push(modOsc);
+                        audioNodes.orbitoneModulatorGains.push(modGain);
+                    }
+                }
+            }
+            return audioNodes;
+        } else if (node.type === "nebula") {
+            const audioNodes = {};
+            audioNodes.gainNode = audioContext.createGain();
+            audioNodes.gainNode.gain.value = 0;
+            audioNodes.filterNode = audioContext.createBiquadFilter();
+            audioNodes.filterNode.type = params.filterType || "lowpass";
+            audioNodes.filterNode.Q.value = params.filterResonance || NEBULA_FILTER_Q;
+            const baseFreq = params.pitch;
+            audioNodes.filterLfo = audioContext.createOscillator();
+            audioNodes.filterLfo.type = "sine";
+            audioNodes.filterLfo.frequency.setValueAtTime(
+                NEBULA_FILTER_LFO_RATE,
+                now,
+            );
+            audioNodes.filterLfoGain = audioContext.createGain();
+            audioNodes.filterLfoGain.gain.setValueAtTime(
+                baseFreq *
+                NEBULA_FILTER_LFO_DEPTH_FACTOR *
+                (params.lfoDepthFactor || 1),
+                now,
+            );
+            audioNodes.filterLfo.connect(audioNodes.filterLfoGain);
+            audioNodes.filterLfoGain.connect(audioNodes.filterNode.frequency);
+            audioNodes.volLfo = audioContext.createOscillator();
+            audioNodes.volLfo.type = "sine";
+            audioNodes.volLfo.frequency.setValueAtTime(NEBULA_VOL_LFO_RATE, now);
+            audioNodes.volLfoGain = audioContext.createGain();
+            audioNodes.volLfoGain.gain.value = NEBULA_VOL_LFO_DEPTH;
+            audioNodes.volLfo.connect(audioNodes.volLfoGain);
+            audioNodes.volLfoGain.connect(audioNodes.gainNode.gain);
+            audioNodes.oscillators = [];
+            const baseWaveformForNebula =
+                params.osc1Type || params.waveform || "sawtooth";
+            const validOscTypes = ["sine", "square", "sawtooth", "triangle"];
+            let waveformType = validOscTypes.includes(baseWaveformForNebula) ?
+                baseWaveformForNebula :
+                "sawtooth";
+            if (
+                baseWaveformForNebula === "fmBell" ||
+                baseWaveformForNebula === "fmXylo"
+            )
+                waveformType = "sine";
+            NEBULA_OSC_INTERVALS.forEach((interval, i) => {
+                const osc = audioContext.createOscillator();
+                const freq = baseFreq * Math.pow(2, interval / 12);
+                osc.frequency.setValueAtTime(freq, now);
+                osc.detune.setValueAtTime(
+                    (i % 2 === 0 ? 1 : -1) *
+                    (params.detune || NEBULA_OSC_DETUNE) *
+                    (i + 1),
+                    now,
+                );
+                osc.type = waveformType;
+                osc.connect(audioNodes.filterNode);
+                audioNodes.oscillators.push(osc);
+            });
+            audioNodes.filterNode.connect(audioNodes.gainNode);
+            if (isReverbReady && reverbPreDelayNode) {
+                audioNodes.reverbSendGain = audioContext.createGain();
+                audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
+                audioNodes.gainNode.connect(audioNodes.reverbSendGain);
+                audioNodes.reverbSendGain.connect(reverbPreDelayNode);
+            }
+            if (isDelayReady && masterDelaySendGain) {
+                audioNodes.delaySendGain = audioContext.createGain();
+                audioNodes.delaySendGain.gain.value = params.delaySend || 0;
+                audioNodes.gainNode.connect(audioNodes.delaySendGain);
+                audioNodes.delaySendGain.connect(masterDelaySendGain);
+            }
+            const initialVol = Math.min(
+                NEBULA_MAX_VOL,
+                node.size * NEBULA_VOL_SCALING,
+            );
+            const initialFilterFreq =
+                params.filterCutoff ||
+                baseFreq * 2 +
+                ((node.size - MIN_NODE_SIZE) / (MAX_NODE_SIZE - MIN_NODE_SIZE || 1)) *
+                baseFreq *
+                (params.filterFreqFactor || 12);
+            audioNodes.filterNode.frequency.setValueAtTime(initialFilterFreq, now);
+            audioNodes.gainNode.gain.linearRampToValueAtTime(initialVol, now + 0.5);
+            try {
+                audioNodes.filterLfo.start(startDelay);
+            } catch (e) {}
+            try {
+                audioNodes.volLfo.start(startDelay);
+            } catch (e) {}
+            audioNodes.oscillators.forEach((osc) => {
+                try {
+                    osc.start(startDelay);
+                } catch (e) {}
+            });
+            if (originalNebulaGroupGain) {
+                audioNodes.gainNode.connect(originalNebulaGroupGain);
+            } else {
+                audioNodes.gainNode.connect(masterGain);
+            }
+            return audioNodes;
+        } else if (node.type === PORTAL_NEBULA_TYPE) {
+            const audioNodes = {};
+            const defaults = PORTAL_NEBULA_DEFAULTS;
+            audioNodes.mainGain = audioContext.createGain();
+            audioNodes.mainGain.gain.setValueAtTime(0, now);
+            audioNodes.mainGain.gain.linearRampToValueAtTime(
+                params.volume,
+                now + 1.0,
+            );
+            audioNodes.droneOsc = audioContext.createOscillator();
+            audioNodes.droneOsc.type = params.actualOscillatorType || "triangle";
+            audioNodes.droneOsc.frequency.setValueAtTime(params.pitch, now);
+            audioNodes.droneFreqLfo = audioContext.createOscillator();
+            audioNodes.droneFreqLfo.type = "sine";
+            audioNodes.droneFreqLfo.frequency.setValueAtTime(
+                0.05 + Math.random() * 0.05,
+                now,
+            );
+            audioNodes.droneFreqLfoGain = audioContext.createGain();
+            audioNodes.droneFreqLfoGain.gain.setValueAtTime(
+                0.5 + Math.random() * 0.5,
+                now,
+            );
+            audioNodes.droneFreqLfo.connect(audioNodes.droneFreqLfoGain);
+            audioNodes.droneFreqLfoGain.connect(audioNodes.droneOsc.frequency);
+            audioNodes.droneOsc.connect(audioNodes.mainGain);
+            audioNodes.harmonics = [];
+            audioNodes.harmonicGain = audioContext.createGain();
+            audioNodes.harmonicGain.gain.setValueAtTime(
+                defaults.harmonicBaseGain,
+                now,
+            );
+            audioNodes.shimmerLfo = audioContext.createOscillator();
+            audioNodes.shimmerLfo.type = "sine";
+            audioNodes.shimmerLfo.frequency.setValueAtTime(defaults.shimmerRate, now);
+            audioNodes.shimmerLfoGain = audioContext.createGain();
+            audioNodes.shimmerLfoGain.gain.setValueAtTime(defaults.shimmerDepth, now);
+            audioNodes.shimmerLfo.connect(audioNodes.shimmerLfoGain);
+            audioNodes.shimmerLfoGain.connect(audioNodes.harmonicGain.gain);
+            for (let i = 0; i < defaults.numHarmonics; i++) {
+                const harmonicOsc = audioContext.createOscillator();
+                harmonicOsc.type = "sine";
+                const freqMultiplier = Math.pow(
+                    2,
+                    (i + 1) * defaults.harmonicSpread * 0.5 + Math.random() * 0.1,
+                );
+                harmonicOsc.frequency.setValueAtTime(
+                    params.pitch * freqMultiplier,
+                    now,
+                );
+                harmonicOsc.detune.setValueAtTime((Math.random() - 0.5) * 15, now);
+                harmonicOsc.connect(audioNodes.harmonicGain);
+                audioNodes.harmonics.push(harmonicOsc);
+            }
+            audioNodes.harmonicGain.connect(audioNodes.mainGain);
+            if (isReverbReady && reverbPreDelayNode) {
+                audioNodes.reverbSendGain = audioContext.createGain();
+                audioNodes.reverbSendGain.gain.value = params.reverbSend || 0;
+                audioNodes.mainGain.connect(audioNodes.reverbSendGain);
+                audioNodes.reverbSendGain.connect(reverbPreDelayNode);
+            }
+            if (isDelayReady && masterDelaySendGain) {
+                audioNodes.delaySendGain = audioContext.createGain();
+                audioNodes.delaySendGain.gain.value = params.delaySend || 0;
+                audioNodes.mainGain.connect(audioNodes.delaySendGain);
+                audioNodes.delaySendGain.connect(masterDelaySendGain);
+            }
+            try {
+                audioNodes.droneOsc.start(startDelay);
+            } catch (e) {}
+            try {
+                audioNodes.droneFreqLfo.start(startDelay);
+            } catch (e) {}
+            try {
+                audioNodes.shimmerLfo.start(startDelay);
+            } catch (e) {}
+            audioNodes.harmonics.forEach((osc) => {
+                try {
+                    osc.start(startDelay);
+                } catch (e) {}
+            });
+            if (portalGroupGain) {
+                audioNodes.mainGain.connect(portalGroupGain);
+            } else {
+                audioNodes.mainGain.connect(masterGain);
+            }
+            return audioNodes;
+        } else if (isDrumType(node.type)) {
+            const audioNodes = {};
+            audioNodes.mainGain = audioContext.createGain();
+            audioNodes.mainGain.gain.value = params.volume || 1.0;
+            if (isReverbReady && reverbPreDelayNode) {
+                audioNodes.reverbSendGain = audioContext.createGain();
+                audioNodes.reverbSendGain.gain.value =
+                    params.reverbSend ?? DEFAULT_REVERB_SEND;
+                audioNodes.mainGain.connect(audioNodes.reverbSendGain);
+                audioNodes.reverbSendGain.connect(reverbPreDelayNode);
+            }
+            if (isDelayReady && masterDelaySendGain) {
+                audioNodes.delaySendGain = audioContext.createGain();
+                audioNodes.delaySendGain.gain.value =
+                    params.delaySend ?? DEFAULT_DELAY_SEND;
+                audioNodes.mainGain.connect(audioNodes.delaySendGain);
+                audioNodes.delaySendGain.connect(masterDelaySendGain);
+            }
+            audioNodes.mainGain.connect(masterGain);
+            return audioNodes;
+        }
+    } catch (e) {
+        console.error(
+            "Error creating audio nodes for node type:",
+            node.type,
+            "ID:",
+            node.id,
+            e,
+        );
+        return null;
+    }
     return null;
-  }
-  return null;
 }
+
 
 function isInAnyIdentifiedGroup(nodeId) {
   return identifiedGroups.some((group) => group.nodeIds.has(nodeId));
@@ -2975,640 +2945,540 @@ function setSpecificGroupReverbSend(groupId, level) {
 }
 
 function updateMixerGUI() {
-  if (!mixerGroupControlsContainer || !isAudioReady) {
-    if (mixerGroupControlsContainer) {
-      mixerGroupControlsContainer.innerHTML =
-        "<small>(Mixer not ready...)</small>";
+    if (!mixerGroupControlsContainer || !isAudioReady) {
+        if (mixerGroupControlsContainer) {
+            mixerGroupControlsContainer.innerHTML = "<small>(Mixer not ready...)</small>";
+        }
+        return;
     }
-    return;
-  }
-  mixerGroupControlsContainer.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-  const now = audioContext ? audioContext.currentTime : 0;
-  const timeConstant = 0.01;
+    mixerGroupControlsContainer.innerHTML = ""; 
+    const fragment = document.createDocumentFragment();
+    const now = audioContext ? audioContext.currentTime : 0;
+    const timeConstant = 0.01;
 
-  if (portalGroupGain) {
-    const standalonePortalNodesExist = nodes.some(
-      (n) =>
-        n.type === PORTAL_NEBULA_TYPE &&
-        !(userDefinedGroups || []).some((ug) => ug.nodeIds.has(n.id)),
-    );
-
-    if (standalonePortalNodesExist) {
-      const portalContainer = document.createElement("div");
-      portalContainer.classList.add(
-        "mixer-group-control-section",
-        "mixer-special-group",
-      );
-      portalContainer.style.borderLeft =
-        "3px solid var(--pulsar-triggerable-border, #aaf)";
-
-      const portalVolControlDiv = document.createElement("div");
-      portalVolControlDiv.classList.add("mixer-control-item");
-      const portalVolLabel = document.createElement("label");
-      portalVolLabel.htmlFor = "mixerPortalGroupSlider";
-      portalVolLabel.textContent = `Portal Drones Vol:`;
-      portalVolControlDiv.appendChild(portalVolLabel);
-      const portalVolSlider = document.createElement("input");
-      portalVolSlider.type = "range";
-      portalVolSlider.id = "mixerPortalGroupSlider";
-      portalVolSlider.min = "0";
-      portalVolSlider.max = "1.5";
-      portalVolSlider.step = "0.01";
-      try {
-        portalVolSlider.value = portalGroupGain.gain.value.toFixed(2);
-      } catch (e) {
-        portalVolSlider.value = "0.7";
-      }
-      portalVolSlider.title = `Volume for Portal Drones (not in user groups)`;
-      portalVolSlider.addEventListener("input", (e) => {
-        const newVol = parseFloat(e.target.value);
-        if (portalGroupGain && audioContext) {
-          portalGroupGain.gain.setTargetAtTime(
-            newVol,
-            audioContext.currentTime,
-            timeConstant,
-          );
-        }
-        const span = document.getElementById("mixerPortalGroupValue");
-        if (span) span.textContent = newVol.toFixed(2);
-      });
-      portalVolSlider.addEventListener("change", saveState);
-      portalVolControlDiv.appendChild(portalVolSlider);
-      const portalVolValueSpan = document.createElement("span");
-      portalVolValueSpan.id = "mixerPortalGroupValue";
-      portalVolValueSpan.textContent = portalVolSlider.value;
-      portalVolControlDiv.appendChild(portalVolValueSpan);
-      portalContainer.appendChild(portalVolControlDiv);
-
-      const portalDelayControlDiv = document.createElement("div");
-      portalDelayControlDiv.classList.add("mixer-control-item");
-      const portalDelayLabel = document.createElement("label");
-      portalDelayLabel.htmlFor = "mixerPortalDelaySlider";
-      portalDelayLabel.textContent = `Portal Delay Send:`;
-      portalDelayControlDiv.appendChild(portalDelayLabel);
-      const portalDelaySlider = document.createElement("input");
-      portalDelaySlider.type = "range";
-      portalDelaySlider.id = "mixerPortalDelaySlider";
-      portalDelaySlider.min = "0";
-      portalDelaySlider.max = "1";
-      portalDelaySlider.step = "0.01";
-      let initialPortalDelay = DEFAULT_DELAY_SEND * 1.2;
-      const firstPortal = nodes.find(
-        (n) =>
-          n.type === PORTAL_NEBULA_TYPE &&
-          !(userDefinedGroups || []).some((ug) => ug.nodeIds.has(n.id)),
-      );
-      if (firstPortal && firstPortal.audioParams) {
-        initialPortalDelay =
-          firstPortal.audioParams.delaySend !== undefined
-            ? firstPortal.audioParams.delaySend
-            : DEFAULT_DELAY_SEND * 1.2;
-      }
-      portalDelaySlider.value = initialPortalDelay.toFixed(2);
-      portalDelaySlider.title = `Delay Send for all Portal Drones (not in user groups)`;
-      portalDelaySlider.addEventListener("input", (e) => {
-        const newSend = parseFloat(e.target.value);
-        nodes.forEach((node) => {
-          if (
-            node.type === PORTAL_NEBULA_TYPE &&
-            !(userDefinedGroups || []).some((ug) => ug.nodeIds.has(node.id)) &&
-            node.audioNodes?.delaySendGain?.gain
-          ) {
-            node.audioParams.delaySend = newSend;
-            node.audioNodes.delaySendGain.gain.setTargetAtTime(
-              newSend,
-              audioContext.currentTime,
-              timeConstant,
-            );
-          }
-        });
-        const span = document.getElementById("mixerPortalDelayValue");
-        if (span) span.textContent = newSend.toFixed(2);
-      });
-      portalDelaySlider.addEventListener("change", saveState);
-      portalDelayControlDiv.appendChild(portalDelaySlider);
-      const portalDelayValueSpan = document.createElement("span");
-      portalDelayValueSpan.id = "mixerPortalDelayValue";
-      portalDelayValueSpan.textContent = portalDelaySlider.value;
-      portalDelayControlDiv.appendChild(portalDelayValueSpan);
-      portalContainer.appendChild(portalDelayControlDiv);
-
-      if (isReverbReady && reverbPreDelayNode) {
-        const portalReverbControlDiv = document.createElement("div");
-        portalReverbControlDiv.classList.add("mixer-control-item");
-        const portalReverbLabel = document.createElement("label");
-        portalReverbLabel.htmlFor = "mixerPortalReverbSlider";
-        portalReverbLabel.textContent = `Portal Reverb Send:`;
-        portalReverbControlDiv.appendChild(portalReverbLabel);
-        const portalReverbSlider = document.createElement("input");
-        portalReverbSlider.type = "range";
-        portalReverbSlider.id = "mixerPortalReverbSlider";
-        portalReverbSlider.min = "0";
-        portalReverbSlider.max = "1";
-        portalReverbSlider.step = "0.01";
-        let initialPortalReverb = DEFAULT_REVERB_SEND * 1.5;
-        if (firstPortal && firstPortal.audioParams) {
-          initialPortalReverb =
-            firstPortal.audioParams.reverbSend !== undefined
-              ? firstPortal.audioParams.reverbSend
-              : DEFAULT_REVERB_SEND * 1.5;
-        }
-        portalReverbSlider.value = initialPortalReverb.toFixed(2);
-        portalReverbSlider.title = `Reverb Send for all Portal Drones (not in user groups)`;
-        portalReverbSlider.addEventListener("input", (e) => {
-          const newSend = parseFloat(e.target.value);
-          nodes.forEach((node) => {
-            if (
-              node.type === PORTAL_NEBULA_TYPE &&
-              !(userDefinedGroups || []).some((ug) =>
-                ug.nodeIds.has(node.id),
-              ) &&
-              node.audioNodes?.reverbSendGain?.gain
-            ) {
-              node.audioParams.reverbSend = newSend;
-              node.audioNodes.reverbSendGain.gain.setTargetAtTime(
-                newSend,
-                audioContext.currentTime,
-                timeConstant,
-              );
-            }
-          });
-          const span = document.getElementById("mixerPortalReverbValue");
-          if (span) span.textContent = newSend.toFixed(2);
-        });
-        portalReverbSlider.addEventListener("change", saveState);
-        portalReverbControlDiv.appendChild(portalReverbSlider);
-        const portalReverbValueSpan = document.createElement("span");
-        portalReverbValueSpan.id = "mixerPortalReverbValue";
-        portalReverbValueSpan.textContent = portalReverbSlider.value;
-        portalReverbControlDiv.appendChild(portalReverbValueSpan);
-        portalContainer.appendChild(portalReverbControlDiv);
-      }
-      fragment.appendChild(portalContainer);
-    }
-  }
-
-  if (originalNebulaGroupGain) {
-    const standaloneNebulaNodesExist = nodes.some(
-      (n) =>
-        n.type === "nebula" &&
-        !(userDefinedGroups || []).some((ug) => ug.nodeIds.has(n.id)),
-    );
-    if (standaloneNebulaNodesExist) {
-      const nebulaContainer = document.createElement("div");
-      nebulaContainer.classList.add(
-        "mixer-group-control-section",
-        "mixer-special-group",
-      );
-      nebulaContainer.style.borderLeft = "3px solid var(--nebula-border, #adf)";
-
-      const nebulaVolControlDiv = document.createElement("div");
-      nebulaVolControlDiv.classList.add("mixer-control-item");
-      const nebulaVolLabel = document.createElement("label");
-      nebulaVolLabel.htmlFor = "mixerNebulaGroupSlider";
-      nebulaVolLabel.textContent = `Nebula Sounds Vol:`;
-      nebulaVolControlDiv.appendChild(nebulaVolLabel);
-      const nebulaVolSlider = document.createElement("input");
-      nebulaVolSlider.type = "range";
-      nebulaVolSlider.id = "mixerNebulaGroupSlider";
-      nebulaVolSlider.min = "0";
-      nebulaVolSlider.max = "1.5";
-      nebulaVolSlider.step = "0.01";
-      try {
-        nebulaVolSlider.value = originalNebulaGroupGain.gain.value.toFixed(2);
-      } catch (e) {
-        nebulaVolSlider.value = "0.8";
-      }
-      nebulaVolSlider.title = `Volume for Nebula Sounds (not in user groups)`;
-      nebulaVolSlider.addEventListener("input", (e) => {
-        const newVol = parseFloat(e.target.value);
-        if (originalNebulaGroupGain && audioContext) {
-          originalNebulaGroupGain.gain.setTargetAtTime(
-            newVol,
-            audioContext.currentTime,
-            timeConstant,
-          );
-        }
-        const span = document.getElementById("mixerNebulaGroupValue");
-        if (span) span.textContent = newVol.toFixed(2);
-      });
-      nebulaVolSlider.addEventListener("change", saveState);
-      nebulaVolControlDiv.appendChild(nebulaVolSlider);
-      const nebulaVolValueSpan = document.createElement("span");
-      nebulaVolValueSpan.id = "mixerNebulaGroupValue";
-      nebulaVolValueSpan.textContent = nebulaVolSlider.value;
-      nebulaVolControlDiv.appendChild(nebulaVolValueSpan);
-      nebulaContainer.appendChild(nebulaVolControlDiv);
-
-      const nebulaDelayControlDiv = document.createElement("div");
-      nebulaDelayControlDiv.classList.add("mixer-control-item");
-      const nebulaDelayLabel = document.createElement("label");
-      nebulaDelayLabel.htmlFor = "mixerNebulaDelaySlider";
-      nebulaDelayLabel.textContent = `Nebula Delay Send:`;
-      nebulaDelayControlDiv.appendChild(nebulaDelayLabel);
-      const nebulaDelaySlider = document.createElement("input");
-      nebulaDelaySlider.type = "range";
-      nebulaDelaySlider.id = "mixerNebulaDelaySlider";
-      nebulaDelaySlider.min = "0";
-      nebulaDelaySlider.max = "1";
-      nebulaDelaySlider.step = "0.01";
-      let initialNebulaDelay = DEFAULT_DELAY_SEND;
-      const firstNebula = nodes.find(
-        (n) =>
-          n.type === "nebula" &&
-          !(userDefinedGroups || []).some((ug) => ug.nodeIds.has(n.id)),
-      );
-      if (firstNebula && firstNebula.audioParams) {
-        initialNebulaDelay =
-          firstNebula.audioParams.delaySend !== undefined
-            ? firstNebula.audioParams.delaySend
-            : DEFAULT_DELAY_SEND;
-      }
-      nebulaDelaySlider.value = initialNebulaDelay.toFixed(2);
-      nebulaDelaySlider.title = `Delay Send for all Nebula sounds (not in user groups)`;
-      nebulaDelaySlider.addEventListener("input", (e) => {
-        const newSend = parseFloat(e.target.value);
-        nodes.forEach((node) => {
-          if (
-            node.type === "nebula" &&
-            !(userDefinedGroups || []).some((ug) => ug.nodeIds.has(node.id)) &&
-            node.audioNodes?.delaySendGain?.gain
-          ) {
-            node.audioParams.delaySend = newSend;
-            node.audioNodes.delaySendGain.gain.setTargetAtTime(
-              newSend,
-              audioContext.currentTime,
-              timeConstant,
-            );
-          }
-        });
-        const span = document.getElementById("mixerNebulaDelayValue");
-        if (span) span.textContent = newSend.toFixed(2);
-      });
-      nebulaDelaySlider.addEventListener("change", saveState);
-      nebulaDelayControlDiv.appendChild(nebulaDelaySlider);
-      const nebulaDelayValueSpan = document.createElement("span");
-      nebulaDelayValueSpan.id = "mixerNebulaDelayValue";
-      nebulaDelayValueSpan.textContent = nebulaDelaySlider.value;
-      nebulaDelayControlDiv.appendChild(nebulaDelayValueSpan);
-      nebulaContainer.appendChild(nebulaDelayControlDiv);
-
-      if (isReverbReady && reverbPreDelayNode) {
-        const nebulaReverbControlDiv = document.createElement("div");
-        nebulaReverbControlDiv.classList.add("mixer-control-item");
-        const nebulaReverbLabel = document.createElement("label");
-        nebulaReverbLabel.htmlFor = "mixerNebulaReverbSlider";
-        nebulaReverbLabel.textContent = `Nebula Reverb Send:`;
-        nebulaReverbControlDiv.appendChild(nebulaReverbLabel);
-        const nebulaReverbSlider = document.createElement("input");
-        nebulaReverbSlider.type = "range";
-        nebulaReverbSlider.id = "mixerNebulaReverbSlider";
-        nebulaReverbSlider.min = "0";
-        nebulaReverbSlider.max = "1";
-        nebulaReverbSlider.step = "0.01";
-        let initialNebulaReverb = DEFAULT_REVERB_SEND;
-        if (firstNebula && firstNebula.audioParams) {
-          initialNebulaReverb =
-            firstNebula.audioParams.reverbSend !== undefined
-              ? firstNebula.audioParams.reverbSend
-              : DEFAULT_REVERB_SEND;
-        }
-        nebulaReverbSlider.value = initialNebulaReverb.toFixed(2);
-        nebulaReverbSlider.title = `Reverb Send for all Nebula sounds (not in user groups)`;
-        nebulaReverbSlider.addEventListener("input", (e) => {
-          const newSend = parseFloat(e.target.value);
-          nodes.forEach((node) => {
-            if (
-              node.type === "nebula" &&
-              !(userDefinedGroups || []).some((ug) =>
-                ug.nodeIds.has(node.id),
-              ) &&
-              node.audioNodes?.reverbSendGain?.gain
-            ) {
-              node.audioParams.reverbSend = newSend;
-              node.audioNodes.reverbSendGain.gain.setTargetAtTime(
-                newSend,
-                audioContext.currentTime,
-                timeConstant,
-              );
-            }
-          });
-          const span = document.getElementById("mixerNebulaReverbValue");
-          if (span) span.textContent = newSend.toFixed(2);
-        });
-        nebulaReverbSlider.addEventListener("change", saveState);
-        nebulaReverbControlDiv.appendChild(nebulaReverbSlider);
-        const nebulaReverbValueSpan = document.createElement("span");
-        nebulaReverbValueSpan.id = "mixerNebulaReverbValue";
-        nebulaReverbValueSpan.textContent = nebulaReverbSlider.value;
-        nebulaReverbControlDiv.appendChild(nebulaReverbValueSpan);
-        nebulaContainer.appendChild(nebulaReverbControlDiv);
-      }
-      fragment.appendChild(nebulaContainer);
-    }
-  }
-
-  if (userDefinedGroups && userDefinedGroups.length > 0) {
-    const userGroupSectionTitle = document.createElement("h4");
-    userGroupSectionTitle.textContent = "User Groups";
-    userGroupSectionTitle.style.marginTop = "15px";
-    userGroupSectionTitle.style.textAlign = "center";
-    fragment.appendChild(userGroupSectionTitle);
-
-    userDefinedGroups.forEach((group, index) => {
-      if (!group.gainNode) {
-        if (audioContext) {
-          group.gainNode = audioContext.createGain();
-          group.gainNode.gain.value =
-            group.volume !== undefined ? group.volume : 1.0;
-          group.gainNode.connect(masterGain);
-
-          if (!group.delaySendGainNode && masterDelaySendGain) {
-            group.delaySendGainNode = audioContext.createGain();
-            group.delaySendGainNode.gain.value =
-              group.delaySendLevel !== undefined
-                ? group.delaySendLevel
-                : DEFAULT_DELAY_SEND;
-            group.gainNode.connect(group.delaySendGainNode);
-            group.delaySendGainNode.connect(masterDelaySendGain);
-          }
-          if (!group.reverbSendGainNode && reverbPreDelayNode) {
-            group.reverbSendGainNode = audioContext.createGain();
-            group.reverbSendGainNode.gain.value =
-              group.reverbSendLevel !== undefined
-                ? group.reverbSendLevel
-                : DEFAULT_REVERB_SEND;
-            group.gainNode.connect(group.reverbSendGainNode);
-            group.reverbSendGainNode.connect(reverbPreDelayNode);
-          }
-        } else return;
-      }
-
-      const groupContainer = document.createElement("div");
-      groupContainer.classList.add(
-        "mixer-group-control-section",
-        "mixer-user-group",
-      );
-      groupContainer.dataset.groupId = group.id;
-      groupContainer.style.borderLeft =
-        "3px solid var(--user-group-color, #FFA500)";
-
-      const volumeControlDiv = document.createElement("div");
-      volumeControlDiv.classList.add("mixer-control-item");
-      const volumeLabel = document.createElement("label");
-      const volumeSliderId = `mixerUserGroupSlider_${group.id.replace(/\s+/g, "_")}`;
-      volumeLabel.htmlFor = volumeSliderId;
-      volumeLabel.textContent = `User Group ${index + 1} (${group.nodeIds?.size ?? "N/A"} nodes) Vol:`;
-      volumeControlDiv.appendChild(volumeLabel);
-      const volumeSlider = document.createElement("input");
-      volumeSlider.type = "range";
-      volumeSlider.id = volumeSliderId;
-      volumeSlider.min = "0";
-      volumeSlider.max = "1.5";
-      volumeSlider.step = "0.01";
-      volumeSlider.value = (
-        group.gainNode.gain.value !== undefined
-          ? group.gainNode.gain.value
-          : group.volume
-      ).toFixed(2);
-      volumeSlider.title = `Volume for User Group ${index + 1}`;
-      volumeSlider.addEventListener("input", (e) => {
-        const newVol = parseFloat(e.target.value);
-        group.gainNode.gain.setTargetAtTime(
-          newVol,
-          audioContext.currentTime,
-          timeConstant,
+    
+    if (portalGroupGain) {
+        const standalonePortalNodesExist = nodes.some(n =>
+            n.type === PORTAL_NEBULA_TYPE &&
+            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))
         );
-        group.volume = newVol;
-        const valueSpan = document.getElementById(
-          `mixerUserGroupValue_${group.id.replace(/\s+/g, "_")}`,
+
+        if (standalonePortalNodesExist) {
+            const portalContainer = document.createElement("div");
+            portalContainer.classList.add("mixer-group-control-section", "mixer-special-group");
+            portalContainer.style.borderLeft = "3px solid var(--pulsar-triggerable-border, #aaf)";
+
+            const portalVolControlDiv = document.createElement("div");
+            portalVolControlDiv.classList.add("mixer-control-item");
+            const portalVolLabel = document.createElement("label");
+            portalVolLabel.htmlFor = "mixerPortalGroupSlider";
+            portalVolLabel.textContent = `Portal Drones Vol:`;
+            portalVolControlDiv.appendChild(portalVolLabel);
+            const portalVolSlider = document.createElement("input");
+            portalVolSlider.type = "range";
+            portalVolSlider.id = "mixerPortalGroupSlider";
+            portalVolSlider.min = "0";
+            portalVolSlider.max = "1.5";
+            portalVolSlider.step = "0.01";
+            try {
+                portalVolSlider.value = portalGroupGain.gain.value.toFixed(2);
+            } catch (e) {
+                portalVolSlider.value = "0.7";
+            }
+            portalVolSlider.title = `Volume for Portal Drones (not in user groups)`;
+            portalVolSlider.addEventListener("input", (e) => {
+                const newVol = parseFloat(e.target.value);
+                if (portalGroupGain && audioContext) {
+                    portalGroupGain.gain.setTargetAtTime(newVol, audioContext.currentTime, timeConstant);
+                }
+                const span = document.getElementById("mixerPortalGroupValue");
+                if (span) span.textContent = newVol.toFixed(2);
+            });
+            portalVolSlider.addEventListener("change", saveState);
+            portalVolControlDiv.appendChild(portalVolSlider);
+            const portalVolValueSpan = document.createElement("span");
+            portalVolValueSpan.id = "mixerPortalGroupValue";
+            portalVolValueSpan.textContent = portalVolSlider.value;
+            portalVolControlDiv.appendChild(portalVolValueSpan);
+            portalContainer.appendChild(portalVolControlDiv);
+
+            const portalDelayControlDiv = document.createElement("div");
+            portalDelayControlDiv.classList.add("mixer-control-item");
+            const portalDelayLabel = document.createElement("label");
+            portalDelayLabel.htmlFor = "mixerPortalDelaySlider";
+            portalDelayLabel.textContent = `Portal Delay Send:`;
+            portalDelayControlDiv.appendChild(portalDelayLabel);
+            const portalDelaySlider = document.createElement("input");
+            portalDelaySlider.type = "range";
+            portalDelaySlider.id = "mixerPortalDelaySlider";
+            portalDelaySlider.min = "0";
+            portalDelaySlider.max = "1";
+            portalDelaySlider.step = "0.01";
+            let initialPortalDelay = DEFAULT_DELAY_SEND * 1.2;
+            const firstPortal = nodes.find((n) => n.type === PORTAL_NEBULA_TYPE && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
+            if (firstPortal && firstPortal.audioParams) {
+                initialPortalDelay = firstPortal.audioParams.delaySend !== undefined ? firstPortal.audioParams.delaySend : DEFAULT_DELAY_SEND * 1.2;
+            }
+            portalDelaySlider.value = initialPortalDelay.toFixed(2);
+            portalDelaySlider.title = `Delay Send for all Portal Drones (not in user groups)`;
+            portalDelaySlider.addEventListener("input", (e) => {
+                const newSend = parseFloat(e.target.value);
+                nodes.forEach((node) => {
+                    if (
+                        node.type === PORTAL_NEBULA_TYPE &&
+                        !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
+                        node.audioNodes?.delaySendGain?.gain
+                    ) {
+                        node.audioParams.delaySend = newSend;
+                        node.audioNodes.delaySendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
+                    }
+                });
+                const span = document.getElementById("mixerPortalDelayValue");
+                if (span) span.textContent = newSend.toFixed(2);
+            });
+            portalDelaySlider.addEventListener("change", saveState);
+            portalDelayControlDiv.appendChild(portalDelaySlider);
+            const portalDelayValueSpan = document.createElement("span");
+            portalDelayValueSpan.id = "mixerPortalDelayValue";
+            portalDelayValueSpan.textContent = portalDelaySlider.value;
+            portalDelayControlDiv.appendChild(portalDelayValueSpan);
+            portalContainer.appendChild(portalDelayControlDiv);
+
+            if (isReverbReady && reverbPreDelayNode) { 
+                const portalReverbControlDiv = document.createElement("div");
+                portalReverbControlDiv.classList.add("mixer-control-item");
+                const portalReverbLabel = document.createElement("label");
+                portalReverbLabel.htmlFor = "mixerPortalReverbSlider";
+                portalReverbLabel.textContent = `Portal Reverb Send:`;
+                portalReverbControlDiv.appendChild(portalReverbLabel);
+                const portalReverbSlider = document.createElement("input");
+                portalReverbSlider.type = "range";
+                portalReverbSlider.id = "mixerPortalReverbSlider";
+                portalReverbSlider.min = "0";
+                portalReverbSlider.max = "1";
+                portalReverbSlider.step = "0.01";
+                let initialPortalReverb = DEFAULT_REVERB_SEND * 1.5;
+                if (firstPortal && firstPortal.audioParams) {
+                    initialPortalReverb = firstPortal.audioParams.reverbSend !== undefined ? firstPortal.audioParams.reverbSend : DEFAULT_REVERB_SEND * 1.5;
+                }
+                portalReverbSlider.value = initialPortalReverb.toFixed(2);
+                portalReverbSlider.title = `Reverb Send for all Portal Drones (not in user groups)`;
+                portalReverbSlider.addEventListener("input", (e) => {
+                    const newSend = parseFloat(e.target.value);
+                    nodes.forEach((node) => {
+                        if (
+                            node.type === PORTAL_NEBULA_TYPE &&
+                            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
+                            node.audioNodes?.reverbSendGain?.gain
+                        ) {
+                            node.audioParams.reverbSend = newSend;
+                            node.audioNodes.reverbSendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
+                        }
+                    });
+                    const span = document.getElementById("mixerPortalReverbValue");
+                    if (span) span.textContent = newSend.toFixed(2);
+                });
+                portalReverbSlider.addEventListener("change", saveState);
+                portalReverbControlDiv.appendChild(portalReverbSlider);
+                const portalReverbValueSpan = document.createElement("span");
+                portalReverbValueSpan.id = "mixerPortalReverbValue";
+                portalReverbValueSpan.textContent = portalReverbSlider.value;
+                portalReverbControlDiv.appendChild(portalReverbValueSpan);
+                portalContainer.appendChild(portalReverbControlDiv);
+            }
+            fragment.appendChild(portalContainer);
+        }
+    }
+
+    if (originalNebulaGroupGain) {
+        const standaloneNebulaNodesExist = nodes.some(n =>
+            n.type === "nebula" &&
+            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))
         );
-        if (valueSpan) valueSpan.textContent = newVol.toFixed(2);
-      });
-      volumeSlider.addEventListener("change", saveState);
-      volumeControlDiv.appendChild(volumeSlider);
-      const volumeValueSpan = document.createElement("span");
-      volumeValueSpan.id = `mixerUserGroupValue_${group.id.replace(/\s+/g, "_")}`;
-      volumeValueSpan.textContent = volumeSlider.value;
-      volumeControlDiv.appendChild(volumeValueSpan);
-      groupContainer.appendChild(volumeControlDiv);
+        if (standaloneNebulaNodesExist) {
+            const nebulaContainer = document.createElement("div");
+            nebulaContainer.classList.add("mixer-group-control-section", "mixer-special-group");
+            nebulaContainer.style.borderLeft = "3px solid var(--nebula-border, #adf)";
 
-      if (group.delaySendGainNode && masterDelaySendGain) {
-        const groupDelayControlDiv = document.createElement("div");
-        groupDelayControlDiv.classList.add("mixer-control-item");
-        const groupDelayLabel = document.createElement("label");
-        const groupDelaySliderId = `mixerUserGroupDelaySlider_${group.id.replace(/\s+/g, "_")}`;
-        groupDelayLabel.htmlFor = groupDelaySliderId;
-        groupDelayLabel.textContent = `Delay Send:`;
-        groupDelayControlDiv.appendChild(groupDelayLabel);
-        const groupDelaySlider = document.createElement("input");
-        groupDelaySlider.type = "range";
-        groupDelaySlider.id = groupDelaySliderId;
-        groupDelaySlider.min = "0";
-        groupDelaySlider.max = "1";
-        groupDelaySlider.step = "0.01";
-        groupDelaySlider.title = `Delay Send for User Group ${index + 1}`;
-        groupDelaySlider.value = (
-          group.delaySendGainNode.gain.value !== undefined
-            ? group.delaySendGainNode.gain.value
-            : group.delaySendLevel
-        ).toFixed(2);
-        groupDelaySlider.addEventListener("input", (e) => {
-          const newSendLevel = parseFloat(e.target.value);
-          group.delaySendGainNode.gain.setTargetAtTime(
-            newSendLevel,
-            audioContext.currentTime,
-            timeConstant,
-          );
-          group.delaySendLevel = newSendLevel;
-          const valueSpan = document.getElementById(
-            `mixerUserGroupDelayValue_${group.id.replace(/\s+/g, "_")}`,
-          );
-          if (valueSpan) valueSpan.textContent = newSendLevel.toFixed(2);
-        });
-        groupDelaySlider.addEventListener("change", saveState);
-        groupDelayControlDiv.appendChild(groupDelaySlider);
-        const groupDelayValueSpan = document.createElement("span");
-        groupDelayValueSpan.id = `mixerUserGroupDelayValue_${group.id.replace(/\s+/g, "_")}`;
-        groupDelayValueSpan.textContent = groupDelaySlider.value;
-        groupDelayControlDiv.appendChild(groupDelayValueSpan);
-        groupContainer.appendChild(groupDelayControlDiv);
-      }
+            const nebulaVolControlDiv = document.createElement("div");
+            nebulaVolControlDiv.classList.add("mixer-control-item");
+            const nebulaVolLabel = document.createElement("label");
+            nebulaVolLabel.htmlFor = "mixerNebulaGroupSlider";
+            nebulaVolLabel.textContent = `Nebula Sounds Vol:`;
+            nebulaVolControlDiv.appendChild(nebulaVolLabel);
+            const nebulaVolSlider = document.createElement("input");
+            nebulaVolSlider.type = "range";
+            nebulaVolSlider.id = "mixerNebulaGroupSlider";
+            nebulaVolSlider.min = "0";
+            nebulaVolSlider.max = "1.5";
+            nebulaVolSlider.step = "0.01";
+            try {
+                nebulaVolSlider.value = originalNebulaGroupGain.gain.value.toFixed(2);
+            } catch (e) {
+                nebulaVolSlider.value = "0.8";
+            }
+            nebulaVolSlider.title = `Volume for Nebula Sounds (not in user groups)`;
+            nebulaVolSlider.addEventListener("input", (e) => {
+                const newVol = parseFloat(e.target.value);
+                if (originalNebulaGroupGain && audioContext) {
+                    originalNebulaGroupGain.gain.setTargetAtTime(newVol, audioContext.currentTime, timeConstant);
+                }
+                const span = document.getElementById("mixerNebulaGroupValue");
+                if (span) span.textContent = newVol.toFixed(2);
+            });
+            nebulaVolSlider.addEventListener("change", saveState);
+            nebulaVolControlDiv.appendChild(nebulaVolSlider);
+            const nebulaVolValueSpan = document.createElement("span");
+            nebulaVolValueSpan.id = "mixerNebulaGroupValue";
+            nebulaVolValueSpan.textContent = nebulaVolSlider.value;
+            nebulaVolControlDiv.appendChild(nebulaVolValueSpan);
+            nebulaContainer.appendChild(nebulaVolControlDiv);
 
-      if (isReverbReady && group.reverbSendGainNode && reverbPreDelayNode) {
-        const groupReverbControlDiv = document.createElement("div");
-        groupReverbControlDiv.classList.add("mixer-control-item");
-        const groupReverbLabel = document.createElement("label");
-        const groupReverbSliderId = `mixerUserGroupReverbSlider_${group.id.replace(/\s+/g, "_")}`;
-        groupReverbLabel.htmlFor = groupReverbSliderId;
-        groupReverbLabel.textContent = `Reverb Send:`;
-        groupReverbControlDiv.appendChild(groupReverbLabel);
-        const groupReverbSlider = document.createElement("input");
-        groupReverbSlider.type = "range";
-        groupReverbSlider.id = groupReverbSliderId;
-        groupReverbSlider.min = "0";
-        groupReverbSlider.max = "1";
-        groupReverbSlider.step = "0.01";
-        groupReverbSlider.title = `Reverb Send for User Group ${index + 1}`;
-        groupReverbSlider.value = (
-          group.reverbSendGainNode.gain.value !== undefined
-            ? group.reverbSendGainNode.gain.value
-            : group.reverbSendLevel
-        ).toFixed(2);
-        groupReverbSlider.addEventListener("input", (e) => {
-          const newSendLevel = parseFloat(e.target.value);
-          group.reverbSendGainNode.gain.setTargetAtTime(
-            newSendLevel,
-            audioContext.currentTime,
-            timeConstant,
-          );
-          group.reverbSendLevel = newSendLevel;
-          const valueSpan = document.getElementById(
-            `mixerUserGroupReverbValue_${group.id.replace(/\s+/g, "_")}`,
-          );
-          if (valueSpan) valueSpan.textContent = newSendLevel.toFixed(2);
-        });
-        groupReverbSlider.addEventListener("change", saveState);
-        groupReverbControlDiv.appendChild(groupReverbSlider);
-        const groupReverbValueSpan = document.createElement("span");
-        groupReverbValueSpan.id = `mixerUserGroupReverbValue_${group.id.replace(/\s+/g, "_")}`;
-        groupReverbValueSpan.textContent = groupReverbSlider.value;
-        groupReverbControlDiv.appendChild(groupReverbValueSpan);
-        groupContainer.appendChild(groupReverbControlDiv);
-      }
-      fragment.appendChild(groupContainer);
-    });
-  }
+            const nebulaDelayControlDiv = document.createElement("div");
+            nebulaDelayControlDiv.classList.add("mixer-control-item");
+            const nebulaDelayLabel = document.createElement("label");
+            nebulaDelayLabel.htmlFor = "mixerNebulaDelaySlider";
+            nebulaDelayLabel.textContent = `Nebula Delay Send:`;
+            nebulaDelayControlDiv.appendChild(nebulaDelayLabel);
+            const nebulaDelaySlider = document.createElement("input");
+            nebulaDelaySlider.type = "range";
+            nebulaDelaySlider.id = "mixerNebulaDelaySlider";
+            nebulaDelaySlider.min = "0";
+            nebulaDelaySlider.max = "1";
+            nebulaDelaySlider.step = "0.01";
+            let initialNebulaDelay = DEFAULT_DELAY_SEND;
+            const firstNebula = nodes.find((n) => n.type === "nebula" && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
+            if (firstNebula && firstNebula.audioParams) {
+                initialNebulaDelay = firstNebula.audioParams.delaySend !== undefined ? firstNebula.audioParams.delaySend : DEFAULT_DELAY_SEND;
+            }
+            nebulaDelaySlider.value = initialNebulaDelay.toFixed(2);
+            nebulaDelaySlider.title = `Delay Send for all Nebula sounds (not in user groups)`;
+            nebulaDelaySlider.addEventListener("input", (e) => {
+                const newSend = parseFloat(e.target.value);
+                nodes.forEach((node) => {
+                    if (
+                        node.type === "nebula" &&
+                        !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
+                        node.audioNodes?.delaySendGain?.gain
+                    ) {
+                        node.audioParams.delaySend = newSend;
+                        node.audioNodes.delaySendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
+                    }
+                });
+                const span = document.getElementById("mixerNebulaDelayValue");
+                if (span) span.textContent = newSend.toFixed(2);
+            });
+            nebulaDelaySlider.addEventListener("change", saveState);
+            nebulaDelayControlDiv.appendChild(nebulaDelaySlider);
+            const nebulaDelayValueSpan = document.createElement("span");
+            nebulaDelayValueSpan.id = "mixerNebulaDelayValue";
+            nebulaDelayValueSpan.textContent = nebulaDelaySlider.value;
+            nebulaDelayControlDiv.appendChild(nebulaDelayValueSpan);
+            nebulaContainer.appendChild(nebulaDelayControlDiv);
 
-  const autoGroups = identifiedGroups.filter(
-    (g) => !g.userDefined && g.nodeIds && g.nodeIds.size > 0,
-  );
-  if (autoGroups.length > 0) {
-    const autoGroupSectionTitle = document.createElement("h4");
-    autoGroupSectionTitle.textContent = "Constellation Groups";
-    autoGroupSectionTitle.style.marginTop = "15px";
-    autoGroupSectionTitle.style.textAlign = "center";
-    fragment.appendChild(autoGroupSectionTitle);
-
-    autoGroups.forEach((group, index) => {
-      if (!group.gainNode) return;
-      const groupContainer = document.createElement("div");
-      groupContainer.classList.add(
-        "mixer-group-control-section",
-        "mixer-auto-group",
-      );
-      groupContainer.dataset.groupId = group.id;
-
-      const volumeControlDiv = document.createElement("div");
-      volumeControlDiv.classList.add("mixer-control-item");
-      const volumeLabel = document.createElement("label");
-      const volumeSliderId = `mixerGroupSlider_${group.id.replace(/\s+/g, "_")}`;
-      volumeLabel.htmlFor = volumeSliderId;
-      volumeLabel.textContent = `Constellation ${index + 1} (${group.nodeIds?.size ?? "N/A"} nodes) Vol:`;
-      volumeControlDiv.appendChild(volumeLabel);
-      const volumeSlider = document.createElement("input");
-      volumeSlider.type = "range";
-      volumeSlider.id = volumeSliderId;
-      volumeSlider.min = "0";
-      volumeSlider.max = "1.5";
-      volumeSlider.step = "0.01";
-      volumeSlider.value = group.gainNode.gain.value.toFixed(2);
-      volumeSlider.title = `Volume for Constellation Group ${index + 1}`;
-      volumeSlider.addEventListener("input", (e) => {
-        setSpecificGroupVolume(group.id, parseFloat(e.target.value));
-      });
-      volumeSlider.addEventListener("change", saveState);
-      volumeControlDiv.appendChild(volumeSlider);
-      const volumeValueSpan = document.createElement("span");
-      volumeValueSpan.id = `mixerGroupValue_${group.id.replace(/\s+/g, "_")}`;
-      volumeValueSpan.textContent = volumeSlider.value;
-      volumeControlDiv.appendChild(volumeValueSpan);
-      groupContainer.appendChild(volumeControlDiv);
-
-      const delayControlDiv = document.createElement("div");
-      delayControlDiv.classList.add("mixer-control-item");
-      const delayLabel = document.createElement("label");
-      const delaySliderId = `mixerGroupDelaySlider_${group.id.replace(/\s+/g, "_")}`;
-      delayLabel.htmlFor = delaySliderId;
-      delayLabel.textContent = `Delay Send:`;
-      delayControlDiv.appendChild(delayLabel);
-      const delaySlider = document.createElement("input");
-      delaySlider.type = "range";
-      delaySlider.id = delaySliderId;
-      delaySlider.min = "0";
-      delaySlider.max = "1";
-      delaySlider.step = "0.01";
-      delaySlider.title = `Delay Send for Constellation Group ${index + 1}`;
-      let initialDelaySend = DEFAULT_DELAY_SEND;
-      if (group.nodeIds.size > 0) {
-        const firstNodeId = group.nodeIds.values().next().value;
-        const firstNode = findNodeById(firstNodeId);
-        if (firstNode && firstNode.audioParams) {
-          initialDelaySend =
-            firstNode.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+            if (isReverbReady && reverbPreDelayNode) {
+                const nebulaReverbControlDiv = document.createElement("div");
+                nebulaReverbControlDiv.classList.add("mixer-control-item");
+                const nebulaReverbLabel = document.createElement("label");
+                nebulaReverbLabel.htmlFor = "mixerNebulaReverbSlider";
+                nebulaReverbLabel.textContent = `Nebula Reverb Send:`;
+                nebulaReverbControlDiv.appendChild(nebulaReverbLabel);
+                const nebulaReverbSlider = document.createElement("input");
+                nebulaReverbSlider.type = "range";
+                nebulaReverbSlider.id = "mixerNebulaReverbSlider";
+                nebulaReverbSlider.min = "0";
+                nebulaReverbSlider.max = "1";
+                nebulaReverbSlider.step = "0.01";
+                let initialNebulaReverb = DEFAULT_REVERB_SEND;
+                if (firstNebula && firstNebula.audioParams) {
+                     initialNebulaReverb = firstNebula.audioParams.reverbSend !== undefined ? firstNebula.audioParams.reverbSend : DEFAULT_REVERB_SEND;
+                }
+                nebulaReverbSlider.value = initialNebulaReverb.toFixed(2);
+                nebulaReverbSlider.title = `Reverb Send for all Nebula sounds (not in user groups)`;
+                nebulaReverbSlider.addEventListener("input", (e) => {
+                    const newSend = parseFloat(e.target.value);
+                    nodes.forEach((node) => {
+                        if (
+                            node.type === "nebula" &&
+                            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
+                            node.audioNodes?.reverbSendGain?.gain
+                        ) {
+                            node.audioParams.reverbSend = newSend;
+                            node.audioNodes.reverbSendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
+                        }
+                    });
+                    const span = document.getElementById("mixerNebulaReverbValue");
+                    if (span) span.textContent = newSend.toFixed(2);
+                });
+                nebulaReverbSlider.addEventListener("change", saveState);
+                nebulaReverbControlDiv.appendChild(nebulaReverbSlider);
+                const nebulaReverbValueSpan = document.createElement("span");
+                nebulaReverbValueSpan.id = "mixerNebulaReverbValue";
+                nebulaReverbValueSpan.textContent = nebulaReverbSlider.value;
+                nebulaReverbControlDiv.appendChild(nebulaReverbValueSpan);
+                nebulaContainer.appendChild(nebulaReverbControlDiv);
+            }
+            fragment.appendChild(nebulaContainer);
         }
-      }
-      delaySlider.value = initialDelaySend.toFixed(2);
-      delaySlider.addEventListener("input", (e) => {
-        setSpecificGroupDelaySend(group.id, parseFloat(e.target.value));
-      });
-      delaySlider.addEventListener("change", saveState);
-      delayControlDiv.appendChild(delaySlider);
-      const delayValueSpan = document.createElement("span");
-      delayValueSpan.id = `mixerGroupDelayValue_${group.id.replace(/\s+/g, "_")}`;
-      delayValueSpan.textContent = delaySlider.value;
-      delayControlDiv.appendChild(delayValueSpan);
-      groupContainer.appendChild(delayControlDiv);
+    }
+    
 
-      if (isReverbReady) {
-        const reverbControlDiv = document.createElement("div");
-        reverbControlDiv.classList.add("mixer-control-item");
-        const reverbLabel = document.createElement("label");
-        const reverbSliderId = `mixerGroupReverbSlider_${group.id.replace(/\s+/g, "_")}`;
-        reverbLabel.htmlFor = reverbSliderId;
-        reverbLabel.textContent = `Reverb Send:`;
-        reverbControlDiv.appendChild(reverbLabel);
-        const reverbSlider = document.createElement("input");
-        reverbSlider.type = "range";
-        reverbSlider.id = reverbSliderId;
-        reverbSlider.min = "0";
-        reverbSlider.max = "1";
-        reverbSlider.step = "0.01";
-        reverbSlider.title = `Reverb Send for Constellation Group ${index + 1}`;
-        let initialReverbSend = DEFAULT_REVERB_SEND;
-        if (group.nodeIds.size > 0) {
-          const firstNodeId = group.nodeIds.values().next().value;
-          const firstNode = findNodeById(firstNodeId);
-          if (firstNode && firstNode.audioParams) {
-            initialReverbSend =
-              firstNode.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-          }
-        }
-        reverbSlider.value = initialReverbSend.toFixed(2);
-        reverbSlider.addEventListener("input", (e) => {
-          setSpecificGroupReverbSend(group.id, parseFloat(e.target.value));
+    
+    if (userDefinedGroups && userDefinedGroups.length > 0) {
+        const userGroupSectionTitle = document.createElement("h4");
+        userGroupSectionTitle.textContent = "User Groups";
+        userGroupSectionTitle.style.marginTop = "15px"; 
+        userGroupSectionTitle.style.textAlign = "center";
+        fragment.appendChild(userGroupSectionTitle);
+
+        userDefinedGroups.forEach((group, index) => {
+            if (!group.gainNode) { 
+                 if(audioContext) { 
+                    group.gainNode = audioContext.createGain();
+                    group.gainNode.gain.value = group.volume !== undefined ? group.volume : 1.0;
+                    group.gainNode.connect(masterGain);
+
+                    if (!group.delaySendGainNode && masterDelaySendGain) {
+                        group.delaySendGainNode = audioContext.createGain();
+                        group.delaySendGainNode.gain.value = group.delaySendLevel !== undefined ? group.delaySendLevel : DEFAULT_DELAY_SEND;
+                        group.gainNode.connect(group.delaySendGainNode);
+                        group.delaySendGainNode.connect(masterDelaySendGain);
+                    }
+                    if (!group.reverbSendGainNode && reverbPreDelayNode) {
+                        group.reverbSendGainNode = audioContext.createGain();
+                        group.reverbSendGainNode.gain.value = group.reverbSendLevel !== undefined ? group.reverbSendLevel : DEFAULT_REVERB_SEND;
+                        group.gainNode.connect(group.reverbSendGainNode);
+                        group.reverbSendGainNode.connect(reverbPreDelayNode);
+                    }
+                 } else return; 
+            }
+            
+            const groupContainer = document.createElement("div");
+            groupContainer.classList.add("mixer-group-control-section", "mixer-user-group");
+            groupContainer.dataset.groupId = group.id;
+            groupContainer.style.borderLeft = "3px solid var(--user-group-color, #FFA500)";
+
+            const volumeControlDiv = document.createElement("div");
+            volumeControlDiv.classList.add("mixer-control-item");
+            const volumeLabel = document.createElement("label");
+            const volumeSliderId = `mixerUserGroupSlider_${group.id.replace(/\s+/g, '_')}`;
+            volumeLabel.htmlFor = volumeSliderId;
+            volumeLabel.textContent = `User Group ${index + 1} (${group.nodeIds?.size ?? "N/A"} nodes) Vol:`;
+            volumeControlDiv.appendChild(volumeLabel);
+            const volumeSlider = document.createElement("input");
+            volumeSlider.type = "range";
+            volumeSlider.id = volumeSliderId;
+            volumeSlider.min = "0";
+            volumeSlider.max = "1.5";
+            volumeSlider.step = "0.01";
+            volumeSlider.value = (group.gainNode.gain.value !== undefined ? group.gainNode.gain.value : group.volume).toFixed(2);
+            volumeSlider.title = `Volume for User Group ${index + 1}`;
+            volumeSlider.addEventListener("input", (e) => {
+                const newVol = parseFloat(e.target.value);
+                group.gainNode.gain.setTargetAtTime(newVol, audioContext.currentTime, timeConstant);
+                group.volume = newVol; 
+                const valueSpan = document.getElementById(`mixerUserGroupValue_${group.id.replace(/\s+/g, '_')}`);
+                if (valueSpan) valueSpan.textContent = newVol.toFixed(2);
+            });
+            volumeSlider.addEventListener("change", saveState);
+            volumeControlDiv.appendChild(volumeSlider);
+            const volumeValueSpan = document.createElement("span");
+            volumeValueSpan.id = `mixerUserGroupValue_${group.id.replace(/\s+/g, '_')}`;
+            volumeValueSpan.textContent = volumeSlider.value;
+            volumeControlDiv.appendChild(volumeValueSpan);
+            groupContainer.appendChild(volumeControlDiv);
+
+            if (group.delaySendGainNode && masterDelaySendGain) {
+                const groupDelayControlDiv = document.createElement("div");
+                groupDelayControlDiv.classList.add("mixer-control-item");
+                const groupDelayLabel = document.createElement("label");
+                const groupDelaySliderId = `mixerUserGroupDelaySlider_${group.id.replace(/\s+/g, '_')}`;
+                groupDelayLabel.htmlFor = groupDelaySliderId;
+                groupDelayLabel.textContent = `Delay Send:`;
+                groupDelayControlDiv.appendChild(groupDelayLabel);
+                const groupDelaySlider = document.createElement("input");
+                groupDelaySlider.type = "range";
+                groupDelaySlider.id = groupDelaySliderId;
+                groupDelaySlider.min = "0";
+                groupDelaySlider.max = "1";
+                groupDelaySlider.step = "0.01";
+                groupDelaySlider.title = `Delay Send for User Group ${index + 1}`;
+                groupDelaySlider.value = (group.delaySendGainNode.gain.value !== undefined ? group.delaySendGainNode.gain.value : group.delaySendLevel).toFixed(2);
+                groupDelaySlider.addEventListener("input", (e) => {
+                    const newSendLevel = parseFloat(e.target.value);
+                    group.delaySendGainNode.gain.setTargetAtTime(newSendLevel, audioContext.currentTime, timeConstant);
+                    group.delaySendLevel = newSendLevel;
+                    const valueSpan = document.getElementById(`mixerUserGroupDelayValue_${group.id.replace(/\s+/g, '_')}`);
+                    if (valueSpan) valueSpan.textContent = newSendLevel.toFixed(2);
+                });
+                groupDelaySlider.addEventListener("change", saveState);
+                groupDelayControlDiv.appendChild(groupDelaySlider);
+                const groupDelayValueSpan = document.createElement("span");
+                groupDelayValueSpan.id = `mixerUserGroupDelayValue_${group.id.replace(/\s+/g, '_')}`;
+                groupDelayValueSpan.textContent = groupDelaySlider.value;
+                groupDelayControlDiv.appendChild(groupDelayValueSpan);
+                groupContainer.appendChild(groupDelayControlDiv);
+            }
+
+            if (isReverbReady && group.reverbSendGainNode && reverbPreDelayNode) {
+                const groupReverbControlDiv = document.createElement("div");
+                groupReverbControlDiv.classList.add("mixer-control-item");
+                const groupReverbLabel = document.createElement("label");
+                const groupReverbSliderId = `mixerUserGroupReverbSlider_${group.id.replace(/\s+/g, '_')}`;
+                groupReverbLabel.htmlFor = groupReverbSliderId;
+                groupReverbLabel.textContent = `Reverb Send:`;
+                groupReverbControlDiv.appendChild(groupReverbLabel);
+                const groupReverbSlider = document.createElement("input");
+                groupReverbSlider.type = "range";
+                groupReverbSlider.id = groupReverbSliderId;
+                groupReverbSlider.min = "0";
+                groupReverbSlider.max = "1";
+                groupReverbSlider.step = "0.01";
+                groupReverbSlider.title = `Reverb Send for User Group ${index + 1}`;
+                groupReverbSlider.value = (group.reverbSendGainNode.gain.value !== undefined ? group.reverbSendGainNode.gain.value : group.reverbSendLevel).toFixed(2);
+                groupReverbSlider.addEventListener("input", (e) => {
+                    const newSendLevel = parseFloat(e.target.value);
+                    group.reverbSendGainNode.gain.setTargetAtTime(newSendLevel, audioContext.currentTime, timeConstant);
+                    group.reverbSendLevel = newSendLevel;
+                    const valueSpan = document.getElementById(`mixerUserGroupReverbValue_${group.id.replace(/\s+/g, '_')}`);
+                    if (valueSpan) valueSpan.textContent = newSendLevel.toFixed(2);
+                });
+                groupReverbSlider.addEventListener("change", saveState);
+                groupReverbControlDiv.appendChild(groupReverbSlider);
+                const groupReverbValueSpan = document.createElement("span");
+                groupReverbValueSpan.id = `mixerUserGroupReverbValue_${group.id.replace(/\s+/g, '_')}`;
+                groupReverbValueSpan.textContent = groupReverbSlider.value;
+                groupReverbControlDiv.appendChild(groupReverbValueSpan);
+                groupContainer.appendChild(groupReverbControlDiv);
+            }
+            fragment.appendChild(groupContainer);
         });
-        reverbSlider.addEventListener("change", saveState);
-        reverbControlDiv.appendChild(reverbSlider);
-        const reverbValueSpan = document.createElement("span");
-        reverbValueSpan.id = `mixerGroupReverbValue_${group.id.replace(/\s+/g, "_")}`;
-        reverbValueSpan.textContent = reverbSlider.value;
-        reverbControlDiv.appendChild(reverbValueSpan);
-        groupContainer.appendChild(reverbControlDiv);
-      }
-      fragment.appendChild(groupContainer);
-    });
-  }
+    }
 
-  mixerGroupControlsContainer.appendChild(fragment);
+    
+    const autoGroups = identifiedGroups.filter(g => !g.userDefined && g.nodeIds && g.nodeIds.size > 0);
+    if (autoGroups.length > 0) {
+        const autoGroupSectionTitle = document.createElement("h4");
+        autoGroupSectionTitle.textContent = "Constellation Groups";
+        autoGroupSectionTitle.style.marginTop = "15px";
+        autoGroupSectionTitle.style.textAlign = "center";
+        fragment.appendChild(autoGroupSectionTitle);
 
-  if (mixerGroupControlsContainer.childElementCount === 0) {
-    const noGroupMsg = document.createElement("small");
-    noGroupMsg.textContent = "(No mixer controls available)";
-    mixerGroupControlsContainer.appendChild(noGroupMsg);
-  }
-  mixerGroupControlsContainer.style.display = "block";
+        autoGroups.forEach((group, index) => {
+            if (!group.gainNode) return;
+            const groupContainer = document.createElement("div");
+            groupContainer.classList.add("mixer-group-control-section", "mixer-auto-group");
+            groupContainer.dataset.groupId = group.id; 
+
+            const volumeControlDiv = document.createElement("div");
+            volumeControlDiv.classList.add("mixer-control-item");
+            const volumeLabel = document.createElement("label");
+            const volumeSliderId = `mixerGroupSlider_${group.id.replace(/\s+/g, '_')}`;
+            volumeLabel.htmlFor = volumeSliderId;
+            volumeLabel.textContent = `Constellation ${index + 1} (${group.nodeIds?.size ?? "N/A"} nodes) Vol:`;
+            volumeControlDiv.appendChild(volumeLabel);
+            const volumeSlider = document.createElement("input");
+            volumeSlider.type = "range";
+            volumeSlider.id = volumeSliderId;
+            volumeSlider.min = "0";
+            volumeSlider.max = "1.5";
+            volumeSlider.step = "0.01";
+            volumeSlider.value = group.gainNode.gain.value.toFixed(2);
+            volumeSlider.title = `Volume for Constellation Group ${index + 1}`;
+            volumeSlider.addEventListener("input", (e) => {
+                setSpecificGroupVolume(group.id, parseFloat(e.target.value));
+            });
+            volumeSlider.addEventListener("change", saveState);
+            volumeControlDiv.appendChild(volumeSlider);
+            const volumeValueSpan = document.createElement("span");
+            volumeValueSpan.id = `mixerGroupValue_${group.id.replace(/\s+/g, '_')}`;
+            volumeValueSpan.textContent = volumeSlider.value;
+            volumeControlDiv.appendChild(volumeValueSpan);
+            groupContainer.appendChild(volumeControlDiv);
+
+            const delayControlDiv = document.createElement("div");
+            delayControlDiv.classList.add("mixer-control-item");
+            const delayLabel = document.createElement("label");
+            const delaySliderId = `mixerGroupDelaySlider_${group.id.replace(/\s+/g, '_')}`;
+            delayLabel.htmlFor = delaySliderId;
+            delayLabel.textContent = `Delay Send:`;
+            delayControlDiv.appendChild(delayLabel);
+            const delaySlider = document.createElement("input");
+            delaySlider.type = "range";
+            delaySlider.id = delaySliderId;
+            delaySlider.min = "0";
+            delaySlider.max = "1";
+            delaySlider.step = "0.01";
+            delaySlider.title = `Delay Send for Constellation Group ${index + 1}`;
+            let initialDelaySend = DEFAULT_DELAY_SEND;
+            if (group.nodeIds.size > 0) {
+                const firstNodeId = group.nodeIds.values().next().value;
+                const firstNode = findNodeById(firstNodeId);
+                if (firstNode && firstNode.audioParams) {
+                    initialDelaySend =
+                        firstNode.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+                }
+            }
+            delaySlider.value = initialDelaySend.toFixed(2);
+            delaySlider.addEventListener("input", (e) => {
+                setSpecificGroupDelaySend(group.id, parseFloat(e.target.value));
+            });
+            delaySlider.addEventListener("change", saveState);
+            delayControlDiv.appendChild(delaySlider);
+            const delayValueSpan = document.createElement("span");
+            delayValueSpan.id = `mixerGroupDelayValue_${group.id.replace(/\s+/g, '_')}`;
+            delayValueSpan.textContent = delaySlider.value;
+            delayControlDiv.appendChild(delayValueSpan);
+            groupContainer.appendChild(delayControlDiv);
+
+            if (isReverbReady) {
+                const reverbControlDiv = document.createElement("div");
+                reverbControlDiv.classList.add("mixer-control-item");
+                const reverbLabel = document.createElement("label");
+                const reverbSliderId = `mixerGroupReverbSlider_${group.id.replace(/\s+/g, '_')}`;
+                reverbLabel.htmlFor = reverbSliderId;
+                reverbLabel.textContent = `Reverb Send:`;
+                reverbControlDiv.appendChild(reverbLabel);
+                const reverbSlider = document.createElement("input");
+                reverbSlider.type = "range";
+                reverbSlider.id = reverbSliderId;
+                reverbSlider.min = "0";
+                reverbSlider.max = "1";
+                reverbSlider.step = "0.01";
+                reverbSlider.title = `Reverb Send for Constellation Group ${index + 1}`;
+                let initialReverbSend = DEFAULT_REVERB_SEND;
+                if (group.nodeIds.size > 0) {
+                    const firstNodeId = group.nodeIds.values().next().value;
+                    const firstNode = findNodeById(firstNodeId);
+                    if (firstNode && firstNode.audioParams) {
+                        initialReverbSend =
+                            firstNode.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+                    }
+                }
+                reverbSlider.value = initialReverbSend.toFixed(2);
+                reverbSlider.addEventListener("input", (e) => {
+                    setSpecificGroupReverbSend(group.id, parseFloat(e.target.value));
+                });
+                reverbSlider.addEventListener("change", saveState);
+                reverbControlDiv.appendChild(reverbSlider);
+                const reverbValueSpan = document.createElement("span");
+                reverbValueSpan.id = `mixerGroupReverbValue_${group.id.replace(/\s+/g, '_')}`;
+                reverbValueSpan.textContent = reverbSlider.value;
+                reverbControlDiv.appendChild(reverbValueSpan);
+                groupContainer.appendChild(reverbControlDiv);
+            }
+            fragment.appendChild(groupContainer);
+        });
+    }
+
+    mixerGroupControlsContainer.appendChild(fragment);
+
+    if (mixerGroupControlsContainer.childElementCount === 0) {
+        const noGroupMsg = document.createElement("small");
+        noGroupMsg.textContent = "(No mixer controls available)";
+        mixerGroupControlsContainer.appendChild(noGroupMsg);
+    }
+    mixerGroupControlsContainer.style.display = "block";
 }
 
 function updateNodeAudioParams(node) {
@@ -6396,648 +6266,639 @@ function createHanningWindow(length) {
   return curve;
 }
 
+
+
+
 function deepCopyState(stateToCopy) {
-  if (!stateToCopy) return null;
-  try {
-    const stringified = JSON.stringify(stateToCopy, (key, value) => {
-      if (value instanceof Set) {
-        return Array.from(value);
-      }
-      if (
-        key === "audioNodes" ||
-        (key === "buffer" && value instanceof AudioBuffer) ||
-        key === "activeRetriggers" ||
-        key === "triggeredInThisSweep"
-      ) {
-        return undefined;
-      }
-      return value;
-    });
-    const parsed = JSON.parse(stringified);
+    if (!stateToCopy) return null;
+    try {
+        const stringified = JSON.stringify(stateToCopy, (key, value) => {
+            if (value instanceof Set) {
+                return Array.from(value);
+            }
+            if (
+                key === "audioNodes" ||
+                (key === "buffer" && value instanceof AudioBuffer) ||
+                key === "activeRetriggers" ||
+                key === "triggeredInThisSweep"
+            ) {
+                return undefined;
+            }
+            return value;
+        });
+        const parsed = JSON.parse(stringified);
 
-    if (parsed.nodes) {
-      parsed.nodes.forEach((node) => {
-        node.connections = node.connections
-          ? new Set(node.connections)
-          : new Set();
-        if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE) {
-          node.audioParams = {};
-        } else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams) {
-          node.audioParams = {};
+        if (parsed.nodes) {
+            parsed.nodes.forEach((node) => {
+                node.connections = node.connections ?
+                    new Set(node.connections) :
+                    new Set();
+                if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE) {
+                    node.audioParams = {};
+                } else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams) {
+                    node.audioParams = {};
+                }
+                node.activeRetriggers = [];
+                node.currentRetriggerVisualIndex = -1;
+            });
         }
-        node.activeRetriggers = [];
-        node.currentRetriggerVisualIndex = -1;
-      });
-    }
-    parsed.selectedElements = parsed.selectedElements
-      ? new Set(
-          parsed.selectedElements.map((el) => ({
-            ...el,
-          })),
-        )
-      : new Set();
-    parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs
-      ? new Set(parsed.fluctuatingGroupNodeIDs)
-      : new Set();
+        parsed.selectedElements = parsed.selectedElements ?
+            new Set(
+                parsed.selectedElements.map((el) => ({
+                    ...el,
+                })),
+            ) :
+            new Set();
+        parsed.fluctuatingGroupNodeIDs = parsed.fluctuatingGroupNodeIDs ?
+            new Set(parsed.fluctuatingGroupNodeIDs) :
+            new Set();
 
-    if (parsed.connections) {
-      parsed.connections.forEach((conn) => {
-        if (!conn.audioParams) conn.audioParams = {};
-        if (conn.type === "wavetrail" && conn.audioParams) {
-          conn.audioParams.buffer = null;
+        if (parsed.connections) {
+            parsed.connections.forEach((conn) => {
+                if (!conn.audioParams) conn.audioParams = {};
+                if (conn.type === "wavetrail" && conn.audioParams) {
+                    conn.audioParams.buffer = null;
+                }
+            });
         }
-      });
+        return parsed;
+    } catch (e) {
+        console.error("Error in deepCopyState:", e);
+        return null;
     }
-    return parsed;
-  } catch (e) {
-    console.error("Error in deepCopyState:", e);
-    return null;
-  }
 }
 
 function saveState() {
-  if (isPerformingUndoRedo) return;
-  unsavedChanges = true;
-  const currentState = {
-    nodes: nodes.map((node) => {
-      const nodeCopy = { ...node };
-      delete nodeCopy.triggeredInThisSweep;
-      delete nodeCopy.audioNodes;
+    if (isPerformingUndoRedo) return;
+    unsavedChanges = true;
+    const currentState = {
+        nodes: nodes.map((node) => {
+            const nodeCopy = { ...node };
+            delete nodeCopy.triggeredInThisSweep;
+            delete nodeCopy.audioNodes;
 
-      if (node.type === TIMELINE_GRID_TYPE) {
-        nodeCopy.scanlineDirection = node.scanlineDirection || "forward";
-        nodeCopy.isPingPongForward =
-          node.isPingPongForward !== undefined ? node.isPingPongForward : true;
-        nodeCopy.timelineMusicalDurationBars =
-          node.timelineMusicalDurationBars || 1;
-        nodeCopy.rotation = node.rotation || 0;
+            if (node.type === TIMELINE_GRID_TYPE) {
+                nodeCopy.scanlineDirection = node.scanlineDirection || "forward";
+                nodeCopy.isPingPongForward =
+                    node.isPingPongForward !== undefined ? node.isPingPongForward : true;
+                nodeCopy.timelineMusicalDurationBars =
+                    node.timelineMusicalDurationBars || 1;
+                nodeCopy.rotation = node.rotation || 0;
 
-        if (!nodeCopy.audioParams) {
-          nodeCopy.audioParams = {};
-        }
-        nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
-        nodeCopy.audioParams.timelineMusicalDurationBars =
-          nodeCopy.timelineMusicalDurationBars;
-        nodeCopy.audioParams.rotation = nodeCopy.rotation;
-        nodeCopy.audioParams.isTransposeEnabled =
-          node.audioParams?.isTransposeEnabled ?? false;
-        nodeCopy.audioParams.transposeDirection =
-          node.audioParams?.transposeDirection ?? "+";
-        nodeCopy.audioParams.transposeAmount =
-          node.audioParams?.transposeAmount ?? 0;
-      } else if (node.audioParams) {
-        nodeCopy.audioParams = { ...node.audioParams };
-      }
+                if (!nodeCopy.audioParams) {
+                    nodeCopy.audioParams = {};
+                }
+                nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
+                nodeCopy.audioParams.timelineMusicalDurationBars =
+                    nodeCopy.timelineMusicalDurationBars;
+                nodeCopy.audioParams.rotation = nodeCopy.rotation;
+                nodeCopy.audioParams.isTransposeEnabled =
+                    node.audioParams?.isTransposeEnabled ?? false;
+                nodeCopy.audioParams.transposeDirection =
+                    node.audioParams?.transposeDirection ?? "+";
+                nodeCopy.audioParams.transposeAmount =
+                    node.audioParams?.transposeAmount ?? 0;
+                nodeCopy.audioParams.autoRotateEnabled = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+                nodeCopy.audioParams.autoRotateSpeedManual = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+                nodeCopy.audioParams.autoRotateDirection = node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
+                nodeCopy.audioParams.autoRotateSyncSubdivisionIndex = node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
 
-      return nodeCopy;
-    }),
-    connections: connections.map((conn) => {
-      const connCopy = { ...conn };
-      delete connCopy.audioNodes;
-      if (
-        connCopy.audioParams &&
-        connCopy.audioParams.buffer &&
-        connCopy.type === "wavetrail"
-      ) {
-        delete connCopy.audioParams.buffer;
-        delete connCopy.audioParams.waveformPath;
-      }
-      if (conn.audioParams) {
-        connCopy.audioParams = { ...conn.audioParams };
-      }
-      return connCopy;
-    }),
-    selectedElements: Array.from(selectedElements),
-    fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
-    nodeIdCounter: nodeIdCounter,
-    connectionIdCounter: connectionIdCounter,
-    isGlobalSyncEnabled: isGlobalSyncEnabled,
-    globalBPM: globalBPM,
-    viewOffsetX: viewOffsetX,
-    viewOffsetY: viewOffsetY,
-    viewScale: viewScale,
-    currentScaleKey: currentScaleKey,
-    currentRootNote: currentRootNote,
-    globalTransposeOffset: globalTransposeOffset,
-    masterVolume: masterGain?.gain.value ?? 0.8,
-    delaySend: masterDelaySendGain?.gain.value ?? 0.3,
-    delayTime: delayNode?.delayTime.value ?? 0.25,
-    delayFeedback: delayFeedbackGain?.gain.value ?? 0.4,
-    portalVolume: portalGroupGain?.gain.value ?? 0.7,
-    originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8,
+            } else if (node.audioParams) {
+                nodeCopy.audioParams = { ...node.audioParams };
+            }
 
-    currentIRUrl:
-      currentIRUrl ||
-      (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav"),
-    reverbWetLevel: reverbWetGain?.gain.value ?? 0.5,
-    reverbPreDelayTime: reverbPreDelayNode?.delayTime.value ?? 0.02,
-    reverbDampingFreq: reverbLowPass?.frequency.value ?? 8000,
-    reverbLowCutFreq: reverbHighPass?.frequency.value ?? 100,
-  };
+            return nodeCopy;
+        }),
+        connections: connections.map((conn) => {
+            const connCopy = { ...conn };
+            delete connCopy.audioNodes;
 
-  const copiedState = deepCopyState(currentState);
-  if (!copiedState) {
-    console.error("Failed to deep copy state in saveState.");
-    return;
-  }
+            if (conn.audioParams) {
+                connCopy.audioParams = { ...conn.audioParams };
+            }
 
-  if (historyIndex < historyStack.length - 1) {
-    historyStack = historyStack.slice(0, historyIndex + 1);
-  }
-  historyStack.push(copiedState);
-  if (historyStack.length > MAX_HISTORY_SIZE) {
-    historyStack.shift();
-  }
-  historyIndex = historyStack.length - 1;
-  console.log(
-    "State saved. History index:",
-    historyIndex,
-    "Stack size:",
-    historyStack.length,
-  );
+            if (
+                connCopy.audioParams &&
+                connCopy.audioParams.buffer &&
+                connCopy.type === "wavetrail"
+            ) {
+                delete connCopy.audioParams.buffer;
+                delete connCopy.audioParams.waveformPath;
+            }
+            return connCopy;
+        }),
+        selectedElements: Array.from(selectedElements),
+        fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
+        nodeIdCounter: nodeIdCounter,
+        connectionIdCounter: connectionIdCounter,
+        isGlobalSyncEnabled: isGlobalSyncEnabled,
+        globalBPM: globalBPM,
+        viewOffsetX: viewOffsetX,
+        viewOffsetY: viewOffsetY,
+        viewScale: viewScale,
+        currentScaleKey: currentScaleKey,
+        currentRootNote: currentRootNote,
+        globalTransposeOffset: globalTransposeOffset,
+        masterVolume: masterGain?.gain.value ?? 0.8,
+        delaySend: masterDelaySendGain?.gain.value ?? 0.3,
+        delayTime: delayNode?.delayTime.value ?? 0.25,
+        delayFeedback: delayFeedbackGain?.gain.value ?? 0.4,
+        portalVolume: portalGroupGain?.gain.value ?? 0.7,
+        originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8,
+        currentIRUrl: currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav"),
+        reverbWetLevel: reverbWetGain?.gain.value ?? 0.5,
+        reverbPreDelayTime: reverbPreDelayNode?.delayTime.value ?? 0.02,
+        reverbDampingFreq: reverbLowPass?.frequency.value ?? 8000,
+        reverbLowCutFreq: reverbHighPass?.frequency.value ?? 100,
+    };
+
+    const copiedState = deepCopyState(currentState);
+    if (!copiedState) {
+        console.error("Failed to deep copy state in saveState.");
+        return;
+    }
+
+    if (historyIndex < historyStack.length - 1) {
+        historyStack = historyStack.slice(0, historyIndex + 1);
+    }
+    historyStack.push(copiedState);
+    if (historyStack.length > MAX_HISTORY_SIZE) {
+        historyStack.shift();
+    }
+    historyIndex = historyStack.length - 1;
+    console.log("State saved. History index:", historyIndex, "Stack size:", historyStack.length);
 }
 
 async function loadState(stateToLoad) {
-  if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
-    console.error("Invalid state object provided to loadState.");
-    return;
-  }
-
-  isPerformingUndoRedo = true;
-
-  nodes.forEach((node) => stopNodeAudio(node));
-  connections.forEach((conn) => stopConnectionAudio(conn));
-  activeRockets.forEach((rocket) => {
-    if (rocket.audioNodes && rocket.audioNodes.engineSound) {
-      try {
-        rocket.audioNodes.engineSound.stop();
-        rocket.audioNodes.engineSound.disconnect();
-      } catch (e) {}
-    }
-  });
-  activeRockets = [];
-
-  nodes = stateToLoad.nodes;
-  connections = stateToLoad.connections;
-
-  if (stateToLoad.selectedElements) {
-    const elementsToProcess = Array.isArray(stateToLoad.selectedElements)
-      ? stateToLoad.selectedElements
-      : Array.from(stateToLoad.selectedElements);
-    selectedElements = new Set(elementsToProcess.map((el) => ({ ...el })));
-  } else {
-    selectedElements = new Set();
-  }
-
-  fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs
-    ? new Set(stateToLoad.fluctuatingGroupNodeIDs)
-    : new Set();
-  nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
-  connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
-  isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
-  globalBPM = stateToLoad.globalBPM ?? 120;
-  currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
-  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
-  currentRootNote = stateToLoad.currentRootNote ?? 0;
-  globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
-  viewOffsetX = stateToLoad.viewOffsetX ?? 0;
-  viewOffsetY = stateToLoad.viewOffsetY ?? 0;
-  viewScale = stateToLoad.viewScale ?? 1.0;
-
-  if (isAudioReady) {
-    const now = audioContext.currentTime;
-    const loadTimeConstant = 0.01;
-    if (masterGain)
-      masterGain.gain.setTargetAtTime(
-        stateToLoad.masterVolume ?? 0.8,
-        now,
-        loadTimeConstant,
-      );
-    if (masterDelaySendGain)
-      masterDelaySendGain.gain.setTargetAtTime(
-        stateToLoad.delaySend ?? 0.3,
-        now,
-        loadTimeConstant,
-      );
-    if (delayNode)
-      delayNode.delayTime.setTargetAtTime(
-        stateToLoad.delayTime ?? 0.25,
-        now,
-        loadTimeConstant,
-      );
-    if (delayFeedbackGain)
-      delayFeedbackGain.gain.setTargetAtTime(
-        stateToLoad.delayFeedback ?? 0.4,
-        now,
-        loadTimeConstant,
-      );
-    if (portalGroupGain)
-      portalGroupGain.gain.setTargetAtTime(
-        stateToLoad.portalVolume ?? 0.7,
-        now,
-        loadTimeConstant,
-      );
-    if (originalNebulaGroupGain)
-      originalNebulaGroupGain.gain.setTargetAtTime(
-        stateToLoad.originalNebulaVolume ?? 0.8,
-        now,
-        loadTimeConstant,
-      );
-
-    if (reverbWetGain) {
-      reverbWetGain.gain.setTargetAtTime(
-        stateToLoad.reverbWetLevel ?? 0.5,
-        now,
-        loadTimeConstant,
-      );
-      if (reverbWetSlider)
-        reverbWetSlider.value = stateToLoad.reverbWetLevel ?? 0.5;
-      if (reverbWetValue)
-        reverbWetValue.textContent = (
-          stateToLoad.reverbWetLevel ?? 0.5
-        ).toFixed(2);
-    }
-    if (reverbPreDelayNode) {
-      reverbPreDelayNode.delayTime.setTargetAtTime(
-        stateToLoad.reverbPreDelayTime ?? 0.02,
-        now,
-        loadTimeConstant,
-      );
-      if (reverbPreDelaySlider)
-        reverbPreDelaySlider.value = stateToLoad.reverbPreDelayTime ?? 0.02;
-      if (reverbPreDelayValue)
-        reverbPreDelayValue.textContent =
-          (stateToLoad.reverbPreDelayTime ?? 0.02).toFixed(3) + "s";
-    }
-    if (reverbLowPass) {
-      reverbLowPass.frequency.setTargetAtTime(
-        stateToLoad.reverbDampingFreq ?? 8000,
-        now,
-        loadTimeConstant,
-      );
-      if (reverbDampingSlider)
-        reverbDampingSlider.value = stateToLoad.reverbDampingFreq ?? 8000;
-      if (reverbDampingValue)
-        reverbDampingValue.textContent =
-          (stateToLoad.reverbDampingFreq ?? 8000).toFixed(0) + "Hz";
-    }
-    if (reverbHighPass) {
-      reverbHighPass.frequency.setTargetAtTime(
-        stateToLoad.reverbLowCutFreq ?? 100,
-        now,
-        loadTimeConstant,
-      );
-      if (reverbLowCutSlider)
-        reverbLowCutSlider.value = stateToLoad.reverbLowCutFreq ?? 100;
-      if (reverbLowCutValue)
-        reverbLowCutValue.textContent =
-          (stateToLoad.reverbLowCutFreq ?? 100).toFixed(0) + "Hz";
+    if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
+        console.error("Invalid state object provided to loadState.");
+        return;
     }
 
-    const newIRUrl =
-      stateToLoad.currentIRUrl ||
-      (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
-    if (currentIRUrl !== newIRUrl || !isReverbReady) {
-      if (typeof updateReverbIR === "function") {
-        await updateReverbIR(newIRUrl);
-      } else {
-        currentIRUrl = newIRUrl;
-      }
-    }
-    if (reverbIRSelect) reverbIRSelect.value = currentIRUrl;
-  } else {
-    currentIRUrl =
-      stateToLoad.currentIRUrl ||
-      (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
-  }
+    isPerformingUndoRedo = true;
 
-  nodes.forEach((node) => {
-    node.audioNodes = null;
-    node.connections = node.connections ? new Set(node.connections) : new Set();
-    node.isSelected = isElementSelected("node", node.id);
-    node.isStartNode = isPulsarType(node.type);
-    node.isEnabled =
-      node.isEnabled !== undefined
-        ? node.isEnabled
-        : node.type !== "pulsar_triggerable";
-    if (node.type === "pulsar_manual") node.isEnabled = true;
-    node.primaryInputConnectionId =
-      node.primaryInputConnectionId ??
-      (node.type === "switch" ? null : undefined);
-    node.baseHue = node.baseHue ?? null;
-    node.activeRetriggers = [];
-    node.currentRetriggerVisualIndex = -1;
+    nodes.forEach((node) => stopNodeAudio(node));
+    connections.forEach((conn) => stopConnectionAudio(conn));
+    activeRockets.forEach((rocket) => {
+        if (rocket.audioNodes && rocket.audioNodes.engineSound) {
+            try {
+                rocket.audioNodes.engineSound.stop();
+                rocket.audioNodes.engineSound.disconnect();
+            } catch (e) {}
+        }
+    });
+    activeRockets = [];
 
-    if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE)
-      node.audioParams = {};
-    else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams)
-      node.audioParams = {};
+    nodes = stateToLoad.nodes;
+    connections = stateToLoad.connections;
 
-    if (node.type === TIMELINE_GRID_TYPE) {
-      node.width = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
-      node.height = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
-      node.timelineSpeed = node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
-      node.timelineMusicalDurationBars = node.timelineMusicalDurationBars || 1;
-      node.timelineIsPlaying =
-        node.timelineIsPlaying !== undefined ? node.timelineIsPlaying : true;
-      node.timelineIsLooping =
-        node.timelineIsLooping !== undefined ? node.timelineIsLooping : true;
-      node.scanLinePosition = node.scanLinePosition || 0;
-      node.triggeredInThisSweep = new Set();
-      node.timelinePulseIntensity =
-        node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
-      node.internalGridDivisions = node.internalGridDivisions || 8;
-      node.showInternalGrid =
-        node.showInternalGrid !== undefined ? node.showInternalGrid : true;
-      node.snapToInternalGrid =
-        node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
-      node.isInResizeMode = node.isInResizeMode || false;
-      node.scanlineDirection = node.scanlineDirection || "forward";
-      node.isPingPongForward =
-        node.isPingPongForward !== undefined ? node.isPingPongForward : true;
-      node.rotation = node.rotation || node.audioParams?.rotation || 0;
-
-      if (!node.audioParams) node.audioParams = {};
-      node.audioParams.timelineSpeed = node.timelineSpeed;
-      node.audioParams.timelineMusicalDurationBars =
-        node.timelineMusicalDurationBars;
-      node.audioParams.timelineIsPlaying = node.timelineIsPlaying;
-      node.audioParams.timelineIsLooping = node.timelineIsLooping;
-      node.audioParams.timelinePulseIntensity = node.timelinePulseIntensity;
-      node.audioParams.width = node.width;
-      node.audioParams.height = node.height;
-      node.audioParams.internalGridDivisions = node.internalGridDivisions;
-      node.audioParams.showInternalGrid = node.showInternalGrid;
-      node.audioParams.snapToInternalGrid = node.snapToInternalGrid;
-      node.audioParams.scanlineDirection = node.scanlineDirection;
-      node.audioParams.isInResizeMode = node.isInResizeMode;
-      node.audioParams.rotation = node.rotation;
-      node.audioParams.isTransposeEnabled =
-        node.audioParams.isTransposeEnabled ?? false;
-      node.audioParams.transposeDirection =
-        node.audioParams.transposeDirection ?? "+";
-      node.audioParams.transposeAmount = node.audioParams.transposeAmount ?? 0;
-
-      node.isStartNode = false;
-      node.audioNodes = null;
-      delete node.starPoints;
-      delete node.baseHue;
-      delete node.color;
+    if (stateToLoad.selectedElements) {
+        const elementsToProcess = Array.isArray(stateToLoad.selectedElements) ?
+            stateToLoad.selectedElements :
+            Array.from(stateToLoad.selectedElements);
+        selectedElements = new Set(elementsToProcess.map((el) => ({ ...el })));
     } else {
-      const defaultVolumeSteps = [0.8, 0.65, 0.5];
-      const numDefaultSteps = defaultVolumeSteps.length;
-
-      const defaultRetriggerParams = {
-        retriggerEnabled: false,
-        retriggerVolumeSteps: [...defaultVolumeSteps],
-        retriggerPitchSteps: Array(numDefaultSteps).fill(0),
-        retriggerFilterSteps: Array(numDefaultSteps).fill(0),
-        retriggerMuteSteps: Array(numDefaultSteps).fill(false),
-        retriggerIntervalMs: 100,
-        retriggerRateMode: "constant",
-      };
-
-      for (const key in defaultRetriggerParams) {
-        if (node.audioParams[key] === undefined) {
-          node.audioParams[key] = defaultRetriggerParams[key];
-        }
-      }
-
-      if (node.audioParams.retriggerRate !== undefined) {
-        if (
-          node.audioParams.retriggerIntervalMs ===
-          defaultRetriggerParams.retriggerIntervalMs
-        ) {
-          node.audioParams.retriggerIntervalMs = Math.max(
-            20,
-            Math.round(1000 / node.audioParams.retriggerRate),
-          );
-        }
-        delete node.audioParams.retriggerRate;
-      }
-
-      let currentStepCount = (
-        node.audioParams.retriggerVolumeSteps ||
-        defaultRetriggerParams.retriggerVolumeSteps
-      ).length;
-
-      if (
-        node.audioParams.retriggerCount !== undefined ||
-        node.audioParams.retriggerVolumeDecay !== undefined
-      ) {
-        const countFromOldParam =
-          node.audioParams.retriggerCount || currentStepCount;
-        const decayType = node.audioParams.retriggerVolumeDecay || "linear";
-        const baseVol = 0.8;
-        const newVolumeSteps = [];
-        for (let i = 0; i < countFromOldParam; i++) {
-          let vol = baseVol;
-          if (decayType === "linear")
-            vol *= Math.max(0, 1 - i / Math.max(1, countFromOldParam - 1));
-          else if (decayType === "exponential") vol *= Math.pow(0.75, i);
-          newVolumeSteps.push(parseFloat(vol.toFixed(2)));
-        }
-        node.audioParams.retriggerVolumeSteps =
-          newVolumeSteps.length > 0
-            ? newVolumeSteps
-            : [...defaultRetriggerParams.retriggerVolumeSteps];
-        currentStepCount = node.audioParams.retriggerVolumeSteps.length;
-
-        delete node.audioParams.retriggerCount;
-        delete node.audioParams.retriggerVolumeDecay;
-      }
-
-      const ensureStepArrayLength = (arrayName, defaultValue) => {
-        if (
-          !node.audioParams[arrayName] ||
-          !Array.isArray(node.audioParams[arrayName]) ||
-          node.audioParams[arrayName].length !== currentStepCount
-        ) {
-          node.audioParams[arrayName] =
-            Array(currentStepCount).fill(defaultValue);
-        }
-      };
-
-      ensureStepArrayLength("retriggerPitchSteps", 0);
-      ensureStepArrayLength("retriggerFilterSteps", 0);
-      ensureStepArrayLength("retriggerMuteSteps", false);
-
-      if (node.audioParams.retriggerFilterArcType !== undefined) {
-        const oldType = node.audioParams.retriggerFilterArcType;
-        const oldFactor = node.audioParams.retriggerFilterArcFactor;
-        if (oldType === "open") {
-          node.audioParams.retriggerFilterArcAmount =
-            oldFactor !== undefined ? oldFactor : 0.5;
-        } else if (oldType === "close") {
-          node.audioParams.retriggerFilterArcAmount =
-            oldFactor !== undefined ? -oldFactor : -0.5;
-        } else {
-          node.audioParams.retriggerFilterArcAmount = 0;
-        }
-        delete node.audioParams.retriggerFilterArcType;
-        delete node.audioParams.retriggerFilterArcFactor;
-      }
-
-      if (node.audioParams.retriggerPitchArcType !== undefined) {
-        if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
-          const oldStepFactor =
-            node.audioParams.retriggerPitchArcStep === undefined
-              ? 0.03
-              : node.audioParams.retriggerPitchArcStep;
-          const newType = "relative_factor";
-          const newStep =
-            node.audioParams.retriggerPitchArcType === "down"
-              ? -Math.abs(oldStepFactor)
-              : Math.abs(oldStepFactor);
-          node.audioParams.retriggerPitchArcType = newType;
-          node.audioParams.retriggerPitchArcStep = newStep;
-        } else if (node.audioParams.retriggerPitchArcType === "step") {
-          node.audioParams.retriggerPitchArcType = "semitone_step";
-        } else if (
-          node.audioParams.retriggerPitchArcType === "none" &&
-          node.audioParams.retriggerPitchArcStep === undefined
-        ) {
-          node.audioParams.retriggerPitchArcStep = 0;
-        }
-      }
-
-      node.audioParams.reverbSend =
-        node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-      node.audioParams.delaySend =
-        node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-      node.audioParams.probability =
-        node.audioParams.probability ?? DEFAULT_PROBABILITY;
-      node.audioParams.pulseIntensity =
-        node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-      node.audioParams.triggerInterval =
-        node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-      node.audioParams.syncSubdivisionIndex =
-        node.syncSubdivisionIndex ??
-        node.audioParams.syncSubdivisionIndex ??
-        DEFAULT_SUBDIVISION_INDEX;
-      node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
-      node.audioParams.gateModeIndex =
-        node.gateModeIndex ??
-        node.audioParams.gateModeIndex ??
-        DEFAULT_GATE_MODE_INDEX;
-      node.gateModeIndex = node.audioParams.gateModeIndex;
-      node.audioParams.pitchShiftIndex =
-        node.pitchShiftIndex ??
-        node.audioParams.pitchShiftIndex ??
-        DEFAULT_PITCH_SHIFT_INDEX;
-      node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
-      node.audioParams.volume = node.audioParams.volume ?? 1.0;
-
-      if (isDrumType(node.type)) {
-        const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
-        node.audioParams.baseFreq =
-          node.audioParams.baseFreq ?? defaults?.baseFreq;
-        node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
-        node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
-        if (node.type === "drum_snare" || node.type === "drum_clap") {
-          node.audioParams.noiseDecay =
-            node.audioParams.noiseDecay ?? defaults?.noiseDecay;
-        }
-      }
-      if (["sound", "nebula"].includes(node.type)) {
-        node.audioParams.scaleIndex = Math.max(
-          MIN_SCALE_INDEX,
-          Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
-        );
-        node.audioParams.pitch = getFrequency(
-          currentScale,
-          node.audioParams.scaleIndex,
-        );
-        if (isNaN(node.audioParams.pitch)) {
-          node.audioParams.scaleIndex = 0;
-          node.audioParams.pitch = getFrequency(currentScale, 0);
-        }
-      }
-      if (node.type === PORTAL_NEBULA_TYPE) {
-        node.audioParams.pitch =
-          node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
-        node.audioParams.volume = node.audioParams.volume ?? 0.6;
-      }
+        selectedElements = new Set();
     }
+
+    fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ?
+        new Set(stateToLoad.fluctuatingGroupNodeIDs) :
+        new Set();
+    nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
+    connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
+    isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
+    globalBPM = stateToLoad.globalBPM ?? 120;
+    currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
+    currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
+    currentRootNote = stateToLoad.currentRootNote ?? 0;
+    globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
+    viewOffsetX = stateToLoad.viewOffsetX ?? 0;
+    viewOffsetY = stateToLoad.viewOffsetY ?? 0;
+    viewScale = stateToLoad.viewScale ?? 1.0;
 
     if (isAudioReady) {
-      if (node.type !== TIMELINE_GRID_TYPE) {
-        node.audioNodes = createAudioNodesForNode(node);
-        if (node.audioNodes) {
-          updateNodeAudioParams(node);
+        const now = audioContext.currentTime;
+        const loadTimeConstant = 0.01;
+        if (masterGain)
+            masterGain.gain.setTargetAtTime(
+                stateToLoad.masterVolume ?? 0.8,
+                now,
+                loadTimeConstant,
+            );
+        if (masterDelaySendGain)
+            masterDelaySendGain.gain.setTargetAtTime(
+                stateToLoad.delaySend ?? 0.3,
+                now,
+                loadTimeConstant,
+            );
+        if (delayNode)
+            delayNode.delayTime.setTargetAtTime(
+                stateToLoad.delayTime ?? 0.25,
+                now,
+                loadTimeConstant,
+            );
+        if (delayFeedbackGain)
+            delayFeedbackGain.gain.setTargetAtTime(
+                stateToLoad.delayFeedback ?? 0.4,
+                now,
+                loadTimeConstant,
+            );
+        if (portalGroupGain)
+            portalGroupGain.gain.setTargetAtTime(
+                stateToLoad.portalVolume ?? 0.7,
+                now,
+                loadTimeConstant,
+            );
+        if (originalNebulaGroupGain)
+            originalNebulaGroupGain.gain.setTargetAtTime(
+                stateToLoad.originalNebulaVolume ?? 0.8,
+                now,
+                loadTimeConstant,
+            );
+
+
+        if (reverbWetGain) {
+            reverbWetGain.gain.setTargetAtTime(stateToLoad.reverbWetLevel ?? 0.5, now, loadTimeConstant);
+            if (reverbWetSlider) reverbWetSlider.value = stateToLoad.reverbWetLevel ?? 0.5;
+            if (reverbWetValue) reverbWetValue.textContent = (stateToLoad.reverbWetLevel ?? 0.5).toFixed(2);
         }
-      } else {
-        node.audioNodes = null;
-      }
-    }
-  });
-
-  connections.forEach(async (conn) => {
-    conn.isSelected = isElementSelected("connection", conn.id);
-    if (!conn.audioParams) conn.audioParams = {};
-
-    if (conn.type === "string_violin") {
-      const defaults = STRING_VIOLIN_DEFAULTS;
-      Object.keys(defaults).forEach((key) => {
-        conn.audioParams[key] = conn.audioParams[key] ?? defaults[key];
-      });
-      conn.audioParams.scaleIndex = Math.max(
-        MIN_SCALE_INDEX,
-        Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
-      );
-      conn.audioParams.pitch = getFrequency(
-        currentScale,
-        conn.audioParams.scaleIndex,
-      );
-      if (isNaN(conn.audioParams.pitch)) {
-        conn.audioParams.scaleIndex = 0;
-        conn.audioParams.pitch = getFrequency(currentScale, 0);
-      }
-      if (isAudioReady) {
-        conn.audioNodes = createAudioNodesForConnection(conn);
-        if (conn.audioNodes) {
-          updateConnectionAudioParams(conn);
+        if (reverbPreDelayNode) {
+            reverbPreDelayNode.delayTime.setTargetAtTime(stateToLoad.reverbPreDelayTime ?? 0.02, now, loadTimeConstant);
+            if (reverbPreDelaySlider) reverbPreDelaySlider.value = stateToLoad.reverbPreDelayTime ?? 0.02;
+            if (reverbPreDelayValue) reverbPreDelayValue.textContent = (stateToLoad.reverbPreDelayTime ?? 0.02).toFixed(3) + "s";
         }
-      } else {
-        conn.audioNodes = null;
-      }
-    } else if (conn.type === "wavetrail") {
-      conn.audioParams.buffer = null;
-      conn.audioParams.waveformPath = null;
+        if (reverbLowPass) {
+            reverbLowPass.frequency.setTargetAtTime(stateToLoad.reverbDampingFreq ?? 8000, now, loadTimeConstant);
+            if (reverbDampingSlider) reverbDampingSlider.value = stateToLoad.reverbDampingFreq ?? 8000;
+            if (reverbDampingValue) reverbDampingValue.textContent = (stateToLoad.reverbDampingFreq ?? 8000).toFixed(0) + "Hz";
+        }
+        if (reverbHighPass) {
+            reverbHighPass.frequency.setTargetAtTime(stateToLoad.reverbLowCutFreq ?? 100, now, loadTimeConstant);
+            if (reverbLowCutSlider) reverbLowCutSlider.value = stateToLoad.reverbLowCutFreq ?? 100;
+            if (reverbLowCutValue) reverbLowCutValue.textContent = (stateToLoad.reverbLowCutFreq ?? 100).toFixed(0) + "Hz";
+        }
 
-      conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
-      conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset ?? null;
-      conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
-      conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
-      conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
-      conn.audioNodes = null;
+        const newIRUrl = stateToLoad.currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
+        if (currentIRUrl !== newIRUrl || !isReverbReady) {
+             if (typeof updateReverbIR === "function") {
+                await updateReverbIR(newIRUrl);
+             } else {
+                currentIRUrl = newIRUrl;
+             }
+        }
+         if (reverbIRSelect) reverbIRSelect.value = currentIRUrl;
 
-      if (
-        conn.audioParams.fileName &&
-        isAudioReady &&
-        typeof fetch === "function"
-      ) {
-        console.log(
-          `WaveTrail ${conn.id} has fileName ${conn.audioParams.fileName}, needs buffer to be reloaded via UI or other mechanism.`,
-        );
-      }
+
     } else {
-      conn.audioNodes = null;
+        currentIRUrl = stateToLoad.currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
     }
-  });
 
-  updateSyncUI();
-  updateScaleAndTransposeUI();
-  if (isAudioReady) updateMixerGUI();
-  updateConstellationGroup();
-  populateEditPanel();
-  drawPianoRoll();
-  identifyAndRouteAllGroups();
 
-  isPerformingUndoRedo = false;
-  unsavedChanges = false;
-  updateAbletonLinkButton();
-  console.log("State loaded.");
+    nodes.forEach((node) => {
+        node.audioNodes = null;
+        node.connections = node.connections ? new Set(node.connections) : new Set();
+        node.isSelected = isElementSelected("node", node.id);
+        node.isStartNode = isPulsarType(node.type);
+        node.isEnabled =
+            node.isEnabled !== undefined ?
+            node.isEnabled :
+            node.type !== "pulsar_triggerable";
+        if (node.type === "pulsar_manual") node.isEnabled = true;
+        node.primaryInputConnectionId =
+            node.primaryInputConnectionId ??
+            (node.type === "switch" ? null : undefined);
+        node.baseHue = node.baseHue ?? null;
+        node.activeRetriggers = [];
+        node.currentRetriggerVisualIndex = -1;
+
+        if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE)
+            node.audioParams = {};
+        else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams)
+            node.audioParams = {};
+
+
+        if (node.type === TIMELINE_GRID_TYPE) {
+            node.width = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+            node.height = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+            node.timelineSpeed = node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+            node.timelineMusicalDurationBars = node.timelineMusicalDurationBars || 1;
+            node.timelineIsPlaying =
+                node.timelineIsPlaying !== undefined ? node.timelineIsPlaying : true;
+            node.timelineIsLooping =
+                node.timelineIsLooping !== undefined ? node.timelineIsLooping : true;
+            node.scanLinePosition = node.scanLinePosition || 0;
+            node.triggeredInThisSweep = new Set();
+            node.timelinePulseIntensity =
+                node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+            node.internalGridDivisions = node.internalGridDivisions || 8;
+            node.showInternalGrid =
+                node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+            node.snapToInternalGrid =
+                node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
+            node.isInResizeMode = node.isInResizeMode || false;
+            node.scanlineDirection = node.scanlineDirection || "forward";
+            node.isPingPongForward =
+                node.isPingPongForward !== undefined ? node.isPingPongForward : true;
+            node.rotation = node.rotation || node.audioParams?.rotation || 0;
+
+
+            if (!node.audioParams) node.audioParams = {};
+            node.audioParams.timelineSpeed = node.timelineSpeed;
+            node.audioParams.timelineMusicalDurationBars =
+                node.timelineMusicalDurationBars;
+            node.audioParams.timelineIsPlaying = node.timelineIsPlaying;
+            node.audioParams.timelineIsLooping = node.timelineIsLooping;
+            node.audioParams.timelinePulseIntensity = node.timelinePulseIntensity;
+            node.audioParams.width = node.width;
+            node.audioParams.height = node.height;
+            node.audioParams.internalGridDivisions = node.internalGridDivisions;
+            node.audioParams.showInternalGrid = node.showInternalGrid;
+            node.audioParams.snapToInternalGrid = node.snapToInternalGrid;
+            node.audioParams.scanlineDirection = node.scanlineDirection;
+            node.audioParams.isInResizeMode = node.isInResizeMode;
+            node.audioParams.rotation = node.rotation;
+            node.audioParams.isTransposeEnabled =
+                node.audioParams.isTransposeEnabled ?? false;
+            node.audioParams.transposeDirection =
+                node.audioParams.transposeDirection ?? "+";
+            node.audioParams.transposeAmount = node.audioParams.transposeAmount ?? 0;
+
+            node.audioParams.autoRotateEnabled = node.audioParams.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+            node.audioParams.autoRotateSpeedManual = node.audioParams.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+            node.audioParams.autoRotateDirection = node.audioParams.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
+            node.audioParams.autoRotateSyncSubdivisionIndex = node.audioParams.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
+
+
+            node.isStartNode = false;
+            node.audioNodes = null;
+            delete node.starPoints;
+            delete node.baseHue;
+            delete node.color;
+        } else {
+
+            const defaultVolumeSteps = [0.8, 0.65, 0.5];
+            const numDefaultSteps = defaultVolumeSteps.length;
+
+            const defaultRetriggerParams = {
+                retriggerEnabled: false,
+                retriggerVolumeSteps: [...defaultVolumeSteps],
+                retriggerPitchSteps: Array(numDefaultSteps).fill(0),
+                retriggerFilterSteps: Array(numDefaultSteps).fill(0),
+                retriggerMuteSteps: Array(numDefaultSteps).fill(false),
+                retriggerIntervalMs: 100,
+                retriggerRateMode: "constant",
+            };
+
+
+            for (const key in defaultRetriggerParams) {
+                if (node.audioParams[key] === undefined) {
+                    node.audioParams[key] = defaultRetriggerParams[key];
+                }
+            }
+
+
+            if (node.audioParams.retriggerRate !== undefined) {
+                if (
+                    node.audioParams.retriggerIntervalMs ===
+                    defaultRetriggerParams.retriggerIntervalMs
+                ) {
+                    node.audioParams.retriggerIntervalMs = Math.max(
+                        20,
+                        Math.round(1000 / node.audioParams.retriggerRate),
+                    );
+                }
+                delete node.audioParams.retriggerRate;
+            }
+
+
+            let currentStepCount = (
+                node.audioParams.retriggerVolumeSteps ||
+                defaultRetriggerParams.retriggerVolumeSteps
+            ).length;
+
+
+            if (
+                node.audioParams.retriggerCount !== undefined ||
+                node.audioParams.retriggerVolumeDecay !== undefined
+            ) {
+                const countFromOldParam =
+                    node.audioParams.retriggerCount || currentStepCount;
+                const decayType = node.audioParams.retriggerVolumeDecay || "linear";
+                const baseVol = 0.8;
+                const newVolumeSteps = [];
+                for (let i = 0; i < countFromOldParam; i++) {
+                    let vol = baseVol;
+                    if (decayType === "linear")
+                        vol *= Math.max(0, 1 - i / Math.max(1, countFromOldParam - 1));
+                    else if (decayType === "exponential") vol *= Math.pow(0.75, i);
+                    newVolumeSteps.push(parseFloat(vol.toFixed(2)));
+                }
+                node.audioParams.retriggerVolumeSteps =
+                    newVolumeSteps.length > 0 ?
+                    newVolumeSteps :
+                    [...defaultRetriggerParams.retriggerVolumeSteps];
+                currentStepCount = node.audioParams.retriggerVolumeSteps.length;
+
+                delete node.audioParams.retriggerCount;
+                delete node.audioParams.retriggerVolumeDecay;
+            }
+
+
+            const ensureStepArrayLength = (arrayName, defaultValue) => {
+                if (
+                    !node.audioParams[arrayName] ||
+                    !Array.isArray(node.audioParams[arrayName]) ||
+                    node.audioParams[arrayName].length !== currentStepCount
+                ) {
+                    node.audioParams[arrayName] =
+                        Array(currentStepCount).fill(defaultValue);
+                }
+            };
+
+            ensureStepArrayLength("retriggerPitchSteps", 0);
+            ensureStepArrayLength("retriggerFilterSteps", 0);
+            ensureStepArrayLength("retriggerMuteSteps", false);
+
+
+            if (node.audioParams.retriggerFilterArcType !== undefined) {
+                const oldType = node.audioParams.retriggerFilterArcType;
+                const oldFactor = node.audioParams.retriggerFilterArcFactor;
+                if (oldType === "open") {
+                    node.audioParams.retriggerFilterArcAmount =
+                        oldFactor !== undefined ? oldFactor : 0.5;
+                } else if (oldType === "close") {
+                    node.audioParams.retriggerFilterArcAmount =
+                        oldFactor !== undefined ? -oldFactor : -0.5;
+                } else {
+                    node.audioParams.retriggerFilterArcAmount = 0;
+                }
+                delete node.audioParams.retriggerFilterArcType;
+                delete node.audioParams.retriggerFilterArcFactor;
+            }
+
+
+            if (node.audioParams.retriggerPitchArcType !== undefined) {
+                if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
+                    const oldStepFactor =
+                        node.audioParams.retriggerPitchArcStep === undefined ?
+                        0.03 :
+                        node.audioParams.retriggerPitchArcStep;
+                    const newType = "relative_factor";
+                    const newStep =
+                        node.audioParams.retriggerPitchArcType === "down" ?
+                        -Math.abs(oldStepFactor) :
+                        Math.abs(oldStepFactor);
+                    node.audioParams.retriggerPitchArcType = newType;
+                    node.audioParams.retriggerPitchArcStep = newStep;
+                } else if (node.audioParams.retriggerPitchArcType === "step") {
+                    node.audioParams.retriggerPitchArcType = "semitone_step";
+                } else if (
+                    node.audioParams.retriggerPitchArcType === "none" &&
+                    node.audioParams.retriggerPitchArcStep === undefined
+                ) {
+                    node.audioParams.retriggerPitchArcStep = 0;
+                }
+            }
+
+
+            node.audioParams.reverbSend =
+                node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+            node.audioParams.delaySend =
+                node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+            node.audioParams.probability =
+                node.audioParams.probability ?? DEFAULT_PROBABILITY;
+            node.audioParams.pulseIntensity =
+                node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+            node.audioParams.triggerInterval =
+                node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+            node.audioParams.syncSubdivisionIndex =
+                node.syncSubdivisionIndex ??
+                node.audioParams.syncSubdivisionIndex ??
+                DEFAULT_SUBDIVISION_INDEX;
+            node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
+            node.audioParams.gateModeIndex =
+                node.gateModeIndex ??
+                node.audioParams.gateModeIndex ??
+                DEFAULT_GATE_MODE_INDEX;
+            node.gateModeIndex = node.audioParams.gateModeIndex;
+            node.audioParams.pitchShiftIndex =
+                node.pitchShiftIndex ??
+                node.audioParams.pitchShiftIndex ??
+                DEFAULT_PITCH_SHIFT_INDEX;
+            node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
+            node.audioParams.volume = node.audioParams.volume ?? 1.0;
+
+
+            if (isDrumType(node.type)) {
+                const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
+                node.audioParams.baseFreq =
+                    node.audioParams.baseFreq ?? defaults?.baseFreq;
+                node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
+                node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
+                if (node.type === "drum_snare" || node.type === "drum_clap") {
+                    node.audioParams.noiseDecay =
+                        node.audioParams.noiseDecay ?? defaults?.noiseDecay;
+                }
+            }
+            if (["sound", "nebula"].includes(node.type)) {
+                node.audioParams.scaleIndex = Math.max(
+                    MIN_SCALE_INDEX,
+                    Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
+                );
+                node.audioParams.pitch = getFrequency(
+                    currentScale,
+                    node.audioParams.scaleIndex,
+                );
+                if (isNaN(node.audioParams.pitch)) {
+                    node.audioParams.scaleIndex = 0;
+                    node.audioParams.pitch = getFrequency(currentScale, 0);
+                }
+            }
+            if (node.type === PORTAL_NEBULA_TYPE) {
+                node.audioParams.pitch =
+                    node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
+                node.audioParams.volume = node.audioParams.volume ?? 0.6;
+            }
+        }
+
+
+        if (isAudioReady) {
+            if (node.type !== TIMELINE_GRID_TYPE) {
+                node.audioNodes = createAudioNodesForNode(node);
+                if (node.audioNodes) {
+                    updateNodeAudioParams(node);
+                }
+            } else {
+                node.audioNodes = null;
+            }
+        }
+    });
+
+    connections.forEach(async (conn) => {
+        conn.isSelected = isElementSelected("connection", conn.id);
+        if (!conn.audioParams) conn.audioParams = {};
+
+        if (conn.type === "string_violin") {
+            const defaults = STRING_VIOLIN_DEFAULTS;
+            Object.keys(defaults).forEach((key) => {
+                conn.audioParams[key] = conn.audioParams[key] ?? defaults[key];
+            });
+            conn.audioParams.scaleIndex = Math.max(
+                MIN_SCALE_INDEX,
+                Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
+            );
+            conn.audioParams.pitch = getFrequency(
+                currentScale,
+                conn.audioParams.scaleIndex,
+            );
+            if (isNaN(conn.audioParams.pitch)) {
+                conn.audioParams.scaleIndex = 0;
+                conn.audioParams.pitch = getFrequency(currentScale, 0);
+            }
+            if (isAudioReady) {
+                conn.audioNodes = createAudioNodesForConnection(conn);
+                if (conn.audioNodes) {
+                    updateConnectionAudioParams(conn);
+                }
+            } else {
+                conn.audioNodes = null;
+            }
+        } else if (conn.type === "wavetrail") {
+
+
+            conn.audioParams.buffer = null;
+            conn.audioParams.waveformPath = null;
+
+            conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
+            conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset ?? null;
+            conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
+            conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
+            conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
+            conn.audioNodes = null;
+
+            if (conn.audioParams.fileName && isAudioReady && typeof fetch === 'function') {
+                 console.log(`WaveTrail ${conn.id} has fileName ${conn.audioParams.fileName}, needs buffer to be reloaded via UI or other mechanism.`);
+            }
+
+
+        } else {
+            conn.audioNodes = null;
+        }
+    });
+
+
+    updateSyncUI();
+    updateScaleAndTransposeUI();
+    if (isAudioReady) updateMixerGUI();
+    updateConstellationGroup();
+    populateEditPanel();
+    drawPianoRoll();
+    identifyAndRouteAllGroups();
+
+    isPerformingUndoRedo = false;
+    unsavedChanges = false;
+    updateAbletonLinkButton();
+    console.log("State loaded.");
 }
 
 function startSamplerGlide_Granular(
@@ -8725,7 +8586,8 @@ function animationLoop() {
           node.type === "pulsar_random_volume" ||
           node.type === "pulsar_random_particles" ||
           node.type === "pulsar_rocket" ||
-          node.type === "pulsar_triggerable")
+          node.type === "pulsar_triggerable" ||
+          node.type === "pulsar_meteorshower") 
       ) {
         let shouldPulse = false;
         let pulseData = {};
@@ -8809,70 +8671,79 @@ function animationLoop() {
         }
 
         if (shouldPulse) {
-          pulseData = {
-            intensity:
-              node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
-            color: node.color ?? null,
-            particleMultiplier: 1.0,
-          };
-          if (node.type === "pulsar_random_volume") {
-            pulseData.intensity =
-              MIN_PULSE_INTENSITY +
-              Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
-          }
+            if (node.type === "pulsar_meteorshower") {
+                startMeteorShower({ type: 'node', node: node, generation: 0 });
+                node.animationState = 1;
+                setTimeout(() => {
+                    const checkNode = findNodeById(node.id);
+                    if (checkNode) checkNode.animationState = 0;
+                }, 150);
+            } else {
+                pulseData = {
+                    intensity:
+                    node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY,
+                    color: node.color ?? null,
+                    particleMultiplier: 1.0,
+                };
+                if (node.type === "pulsar_random_volume") {
+                    pulseData.intensity =
+                    MIN_PULSE_INTENSITY +
+                    Math.random() * (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY);
+                }
 
-          currentGlobalPulseId++;
-          node.animationState = 1;
-          setTimeout(() => {
-            const checkNode = findNodeById(node.id);
-            if (checkNode) checkNode.animationState = 0;
-          }, 150);
+                currentGlobalPulseId++;
+                node.animationState = 1;
+                setTimeout(() => {
+                    const checkNode = findNodeById(node.id);
+                    if (checkNode) checkNode.animationState = 0;
+                }, 150);
 
-          if (node.type === "pulsar_rocket") {
-            launchRocket(node, pulseData);
-          } else {
-            node.connections.forEach((neighborId) => {
-              const neighborNode = findNodeById(neighborId);
-              const connection = connections.find(
-                (c) =>
-                  (c.nodeAId === node.id && c.nodeBId === neighborId) ||
-                  (c.nodeAId === neighborId && c.nodeBId === node.id),
-              );
+                if (node.type === "pulsar_rocket") {
+                    launchRocket(node, pulseData);
+                } else {
+                    node.connections.forEach((neighborId) => {
+                    const neighborNode = findNodeById(neighborId);
+                    const connection = connections.find(
+                        (c) =>
+                        (c.nodeAId === node.id && c.nodeBId === neighborId) ||
+                        (c.nodeAId === neighborId && c.nodeBId === node.id),
+                    );
 
-              if (
-                neighborNode &&
-                neighborNode.type !== "nebula" &&
-                neighborNode.type !== PORTAL_NEBULA_TYPE &&
-                connection &&
-                neighborNode.lastTriggerPulseId !== currentGlobalPulseId
-              ) {
-                const travelTime = connection.length * DELAY_FACTOR;
-                try {
-                  createVisualPulse(
-                    connection.id,
-                    travelTime,
-                    node.id,
-                    Infinity,
-                    "trigger",
-                    pulseData.color,
-                    pulseData.intensity,
-                  );
-                  propagateTrigger(
-                    neighborNode,
-                    travelTime,
-                    currentGlobalPulseId,
-                    node.id,
-                    Infinity,
-                    {
-                      type: "trigger",
-                      data: pulseData,
-                    },
-                    connection,
-                  );
-                } catch (propError) {}
-              }
-            });
-          }
+                    if (
+                        neighborNode &&
+                        neighborNode.type !== "nebula" &&
+                        neighborNode.type !== PORTAL_NEBULA_TYPE &&
+                        connection &&
+                        neighborNode.lastTriggerPulseId !== currentGlobalPulseId
+                    ) {
+                        const travelTime = connection.length * DELAY_FACTOR;
+                        try {
+                        createVisualPulse(
+                            connection.id,
+                            travelTime,
+                            node.id,
+                            Infinity,
+                            "trigger",
+                            pulseData.color,
+                            pulseData.intensity,
+                        );
+                        propagateTrigger(
+                            neighborNode,
+                            travelTime,
+                            currentGlobalPulseId,
+                            node.id,
+                            Infinity,
+                            {
+                            type: "trigger",
+                            data: pulseData,
+                            },
+                            connection,
+                        );
+                        } catch (propError) {}
+                    }
+                    });
+                }
+            }
         }
       } else if (node.type === "gate" && node.currentAngle !== undefined) {
         node.currentAngle += GATE_ROTATION_SPEED * (deltaTime * 60);
@@ -8896,6 +8767,28 @@ function animationLoop() {
           (PORTAL_NEBULA_DEFAULTS.pulseSpeed || 0.5) * (deltaTime * 60);
         node.pulsePhase %= 2 * Math.PI;
       } else if (node.type === TIMELINE_GRID_TYPE) {
+        if (node.audioParams && node.audioParams.autoRotateEnabled) {
+            let rotationIncrement = 0;
+            if (isGlobalSyncEnabled && node.audioParams.autoRotateSyncSubdivisionIndex !== undefined && globalBPM > 0) {
+                const subdivOpt = subdivisionOptions[node.audioParams.autoRotateSyncSubdivisionIndex];
+                if (subdivOpt && typeof subdivOpt.value === 'number') {
+                    const secondsPerFullRotation = (60.0 / globalBPM) * subdivOpt.value * 4;
+                    if (secondsPerFullRotation > 0) {
+                         rotationIncrement = (Math.PI * 2 / secondsPerFullRotation) * deltaTime;
+                    }
+                }
+            } else {
+                rotationIncrement = (node.audioParams.autoRotateSpeedManual || TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL) * (deltaTime * 60) ;
+            }
+
+            if (node.audioParams.autoRotateDirection === "counter-clockwise") {
+                rotationIncrement *= -1;
+            }
+            node.audioParams.rotation = (node.audioParams.rotation || 0) + rotationIncrement;
+            node.audioParams.rotation %= (Math.PI * 2);
+            node.rotation = node.audioParams.rotation;
+        }
+
         if (node.timelineIsPlaying) {
           const prevScanLinePositionRatio = node.scanLinePosition;
           const gridRotation = node.audioParams?.rotation || 0;
@@ -8977,7 +8870,6 @@ function animationLoop() {
               Math.min(1.0, node.scanLinePosition),
             );
           }
-
           const prevScanLineLocalX =
             -node.width / 2 + prevScanLinePositionRatio * node.width;
           const currentScanLineLocalX =
@@ -9297,7 +9189,6 @@ function animationLoop() {
         tapeReelRight.style.transform = `rotate(${tapeReelAngle}deg)`;
       }
     }
-
     draw();
   } catch (loopError) {
     console.error("Error in animationLoop:", loopError);
@@ -11648,6 +11539,12 @@ function draw() {
 
   updateAndDrawPulses(now);
 
+  
+  if (typeof updateAndDrawMeteorShowers === "function") {
+    updateAndDrawMeteorShowers(localDeltaTime, now);
+  }
+
+
   if (
     isConnecting &&
     (currentTool === "connect" ||
@@ -11974,91 +11871,81 @@ function drawPlasmaBridge(ctx, nodeA, nodeB, alpha) {
 }
 
 function generateWaveformPath(audioBuffer, targetPointCount = 200) {
-  if (!audioBuffer || targetPointCount <= 0) {
-    return null;
-  }
-  try {
-    const channelData = audioBuffer.getChannelData(0);
-    const totalSamples = channelData.length;
-    const points = Math.min(targetPointCount, totalSamples);
-    if (points <= 0)
-      return [
-        {
-          min: 0,
-          max: 0,
-        },
-      ];
-
-    const waveformPath = [];
-    const samplesPerPoint = Math.floor(totalSamples / points);
-
-    if (samplesPerPoint <= 0) {
-      for (let i = 0; i < points; i++) {
-        const sampleIndex = Math.min(
-          totalSamples - 1,
-          Math.floor(i * (totalSamples / points)),
-        );
-        const sample = channelData[sampleIndex] || 0;
-        waveformPath.push({
-          min: sample,
-          max: sample,
-        });
-      }
-      return waveformPath;
+    console.log(`[Wavetrail Debug] generateWaveformPath: Called. Buffer valid: ${!!audioBuffer}, targetPoints: ${targetPointCount}`);
+    if (!audioBuffer || targetPointCount <= 0) {
+        console.warn("[Wavetrail Debug] generateWaveformPath: Invalid audioBuffer or targetPointCount <= 0. Returning null.");
+        return null;
     }
-
-    let currentSampleIndex = 0;
-    for (let i = 0; i < points; i++) {
-      const chunkEnd = Math.min(
-        totalSamples,
-        currentSampleIndex + samplesPerPoint,
-      );
-      let chunkMin = 1.0;
-      let chunkMax = -1.0;
-
-      for (let j = currentSampleIndex; j < chunkEnd; j++) {
-        const sample = channelData[j];
-        if (sample < chunkMin) {
-          chunkMin = sample;
+    try {
+        if (audioBuffer.numberOfChannels === 0) {
+            console.warn("[Wavetrail Debug] generateWaveformPath: AudioBuffer has 0 channels. Returning null.");
+            return null;
         }
-        if (sample > chunkMax) {
-          chunkMax = sample;
+        const channelData = audioBuffer.getChannelData(0);
+        const totalSamples = channelData.length;
+        console.log(`[Wavetrail Debug] generateWaveformPath: totalSamples: ${totalSamples}`);
+
+        if (totalSamples === 0) {
+            console.warn("[Wavetrail Debug] generateWaveformPath: AudioBuffer has 0 samples. Returning minimal path.");
+            return Array(targetPointCount).fill({ min: 0, max: 0 });
         }
-      }
 
-      if (chunkMin > chunkMax) {
-        const sample = channelData[currentSampleIndex] || 0;
-        chunkMin = sample;
-        chunkMax = sample;
-      }
+        const points = Math.min(targetPointCount, totalSamples);
+        if (points <= 0) { 
+            console.warn("[Wavetrail Debug] generateWaveformPath: Calculated points <= 0. Returning minimal path.");
+            return Array(targetPointCount).fill({ min: 0, max: 0 });
+        }
 
-      waveformPath.push({
-        min: chunkMin,
-        max: chunkMax,
-      });
-      currentSampleIndex = chunkEnd;
+        const waveformPath = [];
+        
+        const samplesPerPoint = totalSamples < points ? 1 : Math.floor(totalSamples / points);
+        const actualPointsToGenerate = totalSamples < points ? totalSamples : points;
 
-      if (samplesPerPoint === 0 && currentSampleIndex >= totalSamples) break;
+        let currentSampleIndex = 0;
+        for (let i = 0; i < actualPointsToGenerate; i++) {
+            const chunkStart = (totalSamples < points) ? i : Math.floor(i * (totalSamples / actualPointsToGenerate));
+            const chunkEnd = (totalSamples < points) ? (i + 1) : Math.floor((i + 1) * (totalSamples / actualPointsToGenerate));
+            
+            let chunkMin = 1.0;
+            let chunkMax = -1.0;
+            let samplesInThisChunk = 0;
+
+            for (let j = chunkStart; j < chunkEnd && j < totalSamples; j++) {
+                const sample = channelData[j];
+                if (sample < chunkMin) chunkMin = sample;
+                if (sample > chunkMax) chunkMax = sample; 
+                samplesInThisChunk++;
+            }
+
+            if (samplesInThisChunk === 0) { 
+                 const singleSampleIndex = Math.min(chunkStart, totalSamples - 1);
+                 if (singleSampleIndex >= 0) {
+                    chunkMin = channelData[singleSampleIndex] || 0;
+                    chunkMax = channelData[singleSampleIndex] || 0;
+                 } else {
+                    chunkMin = 0;
+                    chunkMax = 0;
+                 }
+            }
+             waveformPath.push({ min: chunkMin, max: chunkMax });
+        }
+        
+        
+        while (waveformPath.length < targetPointCount && waveformPath.length > 0) {
+            waveformPath.push({ ...waveformPath[waveformPath.length - 1] });
+        }
+        
+        if (waveformPath.length === 0 && targetPointCount > 0) { 
+             console.warn("[Wavetrail Debug] generateWaveformPath: WaveformPath ended up empty, returning minimal path.");
+            return Array(targetPointCount).fill({min: 0, max: 0});
+        }
+        console.log(`[Wavetrail Debug] generateWaveformPath: Generated path with ${waveformPath.length} points.`);
+        return waveformPath;
+
+    } catch (error) {
+        console.error("[Wavetrail Debug] Error in generateWaveformPath:", error);
+        return null;
     }
-
-    while (waveformPath.length < targetPointCount && waveformPath.length > 0) {
-      waveformPath.push({
-        ...waveformPath[waveformPath.length - 1],
-      });
-    }
-    if (waveformPath.length === 0)
-      return [
-        {
-          min: 0,
-          max: 0,
-        },
-      ];
-
-    return waveformPath;
-  } catch (error) {
-    console.error("Error generating waveform path:", error);
-    return null;
-  }
 }
 
 function launchRocket(pulsarNode, pulseData) {
@@ -14959,1855 +14846,1767 @@ function setActiveTool(toolName) {
 }
 
 function populateEditPanel() {
-  editPanelContent.innerHTML = "";
-  if (currentTool !== "edit" || selectedElements.size === 0) {
-    if (
-      hamburgerMenuPanel &&
-      !hamburgerMenuPanel.classList.contains("hidden") &&
-      selectedElements.size === 0
-    ) {
-      hamburgerMenuPanel.classList.add("hidden");
-      if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-    }
-    return;
-  }
-
-  const selectedArray = Array.from(selectedElements);
-  const firstElementData = selectedArray[0];
-  const fragment = document.createDocumentFragment();
-  const title = document.createElement("p");
-  const nodeTypes = new Set(
-    selectedArray
-      .filter((el) => el.type === "node")
-      .map((el) => findNodeById(el.id)?.type),
-  );
-  const connectionTypesSet = new Set(
-    selectedArray
-      .filter((el) => el.type === "connection")
-      .map((el) => findConnectionById(el.id)?.type),
-  );
-  let titleText = "";
-  let allSameLogicalType = false;
-  let logicalType = "";
-
-  if (selectedArray.length === 1) {
-    const element =
-      firstElementData.type === "node"
-        ? findNodeById(firstElementData.id)
-        : findConnectionById(firstElementData.id);
-    if (element) {
-      logicalType = element.type.replace(/_/g, " ");
-      titleText = `Edit ${logicalType} #${element.id}`;
-      allSameLogicalType = true;
-    } else {
-      titleText = "Edit Element";
-    }
-  } else {
-    const types = new Set([...nodeTypes, ...connectionTypesSet]);
-    if (types.size === 1) {
-      logicalType = [...types][0].replace(/_/g, " ");
-      titleText = `Edit ${selectedArray.length} ${logicalType}s`;
-      allSameLogicalType = true;
-    } else {
-      titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
-      allSameLogicalType = false;
-    }
-  }
-  title.innerHTML = `<strong>${titleText}</strong>`;
-  fragment.appendChild(title);
-
-  if (selectedArray.length > 1) {
-    let hasNodesSelected = false;
-    for (const elData of selectedArray) {
-      if (elData.type === "node") {
-        hasNodesSelected = true;
-        break;
-      }
-    }
-
-    if (hasNodesSelected) {
-      const makeGroupButton = document.createElement("button");
-      makeGroupButton.textContent = "Make User-Defined Group";
-      makeGroupButton.id = "edit-panel-make-group-btn";
-      makeGroupButton.classList.add("panel-button-like");
-      makeGroupButton.style.marginTop = "10px";
-      makeGroupButton.style.marginBottom = "10px";
-      makeGroupButton.style.display = "block";
-      makeGroupButton.style.width = "100%";
-
-      makeGroupButton.addEventListener("click", () => {
-        if (typeof makeUserDefinedGroup === "function") {
-          makeUserDefinedGroup();
-          populateEditPanel();
-        } else {
-          console.error("makeUserDefinedGroup function is not defined.");
-          alert("Error: Grouping function not available.");
+    editPanelContent.innerHTML = "";
+    if (currentTool !== "edit" || selectedElements.size === 0) {
+        if (
+            hamburgerMenuPanel &&
+            !hamburgerMenuPanel.classList.contains("hidden") &&
+            selectedElements.size === 0
+        ) {
+            hamburgerMenuPanel.classList.add("hidden");
+            if (hamburgerBtn) hamburgerBtn.classList.remove("active");
         }
-      });
-      fragment.appendChild(makeGroupButton);
+        return;
     }
-  }
 
-  const elementsWithNote = selectedArray.filter((elData) => {
-    const el =
-      elData.type === "node"
-        ? findNodeById(elData.id)
-        : findConnectionById(elData.id);
-    return (
-      el &&
-      (el.type === "sound" ||
-        el.type === "nebula" ||
-        (elData.type === "connection" && el.type === "string_violin"))
+    const selectedArray = Array.from(selectedElements);
+    const firstElementData = selectedArray[0];
+    const fragment = document.createDocumentFragment();
+    const title = document.createElement("p");
+    const nodeTypes = new Set(
+        selectedArray
+        .filter((el) => el.type === "node")
+        .map((el) => findNodeById(el.id)?.type),
     );
-  });
+    const connectionTypesSet = new Set(
+        selectedArray
+        .filter((el) => el.type === "connection")
+        .map((el) => findConnectionById(el.id)?.type),
+    );
+    let titleText = "";
+    let allSameLogicalType = false;
+    let logicalType = "";
 
-  if (elementsWithNote.length > 0) {
-    const targetDataForNoteSelector = elementsWithNote.map((el) => ({
-      type: el.type,
-      id: el.id,
-    }));
-    createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
-  }
-
-  if (allSameLogicalType) {
-    if (firstElementData.type === "node") {
-      const node = findNodeById(firstElementData.id);
-
-      if (node && node.type === TIMELINE_GRID_TYPE) {
-        const section = document.createElement("div");
-        section.classList.add("panel-section");
-
-        const playingLabel = document.createElement("label");
-        playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
-        playingLabel.textContent = "Playing:";
-        section.appendChild(playingLabel);
-        const playingCheckbox = document.createElement("input");
-        playingCheckbox.type = "checkbox";
-        playingCheckbox.id = `edit-timeline-playing-${node.id}`;
-        playingCheckbox.checked = node.timelineIsPlaying;
-        playingCheckbox.addEventListener("change", (e) => {
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) {
-              n.timelineIsPlaying = e.target.checked;
-              if (
-                n.timelineIsPlaying &&
-                n.scanLinePosition >= 1.0 &&
-                n.timelineIsLooping
-              ) {
-                n.scanLinePosition = 0;
-                if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear();
-                else n.triggeredInThisSweep = new Set();
-              }
-              if (n.audioParams)
-                n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
-            }
-          });
-          saveState();
-        });
-        section.appendChild(playingCheckbox);
-        section.appendChild(document.createElement("br"));
-
-        const loopingLabel = document.createElement("label");
-        loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
-        loopingLabel.textContent = "Looping:";
-        section.appendChild(loopingLabel);
-        const loopingCheckbox = document.createElement("input");
-        loopingCheckbox.type = "checkbox";
-        loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
-        loopingCheckbox.checked = node.timelineIsLooping;
-        loopingCheckbox.addEventListener("change", (e) => {
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) {
-              n.timelineIsLooping = e.target.checked;
-              if (n.audioParams)
-                n.audioParams.timelineIsLooping = n.timelineIsLooping;
-            }
-          });
-          saveState();
-        });
-        section.appendChild(loopingCheckbox);
-        section.appendChild(document.createElement("br"));
-
-        if (isGlobalSyncEnabled) {
-          const durationLabel = document.createElement("label");
-          durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
-          durationLabel.textContent = "Duration (Sync):";
-          section.appendChild(durationLabel);
-          const durationSelect = document.createElement("select");
-          durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
-          const barOptions = [
-            { label: "1/4 Bar (1 Beat)", value: 0.25 },
-            { label: "1/2 Bar (2 Beats)", value: 0.5 },
-            { label: "1 Bar (4 Beats)", value: 1 },
-            { label: "2 Bars (8 Beats)", value: 2 },
-            { label: "4 Bars (16 Beats)", value: 4 },
-            { label: "8 Bars (32 Beats)", value: 8 },
-          ];
-          let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
-          barOptions.forEach((opt) => {
-            const optionEl = document.createElement("option");
-            optionEl.value = opt.value;
-            optionEl.textContent = opt.label;
-            if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
-              optionEl.selected = true;
-            }
-            durationSelect.appendChild(optionEl);
-          });
-          durationSelect.addEventListener("change", (e) => {
-            const newBars = parseFloat(e.target.value);
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) {
-                n.timelineMusicalDurationBars = newBars;
-                if (n.audioParams)
-                  n.audioParams.timelineMusicalDurationBars = newBars;
-              }
-            });
-            saveState();
-          });
-          section.appendChild(durationSelect);
+    if (selectedArray.length === 1) {
+        const element =
+            firstElementData.type === "node" ?
+            findNodeById(firstElementData.id) :
+            findConnectionById(firstElementData.id);
+        if (element) {
+            logicalType = element.type.replace(/_/g, " ");
+            titleText = `Edit ${logicalType} #${element.id}`;
+            allSameLogicalType = true;
         } else {
-          const currentSpeed =
-            node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
-          const speedVal = currentSpeed.toFixed(1);
-          const speedSliderContainer = createSlider(
-            `edit-timeline-speed-${node.id}`,
-            `Speed (${speedVal}s / sweep):`,
-            0.2,
-            30.0,
-            0.1,
-            currentSpeed,
-            saveState,
-            (e_input) => {
-              const newSpeed = parseFloat(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id);
-                if (n && n.type === TIMELINE_GRID_TYPE) {
-                  n.timelineSpeed = newSpeed;
-                  if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
-                }
-              });
-              e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
-            },
-          );
-          section.appendChild(speedSliderContainer);
+            titleText = "Edit Element";
         }
-
-        const MIN_TIMELINE_PIXEL_WIDTH = 50;
-        const MAX_TIMELINE_PIXEL_WIDTH = 1200;
-        const MIN_TIMELINE_PIXEL_HEIGHT = 50;
-        const MAX_TIMELINE_PIXEL_HEIGHT = 800;
-        const PIXEL_STEP = 10;
-
-        const gridSpacing = calculateGridSpacing();
-        const halfGridSquare =
-          isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
-
-        let widthSliderMin,
-          widthSliderMax,
-          widthSliderStep,
-          currentWidthInUnits,
-          widthLabelUnitText;
-        const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
-
-        if (isSnapEnabled && halfGridSquare > 0) {
-          widthSliderMin = Math.max(
-            1,
-            Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
-          );
-          widthSliderMax = Math.round(
-            MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
-          );
-          widthSliderStep = 1;
-          currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
-          widthLabelUnitText = " units";
+    } else {
+        const types = new Set([...nodeTypes, ...connectionTypesSet]);
+        if (types.size === 1) {
+            logicalType = [...types][0].replace(/_/g, " ");
+            titleText = `Edit ${selectedArray.length} ${logicalType}s`;
+            allSameLogicalType = true;
         } else {
-          widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
-          widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
-          widthSliderStep = PIXEL_STEP;
-          currentWidthInUnits = currentPixelWidth;
-          widthLabelUnitText = "px";
+            titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
+            allSameLogicalType = false;
+        }
+    }
+    title.innerHTML = `<strong>${titleText}</strong>`;
+    fragment.appendChild(title);
+
+    if (selectedArray.length > 1) {
+        let hasNodesSelected = false;
+        for (const elData of selectedArray) {
+            if (elData.type === 'node') {
+                hasNodesSelected = true;
+                break;
+            }
         }
 
-        const widthDisplayValText =
-          isSnapEnabled && halfGridSquare > 0
-            ? currentWidthInUnits.toFixed(0)
-            : currentPixelWidth.toFixed(0);
-        const widthSliderContainer = createSlider(
-          `edit-timeline-width-${node.id}`,
-          `Width (${widthDisplayValText}${widthLabelUnitText}):`,
-          widthSliderMin,
-          widthSliderMax,
-          widthSliderStep,
-          currentWidthInUnits,
-          saveState,
-          (e_input) => {
-            const newSliderValue = parseFloat(e_input.target.value);
-            let newPixelWidth;
-            if (isSnapEnabled && halfGridSquare > 0) {
-              newPixelWidth = newSliderValue * halfGridSquare;
-              newPixelWidth = Math.max(
-                halfGridSquare,
-                Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
-              );
-            } else {
-              newPixelWidth = newSliderValue;
-            }
-            newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
+        if (hasNodesSelected) {
+            const makeGroupButton = document.createElement("button");
+            makeGroupButton.textContent = "Make User-Defined Group";
+            makeGroupButton.id = "edit-panel-make-group-btn";
+            makeGroupButton.classList.add("panel-button-like");
+            makeGroupButton.style.marginTop = "10px";
+            makeGroupButton.style.marginBottom = "10px";
+            makeGroupButton.style.display = "block";
+            makeGroupButton.style.width = "100%";
 
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) {
-                n.width = newPixelWidth;
-                if (n.audioParams) n.audioParams.width = newPixelWidth;
-              }
-            });
-            const displayVal =
-              isSnapEnabled && halfGridSquare > 0
-                ? (newPixelWidth / halfGridSquare).toFixed(0)
-                : newPixelWidth.toFixed(0);
-            const displayUnit =
-              isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
-            e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
-          },
-        );
-        section.appendChild(widthSliderContainer);
-
-        let heightSliderMin,
-          heightSliderMax,
-          heightSliderStep,
-          currentHeightInUnits,
-          heightLabelUnitText;
-        const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
-
-        if (isSnapEnabled && halfGridSquare > 0) {
-          heightSliderMin = Math.max(
-            1,
-            Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
-          );
-          heightSliderMax = Math.round(
-            MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
-          );
-          heightSliderStep = 1;
-          currentHeightInUnits = Math.round(
-            currentPixelHeight / halfGridSquare,
-          );
-          heightLabelUnitText = " units";
-        } else {
-          heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
-          heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
-          heightSliderStep = PIXEL_STEP;
-          currentHeightInUnits = currentPixelHeight;
-          heightLabelUnitText = "px";
-        }
-
-        const heightDisplayValText =
-          isSnapEnabled && halfGridSquare > 0
-            ? currentHeightInUnits.toFixed(0)
-            : currentPixelHeight.toFixed(0);
-        const heightSliderContainer = createSlider(
-          `edit-timeline-height-${node.id}`,
-          `Height (${heightDisplayValText}${heightLabelUnitText}):`,
-          heightSliderMin,
-          heightSliderMax,
-          heightSliderStep,
-          currentHeightInUnits,
-          saveState,
-          (e_input) => {
-            const newSliderValue = parseFloat(e_input.target.value);
-            let newPixelHeight;
-            if (isSnapEnabled && halfGridSquare > 0) {
-              newPixelHeight = newSliderValue * halfGridSquare;
-              newPixelHeight = Math.max(
-                halfGridSquare,
-                Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
-              );
-            } else {
-              newPixelHeight = newSliderValue;
-            }
-            newPixelHeight = Math.max(
-              MIN_TIMELINE_PIXEL_HEIGHT,
-              newPixelHeight,
-            );
-
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) {
-                n.height = newPixelHeight;
-                if (n.audioParams) n.audioParams.height = newPixelHeight;
-              }
-            });
-            const displayVal =
-              isSnapEnabled && halfGridSquare > 0
-                ? (newPixelHeight / halfGridSquare).toFixed(0)
-                : newPixelHeight.toFixed(0);
-            const displayUnit =
-              isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
-            e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
-          },
-        );
-        section.appendChild(heightSliderContainer);
-
-        const currentPulseIntensity =
-          node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
-        const intensityVal = currentPulseIntensity.toFixed(2);
-        const intensitySliderContainer = createSlider(
-          `edit-timeline-intensity-${node.id}`,
-          `Trigger Intensity (${intensityVal}):`,
-          0.1,
-          1.5,
-          0.01,
-          currentPulseIntensity,
-          saveState,
-          (e_input) => {
-            const newIntensity = parseFloat(e_input.target.value);
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.type === TIMELINE_GRID_TYPE) {
-                n.timelinePulseIntensity = newIntensity;
-                if (n.audioParams)
-                  n.audioParams.timelinePulseIntensity = newIntensity;
-              }
-            });
-            e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
-          },
-        );
-        section.appendChild(intensitySliderContainer);
-
-        const internalGridSection = document.createElement("div");
-        internalGridSection.classList.add("panel-section");
-        internalGridSection.style.borderTop = "1px solid var(--button-hover)";
-        internalGridSection.style.marginTop = "10px";
-        internalGridSection.style.paddingTop = "10px";
-
-        const showInternalGridLabel = document.createElement("label");
-        showInternalGridLabel.textContent = "Show Internal Grid: ";
-        const showInternalGridCheckbox = document.createElement("input");
-        showInternalGridCheckbox.type = "checkbox";
-        showInternalGridCheckbox.checked =
-          node.showInternalGrid !== undefined ? node.showInternalGrid : true;
-        showInternalGridCheckbox.addEventListener("change", (e) => {
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) {
-              n.showInternalGrid = e.target.checked;
-              if (n.audioParams)
-                n.audioParams.showInternalGrid = n.showInternalGrid;
-            }
-          });
-          saveState();
-        });
-        internalGridSection.appendChild(showInternalGridLabel);
-        internalGridSection.appendChild(showInternalGridCheckbox);
-        internalGridSection.appendChild(document.createElement("br"));
-
-        const snapToInternalGridLabel = document.createElement("label");
-        snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
-        const snapToInternalGridCheckbox = document.createElement("input");
-        snapToInternalGridCheckbox.type = "checkbox";
-        snapToInternalGridCheckbox.checked =
-          node.snapToInternalGrid !== undefined
-            ? node.snapToInternalGrid
-            : true;
-        snapToInternalGridCheckbox.addEventListener("change", (e) => {
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) {
-              n.snapToInternalGrid = e.target.checked;
-              if (n.audioParams)
-                n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
-            }
-          });
-          saveState();
-        });
-        internalGridSection.appendChild(snapToInternalGridLabel);
-        internalGridSection.appendChild(snapToInternalGridCheckbox);
-        internalGridSection.appendChild(document.createElement("br"));
-
-        const currentDivisions = node.internalGridDivisions || 8;
-        const divisionsLabel = document.createElement("label");
-        divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
-        divisionsLabel.textContent = "Internal Grid Subdivisions:";
-        internalGridSection.appendChild(divisionsLabel);
-
-        const divisionsSelect = document.createElement("select");
-        divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
-        const divisionOptions = [
-          { label: "None (1)", value: 1 },
-          { label: "Halves (2)", value: 2 },
-          { label: "Thirds (3)", value: 3 },
-          { label: "Quarters (4)", value: 4 },
-          { label: "Sixths (6)", value: 6 },
-          { label: "Eighths (8)", value: 8 },
-          { label: "Twelfths (12 - triplets)", value: 12 },
-          { label: "Sixteenths (16)", value: 16 },
-          { label: "24ths (16th triplets)", value: 24 },
-          { label: "32nds (32)", value: 32 },
-          { label: "64ths (64)", value: 64 },
-        ];
-        let currentDivisionValueForSelect = node.internalGridDivisions || 8;
-        divisionOptions.forEach((opt) => {
-          const optionEl = document.createElement("option");
-          optionEl.value = opt.value;
-          optionEl.textContent = opt.label;
-          if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
-            optionEl.selected = true;
-          }
-          divisionsSelect.appendChild(optionEl);
-        });
-        divisionsSelect.addEventListener("change", (e) => {
-          const newDivisions = parseInt(e.target.value);
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id);
-            if (n && n.type === TIMELINE_GRID_TYPE) {
-              n.internalGridDivisions = newDivisions;
-              if (n.audioParams)
-                n.audioParams.internalGridDivisions = newDivisions;
-            }
-          });
-          saveState();
-        });
-        internalGridSection.appendChild(divisionsSelect);
-        section.appendChild(internalGridSection);
-
-        const transposeSection = document.createElement("div");
-        transposeSection.classList.add("panel-section");
-        transposeSection.style.borderTop = "1px solid var(--button-hover)";
-        transposeSection.style.marginTop = "10px";
-        transposeSection.style.paddingTop = "10px";
-        transposeSection.innerHTML =
-          "<p><strong>Timeline Transposition:</strong></p>";
-
-        const enableTransposeLabel = document.createElement("label");
-        enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
-        enableTransposeLabel.textContent = "Enable Transposition: ";
-        const enableTransposeCheckbox = document.createElement("input");
-        enableTransposeCheckbox.type = "checkbox";
-        enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
-        enableTransposeCheckbox.checked =
-          node.audioParams?.isTransposeEnabled || false;
-        enableTransposeCheckbox.addEventListener("change", (e) => {
-          selectedArray.forEach((elData) => {
-            const n = findNodeById(elData.id);
-            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-              n.audioParams.isTransposeEnabled = e.target.checked;
-            }
-          });
-          saveState();
-          populateEditPanel();
-        });
-        transposeSection.appendChild(enableTransposeLabel);
-        transposeSection.appendChild(enableTransposeCheckbox);
-        transposeSection.appendChild(document.createElement("br"));
-
-        if (node.audioParams?.isTransposeEnabled) {
-          const directionContainer = document.createElement("div");
-          directionContainer.style.marginBottom = "5px";
-          const directionLabel = document.createElement("label");
-          directionLabel.textContent = "Direction: ";
-          directionLabel.style.marginRight = "5px";
-          directionContainer.appendChild(directionLabel);
-
-          const plusButton = document.createElement("button");
-          plusButton.textContent = "+";
-          plusButton.classList.add("panel-button-like");
-          if (node.audioParams.transposeDirection === "+") {
-            plusButton.classList.add("active");
-          }
-          plusButton.addEventListener("click", () => {
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                n.audioParams.transposeDirection = "+";
-              }
-            });
-            saveState();
-            populateEditPanel();
-          });
-          directionContainer.appendChild(plusButton);
-
-          const minusButton = document.createElement("button");
-          minusButton.textContent = "-";
-          minusButton.classList.add("panel-button-like");
-          if (node.audioParams.transposeDirection === "-") {
-            minusButton.classList.add("active");
-          }
-          minusButton.addEventListener("click", () => {
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                n.audioParams.transposeDirection = "-";
-              }
-            });
-            saveState();
-            populateEditPanel();
-          });
-          directionContainer.appendChild(minusButton);
-          transposeSection.appendChild(directionContainer);
-
-          const currentTransposeAmount = node.audioParams.transposeAmount || 0;
-          const amountSliderContainer = createSlider(
-            `edit-timeline-transpose-amount-${node.id}`,
-            `Amount (${currentTransposeAmount} scale steps):`,
-            0,
-            24,
-            1,
-            currentTransposeAmount,
-            () => {
-              saveState();
-            },
-            (e_input) => {
-              const newAmount = parseInt(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id);
-                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                  n.audioParams.transposeAmount = newAmount;
+            makeGroupButton.addEventListener("click", () => {
+                if (typeof makeUserDefinedGroup === "function") {
+                    makeUserDefinedGroup();
+                    populateEditPanel();
+                } else {
+                    console.error("makeUserDefinedGroup function is not defined.");
+                    alert("Error: Grouping function not available.");
                 }
-              });
-              const labelElement = e_input.target.previousElementSibling;
-              if (labelElement) {
-                labelElement.textContent = `Amount (${newAmount} scale steps):`;
-              }
-            },
-          );
-          transposeSection.appendChild(amountSliderContainer);
+            });
+            fragment.appendChild(makeGroupButton);
         }
-        section.appendChild(transposeSection);
-        fragment.appendChild(section);
-      } else if (node && node.audioParams) {
-        if (
-          isPulsarType(node.type) ||
-          node.type === "sound" ||
-          isDrumType(node.type)
-        ) {
-          const syncIgnoreSection = document.createElement("div");
-          syncIgnoreSection.classList.add("panel-section");
-          const ignoreSyncLabel = document.createElement("label");
-          ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
-          ignoreSyncLabel.textContent = "Ignore Global Sync:";
-          ignoreSyncLabel.style.marginRight = "5px";
-          syncIgnoreSection.appendChild(ignoreSyncLabel);
-          const ignoreSyncCheckbox = document.createElement("input");
-          ignoreSyncCheckbox.type = "checkbox";
-          ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`;
-          ignoreSyncCheckbox.checked =
-            node.audioParams.ignoreGlobalSync || false;
-          ignoreSyncCheckbox.addEventListener("change", (e) => {
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.audioParams) {
-                n.audioParams.ignoreGlobalSync = e.target.checked;
-                if (isPulsarType(n.type)) {
-                  n.lastTriggerTime = -1;
-                  n.nextSyncTriggerTime = 0;
+    }
+
+    const elementsWithNote = selectedArray.filter((elData) => {
+        const el =
+            elData.type === "node" ?
+            findNodeById(elData.id) :
+            findConnectionById(elData.id);
+        return (
+            el &&
+            (el.type === "sound" ||
+                el.type === "nebula" ||
+                (elData.type === "connection" && el.type === "string_violin"))
+        );
+    });
+
+    if (elementsWithNote.length > 0) {
+        const targetDataForNoteSelector = elementsWithNote.map((el) => ({
+            type: el.type,
+            id: el.id,
+        }));
+        createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
+    }
+
+    if (allSameLogicalType) {
+        if (firstElementData.type === "node") {
+            const node = findNodeById(firstElementData.id);
+            let currentSection;
+
+            if (node && node.audioParams) {
+                const section = document.createElement("div");
+                section.classList.add("panel-section");
+
+                if (node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE) {
+                     const volParam = node.audioParams.volume !== undefined ? node.audioParams.volume : (isDrumType(node.type) ? (DRUM_ELEMENT_DEFAULTS[node.type]?.volume ?? 1.0) : (node.type === PRORB_TYPE ? 0.7 : 1.0));
+                     const volVal = volParam.toFixed(2);
+                     const volSliderContainer = createSlider(
+                         `edit-node-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, volParam,
+                         saveState,
+                         (e_input) => {
+                             const newVol = parseFloat(e_input.target.value);
+                             selectedArray.forEach(elData => {
+                                 const n = findNodeById(elData.id);
+                                 if (n && n.audioParams) {
+                                     n.audioParams.volume = newVol;
+                                     updateNodeAudioParams(n);
+                                 }
+                             });
+                             e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                         }
+                     );
+                     section.appendChild(volSliderContainer);
                 }
-              }
-            });
-            identifyAndRouteAllGroups();
-            saveState();
-            populateEditPanel();
-          });
-          syncIgnoreSection.appendChild(ignoreSyncCheckbox);
-          fragment.appendChild(syncIgnoreSection);
-        }
-        if (isPulsarType(node.type)) {
-          const section = document.createElement("div");
-          section.classList.add("panel-section");
-          const enableLabel = document.createElement("label");
-          enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
-          enableLabel.textContent =
-            node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
-          section.appendChild(enableLabel);
-          const enableCheckbox = document.createElement("input");
-          enableCheckbox.type = "checkbox";
-          enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
-          enableCheckbox.checked = node.isEnabled;
-          enableCheckbox.disabled =
-            selectedArray.length > 1 && node.type === "pulsar_triggerable";
-          enableCheckbox.addEventListener("change", () => {
-            handlePulsarTriggerToggle(node);
-            identifyAndRouteAllGroups();
-          });
-          section.appendChild(enableCheckbox);
-          section.appendChild(document.createElement("br"));
-          const showSyncControls =
-            isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
-          if (
-            node.type !== "pulsar_random_particles" &&
-            node.type !== "pulsar_manual"
-          ) {
-            if (showSyncControls) {
-              const subdivLabel = document.createElement("label");
-              subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
-              subdivLabel.textContent = "Sync Subdivision:";
-              section.appendChild(subdivLabel);
-              const subdivSelect = document.createElement("select");
-              subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
-              subdivSelect.disabled = selectedArray.length > 1;
-              subdivisionOptions.forEach((opt, index) => {
-                const option = document.createElement("option");
-                option.value = index;
-                option.textContent = opt.label;
-                if (
-                  index ===
-                  (node.audioParams.syncSubdivisionIndex ??
-                    DEFAULT_SUBDIVISION_INDEX)
-                )
-                  option.selected = true;
-                subdivSelect.appendChild(option);
-              });
-              subdivSelect.addEventListener("change", (e) => {
-                const newIndex = parseInt(e.target.value, 10);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (
-                    n &&
-                    n.audioParams &&
-                    isPulsarType(n.type) &&
-                    n.type !== "pulsar_random_particles" &&
-                    n.type !== "pulsar_manual"
-                  ) {
-                    n.audioParams.syncSubdivisionIndex = newIndex;
-                    if (n.syncSubdivisionIndex !== undefined)
-                      n.syncSubdivisionIndex = newIndex;
-                    n.nextSyncTriggerTime = 0;
-                  }
-                });
-                identifyAndRouteAllGroups();
-                saveState();
-              });
-              section.appendChild(subdivSelect);
-            } else {
-              const currentInterval =
-                node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-              const intervalVal = currentInterval.toFixed(1);
-              const intervalSliderContainer = createSlider(
-                `edit-pulsar-interval-${node.id}`,
-                `Interval (${intervalVal}s):`,
-                0.1,
-                10.0,
-                0.1,
-                currentInterval,
-                () => {
-                  identifyAndRouteAllGroups();
-                  saveState();
-                },
-                (e_input) => {
-                  const newInterval = parseFloat(e_input.target.value);
-                  selectedArray.forEach((elData) => {
-                    const n = findNodeById(elData.id);
-                    if (
-                      n?.audioParams &&
-                      n.type !== "pulsar_random_particles" &&
-                      n.type !== "pulsar_manual"
-                    )
-                      n.audioParams.triggerInterval = newInterval;
-                  });
-                  e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
-                },
-              );
-              section.appendChild(intervalSliderContainer);
-            }
-          } else if (node.type === "pulsar_random_particles") {
-            const timingInfo = document.createElement("small");
-            timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
-            section.appendChild(timingInfo);
-          }
-          section.appendChild(document.createElement("br"));
-          if (node.type !== "pulsar_random_volume") {
-            const currentIntensity =
-              node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-            const intensityVal = currentIntensity.toFixed(2);
-            const intensitySliderContainer = createSlider(
-              `edit-pulsar-intensity-${node.id}`,
-              `Pulse Intensity (${intensityVal}):`,
-              MIN_PULSE_INTENSITY,
-              MAX_PULSE_INTENSITY,
-              0.01,
-              currentIntensity,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newIntensity = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n?.audioParams && n.type !== "pulsar_random_volume")
-                    n.audioParams.pulseIntensity = newIntensity;
-                });
-                e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
-              },
-            );
-            section.appendChild(intensitySliderContainer);
-          } else {
-            const intensityInfo = document.createElement("small");
-            intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
-            section.appendChild(intensityInfo);
-          }
-          section.appendChild(document.createElement("br"));
-          const colorLabel = document.createElement("label");
-          colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
-          colorLabel.textContent = "Pulsar Color:";
-          section.appendChild(colorLabel);
-          const colorInput = document.createElement("input");
-          colorInput.type = "color";
-          colorInput.id = `edit-pulsar-color-${node.id}`;
-          const styles = getComputedStyle(document.documentElement);
-          const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
-          const fallbackColorVar = "--start-node-color";
-          const defaultColorRgba =
-            styles.getPropertyValue(defaultColorVar).trim() ||
-            styles.getPropertyValue(fallbackColorVar).trim();
-          const defaultColorHex = rgbaToHex(defaultColorRgba);
-          colorInput.value = node.color
-            ? rgbaToHex(node.color)
-            : defaultColorHex;
-          colorInput.addEventListener("input", (e) => {
-            const newColor = hexToRgba(e.target.value, 0.9);
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n) n.color = newColor;
-            });
-          });
-          colorInput.addEventListener("change", () => {
-            identifyAndRouteAllGroups();
-            saveState();
-          });
-          section.appendChild(colorInput);
-          fragment.appendChild(section);
-          if (node.type === "pulsar_rocket") {
-            const rocketSection = document.createElement("div");
-            rocketSection.classList.add("panel-section");
-            const rocketTitle = document.createElement("p");
-            rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
-            rocketSection.appendChild(rocketTitle);
-            let currentAngleDegVal = parseFloat(
-              (
-                ((node.audioParams.rocketDirectionAngle || 0) * 180) /
-                Math.PI
-              ).toFixed(0),
-            );
-            const dirSliderContainer = createSlider(
-              `edit-rocket-dir-${node.id}`,
-              `Direction (${currentAngleDegVal}°):`,
-              0,
-              359,
-              1,
-              currentAngleDegVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newAngleDeg = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                    n.audioParams.rocketDirectionAngle =
-                      (newAngleDeg / 180) * Math.PI;
-                  }
-                });
-                e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
-              },
-            );
-            rocketSection.appendChild(dirSliderContainer);
-            let currentSpeedVal = parseFloat(
-              (node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1),
-            );
-            const speedSliderContainer = createSlider(
-              `edit-rocket-speed-${node.id}`,
-              `Speed (${currentSpeedVal.toFixed(1)}):`,
-              50,
-              500,
-              1,
-              currentSpeedVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newSpeed = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                    n.audioParams.rocketSpeed = newSpeed;
-                  }
-                });
-                e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
-              },
-            );
-            rocketSection.appendChild(speedSliderContainer);
-            let currentRangeVal = parseFloat(
-              (node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0),
-            );
-            const rangeSliderContainer = createSlider(
-              `edit-rocket-range-${node.id}`,
-              `Range (${currentRangeVal.toFixed(0)}):`,
-              50,
-              2000,
-              10,
-              currentRangeVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newRange = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                    n.audioParams.rocketRange = newRange;
-                  }
-                });
-                e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
-              },
-            );
-            rocketSection.appendChild(rangeSliderContainer);
-            let currentGravityVal = parseFloat(
-              (
-                node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY
-              ).toFixed(0),
-            );
-            const gravitySliderContainer = createSlider(
-              `edit-rocket-gravity-${node.id}`,
-              `Gravity (${currentGravityVal.toFixed(0)}):`,
-              -200,
-              200,
-              1,
-              currentGravityVal,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newGravity = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                    n.audioParams.rocketGravity = newGravity;
-                  }
-                });
-                e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
-              },
-            );
-            rocketSection.appendChild(gravitySliderContainer);
-            fragment.appendChild(rocketSection);
-          }
-        } else if (node && node.type === "sound" && node.audioParams) {
-          const orbitoneMainSection = document.createElement("div");
-          orbitoneMainSection.classList.add("panel-section");
-          orbitoneMainSection.innerHTML =
-            "<p><strong>Orbitone Settings:</strong></p>";
 
-          const enableOrbitonesLabel = document.createElement("label");
-          enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
-          enableOrbitonesLabel.textContent = "Enable Orbitones:";
-          enableOrbitonesLabel.style.marginRight = "8px";
-          orbitoneMainSection.appendChild(enableOrbitonesLabel);
 
-          const enableOrbitonesCheckbox = document.createElement("input");
-          enableOrbitonesCheckbox.type = "checkbox";
-          enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
-          enableOrbitonesCheckbox.checked =
-            node.audioParams.orbitonesEnabled || false;
-          enableOrbitonesCheckbox.addEventListener("change", (e) => {
-            const isEnabled = e.target.checked;
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.audioParams && n.type === "sound") {
-                n.audioParams.orbitonesEnabled = isEnabled;
-                stopNodeAudio(n);
-                n.audioNodes = createAudioNodesForNode(n);
-                if (n.audioNodes) updateNodeAudioParams(n);
-              }
-            });
-            identifyAndRouteAllGroups();
-            saveState();
-            populateEditPanel();
-          });
-          orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
-          fragment.appendChild(orbitoneMainSection);
-
-          if (node.audioParams.orbitonesEnabled) {
-            const orbitoneSettingsSection = document.createElement("div");
-            orbitoneSettingsSection.classList.add("panel-section");
-            orbitoneSettingsSection.style.paddingLeft = "15px";
-            orbitoneSettingsSection.style.borderLeft =
-              "2px solid var(--button-bg)";
-            orbitoneSettingsSection.style.marginTop = "5px";
-
-            const visualControllerPlaceholder = document.createElement("div");
-            visualControllerPlaceholder.id = `orbitone-visual-controller-${node.id}`;
-            visualControllerPlaceholder.innerHTML =
-              "<em>Visual Orbitone Controller (Future)</em>";
-            visualControllerPlaceholder.style.height = "auto";
-            visualControllerPlaceholder.style.padding = "10px";
-            visualControllerPlaceholder.style.border =
-              "1px dashed var(--button-hover)";
-            visualControllerPlaceholder.style.display = "flex";
-            visualControllerPlaceholder.style.flexDirection = "column";
-            visualControllerPlaceholder.style.alignItems = "center";
-            visualControllerPlaceholder.style.justifyContent = "center";
-            visualControllerPlaceholder.style.marginBottom = "15px";
-            visualControllerPlaceholder.style.textAlign = "center";
-            orbitoneSettingsSection.appendChild(visualControllerPlaceholder);
-
-            const currentOrbitoneCount = node.audioParams.orbitoneCount || 0;
-            const orbitoneCountSliderContainer = createSlider(
-              `edit-node-orbitone-count-${node.id}`,
-              `Number of extra Orbitones (${currentOrbitoneCount}):`,
-              0,
-              5,
-              1,
-              currentOrbitoneCount,
-              (e_change_event) => {
-                const newCount = parseInt(e_change_event.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n && n.audioParams && n.type === "sound") {
-                    n.audioParams.orbitoneCount = newCount;
-                    applyOrbitoneVoicingFromPhase(n);
-                    applyOrbitoneTimingFromPhase(n);
-                    stopNodeAudio(n);
-                    n.audioNodes = createAudioNodesForNode(n);
-                    if (n.audioNodes) updateNodeAudioParams(n);
-                  }
-                });
-                identifyAndRouteAllGroups();
-                saveState();
-                populateEditPanel();
-              },
-              (e_input) => {
-                e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`;
-              },
-            );
-            orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
-
-            if (node.audioParams.orbitoneCount > 0) {
-              const currentVoicingPhase =
-                node.audioParams.orbitoneVoicingPhase || 0;
-              const voicingPhaseSlider = createSlider(
-                `edit-orbitone-voicing-phase-${node.id}`,
-                `Orbitone Voicing Style (${currentVoicingPhase}):`,
-                0,
-                100,
-                1,
-                currentVoicingPhase,
-                (e_change) => {
-                  const val = parseInt(e_change.target.value);
-                  selectedArray.forEach((el) => {
-                    const n = findNodeById(el.id);
-                    if (n && n.audioParams && n.type === "sound") {
-                      n.audioParams.orbitoneVoicingPhase = val;
-                      applyOrbitoneVoicingFromPhase(n);
-                      stopNodeAudio(n);
-                      n.audioNodes = createAudioNodesForNode(n);
-                      if (n.audioNodes) updateNodeAudioParams(n);
-                    }
-                  });
-                  identifyAndRouteAllGroups();
-                  saveState();
-                  populateEditPanel();
-                },
-                (e_input) => {
-                  e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`;
-                },
-              );
-              orbitoneSettingsSection.appendChild(voicingPhaseSlider);
-
-              const currentTimingPhase =
-                node.audioParams.orbitoneTimingPhase || 0;
-              const timingPhaseSlider = createSlider(
-                `edit-orbitone-timing-phase-${node.id}`,
-                `Orbitone Timing Style (${currentTimingPhase}):`,
-                0,
-                100,
-                1,
-                currentTimingPhase,
-                (e_change) => {
-                  const val = parseInt(e_change.target.value);
-                  selectedArray.forEach((el) => {
-                    const n = findNodeById(el.id);
-                    if (n && n.audioParams && n.type === "sound") {
-                      n.audioParams.orbitoneTimingPhase = val;
-                      applyOrbitoneTimingFromPhase(n);
-                      updateNodeAudioParams(n);
-                    }
-                  });
-                  identifyAndRouteAllGroups();
-                  saveState();
-                },
-                (e_input) => {
-                  e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`;
-                },
-              );
-              orbitoneSettingsSection.appendChild(timingPhaseSlider);
-
-              const currentMix =
-                node.audioParams.orbitoneMix !== undefined
-                  ? node.audioParams.orbitoneMix
-                  : 0.5;
-              const mixSliderContainer = createSlider(
-                `edit-node-orbitone-mix-${node.id}`,
-                `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`,
-                0,
-                1,
-                0.05,
-                currentMix,
-                (e_change_event) => {
-                  const newMix = parseFloat(e_change_event.target.value);
-                  selectedArray.forEach((elData) => {
-                    const n = findNodeById(elData.id);
-                    if (n && n.audioParams && n.type === "sound") {
-                      n.audioParams.orbitoneMix = newMix;
-                      updateNodeAudioParams(n);
-                    }
-                  });
-                  identifyAndRouteAllGroups();
-                  saveState();
-                },
-                (e_input) => {
-                  e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`;
-                },
-              );
-              orbitoneSettingsSection.appendChild(mixSliderContainer);
-            }
-            fragment.appendChild(orbitoneSettingsSection);
-          }
-        } else if (node && isDrumType(node.type)) {
-          const section = document.createElement("div");
-          section.classList.add("panel-section");
-          const params = node.audioParams;
-          const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
-          const soundDiv = document.createElement("div");
-          soundDiv.classList.add("edit-drum-sound");
-          const soundLabel = document.createElement("strong");
-          soundLabel.textContent = defaults.label;
-          soundDiv.appendChild(soundLabel);
-          const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
-          const tuneVal = currentBaseFreq.toFixed(0);
-          const tuneSliderContainer = createSlider(
-            `edit-drum-tune-${node.id}`,
-            `Tune (${tuneVal}Hz):`,
-            20,
-            node.type === "drum_hihat"
-              ? 15000
-              : node.type === "drum_cowbell" || node.type === "drum_clap"
-                ? 2000
-                : 1000,
-            1,
-            currentBaseFreq,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
-            (e_input) => {
-              const newFreq = parseFloat(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id);
-                if (n?.audioParams) n.audioParams.baseFreq = newFreq;
-              });
-              e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
-            },
-          );
-          soundDiv.appendChild(tuneSliderContainer);
-          if (params?.decay !== undefined || defaults?.decay !== undefined) {
-            const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
-            const decayVal = currentDecay.toFixed(2);
-            const decaySliderContainer = createSlider(
-              `edit-drum-decay-${node.id}`,
-              `Decay (${decayVal}s):`,
-              0.01,
-              1.5,
-              0.01,
-              currentDecay,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newDecay = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n?.audioParams) n.audioParams.decay = newDecay;
-                });
-                e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
-              },
-            );
-            soundDiv.appendChild(decaySliderContainer);
-          }
-          if (
-            params?.noiseDecay !== undefined ||
-            defaults?.noiseDecay !== undefined
-          ) {
-            const currentNoiseDecay =
-              params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
-            const noiseDecayVal = currentNoiseDecay.toFixed(2);
-            const noiseDecaySliderContainer = createSlider(
-              `edit-drum-noisedecay-${node.id}`,
-              `Noise Decay (${noiseDecayVal}s):`,
-              0.01,
-              0.5,
-              0.01,
-              currentNoiseDecay,
-              () => {
-                identifyAndRouteAllGroups();
-                saveState();
-              },
-              (e_input) => {
-                const newNoiseDecay = parseFloat(e_input.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay;
-                });
-                e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
-              },
-            );
-            soundDiv.appendChild(noiseDecaySliderContainer);
-          }
-          const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
-          const volVal = currentVolume.toFixed(2);
-          const volSliderContainer = createSlider(
-            `edit-drum-vol-${node.id}`,
-            `Volume (${volVal}):`,
-            0,
-            1.5,
-            0.01,
-            currentVolume,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
-            (e_input) => {
-              const newVol = parseFloat(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id);
-                if (n?.audioParams) {
-                  n.audioParams.volume = newVol;
-                  updateNodeAudioParams(n);
-                }
-              });
-              e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-            },
-          );
-          soundDiv.appendChild(volSliderContainer);
-          section.appendChild(soundDiv);
-          fragment.appendChild(section);
-        } else if (
-          node &&
-          node.type === "switch" &&
-          selectedArray.length === 1
-        ) {
-          const section = document.createElement("div");
-          section.classList.add("panel-section");
-          const label = document.createElement("label");
-          label.textContent = "Primary Input Connection:";
-          section.appendChild(label);
-          const select = document.createElement("select");
-          select.id = `edit-switch-primary-${node.id}`;
-          const noneOpt = document.createElement("option");
-          noneOpt.value = "null";
-          noneOpt.textContent = "None (Set on next pulse)";
-          select.appendChild(noneOpt);
-          node.connections.forEach((neighborId) => {
-            const conn = connections.find(
-              (c) =>
-                (c.nodeAId === node.id && c.nodeBId === neighborId) ||
-                (c.nodeAId === neighborId && c.nodeBId === node.id),
-            );
-            if (conn) {
-              const otherNode = findNodeById(neighborId);
-              const option = document.createElement("option");
-              option.value = conn.id;
-              option.textContent = `From Node #${neighborId} (${otherNode?.type || "?"})`;
-              if (conn.id === node.primaryInputConnectionId) {
-                option.selected = true;
-              }
-              select.appendChild(option);
-            }
-          });
-          select.addEventListener("change", (e) => {
-            node.primaryInputConnectionId =
-              e.target.value === "null" ? null : parseInt(e.target.value, 10);
-            identifyAndRouteAllGroups();
-            saveState();
-          });
-          section.appendChild(select);
-          fragment.appendChild(section);
-        }
-
-        if (
-          node &&
-          node.audioParams &&
-          (node.type === "sound" || isDrumType(node.type)) &&
-          node.type !== TIMELINE_GRID_TYPE
-        ) {
-          const retriggerSection = document.createElement("div");
-          retriggerSection.classList.add("panel-section");
-          retriggerSection.style.borderTop = "1px solid var(--button-bg)";
-          retriggerSection.style.paddingTop = "10px";
-          retriggerSection.style.marginTop = "10px";
-          const retriggerToggleContainer = document.createElement("div");
-          retriggerToggleContainer.style.display = "flex";
-          retriggerToggleContainer.style.alignItems = "center";
-          retriggerToggleContainer.style.marginBottom = "10px";
-          const enabledCheckbox = document.createElement("input");
-          enabledCheckbox.type = "checkbox";
-          enabledCheckbox.id = `edit-retrigger-enabled-${node.id}`;
-          enabledCheckbox.checked = node.audioParams.retriggerEnabled || false;
-          enabledCheckbox.style.marginRight = "8px";
-          enabledCheckbox.addEventListener("change", (e) => {
-            selectedArray.forEach((elData) => {
-              const n = findNodeById(elData.id);
-              if (n && n.audioParams)
-                n.audioParams.retriggerEnabled = e.target.checked;
-            });
-            identifyAndRouteAllGroups();
-            saveState();
-            populateEditPanel();
-          });
-          retriggerToggleContainer.appendChild(enabledCheckbox);
-          const enabledLabel = document.createElement("label");
-          enabledLabel.htmlFor = `edit-retrigger-enabled-${node.id}`;
-          enabledLabel.innerHTML = "<strong>Retrigger</strong>";
-          enabledLabel.style.cursor = "pointer";
-          retriggerToggleContainer.appendChild(enabledLabel);
-          retriggerSection.appendChild(retriggerToggleContainer);
-
-          if (node.audioParams.retriggerEnabled) {
-            const currentStepsArray =
-              node.audioParams.retriggerVolumeSteps || [];
-            const countVal = currentStepsArray.length;
-            const countSliderContainer = createSlider(
-              `edit-retrigger-count-${node.id}`,
-              `Steps (${countVal}):`,
-              1,
-              16,
-              1,
-              countVal,
-              null,
-              (e_input) => {
-                const newCount = parseInt(e_input.target.value);
-                e_input.target.previousElementSibling.textContent = `Steps (${newCount}):`;
-              },
-            );
-            const countSliderInput = countSliderContainer.querySelector(
-              'input[type="range"]',
-            );
-            if (countSliderInput) {
-              countSliderInput.addEventListener("change", (e_change) => {
-                const newCount = parseInt(e_change.target.value);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n && n.audioParams) {
-                    const arraysToSync = [
-                      "retriggerVolumeSteps",
-                      "retriggerPitchSteps",
-                      "retriggerFilterSteps",
-                      "retriggerMuteSteps",
-                    ];
-                    const defaultValues = {
-                      retriggerVolumeSteps: 0.5,
-                      retriggerPitchSteps: 0,
-                      retriggerFilterSteps: 0,
-                      retriggerMuteSteps: false,
-                    };
-                    arraysToSync.forEach((arrayName) => {
-                      let currentLocalSteps = n.audioParams[arrayName] || [];
-                      if (newCount > currentLocalSteps.length) {
-                        for (
-                          let i = currentLocalSteps.length;
-                          i < newCount;
-                          i++
-                        ) {
-                          let valToPush = defaultValues[arrayName];
-                          if (
-                            arrayName === "retriggerVolumeSteps" &&
-                            i > 0 &&
-                            currentLocalSteps.length > 0
-                          )
-                            valToPush = parseFloat(
-                              (
-                                currentLocalSteps[
-                                  currentLocalSteps.length - 1
-                                ] * 0.85
-                              ).toFixed(2),
-                            );
-                          else if (arrayName === "retriggerVolumeSteps")
-                            valToPush = 0.6;
-                          currentLocalSteps.push(valToPush);
+                if (node.type === "sound" || isDrumType(node.type) || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE || node.type === PRORB_TYPE) {
+                    const currentDelaySend = node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+                    const delaySendVal = currentDelaySend.toFixed(2);
+                    const delaySendSliderContainer = createSlider(
+                        `edit-node-delaysend-${node.id}`, `Delay Send (${delaySendVal}):`, 0, 1, 0.01, currentDelaySend,
+                        saveState,
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) { n.audioParams.delaySend = newVal; updateNodeAudioParams(n); } });
+                            e_input.target.previousElementSibling.textContent = `Delay Send (${newVal.toFixed(2)}):`;
                         }
-                      } else if (newCount < currentLocalSteps.length) {
-                        currentLocalSteps = currentLocalSteps.slice(
-                          0,
-                          newCount,
-                        );
-                      }
-                      n.audioParams[arrayName] = currentLocalSteps;
-                    });
-                  }
-                });
-                identifyAndRouteAllGroups();
-                saveState();
-                populateEditPanel();
-              });
-            }
-            retriggerSection.appendChild(countSliderContainer);
+                    );
+                    section.appendChild(delaySendSliderContainer);
 
-            const retriggerEditorTabsContainer = document.createElement("div");
-            retriggerEditorTabsContainer.classList.add("retrigger-editor-tabs");
-            const editorDisplayArea = document.createElement("div");
-            editorDisplayArea.classList.add("retrigger-editor-display-area");
-
-            const createTabButton = (paramType, labelText) => {
-              const button = document.createElement("button");
-              button.textContent = labelText;
-              button.classList.add("retrigger-tab-button", "panel-button-like");
-              button.dataset.paramType = paramType;
-              button.addEventListener("click", () => {
-                retriggerEditorTabsContainer
-                  .querySelectorAll(".retrigger-tab-button")
-                  .forEach((btn) => btn.classList.remove("active"));
-                button.classList.add("active");
-                const visualEditor = createRetriggerVisualEditor(
-                  node,
-                  selectedArray,
-                  paramType,
-                );
-                editorDisplayArea.innerHTML = "";
-                editorDisplayArea.appendChild(visualEditor);
-              });
-              return button;
-            };
-
-            const volumeTab = createTabButton("volume", "Volume");
-            const pitchTab = createTabButton("pitch", "Pitch");
-            const filterTab = createTabButton("filter", "Filter");
-            retriggerEditorTabsContainer.appendChild(volumeTab);
-            retriggerEditorTabsContainer.appendChild(pitchTab);
-            retriggerEditorTabsContainer.appendChild(filterTab);
-            retriggerSection.appendChild(retriggerEditorTabsContainer);
-            retriggerSection.appendChild(editorDisplayArea);
-
-            let activeParamTypeForRetrigger = "volume";
-            const currentActiveTab = retriggerEditorTabsContainer.querySelector(
-              ".retrigger-tab-button.active",
-            );
-            if (currentActiveTab && currentActiveTab.dataset.paramType) {
-              activeParamTypeForRetrigger = currentActiveTab.dataset.paramType;
-            } else {
-              const firstActiveTab = retriggerEditorTabsContainer.querySelector(
-                ".retrigger-tab-button[data-param-type='volume']",
-              );
-              if (firstActiveTab) firstActiveTab.classList.add("active");
-            }
-
-            const initialVisualEditor = createRetriggerVisualEditor(
-              node,
-              selectedArray,
-              activeParamTypeForRetrigger,
-            );
-            editorDisplayArea.appendChild(initialVisualEditor);
-            retriggerEditorTabsContainer
-              .querySelectorAll(".retrigger-tab-button")
-              .forEach((btn) => {
-                btn.classList.toggle(
-                  "active",
-                  btn.dataset.paramType === activeParamTypeForRetrigger,
-                );
-              });
-
-            const showRetriggerSyncControls =
-              isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
-            if (showRetriggerSyncControls) {
-              const subdivRetriggerLabel = document.createElement("label");
-              subdivRetriggerLabel.htmlFor = `edit-retrigger-subdiv-${node.id}`;
-              subdivRetriggerLabel.textContent = "Retrigger Sync:";
-              retriggerSection.appendChild(subdivRetriggerLabel);
-              const subdivRetriggerSelect = document.createElement("select");
-              subdivRetriggerSelect.id = `edit-retrigger-subdiv-${node.id}`;
-              subdivisionOptions.forEach((opt, index) => {
-                const option = document.createElement("option");
-                option.value = index;
-                option.textContent = opt.label;
-                if (
-                  index ===
-                  (node.audioParams.retriggerSyncSubdivisionIndex ??
-                    DEFAULT_SUBDIVISION_INDEX)
-                )
-                  option.selected = true;
-                subdivRetriggerSelect.appendChild(option);
-              });
-              subdivRetriggerSelect.addEventListener("change", (e) => {
-                const newIndex = parseInt(e.target.value, 10);
-                selectedArray.forEach((elData) => {
-                  const n = findNodeById(elData.id);
-                  if (n?.audioParams)
-                    n.audioParams.retriggerSyncSubdivisionIndex = newIndex;
-                });
-                identifyAndRouteAllGroups();
-                saveState();
-              });
-              retriggerSection.appendChild(subdivRetriggerSelect);
-            } else {
-              const intervalValMs = node.audioParams.retriggerIntervalMs || 100;
-              const intervalSliderContainer = createSlider(
-                `edit-retrigger-interval-${node.id}`,
-                `Interval (${intervalValMs} ms):`,
-                20,
-                1000,
-                5,
-                intervalValMs,
-                () => {
-                  identifyAndRouteAllGroups();
-                  saveState();
-                },
-                (e_input) => {
-                  const newValMs = parseInt(e_input.target.value);
-                  selectedArray.forEach((elData) => {
-                    const n = findNodeById(elData.id);
-                    if (n?.audioParams)
-                      n.audioParams.retriggerIntervalMs = newValMs;
-                  });
-                  e_input.target.previousElementSibling.textContent = `Interval (${newValMs} ms):`;
-                },
-              );
-              retriggerSection.appendChild(intervalSliderContainer);
-            }
-
-            const rateModeLabel = document.createElement("label");
-            rateModeLabel.htmlFor = `edit-retrigger-ratemode-${node.id}`;
-            rateModeLabel.textContent = "Rate Mode:";
-            retriggerSection.appendChild(rateModeLabel);
-            const rateModeSelect = document.createElement("select");
-            rateModeSelect.id = `edit-retrigger-ratemode-${node.id}`;
-            ["constant", "accelerate", "decelerate", "random"].forEach(
-              (opt) => {
-                const option = document.createElement("option");
-                option.value = opt;
-                option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
-                if ((node.audioParams.retriggerRateMode || "constant") === opt)
-                  option.selected = true;
-                rateModeSelect.appendChild(option);
-              },
-            );
-            rateModeSelect.addEventListener("change", (e) => {
-              selectedArray.forEach((elData) => {
-                const n = findNodeById(elData.id);
-                if (n?.audioParams)
-                  n.audioParams.retriggerRateMode = e.target.value;
-              });
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            retriggerSection.appendChild(rateModeSelect);
-          }
-          fragment.appendChild(retriggerSection);
-        }
-      }
-    } else if (firstElementData.type === "connection") {
-      const connection = findConnectionById(firstElementData.id);
-      if (connection) {
-        if (connection.type === "string_violin") {
-          const section = document.createElement("div");
-          section.classList.add("panel-section");
-          const params = connection.audioParams;
-          const defaults = STRING_VIOLIN_DEFAULTS;
-          const currentVol = params?.volume ?? defaults.volume;
-          const volVal = currentVol.toFixed(2);
-          const volSliderContainer = createSlider(
-            `edit-string-vol-${connection.id}`,
-            `Volume (${volVal}):`,
-            0,
-            1.0,
-            0.01,
-            currentVol,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
-            (e_input) => {
-              const newVol = parseFloat(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const c = findConnectionById(elData.id);
-                if (c?.audioParams) c.audioParams.volume = newVol;
-              });
-              e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-            },
-          );
-          section.appendChild(volSliderContainer);
-          const currentAttack = params?.attack ?? defaults.attack;
-          const attackVal = currentAttack.toFixed(2);
-          const attackSliderContainer = createSlider(
-            `edit-string-attack-${connection.id}`,
-            `Attack (${attackVal}s):`,
-            0.01,
-            1.0,
-            0.01,
-            currentAttack,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
-            (e_input) => {
-              const newVal = parseFloat(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const c = findConnectionById(elData.id);
-                if (c?.audioParams) c.audioParams.attack = newVal;
-              });
-              e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
-            },
-          );
-          section.appendChild(attackSliderContainer);
-          const currentRelease = params?.release ?? defaults.release;
-          const releaseVal = currentRelease.toFixed(2);
-          const releaseSliderContainer = createSlider(
-            `edit-string-release-${connection.id}`,
-            `Release (${releaseVal}s):`,
-            0.1,
-            5.0,
-            0.01,
-            currentRelease,
-            () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            },
-            (e_input) => {
-              const newVal = parseFloat(e_input.target.value);
-              selectedArray.forEach((elData) => {
-                const c = findConnectionById(elData.id);
-                if (c?.audioParams) c.audioParams.release = newVal;
-              });
-              e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
-            },
-          );
-          section.appendChild(releaseSliderContainer);
-          fragment.appendChild(section);
-        } else if (connection.type === "wavetrail") {
-          const section = document.createElement("div");
-          section.classList.add("panel-section");
-          const fileLabel = document.createElement("label");
-          fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
-          fileLabel.textContent = "Audio File:";
-          section.appendChild(fileLabel);
-          const fileInput = document.createElement("input");
-          fileInput.type = "file";
-          fileInput.id = `edit-wavetrail-file-${connection.id}`;
-          fileInput.accept = ".wav,.mp3,audio/*";
-          fileInput.style.marginBottom = "5px";
-          fileInput.addEventListener("change", (e) =>
-            handleWaveTrailFileInputChange(e, connection),
-          );
-          section.appendChild(fileInput);
-          const fileNameDisplay = document.createElement("small");
-          fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
-          fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || "None selected"}`;
-          fileNameDisplay.style.display = "block";
-          section.appendChild(fileNameDisplay);
-          if (connection.audioParams?.buffer) {
-            const bufferDuration = connection.audioParams.buffer.duration;
-            const currentOffset = connection.audioParams.startTimeOffset || 0;
-            const currentEndOffset =
-              connection.audioParams.endTimeOffset ?? bufferDuration;
-            const currentStartOffset =
-              connection.audioParams.startTimeOffset || 0;
-            const currentGrainDuration =
-              connection.audioParams.grainDuration || 0.09;
-            const currentGrainOverlap =
-              connection.audioParams.grainOverlap || 0.07;
-            const currentPlaybackRate =
-              connection.audioParams.playbackRate || 1.0;
-            const offsetLabel = document.createElement("label");
-            offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
-            offsetLabel.style.marginTop = "10px";
-            offsetLabel.textContent = `Start Offset (${currentOffset.toFixed(2)}s):`;
-            section.appendChild(offsetLabel);
-            const offsetSlider = document.createElement("input");
-            offsetSlider.type = "range";
-            offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
-            offsetSlider.min = "0";
-            offsetSlider.max = bufferDuration.toFixed(3);
-            offsetSlider.step = "0.01";
-            offsetSlider.value = currentOffset;
-            offsetSlider.title = "Scrub Start Time";
-            const offsetValueDisplay = document.createElement("span");
-            offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
-            offsetValueDisplay.textContent = `${currentOffset.toFixed(2)}s`;
-            offsetValueDisplay.style.cssText =
-              "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
-            section.appendChild(offsetSlider);
-            section.appendChild(offsetValueDisplay);
-            const endOffsetLabel = document.createElement("label");
-            endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
-            endOffsetLabel.style.marginTop = "10px";
-            endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
-            section.appendChild(endOffsetLabel);
-            const endOffsetSlider = document.createElement("input");
-            endOffsetSlider.type = "range";
-            endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
-            endOffsetSlider.min = currentStartOffset.toFixed(3);
-            endOffsetSlider.max = bufferDuration.toFixed(3);
-            endOffsetSlider.step = "0.01";
-            endOffsetSlider.value = currentEndOffset;
-            endOffsetSlider.title = "Scrub End Time";
-            const endOffsetValueDisplay = document.createElement("span");
-            endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
-            endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
-            endOffsetValueDisplay.style.cssText =
-              "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
-            section.appendChild(endOffsetSlider);
-            section.appendChild(endOffsetValueDisplay);
-            offsetSlider.addEventListener("input", (e_input) => {
-              const newStart = parseFloat(e_input.target.value);
-              const conn = findConnectionById(
-                e_input.target.id.replace("edit-wavetrail-start-", ""),
-              );
-              if (conn && conn.audioParams) {
-                conn.audioParams.startTimeOffset = newStart;
-                const endSlider = document.getElementById(
-                  `edit-wavetrail-end-${conn.id}`,
-                );
-                if (endSlider) endSlider.min = newStart.toFixed(3);
-                if (
-                  conn.audioParams.endTimeOffset !== null &&
-                  conn.audioParams.endTimeOffset < newStart
-                ) {
-                  conn.audioParams.endTimeOffset = newStart + 0.01;
-                  if (endSlider)
-                    endSlider.value = conn.audioParams.endTimeOffset;
-                  const endValDisplay = document.getElementById(
-                    `edit-wavetrail-end-value-${conn.id}`,
-                  );
-                  if (endValDisplay)
-                    endValDisplay.textContent = `${conn.audioParams.endTimeOffset.toFixed(2)}s`;
+                    const currentReverbSend = node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+                    const reverbSendVal = currentReverbSend.toFixed(2);
+                    const reverbSendSliderContainer = createSlider(
+                        `edit-node-reverbsend-${node.id}`, `Reverb Send (${reverbSendVal}):`, 0, 1, 0.01, currentReverbSend,
+                        saveState,
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) { n.audioParams.reverbSend = newVal; updateNodeAudioParams(n); } });
+                            e_input.target.previousElementSibling.textContent = `Reverb Send (${newVal.toFixed(2)}):`;
+                        }
+                    );
+                    section.appendChild(reverbSendSliderContainer);
                 }
-              }
-              const valDisplay = document.getElementById(
-                `edit-wavetrail-start-value-${conn.id}`,
-              );
-              if (valDisplay)
-                valDisplay.textContent = `${newStart.toFixed(2)}s`;
-              connection.audioParams.waveformPath = generateWaveformPath(
-                connection.audioParams.buffer,
-                200,
-              );
-            });
-            offsetSlider.addEventListener("change", () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
-            endOffsetSlider.addEventListener("input", (e_input) => {
-              const newEnd = parseFloat(e_input.target.value);
-              const conn = findConnectionById(
-                e_input.target.id.replace("edit-wavetrail-end-", ""),
-              );
-              if (conn && conn.audioParams) {
-                conn.audioParams.endTimeOffset = newEnd;
-              }
-              const valDisplay = document.getElementById(
-                `edit-wavetrail-end-value-${conn.id}`,
-              );
-              if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
-              connection.audioParams.waveformPath = generateWaveformPath(
-                connection.audioParams.buffer,
-                200,
-              );
-            });
-            endOffsetSlider.addEventListener("change", () => {
-              identifyAndRouteAllGroups();
-              saveState();
-            });
+                currentSection = section;
+            }
 
-            const grainDurSlider = createSlider(
-              `edit-wavetrail-graindur-${connection.id}`,
-              `Grain Duration (${currentGrainDuration.toFixed(3)}s):`,
-              0.005,
-              0.5,
-              0.001,
-              currentGrainDuration,
-              saveState,
-              (e) => {
-                const conn = findConnectionById(
-                  e.target.id.replace("edit-wavetrail-graindur-", ""),
-                );
-                if (conn)
-                  conn.audioParams.grainDuration = parseFloat(e.target.value);
-                e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
-              },
-            );
-            section.appendChild(grainDurSlider);
 
-            const grainOvlSlider = createSlider(
-              `edit-wavetrail-grainovl-${connection.id}`,
-              `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`,
-              0.001,
-              0.49,
-              0.001,
-              currentGrainOverlap,
-              saveState,
-              (e) => {
-                const conn = findConnectionById(
-                  e.target.id.replace("edit-wavetrail-grainovl-", ""),
-                );
-                if (conn)
-                  conn.audioParams.grainOverlap = parseFloat(e.target.value);
-                e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
-              },
-            );
-            section.appendChild(grainOvlSlider);
+            if (node && node.type === TIMELINE_GRID_TYPE) {
+                const section = document.createElement("div");
+                section.classList.add("panel-section");
 
-            const rateSlider = createSlider(
-              `edit-wavetrail-rate-${connection.id}`,
-              `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`,
-              0.1,
-              4.0,
-              0.05,
-              currentPlaybackRate,
-              saveState,
-              (e) => {
-                const conn = findConnectionById(
-                  e.target.id.replace("edit-wavetrail-rate-", ""),
+                const playingLabel = document.createElement("label");
+                playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
+                playingLabel.textContent = "Playing:";
+                section.appendChild(playingLabel);
+                const playingCheckbox = document.createElement("input");
+                playingCheckbox.type = "checkbox";
+                playingCheckbox.id = `edit-timeline-playing-${node.id}`;
+                playingCheckbox.checked = node.timelineIsPlaying;
+                playingCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.timelineIsPlaying = e.target.checked;
+                            if (
+                                n.timelineIsPlaying &&
+                                n.scanLinePosition >= 1.0 &&
+                                n.timelineIsLooping
+                            ) {
+                                n.scanLinePosition = 0;
+                                if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear();
+                                else n.triggeredInThisSweep = new Set();
+                            }
+                            if (n.audioParams)
+                                n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
+                        }
+                    });
+                    saveState();
+                });
+                section.appendChild(playingCheckbox);
+                section.appendChild(document.createElement("br"));
+
+                const loopingLabel = document.createElement("label");
+                loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
+                loopingLabel.textContent = "Looping:";
+                section.appendChild(loopingLabel);
+                const loopingCheckbox = document.createElement("input");
+                loopingCheckbox.type = "checkbox";
+                loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
+                loopingCheckbox.checked = node.timelineIsLooping;
+                loopingCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.timelineIsLooping = e.target.checked;
+                            if (n.audioParams)
+                                n.audioParams.timelineIsLooping = n.timelineIsLooping;
+                        }
+                    });
+                    saveState();
+                });
+                section.appendChild(loopingCheckbox);
+                section.appendChild(document.createElement("br"));
+
+                if (isGlobalSyncEnabled) {
+                    const durationLabel = document.createElement("label");
+                    durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
+                    durationLabel.textContent = "Duration (Sync):";
+                    section.appendChild(durationLabel);
+                    const durationSelect = document.createElement("select");
+                    durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
+                    const barOptions = [
+                        { label: "1/4 Bar (1 Beat)", value: 0.25 },
+                        { label: "1/2 Bar (2 Beats)", value: 0.5 },
+                        { label: "1 Bar (4 Beats)", value: 1 },
+                        { label: "2 Bars (8 Beats)", value: 2 },
+                        { label: "4 Bars (16 Beats)", value: 4 },
+                        { label: "8 Bars (32 Beats)", value: 8 },
+                    ];
+                    let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
+                    barOptions.forEach((opt) => {
+                        const optionEl = document.createElement("option");
+                        optionEl.value = opt.value;
+                        optionEl.textContent = opt.label;
+                        if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
+                            optionEl.selected = true;
+                        }
+                        durationSelect.appendChild(optionEl);
+                    });
+                    durationSelect.addEventListener("change", (e) => {
+                        const newBars = parseFloat(e.target.value);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.timelineMusicalDurationBars = newBars;
+                                if (n.audioParams)
+                                    n.audioParams.timelineMusicalDurationBars = newBars;
+                            }
+                        });
+                        saveState();
+                    });
+                    section.appendChild(durationSelect);
+                } else {
+                    const currentSpeed =
+                        node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+                    const speedVal = currentSpeed.toFixed(1);
+                    const speedSliderContainer = createSlider(
+                        `edit-timeline-speed-${node.id}`,
+                        `Speed (${speedVal}s / sweep):`,
+                        0.2,
+                        30.0,
+                        0.1,
+                        currentSpeed,
+                        saveState,
+                        (e_input) => {
+                            const newSpeed = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === TIMELINE_GRID_TYPE) {
+                                    n.timelineSpeed = newSpeed;
+                                    if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
+                                }
+                            });
+                            e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
+                        },
+                    );
+                    section.appendChild(speedSliderContainer);
+                }
+
+                const MIN_TIMELINE_PIXEL_WIDTH = 50;
+                const MAX_TIMELINE_PIXEL_WIDTH = 1200;
+                const MIN_TIMELINE_PIXEL_HEIGHT = 50;
+                const MAX_TIMELINE_PIXEL_HEIGHT = 800;
+                const PIXEL_STEP = 10;
+
+                const gridSpacing = calculateGridSpacing();
+                const halfGridSquare =
+                    isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
+
+                let widthSliderMin,
+                    widthSliderMax,
+                    widthSliderStep,
+                    currentWidthInUnits,
+                    widthLabelUnitText;
+                const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+
+                if (isSnapEnabled && halfGridSquare > 0) {
+                    widthSliderMin = Math.max(
+                        1,
+                        Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
+                    );
+                    widthSliderMax = Math.round(
+                        MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
+                    );
+                    widthSliderStep = 1;
+                    currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
+                    widthLabelUnitText = " units";
+                } else {
+                    widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
+                    widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
+                    widthSliderStep = PIXEL_STEP;
+                    currentWidthInUnits = currentPixelWidth;
+                    widthLabelUnitText = "px";
+                }
+
+                const widthDisplayValText =
+                    isSnapEnabled && halfGridSquare > 0 ?
+                    currentWidthInUnits.toFixed(0) :
+                    currentPixelWidth.toFixed(0);
+                const widthSliderContainer = createSlider(
+                    `edit-timeline-width-${node.id}`,
+                    `Width (${widthDisplayValText}${widthLabelUnitText}):`,
+                    widthSliderMin,
+                    widthSliderMax,
+                    widthSliderStep,
+                    currentWidthInUnits,
+                    saveState,
+                    (e_input) => {
+                        const newSliderValue = parseFloat(e_input.target.value);
+                        let newPixelWidth;
+                        if (isSnapEnabled && halfGridSquare > 0) {
+                            newPixelWidth = newSliderValue * halfGridSquare;
+                            newPixelWidth = Math.max(
+                                halfGridSquare,
+                                Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
+                            );
+                        } else {
+                            newPixelWidth = newSliderValue;
+                        }
+                        newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
+
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.width = newPixelWidth;
+                                if (n.audioParams) n.audioParams.width = newPixelWidth;
+                            }
+                        });
+                        const displayVal =
+                            isSnapEnabled && halfGridSquare > 0 ?
+                            (newPixelWidth / halfGridSquare).toFixed(0) :
+                            newPixelWidth.toFixed(0);
+                        const displayUnit =
+                            isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+                        e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
+                    },
                 );
-                if (conn)
-                  conn.audioParams.playbackRate = parseFloat(e.target.value);
-                e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
-              },
-            );
-            section.appendChild(rateSlider);
-          }
-          fragment.appendChild(section);
+                section.appendChild(widthSliderContainer);
+
+                let heightSliderMin,
+                    heightSliderMax,
+                    heightSliderStep,
+                    currentHeightInUnits,
+                    heightLabelUnitText;
+                const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+
+                if (isSnapEnabled && halfGridSquare > 0) {
+                    heightSliderMin = Math.max(
+                        1,
+                        Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
+                    );
+                    heightSliderMax = Math.round(
+                        MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
+                    );
+                    heightSliderStep = 1;
+                    currentHeightInUnits = Math.round(
+                        currentPixelHeight / halfGridSquare,
+                    );
+                    heightLabelUnitText = " units";
+                } else {
+                    heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
+                    heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
+                    heightSliderStep = PIXEL_STEP;
+                    currentHeightInUnits = currentPixelHeight;
+                    heightLabelUnitText = "px";
+                }
+
+                const heightDisplayValText =
+                    isSnapEnabled && halfGridSquare > 0 ?
+                    currentHeightInUnits.toFixed(0) :
+                    currentPixelHeight.toFixed(0);
+                const heightSliderContainer = createSlider(
+                    `edit-timeline-height-${node.id}`,
+                    `Height (${heightDisplayValText}${heightLabelUnitText}):`,
+                    heightSliderMin,
+                    heightSliderMax,
+                    heightSliderStep,
+                    currentHeightInUnits,
+                    saveState,
+                    (e_input) => {
+                        const newSliderValue = parseFloat(e_input.target.value);
+                        let newPixelHeight;
+                        if (isSnapEnabled && halfGridSquare > 0) {
+                            newPixelHeight = newSliderValue * halfGridSquare;
+                            newPixelHeight = Math.max(
+                                halfGridSquare,
+                                Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
+                            );
+                        } else {
+                            newPixelHeight = newSliderValue;
+                        }
+                        newPixelHeight = Math.max(
+                            MIN_TIMELINE_PIXEL_HEIGHT,
+                            newPixelHeight,
+                        );
+
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.height = newPixelHeight;
+                                if (n.audioParams) n.audioParams.height = newPixelHeight;
+                            }
+                        });
+                        const displayVal =
+                            isSnapEnabled && halfGridSquare > 0 ?
+                            (newPixelHeight / halfGridSquare).toFixed(0) :
+                            newPixelHeight.toFixed(0);
+                        const displayUnit =
+                            isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+                        e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
+                    },
+                );
+                section.appendChild(heightSliderContainer);
+
+                const currentPulseIntensity =
+                    node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+                const intensityVal = currentPulseIntensity.toFixed(2);
+                const intensitySliderContainer = createSlider(
+                    `edit-timeline-intensity-${node.id}`,
+                    `Trigger Intensity (${intensityVal}):`,
+                    0.1,
+                    1.5,
+                    0.01,
+                    currentPulseIntensity,
+                    saveState,
+                    (e_input) => {
+                        const newIntensity = parseFloat(e_input.target.value);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.timelinePulseIntensity = newIntensity;
+                                if (n.audioParams)
+                                    n.audioParams.timelinePulseIntensity = newIntensity;
+                            }
+                        });
+                        e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
+                    },
+                );
+                section.appendChild(intensitySliderContainer);
+
+                const internalGridSection = document.createElement("div");
+                internalGridSection.classList.add("panel-section");
+                internalGridSection.style.borderTop = "1px solid var(--button-hover)";
+                internalGridSection.style.marginTop = "10px";
+                internalGridSection.style.paddingTop = "10px";
+
+                const showInternalGridLabel = document.createElement("label");
+                showInternalGridLabel.textContent = "Show Internal Grid: ";
+                const showInternalGridCheckbox = document.createElement("input");
+                showInternalGridCheckbox.type = "checkbox";
+                showInternalGridCheckbox.checked =
+                    node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+                showInternalGridCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.showInternalGrid = e.target.checked;
+                            if (n.audioParams)
+                                n.audioParams.showInternalGrid = n.showInternalGrid;
+                        }
+                    });
+                    saveState();
+                });
+                internalGridSection.appendChild(showInternalGridLabel);
+                internalGridSection.appendChild(showInternalGridCheckbox);
+                internalGridSection.appendChild(document.createElement("br"));
+
+                const snapToInternalGridLabel = document.createElement("label");
+                snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
+                const snapToInternalGridCheckbox = document.createElement("input");
+                snapToInternalGridCheckbox.type = "checkbox";
+                snapToInternalGridCheckbox.checked =
+                    node.snapToInternalGrid !== undefined ?
+                    node.snapToInternalGrid :
+                    true;
+                snapToInternalGridCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.snapToInternalGrid = e.target.checked;
+                            if (n.audioParams)
+                                n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
+                        }
+                    });
+                    saveState();
+                });
+                internalGridSection.appendChild(snapToInternalGridLabel);
+                internalGridSection.appendChild(snapToInternalGridCheckbox);
+                internalGridSection.appendChild(document.createElement("br"));
+
+                const currentDivisions = node.internalGridDivisions || 8;
+                const divisionsLabel = document.createElement("label");
+                divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
+                divisionsLabel.textContent = "Internal Grid Subdivisions:";
+                internalGridSection.appendChild(divisionsLabel);
+
+                const divisionsSelect = document.createElement("select");
+                divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
+                const divisionOptions = [
+                    { label: "None (1)", value: 1 }, { label: "Halves (2)", value: 2 },
+                    { label: "Thirds (3)", value: 3 }, { label: "Quarters (4)", value: 4 },
+                    { label: "Sixths (6)", value: 6 }, { label: "Eighths (8)", value: 8 },
+                    { label: "Twelfths (12 - triplets)", value: 12 }, { label: "Sixteenths (16)", value: 16 },
+                    { label: "24ths (16th triplets)", value: 24 }, { label: "32nds (32)", value: 32 },
+                    { label: "64ths (64)", value: 64 },
+                ];
+                let currentDivisionValueForSelect = node.internalGridDivisions || 8;
+                divisionOptions.forEach((opt) => {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = opt.value;
+                    optionEl.textContent = opt.label;
+                    if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
+                        optionEl.selected = true;
+                    }
+                    divisionsSelect.appendChild(optionEl);
+                });
+                divisionsSelect.addEventListener("change", (e) => {
+                    const newDivisions = parseInt(e.target.value);
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.internalGridDivisions = newDivisions;
+                            if (n.audioParams)
+                                n.audioParams.internalGridDivisions = newDivisions;
+                        }
+                    });
+                    saveState();
+                });
+                internalGridSection.appendChild(divisionsSelect);
+                section.appendChild(internalGridSection);
+
+                const transposeSection = document.createElement("div");
+                transposeSection.classList.add("panel-section");
+                transposeSection.style.borderTop = "1px solid var(--button-hover)";
+                transposeSection.style.marginTop = "10px";
+                transposeSection.style.paddingTop = "10px";
+                transposeSection.innerHTML = "<p><strong>Timeline Transposition:</strong></p>";
+
+                const enableTransposeLabel = document.createElement("label");
+                enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
+                enableTransposeLabel.textContent = "Enable Transposition: ";
+                const enableTransposeCheckbox = document.createElement("input");
+                enableTransposeCheckbox.type = "checkbox";
+                enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
+                enableTransposeCheckbox.checked =
+                    node.audioParams?.isTransposeEnabled || false;
+                enableTransposeCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                            n.audioParams.isTransposeEnabled = e.target.checked;
+                        }
+                    });
+                    saveState();
+                    populateEditPanel();
+                });
+                transposeSection.appendChild(enableTransposeLabel);
+                transposeSection.appendChild(enableTransposeCheckbox);
+                transposeSection.appendChild(document.createElement("br"));
+
+                if (node.audioParams?.isTransposeEnabled) {
+                    const directionContainer = document.createElement("div");
+                    directionContainer.style.marginBottom = "5px";
+                    const directionLabel = document.createElement("label");
+                    directionLabel.textContent = "Direction: ";
+                    directionLabel.style.marginRight = "5px";
+                    directionContainer.appendChild(directionLabel);
+
+                    const plusButton = document.createElement("button");
+                    plusButton.textContent = "+";
+                    plusButton.classList.add("panel-button-like");
+                    if (node.audioParams.transposeDirection === "+") {
+                        plusButton.classList.add("active");
+                    }
+                    plusButton.addEventListener("click", () => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                n.audioParams.transposeDirection = "+";
+                            }
+                        });
+                        saveState();
+                        populateEditPanel();
+                    });
+                    directionContainer.appendChild(plusButton);
+
+                    const minusButton = document.createElement("button");
+                    minusButton.textContent = "-";
+                    minusButton.classList.add("panel-button-like");
+                    if (node.audioParams.transposeDirection === "-") {
+                        minusButton.classList.add("active");
+                    }
+                    minusButton.addEventListener("click", () => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                n.audioParams.transposeDirection = "-";
+                            }
+                        });
+                        saveState();
+                        populateEditPanel();
+                    });
+                    directionContainer.appendChild(minusButton);
+                    transposeSection.appendChild(directionContainer);
+
+                    const currentTransposeAmount = node.audioParams.transposeAmount || 0;
+                    const amountSliderContainer = createSlider(
+                        `edit-timeline-transpose-amount-${node.id}`,
+                        `Amount (${currentTransposeAmount} scale steps):`,
+                        0,
+                        24,
+                        1,
+                        currentTransposeAmount,
+                        () => {
+                            saveState();
+                        },
+                        (e_input) => {
+                            const newAmount = parseInt(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                    n.audioParams.transposeAmount = newAmount;
+                                }
+                            });
+                            const labelElement = e_input.target.previousElementSibling;
+                            if (labelElement) {
+                                labelElement.textContent = `Amount (${newAmount} scale steps):`;
+                            }
+                        },
+                    );
+                    transposeSection.appendChild(amountSliderContainer);
+                }
+                section.appendChild(transposeSection);
+
+                const autoRotateSection = document.createElement("div");
+                autoRotateSection.classList.add("panel-section");
+                autoRotateSection.style.borderTop = "1px solid var(--button-hover)";
+                autoRotateSection.style.marginTop = "10px";
+                autoRotateSection.style.paddingTop = "10px";
+                autoRotateSection.innerHTML = "<p><strong>Timeline Auto-Rotation:</strong></p>";
+
+                const enableAutoRotateLabel = document.createElement("label");
+                enableAutoRotateLabel.htmlFor = `edit-timeline-autorotate-enable-${node.id}`;
+                enableAutoRotateLabel.textContent = "Enable Auto-Rotate: ";
+                const enableAutoRotateCheckbox = document.createElement("input");
+                enableAutoRotateCheckbox.type = "checkbox";
+                enableAutoRotateCheckbox.id = `edit-timeline-autorotate-enable-${node.id}`;
+                enableAutoRotateCheckbox.checked = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+                enableAutoRotateCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                            n.audioParams.autoRotateEnabled = e.target.checked;
+                        }
+                    });
+                    saveState();
+                    populateEditPanel();
+                });
+                autoRotateSection.appendChild(enableAutoRotateLabel);
+                autoRotateSection.appendChild(enableAutoRotateCheckbox);
+                autoRotateSection.appendChild(document.createElement("br"));
+
+                if (node.audioParams?.autoRotateEnabled) {
+                    const directionRotateLabel = document.createElement("label");
+                    directionRotateLabel.htmlFor = `edit-timeline-autorotate-direction-${node.id}`;
+                    directionRotateLabel.textContent = "Direction: ";
+                    autoRotateSection.appendChild(directionRotateLabel);
+
+                    const directionRotateSelect = document.createElement("select");
+                    directionRotateSelect.id = `edit-timeline-autorotate-direction-${node.id}`;
+                    ["clockwise", "counter-clockwise"].forEach(dir => {
+                        const option = document.createElement("option");
+                        option.value = dir;
+                        option.textContent = dir.charAt(0).toUpperCase() + dir.slice(1);
+                        if (dir === (node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION)) {
+                            option.selected = true;
+                        }
+                        directionRotateSelect.appendChild(option);
+                    });
+                    directionRotateSelect.addEventListener("change", (e) => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                n.audioParams.autoRotateDirection = e.target.value;
+                            }
+                        });
+                        saveState();
+                    });
+                    autoRotateSection.appendChild(directionRotateSelect);
+                    autoRotateSection.appendChild(document.createElement("br"));
+
+                    if (isGlobalSyncEnabled) {
+                        const syncSpeedLabel = document.createElement("label");
+                        syncSpeedLabel.htmlFor = `edit-timeline-autorotate-syncspeed-${node.id}`;
+                        syncSpeedLabel.textContent = "Synced Speed (Full Rotation per):";
+                        autoRotateSection.appendChild(syncSpeedLabel);
+
+                        const syncSpeedSelect = document.createElement("select");
+                        syncSpeedSelect.id = `edit-timeline-autorotate-syncspeed-${node.id}`;
+
+                        const syncSubdivisionForRotation = [
+                            { label: "1/8 Note", originalIndex: 2 },
+                            { label: "1/4 Note", originalIndex: 4 },
+                            { label: "1/2 Note", originalIndex: 6 },
+                            { label: "1 Beat", originalIndex: 8 },
+                            { label: "2 Beats", originalIndex: 9 },
+                            { label: "1 Bar", originalIndex: 10 },
+                            { label: "2 Bars", originalIndex: 10, multiplier: 2 },
+                            { label: "4 Bars", originalIndex: 10, multiplier: 4 },
+                            { label: "8 Bars", originalIndex: 10, multiplier: 8 },
+                        ];
+
+                        syncSubdivisionForRotation.forEach((opt, pseudoIndex) => {
+                            const optionEl = document.createElement("option");
+                            optionEl.value = pseudoIndex;
+                            optionEl.textContent = opt.label;
+                            if (pseudoIndex === (node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX)) {
+                                optionEl.selected = true;
+                            }
+                            syncSpeedSelect.appendChild(optionEl);
+                        });
+                        syncSpeedSelect.addEventListener("change", (e) => {
+                            const newPseudoIndex = parseInt(e.target.value, 10);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                    n.audioParams.autoRotateSyncSubdivisionIndex = newPseudoIndex;
+                                }
+                            });
+                            saveState();
+                        });
+                        autoRotateSection.appendChild(syncSpeedSelect);
+
+                    } else {
+                        const currentManualSpeed = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+                        const speedValManual = currentManualSpeed.toFixed(4);
+                        const speedManualSlider = createSlider(
+                            `edit-timeline-autorotate-speedmanual-${node.id}`,
+                            `Manual Speed (${speedValManual} rad/update):`,
+                            0.0001, 0.02, 0.0001, currentManualSpeed,
+                            saveState,
+                            (e_input) => {
+                                const newSpeed = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                        n.audioParams.autoRotateSpeedManual = newSpeed;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Manual Speed (${newSpeed.toFixed(4)} rad/update):`;
+                            }
+                        );
+                        autoRotateSection.appendChild(speedManualSlider);
+                    }
+                }
+                section.appendChild(autoRotateSection);
+                currentSection = section;
+
+
+            } else if (node && node.audioParams) {
+                let sectionCreatedForThisType = false;
+
+                if (isPulsarType(node.type) || node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE) {
+                     if(!currentSection || !fragment.contains(currentSection)) {
+                        currentSection = document.createElement("div");
+                        currentSection.classList.add("panel-section");
+                     }
+                    sectionCreatedForThisType = true;
+
+                    if (node.type !== PRORB_TYPE) {
+                        const syncIgnoreSection = document.createElement("div");
+                        syncIgnoreSection.classList.add("panel-section");
+                        const ignoreSyncLabel = document.createElement("label");
+                        ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
+                        ignoreSyncLabel.textContent = "Ignore Global Sync:";
+                        ignoreSyncLabel.style.marginRight = "5px";
+                        syncIgnoreSection.appendChild(ignoreSyncLabel);
+                        const ignoreSyncCheckbox = document.createElement("input");
+                        ignoreSyncCheckbox.type = "checkbox";
+                        ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`;
+                        ignoreSyncCheckbox.checked =
+                            node.audioParams.ignoreGlobalSync || false;
+                        ignoreSyncCheckbox.addEventListener("change", (e) => {
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.audioParams) {
+                                    n.audioParams.ignoreGlobalSync = e.target.checked;
+                                    if (isPulsarType(n.type)) {
+                                        n.lastTriggerTime = -1;
+                                        n.nextSyncTriggerTime = 0;
+                                    }
+                                }
+                            });
+                            identifyAndRouteAllGroups();
+                            saveState();
+                            populateEditPanel();
+                        });
+                        syncIgnoreSection.appendChild(ignoreSyncCheckbox);
+                        currentSection.appendChild(syncIgnoreSection);
+                    }
+                } else if (!currentSection || !fragment.contains(currentSection)) {
+                    currentSection = document.createElement("div");
+                    currentSection.classList.add("panel-section");
+                    sectionCreatedForThisType = true;
+                }
+
+
+                if (isPulsarType(node.type)) {
+                    const enableLabel = document.createElement("label");
+                    enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
+                    enableLabel.textContent =
+                        node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
+                    currentSection.appendChild(enableLabel);
+                    const enableCheckbox = document.createElement("input");
+                    enableCheckbox.type = "checkbox";
+                    enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
+                    enableCheckbox.checked = node.isEnabled;
+                    enableCheckbox.disabled =
+                        selectedArray.length > 1 && node.type === "pulsar_triggerable";
+                    enableCheckbox.addEventListener("change", () => {
+                        handlePulsarTriggerToggle(node);
+                        identifyAndRouteAllGroups();
+                    });
+                    currentSection.appendChild(enableCheckbox);
+                    currentSection.appendChild(document.createElement("br"));
+                    const showSyncControls =
+                        isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync && node.type !== PRORB_TYPE;
+                    if (
+                        node.type !== "pulsar_random_particles" &&
+                        node.type !== "pulsar_manual" &&
+                        node.type !== "pulsar_meteorshower" &&
+                        node.type !== PRORB_TYPE
+                    ) {
+                        if (showSyncControls) {
+                            const subdivLabel = document.createElement("label");
+                            subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
+                            subdivLabel.textContent = "Sync Subdivision:";
+                            currentSection.appendChild(subdivLabel);
+                            const subdivSelect = document.createElement("select");
+                            subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
+                            subdivSelect.disabled = selectedArray.length > 1;
+                            subdivisionOptions.forEach((opt, index) => {
+                                const option = document.createElement("option");
+                                option.value = index;
+                                option.textContent = opt.label;
+                                if (
+                                    index ===
+                                    (node.audioParams.syncSubdivisionIndex ??
+                                        DEFAULT_SUBDIVISION_INDEX)
+                                )
+                                    option.selected = true;
+                                subdivSelect.appendChild(option);
+                            });
+                            subdivSelect.addEventListener("change", (e) => {
+                                const newIndex = parseInt(e.target.value, 10);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (
+                                        n &&
+                                        n.audioParams &&
+                                        isPulsarType(n.type) &&
+                                        n.type !== "pulsar_random_particles" &&
+                                        n.type !== "pulsar_manual" &&
+                                        n.type !== "pulsar_meteorshower" &&
+                                        n.type !== PRORB_TYPE
+                                    ) {
+                                        n.audioParams.syncSubdivisionIndex = newIndex;
+                                        if (n.syncSubdivisionIndex !== undefined)
+                                            n.syncSubdivisionIndex = newIndex;
+                                        n.nextSyncTriggerTime = 0;
+                                    }
+                                });
+                                identifyAndRouteAllGroups();
+                                saveState();
+                            });
+                            currentSection.appendChild(subdivSelect);
+                        } else {
+                            const currentInterval =
+                                node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+                            const intervalVal = currentInterval.toFixed(1);
+                            const intervalSliderContainer = createSlider(
+                                `edit-pulsar-interval-${node.id}`,
+                                `Interval (${intervalVal}s):`,
+                                0.1,
+                                10.0,
+                                0.1,
+                                currentInterval,
+                                () => { identifyAndRouteAllGroups(); saveState(); },
+                                (e_input) => {
+                                    const newInterval = parseFloat(e_input.target.value);
+                                    selectedArray.forEach((elData) => {
+                                        const n = findNodeById(elData.id);
+                                        if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual" && n.type !== "pulsar_meteorshower" && n.type !== PRORB_TYPE)
+                                            n.audioParams.triggerInterval = newInterval;
+                                    });
+                                    e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
+                                },
+                            );
+                            currentSection.appendChild(intervalSliderContainer);
+                        }
+                    } else if (node.type === "pulsar_random_particles") {
+                        const timingInfo = document.createElement("small");
+                        timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
+                        currentSection.appendChild(timingInfo);
+                    }
+                    currentSection.appendChild(document.createElement("br"));
+                    if (node.type !== "pulsar_random_volume") {
+                        const currentIntensity =
+                            node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                        const intensityVal = currentIntensity.toFixed(2);
+                        const intensitySliderContainer = createSlider(
+                            `edit-pulsar-intensity-${node.id}`,
+                            `Pulse Intensity (${intensityVal}):`,
+                            MIN_PULSE_INTENSITY,
+                            MAX_PULSE_INTENSITY,
+                            0.01,
+                            currentIntensity,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newIntensity = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n?.audioParams && n.type !== "pulsar_random_volume")
+                                        n.audioParams.pulseIntensity = newIntensity;
+                                });
+                                e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
+                            },
+                        );
+                        currentSection.appendChild(intensitySliderContainer);
+                    } else {
+                        const intensityInfo = document.createElement("small");
+                        intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
+                        currentSection.appendChild(intensityInfo);
+                    }
+                    currentSection.appendChild(document.createElement("br"));
+
+                    if (node.type === "pulsar_meteorshower") {
+                        const meteorSubSection = document.createElement("div");
+                        meteorSubSection.classList.add("panel-section");
+                        meteorSubSection.style.marginTop = "10px";
+                        meteorSubSection.style.borderTop = "1px dashed var(--button-hover)";
+                        const meteorTitle = document.createElement("p");
+                        meteorTitle.innerHTML = "<strong>Meteor Shower Settings:</strong>";
+                        meteorSubSection.appendChild(meteorTitle);
+
+                        const currentMaxRadius = node.audioParams?.meteorMaxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS;
+                        const radiusSlider = createSlider(
+                            `edit-meteor-radius-${node.id}`,
+                            `Shower Max Radius (${currentMaxRadius.toFixed(0)}px):`,
+                            50, 800, 10, currentMaxRadius,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newVal = parseFloat(e_input.target.value);
+                                selectedArray.forEach(elData => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorMaxRadius = newVal;
+                                });
+                                e_input.target.previousElementSibling.textContent = `Shower Max Radius (${newVal.toFixed(0)}px):`;
+                            }
+                        );
+                        meteorSubSection.appendChild(radiusSlider);
+
+                        const currentGrowthRate = node.audioParams?.meteorGrowthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE;
+                        const growthSlider = createSlider(
+                            `edit-meteor-growth-${node.id}`,
+                            `Shower Growth Rate (${currentGrowthRate.toFixed(0)}px/s):`,
+                            20, 500, 5, currentGrowthRate,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newVal = parseFloat(e_input.target.value);
+                                selectedArray.forEach(elData => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorGrowthRate = newVal;
+                                });
+                                e_input.target.previousElementSibling.textContent = `Shower Growth Rate (${newVal.toFixed(0)}px/s):`;
+                            }
+                        );
+                        meteorSubSection.appendChild(growthSlider);
+                        currentSection.appendChild(meteorSubSection);
+                    }
+
+                    const colorLabel = document.createElement("label");
+                    colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
+                    colorLabel.textContent = "Pulsar Color:";
+                    currentSection.appendChild(colorLabel);
+                    const colorInput = document.createElement("input");
+                    colorInput.type = "color";
+                    colorInput.id = `edit-pulsar-color-${node.id}`;
+                    const styles = getComputedStyle(document.documentElement);
+                    const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
+                    const fallbackColorVar = "--start-node-color";
+                    const defaultColorRgba =
+                        styles.getPropertyValue(defaultColorVar).trim() ||
+                        styles.getPropertyValue(fallbackColorVar).trim();
+                    const defaultColorHex = rgbaToHex(defaultColorRgba);
+                    colorInput.value = node.color ?
+                        rgbaToHex(node.color) :
+                        defaultColorHex;
+                    colorInput.addEventListener("input", (e) => {
+                        const newColor = hexToRgba(e.target.value, 0.9);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n) n.color = newColor;
+                        });
+                    });
+                    colorInput.addEventListener("change", () => {
+                        identifyAndRouteAllGroups();
+                        saveState();
+                    });
+                    currentSection.appendChild(colorInput);
+
+                    if (node.type === "pulsar_rocket") {
+                        const rocketSubSection = document.createElement("div");
+                        rocketSubSection.classList.add("panel-section");
+                        const rocketTitle = document.createElement("p");
+                        rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
+                        rocketSubSection.appendChild(rocketTitle);
+                        let currentAngleDegVal = parseFloat(
+                            (
+                                ((node.audioParams.rocketDirectionAngle || 0) * 180) /
+                                Math.PI
+                            ).toFixed(0),
+                        );
+                        const dirSliderContainer = createSlider(
+                            `edit-rocket-dir-${node.id}`,
+                            `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newAngleDeg = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(dirSliderContainer);
+                        let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
+                        const speedSliderContainer = createSlider(
+                            `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newSpeed = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketSpeed = newSpeed;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(speedSliderContainer);
+                        let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
+                        const rangeSliderContainer = createSlider(
+                            `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newRange = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketRange = newRange;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(rangeSliderContainer);
+                        let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
+                        const gravitySliderContainer = createSlider(
+                            `edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newGravity = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketGravity = newGravity;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(gravitySliderContainer);
+                        currentSection.appendChild(rocketSubSection);
+                    }
+
+                } else if (node.type === "sound") {
+                    const orbitoneMainSection = document.createElement("div");
+                    orbitoneMainSection.classList.add("panel-section");
+                    orbitoneMainSection.innerHTML = "<p><strong>Orbitone Settings:</strong></p>";
+
+                    const enableOrbitonesLabel = document.createElement("label");
+                    enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
+                    enableOrbitonesLabel.textContent = "Enable Orbitones:";
+                    enableOrbitonesLabel.style.marginRight = "8px";
+                    orbitoneMainSection.appendChild(enableOrbitonesLabel);
+
+                    const enableOrbitonesCheckbox = document.createElement("input");
+                    enableOrbitonesCheckbox.type = "checkbox";
+                    enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
+                    enableOrbitonesCheckbox.checked = node.audioParams.orbitonesEnabled || false;
+                    enableOrbitonesCheckbox.addEventListener("change", (e) => {
+                        const isEnabled = e.target.checked;
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams && n.type === "sound") {
+                                n.audioParams.orbitonesEnabled = isEnabled;
+                                stopNodeAudio(n);
+                                n.audioNodes = createAudioNodesForNode(n);
+                                if (n.audioNodes) updateNodeAudioParams(n);
+                            }
+                        });
+                        identifyAndRouteAllGroups();
+                        saveState();
+                        populateEditPanel();
+                    });
+                    orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
+                    currentSection.appendChild(orbitoneMainSection);
+
+                    if (node.audioParams.orbitonesEnabled) {
+                        const orbitoneSettingsSection = document.createElement("div");
+                        orbitoneSettingsSection.classList.add("panel-section");
+                        orbitoneSettingsSection.style.paddingLeft = "15px";
+                        orbitoneSettingsSection.style.borderLeft = "2px solid var(--button-bg)";
+                        orbitoneSettingsSection.style.marginTop = "5px";
+
+                        const visualControllerPlaceholder = document.createElement("div");
+                        visualControllerPlaceholder.id = `orbitone-visual-controller-${node.id}`;
+                        visualControllerPlaceholder.innerHTML = "<em>Visual Orbitone Controller (Future)</em>";
+                        visualControllerPlaceholder.style.height = "auto";
+                        visualControllerPlaceholder.style.padding = "10px";
+                        visualControllerPlaceholder.style.border = "1px dashed var(--button-hover)";
+                        visualControllerPlaceholder.style.display = "flex";
+                        visualControllerPlaceholder.style.flexDirection = "column";
+                        visualControllerPlaceholder.style.alignItems = "center";
+                        visualControllerPlaceholder.style.justifyContent = "center";
+                        visualControllerPlaceholder.style.marginBottom = "15px";
+                        visualControllerPlaceholder.style.textAlign = "center";
+                        orbitoneSettingsSection.appendChild(visualControllerPlaceholder);
+
+                        const currentOrbitoneCount = node.audioParams.orbitoneCount || 0;
+                        const orbitoneCountSliderContainer = createSlider(
+                            `edit-node-orbitone-count-${node.id}`,
+                            `Number of extra Orbitones (${currentOrbitoneCount}):`, 0, 5, 1, currentOrbitoneCount,
+                            (e_change_event) => {
+                                const newCount = parseInt(e_change_event.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.audioParams && n.type === "sound") {
+                                        n.audioParams.orbitoneCount = newCount;
+                                        applyOrbitoneVoicingFromPhase(n);
+                                        applyOrbitoneTimingFromPhase(n);
+                                        stopNodeAudio(n);
+                                        n.audioNodes = createAudioNodesForNode(n);
+                                        if (n.audioNodes) updateNodeAudioParams(n);
+                                    }
+                                });
+                                identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+                            },
+                            (e_input) => {
+                                e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`;
+                            },
+                        );
+                        orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
+
+                        if (node.audioParams.orbitoneCount > 0) {
+                            const currentVoicingPhase = node.audioParams.orbitoneVoicingPhase || 0;
+                            const voicingPhaseSlider = createSlider(
+                                `edit-orbitone-voicing-phase-${node.id}`, `Orbitone Voicing Style (${currentVoicingPhase}):`, 0, 100, 1, currentVoicingPhase,
+                                (e_change) => {
+                                    const val = parseInt(e_change.target.value);
+                                    selectedArray.forEach((el) => {
+                                        const n = findNodeById(el.id);
+                                        if (n && n.audioParams && n.type === "sound") {
+                                            n.audioParams.orbitoneVoicingPhase = val;
+                                            applyOrbitoneVoicingFromPhase(n);
+                                            stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); if (n.audioNodes) updateNodeAudioParams(n);
+                                        }
+                                    });
+                                    identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+                                },
+                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; },
+                            );
+                            orbitoneSettingsSection.appendChild(voicingPhaseSlider);
+
+                            const currentTimingPhase = node.audioParams.orbitoneTimingPhase || 0;
+                            const timingPhaseSlider = createSlider(
+                                `edit-orbitone-timing-phase-${node.id}`, `Orbitone Timing Style (${currentTimingPhase}):`, 0, 100, 1, currentTimingPhase,
+                                (e_change) => {
+                                    const val = parseInt(e_change.target.value);
+                                    selectedArray.forEach((el) => {
+                                        const n = findNodeById(el.id);
+                                        if (n && n.audioParams && n.type === "sound") {
+                                            n.audioParams.orbitoneTimingPhase = val;
+                                            applyOrbitoneTimingFromPhase(n); updateNodeAudioParams(n);
+                                        }
+                                    });
+                                    identifyAndRouteAllGroups(); saveState();
+                                },
+                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; },
+                            );
+                            orbitoneSettingsSection.appendChild(timingPhaseSlider);
+
+                            const currentMix = node.audioParams.orbitoneMix !== undefined ? node.audioParams.orbitoneMix : 0.5;
+                            const mixSliderContainer = createSlider(
+                                `edit-node-orbitone-mix-${node.id}`, `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`, 0, 1, 0.05, currentMix,
+                                (e_change_event) => {
+                                    const newMix = parseFloat(e_change_event.target.value);
+                                    selectedArray.forEach((elData) => {
+                                        const n = findNodeById(elData.id);
+                                        if (n && n.audioParams && n.type === "sound") {
+                                            n.audioParams.orbitoneMix = newMix; updateNodeAudioParams(n);
+                                        }
+                                    });
+                                    identifyAndRouteAllGroups(); saveState();
+                                },
+                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`; },
+                            );
+                            orbitoneSettingsSection.appendChild(mixSliderContainer);
+                        }
+                        currentSection.appendChild(orbitoneSettingsSection);
+                    }
+                } else if (isDrumType(node.type)) {
+                    const params = node.audioParams;
+                    const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
+                    const soundDiv = document.createElement("div");
+                    soundDiv.classList.add("edit-drum-sound");
+                    const soundLabel = document.createElement("strong");
+                    soundLabel.textContent = defaults.label;
+                    soundDiv.appendChild(soundLabel);
+
+                    const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
+                    const tuneVal = currentBaseFreq.toFixed(0);
+                    const tuneSliderContainer = createSlider(
+                        `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20, node.type === "drum_hihat" ? 15000 : (node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000), 1, currentBaseFreq,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newFreq = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
+                            e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
+                        }
+                    );
+                    soundDiv.appendChild(tuneSliderContainer);
+
+                    if (params?.decay !== undefined || defaults?.decay !== undefined) {
+                        const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
+                        const decayVal = currentDecay.toFixed(2);
+                        const decaySliderContainer = createSlider(
+                            `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newDecay = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
+                                e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
+                            }
+                        );
+                        soundDiv.appendChild(decaySliderContainer);
+                    }
+                    if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
+                        const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
+                        const noiseDecayVal = currentNoiseDecay.toFixed(2);
+                        const noiseDecaySliderContainer = createSlider(
+                            `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newNoiseDecay = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
+                                e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
+                            }
+                        );
+                        soundDiv.appendChild(noiseDecaySliderContainer);
+                    }
+
+                    const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
+                    const volVal = currentVolume.toFixed(2);
+                    const volSliderContainer = createSlider(
+                        `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newVol = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n?.audioParams) { n.audioParams.volume = newVol; updateNodeAudioParams(n); }
+                            });
+                            e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                        }
+                    );
+                    soundDiv.appendChild(volSliderContainer);
+                    currentSection.appendChild(soundDiv);
+                } else if (node.type === "switch" && selectedArray.length === 1) {
+                    const label = document.createElement("label");
+                    label.textContent = "Primary Input Connection:";
+                    currentSection.appendChild(label);
+
+                    const select = document.createElement("select");
+                    select.id = `edit-switch-primary-${node.id}`;
+                    const noneOpt = document.createElement("option");
+                    noneOpt.value = "null";
+                    noneOpt.textContent = "None (Set on next pulse)";
+                    select.appendChild(noneOpt);
+                    node.connections.forEach(neighborId => {
+                        const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                        if (conn) {
+                            const otherNode = findNodeById(neighborId);
+                            const option = document.createElement("option");
+                            option.value = conn.id;
+                            option.textContent = `From Node #${neighborId} (${otherNode?.type || '?'})`;
+                            if (conn.id === node.primaryInputConnectionId) option.selected = true;
+                            select.appendChild(option);
+                        }
+                    });
+                    select.addEventListener("change", (e) => {
+                        node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                        identifyAndRouteAllGroups(); saveState();
+                    });
+                    currentSection.appendChild(select);
+                }
+
+                console.log(`[Retrigger Debug] Checking if retrigger section should be created for node ID ${node.id}, type: ${node.type}`);
+                if (node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE) {
+                     console.log(`[Retrigger Debug] Condition met for node type ${node.type}. audioParams present: ${!!node.audioParams}`);
+                    const retriggerSection = document.createElement("div");
+                    retriggerSection.classList.add("panel-section");
+                    retriggerSection.style.borderTop = "1px solid var(--button-hover)";
+                    retriggerSection.style.marginTop = "10px";
+                    retriggerSection.style.paddingTop = "10px";
+
+                    const retriggerTitle = document.createElement("p");
+                    retriggerTitle.innerHTML = "<strong>Retrigger / Step Sequencer:</strong>";
+                    retriggerSection.appendChild(retriggerTitle);
+                    
+                    console.log("[Retrigger Debug] Attempting to create 'Enable Retriggering' checkbox.");
+                    const enableRetriggerLabel = document.createElement("label");
+                    enableRetriggerLabel.htmlFor = `edit-retrigger-enabled-${node.id}`;
+                    enableRetriggerLabel.textContent = "Enable Retriggering: ";
+                    enableRetriggerLabel.style.marginRight = "5px";
+                    retriggerSection.appendChild(enableRetriggerLabel);
+
+                    const enableRetriggerCheckbox = document.createElement("input");
+                    enableRetriggerCheckbox.type = "checkbox";
+                    enableRetriggerCheckbox.id = `edit-retrigger-enabled-${node.id}`;
+                    if (node.audioParams) {
+                        enableRetriggerCheckbox.checked = node.audioParams.retriggerEnabled || false;
+                        console.log(`[Retrigger Debug] Retrigger enabled status for node ${node.id}: ${node.audioParams.retriggerEnabled}`);
+                    } else {
+                        enableRetriggerCheckbox.checked = false;
+                        console.warn(`[Retrigger Debug] node.audioParams missing for node ${node.id} when creating retrigger checkbox!`);
+                    }
+                    enableRetriggerCheckbox.addEventListener("change", (e) => {
+                        const isEnabled = e.target.checked;
+                        selectedArray.forEach(elData => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams) {
+                                n.audioParams.retriggerEnabled = isEnabled;
+                                if (!isEnabled && n.activeRetriggers) {
+                                    n.activeRetriggers.forEach(clearTimeout);
+                                    n.activeRetriggers = [];
+                                    n.currentRetriggerVisualIndex = -1;
+                                }
+                            }
+                        });
+                        saveState();
+                        populateEditPanel();
+                    });
+                    retriggerSection.appendChild(enableRetriggerCheckbox);
+                    console.log("[Retrigger Debug] 'Enable Retriggering' checkbox created and added to retriggerSection.");
+
+                    if (node.audioParams && node.audioParams.retriggerEnabled) {
+                        console.log(`[Retrigger Debug] Retrigger is enabled for node ${node.id}, creating further controls.`);
+                        const tabsContainer = document.createElement("div");
+                        tabsContainer.classList.add("retrigger-editor-tabs");
+
+                        ["Volume", "Pitch", "Filter"].forEach(paramType => {
+                            const button = document.createElement("button");
+                            button.classList.add("retrigger-tab-button");
+                            button.textContent = paramType;
+                            button.dataset.paramType = paramType.toLowerCase();
+                            if (paramType.toLowerCase() === (retriggerSection.dataset.activeParamType || "volume")) {
+                                button.classList.add("active");
+                            }
+                            button.addEventListener("click", (e_click) => {
+                                const clickedParamType = e_click.target.dataset.paramType;
+                                retriggerSection.dataset.activeParamType = clickedParamType;
+                                const displayArea = retriggerSection.querySelector(".retrigger-editor-display-area");
+                                if (displayArea) {
+                                    displayArea.innerHTML = "";
+                                    displayArea.appendChild(createRetriggerVisualEditor(node, selectedArray, clickedParamType));
+                                }
+                                tabsContainer.querySelectorAll(".retrigger-tab-button").forEach(btn => btn.classList.remove("active"));
+                                e_click.target.classList.add("active");
+                            });
+                            tabsContainer.appendChild(button);
+                        });
+                        retriggerSection.appendChild(tabsContainer);
+
+                        const displayArea = document.createElement("div");
+                        displayArea.classList.add("retrigger-editor-display-area");
+                        displayArea.id = `retrigger-display-area-${node.id}`;
+                        const initialActiveParamType = retriggerSection.dataset.activeParamType || "volume";
+                        displayArea.appendChild(createRetriggerVisualEditor(node, selectedArray, initialActiveParamType));
+                        retriggerSection.appendChild(displayArea);
+
+
+                        const controlsDiv = document.createElement("div");
+                        controlsDiv.classList.add("retrigger-editor-controls");
+
+                        const stepCountLabel = document.createElement("label");
+                        stepCountLabel.textContent = "Steps: ";
+                        const stepCountInput = document.createElement("input");
+                        stepCountInput.type = "number";
+                        stepCountInput.min = "1";
+                        stepCountInput.max = "64";
+                        stepCountInput.value = node.audioParams.retriggerVolumeSteps?.length || 3;
+                        stepCountInput.style.width = "50px";
+                        stepCountInput.addEventListener("change", (e_steps) => {
+                            const newCount = parseInt(e_steps.target.value);
+                            if (isNaN(newCount) || newCount < 1 || newCount > 64) {
+                                e_steps.target.value = node.audioParams.retriggerVolumeSteps?.length || 3;
+                                return;
+                            }
+                            selectedArray.forEach(elData => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.audioParams) {
+                                    const types = ["Volume", "Pitch", "Filter", "Mute"];
+                                    types.forEach(t => {
+                                        const key = `retrigger${t}Steps`;
+                                        const currentArray = n.audioParams[key] || [];
+                                        const defaultValue = t === "Mute" ? false : (t === "Volume" ? 0.5 : 0);
+                                        const newArray = Array(newCount).fill(null).map((_, i) => 
+                                            i < currentArray.length ? currentArray[i] : defaultValue
+                                        );
+                                        n.audioParams[key] = newArray;
+                                    });
+                                }
+                            });
+                            saveState();
+                            populateEditPanel();
+                        });
+                        controlsDiv.appendChild(stepCountLabel);
+                        controlsDiv.appendChild(stepCountInput);
+
+                        const intervalLabel = document.createElement("label");
+                        intervalLabel.textContent = "Interval(ms): ";
+                        intervalLabel.style.marginLeft = "10px";
+                        const intervalInput = document.createElement("input");
+                        intervalInput.type = "number";
+                        intervalInput.min = "10";
+                        intervalInput.max = "1000";
+                        intervalInput.step = "10";
+                        intervalInput.value = node.audioParams.retriggerIntervalMs || 100;
+                        intervalInput.style.width = "60px";
+                        intervalInput.addEventListener("change", (e_interval) => {
+                            const newInterval = parseInt(e_interval.target.value);
+                            if (isNaN(newInterval) || newInterval < 10 || newInterval > 1000) {
+                                e_interval.target.value = node.audioParams.retriggerIntervalMs || 100;
+                                return;
+                            }
+                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) n.audioParams.retriggerIntervalMs = newInterval; });
+                            saveState();
+                        });
+                        controlsDiv.appendChild(intervalLabel);
+                        controlsDiv.appendChild(intervalInput);
+
+                        const rateModeLabel = document.createElement("label");
+                        rateModeLabel.textContent = "Rate Mode: ";
+                        rateModeLabel.style.marginLeft = "10px";
+                        const rateModeSelect = document.createElement("select");
+                        const modes = ["constant", "accelerate", "decelerate", "random"];
+                        modes.forEach(mode => {
+                            const opt = document.createElement("option");
+                            opt.value = mode;
+                            opt.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+                            if (mode === (node.audioParams.retriggerRateMode || "constant")) opt.selected = true;
+                            rateModeSelect.appendChild(opt);
+                        });
+                        rateModeSelect.addEventListener("change", (e_rate) => {
+                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n && n.audioParams) n.audioParams.retriggerRateMode = e_rate.target.value; });
+                            saveState();
+                        });
+                        controlsDiv.appendChild(rateModeLabel);
+                        controlsDiv.appendChild(rateModeSelect);
+
+                        retriggerSection.appendChild(controlsDiv);
+                    } else if (node.audioParams) {
+                         console.log(`[Retrigger Debug] Retrigger is NOT enabled for node ${node.id}, further controls skipped.`);
+                    }
+
+                    if (retriggerSection.hasChildNodes()) {
+                        console.log("[Retrigger Debug] Appending retriggerSection to currentSection.");
+                        if (currentSection && typeof currentSection.appendChild === 'function') {
+                            currentSection.appendChild(retriggerSection);
+                        } else {
+                             console.warn("[Retrigger Debug] currentSection is not defined or not a DOM element, cannot append retriggerSection.");
+                             fragment.appendChild(retriggerSection);
+                        }
+                    } else {
+                         console.warn("[Retrigger Debug] retriggerSection has no children, not appending.");
+                    }
+                } else {
+                     console.log(`[Retrigger Debug] Condition NOT met for node type ${node.type} OR audioParams missing for retrigger section.`);
+                }
+
+
+                if (currentSection && currentSection.hasChildNodes() && !fragment.contains(currentSection)) {
+                    fragment.appendChild(currentSection);
+                }
+            }
+
+        } else if (firstElementData.type === "connection") {
+            const connection = findConnectionById(firstElementData.id);
+            if (connection) {
+                const section = document.createElement("div");
+                section.classList.add("panel-section");
+
+                if (connection.type === "string_violin") {
+                    const params = connection.audioParams;
+                    const defaults = STRING_VIOLIN_DEFAULTS;
+                    const currentVol = params?.volume ?? defaults.volume;
+                    const volVal = currentVol.toFixed(2);
+                    const volSliderContainer = createSlider(
+                        `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
+                        saveState,
+                        (e_input) => {
+                            const newVol = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
+                            e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                        }
+                    );
+                    section.appendChild(volSliderContainer);
+                    const currentAttack = params?.attack ?? defaults.attack;
+                    const attackVal = currentAttack.toFixed(2);
+                    const attackSliderContainer = createSlider(
+                        `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
+                        saveState,
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
+                            e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
+                        }
+                    );
+                    section.appendChild(attackSliderContainer);
+                    const currentRelease = params?.release ?? defaults.release;
+                    const releaseVal = currentRelease.toFixed(2);
+                    const releaseSliderContainer = createSlider(
+                        `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
+                        saveState,
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
+                            e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
+                        }
+                    );
+                    section.appendChild(releaseSliderContainer);
+                } else if (connection.type === "wavetrail") {
+                    console.log(`[Wavetrail Debug] populateEditPanel: Processing Wavetrail connection ID ${connection.id}`);
+                    section.classList.add("panel-section");
+
+                    const fileLabel = document.createElement("label");
+                    fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
+                    fileLabel.textContent = "Audio File:";
+                    section.appendChild(fileLabel);
+
+                    const fileInput = document.createElement("input");
+                    fileInput.type = "file";
+                    fileInput.id = `edit-wavetrail-file-${connection.id}`;
+                    fileInput.accept = ".wav,.mp3,audio/*";
+                    fileInput.style.marginBottom = "5px";
+                    fileInput.addEventListener("change", (e) => handleWaveTrailFileInputChange(e, connection));
+                    section.appendChild(fileInput);
+
+                    const fileNameDisplay = document.createElement("small");
+                    fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
+                    if (!connection.audioParams) {
+                        console.error(`[Wavetrail Debug] populateEditPanel: connection.audioParams is missing for ID ${connection.id}`);
+                        connection.audioParams = {};
+                    }
+                    fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || "None selected"}`;
+                    fileNameDisplay.style.display = "block";
+                    section.appendChild(fileNameDisplay);
+                    console.log(`[Wavetrail Debug] populateEditPanel: Checking buffer for Wavetrail ${connection.id}. Buffer exists: ${!!connection.audioParams?.buffer}`);
+
+                    if (connection.audioParams?.buffer) {
+                        console.log(`[Wavetrail Debug] populateEditPanel: Buffer found for Wavetrail ${connection.id}. Creating sliders.`);
+                        const bufferDuration = connection.audioParams.buffer.duration;
+                        const currentStartOffset = connection.audioParams.startTimeOffset || 0;
+                        const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+                        const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
+                        const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
+                        const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
+
+                        const offsetLabel = document.createElement("label");
+                        offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
+                        offsetLabel.style.marginTop = "10px";
+                        offsetLabel.textContent = `Start Offset (${currentStartOffset.toFixed(2)}s):`;
+                        section.appendChild(offsetLabel);
+                        const offsetSlider = document.createElement("input");
+                        offsetSlider.type = "range";
+                        offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
+                        offsetSlider.min = "0";
+                        offsetSlider.max = bufferDuration.toFixed(3);
+                        offsetSlider.step = "0.01";
+                        offsetSlider.value = currentStartOffset;
+                        offsetSlider.title = "Scrub Start Time";
+                        const offsetValueDisplay = document.createElement("span");
+                        offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
+                        offsetValueDisplay.textContent = `${currentStartOffset.toFixed(2)}s`;
+                        offsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
+                        section.appendChild(offsetSlider);
+                        section.appendChild(offsetValueDisplay);
+
+                        const endOffsetLabel = document.createElement("label");
+                        endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
+                        endOffsetLabel.style.marginTop = "10px";
+                        endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
+                        section.appendChild(endOffsetLabel);
+                        const endOffsetSlider = document.createElement("input");
+                        endOffsetSlider.type = "range";
+                        endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
+                        endOffsetSlider.min = currentStartOffset.toFixed(3);
+                        endOffsetSlider.max = bufferDuration.toFixed(3);
+                        endOffsetSlider.step = "0.01";
+                        endOffsetSlider.value = currentEndOffset;
+                        endOffsetSlider.title = "Scrub End Time";
+                        const endOffsetValueDisplay = document.createElement("span");
+                        endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
+                        endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
+                        endOffsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
+                        section.appendChild(endOffsetSlider);
+                        section.appendChild(endOffsetValueDisplay);
+
+                        offsetSlider.addEventListener("input", (e_input) => {
+                            const newStart = parseFloat(e_input.target.value);
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) {
+                                localConn.audioParams.startTimeOffset = newStart;
+                                const endSlider = document.getElementById(`edit-wavetrail-end-${localConn.id}`);
+                                if (endSlider) endSlider.min = newStart.toFixed(3);
+                                if (localConn.audioParams.endTimeOffset !== null && localConn.audioParams.endTimeOffset < newStart) {
+                                    localConn.audioParams.endTimeOffset = newStart + 0.01;
+                                    if (endSlider) endSlider.value = localConn.audioParams.endTimeOffset;
+                                    const endValDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn.id}`);
+                                    if (endValDisplay) endValDisplay.textContent = `${localConn.audioParams.endTimeOffset.toFixed(2)}s`;
+                                }
+                            }
+                            const valDisplay = document.getElementById(`edit-wavetrail-start-value-${localConn ? localConn.id : connection.id}`);
+                            if (valDisplay) valDisplay.textContent = `${newStart.toFixed(2)}s`;
+                            if (localConn && localConn.audioParams?.buffer) {
+                                localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
+                            }
+                        });
+                        offsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
+
+                        endOffsetSlider.addEventListener("input", (e_input) => {
+                            const newEnd = parseFloat(e_input.target.value);
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) {
+                                localConn.audioParams.endTimeOffset = newEnd;
+                            }
+                            const valDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn ? localConn.id : connection.id}`);
+                            if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
+                             if (localConn && localConn.audioParams?.buffer) {
+                                localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
+                            }
+                        });
+                        endOffsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
+
+                        const grainDurSlider = createSlider(`edit-wavetrail-graindur-${connection.id}`, `Grain Duration (${currentGrainDuration.toFixed(3)}s):`, 0.005, 0.5, 0.001, currentGrainDuration, saveState, (e) => {
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) localConn.audioParams.grainDuration = parseFloat(e.target.value);
+                            e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
+                        });
+                        section.appendChild(grainDurSlider);
+                        const grainOvlSlider = createSlider(`edit-wavetrail-grainovl-${connection.id}`, `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`, 0.001, 0.49, 0.001, currentGrainOverlap, saveState, (e) => {
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) localConn.audioParams.grainOverlap = parseFloat(e.target.value);
+                            e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
+                        });
+                        section.appendChild(grainOvlSlider);
+                        const rateSlider = createSlider(`edit-wavetrail-rate-${connection.id}`, `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`, 0.1, 4.0, 0.05, currentPlaybackRate, saveState, (e) => {
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) localConn.audioParams.playbackRate = parseFloat(e.target.value);
+                            e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
+                        });
+                        section.appendChild(rateSlider);
+                    } else {
+                        console.log(`[Wavetrail Debug] populateEditPanel: Buffer NOT found for Wavetrail ${connection.id}. Not creating sliders.`);
+                        const noBufferMsg = document.createElement("small");
+                        noBufferMsg.textContent = " (Upload an audio file to enable more controls)";
+                        noBufferMsg.style.display = "block";
+                        noBufferMsg.style.opacity = "0.7";
+                        section.appendChild(noBufferMsg);
+                    }
+                }
+                if (section.hasChildNodes()) fragment.appendChild(section);
+            }
         }
-      }
+    } else {
+        const multiInfo = document.createElement("small");
+        multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
+        fragment.appendChild(multiInfo);
     }
-  } else {
-    const multiInfo = document.createElement("small");
-    multiInfo.textContent =
-      "Editing multiple elements of different types. Only common properties might be available if implemented.";
-    fragment.appendChild(multiInfo);
-  }
 
-  editPanelContent.appendChild(fragment);
+    editPanelContent.appendChild(fragment);
 
-  if (
-    hamburgerMenuPanel &&
-    hamburgerMenuPanel.classList.contains("hidden") &&
-    currentTool === "edit" &&
-    selectedElements.size > 0
-  ) {
-    hamburgerMenuPanel.classList.remove("hidden");
-    if (hamburgerBtn) hamburgerBtn.classList.add("active");
-  }
-  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
-    sideToolbar.classList.add("hidden");
-    const addBrushButtons = toolbar.querySelectorAll(
-      "#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button",
-    );
-    addBrushButtons.forEach((btn) => btn.classList.remove("active"));
-    if (brushBtn) brushBtn.classList.remove("active");
-  }
+    if (hamburgerMenuPanel && currentTool === "edit" && selectedElements.size > 0) {
+        if (hamburgerMenuPanel.classList.contains("hidden")) {
+            hamburgerMenuPanel.classList.remove("hidden");
+            if (hamburgerBtn) hamburgerBtn.classList.add("active");
+        }
+    } else if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden")) {
+        hamburgerMenuPanel.classList.add("hidden");
+        if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+    }
+
+    if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
+        sideToolbar.classList.add("hidden");
+        const addBrushButtons = toolbar.querySelectorAll(
+            "#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button"
+        );
+        addBrushButtons.forEach(btn => btn.classList.remove("active"));
+        if (brushBtn) brushBtn.classList.remove("active");
+    }
 }
 
 function populateSideToolbar(contentType, title) {
@@ -17712,62 +17511,67 @@ function changeScale(scaleKey, skipNodeUpdate = false) {
   currentScale = scales[scaleKey];
   document.body.className = currentScale.theme;
   if (scaleSelectTransport) {
-    scaleSelectTransport.value = scaleKey;
+      scaleSelectTransport.value = scaleKey;
   }
 
   if (!skipNodeUpdate) {
-    nodes.forEach((node) => {
-      if (node.type === "sound" || node.type === "nebula") {
-        node.audioParams.scaleIndex = Math.max(
-          MIN_SCALE_INDEX,
-          Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
-        );
-        node.audioParams.pitch = getFrequency(
-          currentScale,
-          node.audioParams.scaleIndex,
-        );
-        if (isNaN(node.audioParams.pitch)) {
-          node.audioParams.scaleIndex = 0;
-          node.audioParams.pitch = getFrequency(currentScale, 0);
-        }
-        updateNodeAudioParams(node);
-      }
-    });
-    connections.forEach((conn) => {
-      if (conn.type === "string_violin") {
-        conn.audioParams.scaleIndex = Math.max(
-          MIN_SCALE_INDEX,
-          Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
-        );
-        conn.audioParams.pitch = getFrequency(
-          currentScale,
-          conn.audioParams.scaleIndex,
-        );
-        if (isNaN(conn.audioParams.pitch)) {
-          conn.audioParams.scaleIndex = 0;
-          conn.audioParams.pitch = getFrequency(currentScale, 0);
-        }
-        updateConnectionAudioParams(conn);
-      }
-    });
+      const newThemeMeteorColors = getThemeMeteorColors(); 
+
+      nodes.forEach((node) => {
+          if (node.type === "sound" || node.type === "nebula") {
+              node.audioParams.scaleIndex = Math.max(
+                  MIN_SCALE_INDEX,
+                  Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
+              );
+              node.audioParams.pitch = getFrequency(
+                  currentScale,
+                  node.audioParams.scaleIndex,
+              );
+              if (isNaN(node.audioParams.pitch)) {
+                  node.audioParams.scaleIndex = 0;
+                  node.audioParams.pitch = getFrequency(currentScale, 0);
+              }
+              updateNodeAudioParams(node);
+          }
+          if (node.type === 'pulsar_meteorshower' && newThemeMeteorColors.length > 0) {
+              node.color = newThemeMeteorColors[Math.floor(Math.random() * newThemeMeteorColors.length)];
+          }
+      });
+      connections.forEach((conn) => {
+          if (conn.type === "string_violin") {
+              conn.audioParams.scaleIndex = Math.max(
+                  MIN_SCALE_INDEX,
+                  Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
+              );
+              conn.audioParams.pitch = getFrequency(
+                  currentScale,
+                  conn.audioParams.scaleIndex,
+              );
+              if (isNaN(conn.audioParams.pitch)) {
+                  conn.audioParams.scaleIndex = 0;
+                  conn.audioParams.pitch = getFrequency(currentScale, 0);
+              }
+              updateConnectionAudioParams(conn);
+          }
+      });
   }
 
   if (
-    !sideToolbar.classList.contains("hidden") &&
-    (nodeTypeToAdd === "sound" || nodeTypeToAdd === "nebula")
+      !sideToolbar.classList.contains("hidden") &&
+      (nodeTypeToAdd === "sound" || nodeTypeToAdd === "nebula")
   ) {
-    noteIndexToAdd = -1;
-    if (currentTool === "add" || currentTool === "brush") {
-      if (document.getElementById("hexNoteSelectorContainer")) {
-        createHexNoteSelectorDOM(sideToolbarContent);
+      noteIndexToAdd = -1;
+      if (currentTool === "add" || currentTool === "brush") {
+          if (document.getElementById("hexNoteSelectorContainer")) {
+              createHexNoteSelectorDOM(sideToolbarContent);
+          }
       }
-    }
   }
 
   drawPianoRoll();
   populateEditPanel();
   if (!skipNodeUpdate) {
-    saveState();
+      saveState();
   }
 }
 
@@ -18453,6 +18257,22 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     };
   }
 
+  if (type === "pulsar_meteorshower") {
+      newNode.audioParams.meteorMaxRadius = METEOR_SHOWER_DEFAULT_MAX_RADIUS;
+      newNode.audioParams.meteorGrowthRate = METEOR_SHOWER_DEFAULT_GROWTH_RATE;
+      newNode.audioParams.pulseIntensity = newNode.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+      newNode.audioParams.ignoreGlobalSync = newNode.audioParams.ignoreGlobalSync ?? false;
+      newNode.audioParams.syncSubdivisionIndex = newNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
+      newNode.audioParams.triggerInterval = newNode.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+      
+      
+      const themeMeteorColorsForNode = getThemeMeteorColors();
+      if (themeMeteorColorsForNode.length > 0) {
+          newNode.color = themeMeteorColorsForNode[Math.floor(Math.random() * themeMeteorColorsForNode.length)];
+      } else {
+          newNode.color = 'rgba(255, 150, 50, 0.7)'; 
+      }}
+
   applyOrbitoneVoicingFromPhase(newNode);
   applyOrbitoneTimingFromPhase(newNode);
 
@@ -18504,6 +18324,11 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     newNode.audioParams.isTransposeEnabled = false;
     newNode.audioParams.transposeDirection = "+";
     newNode.audioParams.transposeAmount = 0;
+
+    newNode.audioParams.autoRotateEnabled = TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+    newNode.audioParams.autoRotateSpeedManual = TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+    newNode.audioParams.autoRotateDirection = TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
+    newNode.audioParams.autoRotateSyncSubdivisionIndex = TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
 
     newNode.isStartNode = false;
     newNode.audioNodes = null;
@@ -18560,6 +18385,379 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   nodes.push(newNode);
   identifyAndRouteAllGroups();
   return newNode;
+}
+
+function getThemeMeteorColors() {
+  const styles = getComputedStyle(document.body); 
+  const colors = [];
+  const color1 = styles.getPropertyValue('--meteorshower-style-color-1').trim();
+  const color2 = styles.getPropertyValue('--meteorshower-style-color-2').trim();
+  const color3 = styles.getPropertyValue('--meteorshower-style-color-3').trim();
+
+  if (color1) colors.push(color1);
+  if (color2) colors.push(color2);
+  if (color3) colors.push(color3);
+
+  
+  if (colors.length === 0) {
+      return [
+          'rgba(255,100,100,0.7)', 
+          'rgba(100,255,100,0.7)', 
+          'rgba(100,100,255,0.7)'  
+      ];
+  }
+  return colors;
+}
+
+function startMeteorShower(originConfig) {
+  if (!isAudioReady || !originConfig) {
+      return;
+  }
+
+  let idPrefix = "ms_";
+  let originX, originY, maxRadius, growthRate, color, generation, sourceNodeIdForTracking;
+  let pulseIntensity = DEFAULT_PULSE_INTENSITY;
+  let isCollisionProduct = false;
+  let canSpawnFromCollisionUntil = 0;
+  const currentTime = audioContext ? audioContext.currentTime : performance.now() / 1000;
+
+  if (originConfig.type === 'node') {
+      const sourceNode = originConfig.node;
+      if (!sourceNode || !sourceNode.audioParams || (originConfig.generation !== undefined && originConfig.generation >= MAX_METEOR_SHOWER_GENERATIONS)) {
+          return;
+      }
+
+      originX = sourceNode.x;
+      originY = sourceNode.y;
+      maxRadius = sourceNode.audioParams.meteorMaxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS;
+      growthRate = sourceNode.audioParams.meteorGrowthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE;
+      generation = originConfig.generation || 0;
+      sourceNodeIdForTracking = sourceNode.id;
+      idPrefix = `ms_node_${sourceNode.id}_gen${generation}_`;
+      pulseIntensity = sourceNode.audioParams.pulseIntensity || DEFAULT_PULSE_INTENSITY;
+      isCollisionProduct = false;
+      canSpawnFromCollisionUntil = 0;
+
+      
+      if (originConfig.previousShowerColor && typeof originConfig.previousShowerColor === 'string' && originConfig.previousShowerColor.startsWith('rgba')) {
+          
+          try {
+              const match = originConfig.previousShowerColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
+              if (match) {
+                  const [rVal, gVal, bVal, aVal = 1] = match.slice(1).map(Number);
+                  const newR = Math.min(255, Math.max(0, rVal + generation * 10 + 10));
+                  const newG = Math.min(255, Math.max(0, gVal - generation * 15 - 10));
+                  const newB = Math.min(255, Math.max(0, bVal + generation * 5 + 5));
+                  
+                  color = `rgba(${newR},${newG},${newB},${Math.max(0.1, parseFloat(aVal) * 0.85).toFixed(2)})`;
+              } else { color = 'rgba(225, 120, 150, 0.6)'; } 
+          } catch (e) { color = 'rgba(225, 120, 150, 0.6)'; }
+      } else if (sourceNode.color && typeof sourceNode.color === 'string') {
+          
+          
+          const showerAlpha = 0.7; 
+          if (sourceNode.color.startsWith('rgba')) {
+              try {
+                  const match = sourceNode.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
+                  if (match) {
+                      const [rVal, gVal, bVal] = match.slice(1).map(Number);
+                      color = `rgba(${rVal},${gVal},${bVal},${showerAlpha})`;
+                  } else { color = `rgba(200, 200, 200, ${showerAlpha})`; }
+              } catch (e) { color = `rgba(200, 200, 200, ${showerAlpha})`; }
+          } else if (sourceNode.color.startsWith('#')) {
+              color = hexToRgba(sourceNode.color, showerAlpha) || `rgba(200, 200, 200, ${showerAlpha})`;
+          } else { 
+              
+              
+              const pulsarDef = pulsarTypes.find(p => p.type === sourceNode.type);
+              if (pulsarDef && pulsarDef.type === 'pulsar_meteorshower') {
+                   color = `rgba(255, 150, 50, ${showerAlpha})`; 
+              } else {
+                   color = `rgba(200, 220, 255, ${showerAlpha})`;
+              }
+          }
+      } else {
+          
+          const defaultMeteorColors = [`rgba(255,100,100,0.7)`, `rgba(100,255,100,0.7)`, `rgba(100,100,255,0.7)`];
+          color = defaultMeteorColors[Math.floor(Math.random() * defaultMeteorColors.length)];
+      }
+      
+
+  } else if (originConfig.type === 'collision') {
+      if (originConfig.generation >= MAX_METEOR_SHOWER_GENERATIONS) {
+          return;
+      }
+      originX = originConfig.x;
+      originY = originConfig.y;
+      generation = originConfig.generation || 0;
+      
+      color = originConfig.color || 'rgba(180, 220, 255, 0.7)'; 
+      maxRadius = originConfig.maxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS * 0.6;
+      growthRate = originConfig.growthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE * 1.2;
+      sourceNodeIdForTracking = 'COLLISION_SPAWNED_SHOWER';
+      idPrefix = `ms_coll_gen${generation}_`;
+      pulseIntensity = DEFAULT_PULSE_INTENSITY * 0.6;
+      isCollisionProduct = true;
+      canSpawnFromCollisionUntil = currentTime + COLLISION_SPAWN_COOLDOWN_SECONDS;
+  } else {
+      return;
+  }
+
+  if (typeof color !== 'string' || !(color.startsWith('rgba') || color.startsWith('#') || /^[a-zA-Z]+$/.test(color) )) {
+      color = 'rgba(255, 0, 0, 0.5)';
+  }
+  if (isNaN(originX) || isNaN(originY) || isNaN(maxRadius) || isNaN(growthRate) || isNaN(generation) || isNaN(pulseIntensity)) {
+      return;
+  }
+
+  const newShower = {
+      id: `${idPrefix}${meteorShowerIdCounter++}`,
+      originX: originX,
+      originY: originY,
+      currentRadius: 0,
+      maxRadius: maxRadius,
+      growthRate: growthRate,
+      color: color, 
+      startTime: currentTime,
+      sourceNodeId: sourceNodeIdForTracking,
+      triggeredNodes: new Set(),
+      generation: generation,
+      pulseData: {
+          intensity: pulseIntensity,
+          color: color 
+      },
+      isCollisionProduct: isCollisionProduct,
+      canSpawnFromCollisionUntil: canSpawnFromCollisionUntil
+  };
+  activeMeteorShowers.push(newShower);
+}   
+function updateAndDrawMeteorShowers(deltaTime, now) {
+  const currentShowersToProcess = [...activeMeteorShowers];
+  const survivors = [];
+  const collisionSpawnConfigs = [];
+  
+
+  if (Math.random() < 0.01) {
+      for (const [key, expiry] of recentlyInteractedShowerPairs) {
+          if (now > expiry + (PAIR_INTERACTION_COOLDOWN_SECONDS * 10)) {
+              recentlyInteractedShowerPairs.delete(key);
+          }
+      }
+  }
+
+  for (let i = 0; i < currentShowersToProcess.length; i++) {
+      const shower1 = currentShowersToProcess[i];
+
+      if (!shower1 || typeof shower1.currentRadius === 'undefined' || typeof shower1.growthRate === 'undefined') {
+          continue;
+      }
+
+      shower1.currentRadius += shower1.growthRate * deltaTime;
+
+      if (shower1.currentRadius < shower1.maxRadius) {
+          const mainRingProgress = Math.min(1.0, shower1.currentRadius / shower1.maxRadius);
+          const overallAlphaFade = Math.max(0, 1 - mainRingProgress * mainRingProgress);
+          const targetLineWidth = (4 / viewScale) * Math.max(0.1, 1 - mainRingProgress);
+
+          if (shower1.color && overallAlphaFade > 0.005 && targetLineWidth > 0.05 / viewScale) {
+              ctx.beginPath();
+              ctx.arc(shower1.originX, shower1.originY, shower1.currentRadius, 0, Math.PI * 2);
+              const originalGlobalAlphaCtx = ctx.globalAlpha;
+              let strokeStyleToUse = shower1.color;
+              try {
+                  const grad = ctx.createRadialGradient(
+                      shower1.originX, shower1.originY, Math.max(0, shower1.currentRadius - targetLineWidth / 2 -1),
+                      shower1.originX, shower1.originY, shower1.currentRadius + targetLineWidth / 2 +1
+                  );
+                  let rVal = 200, gVal = 220, bVal = 255;
+                  if (typeof shower1.color === 'string') {
+                      if (shower1.color.startsWith('rgba')) {
+                          const match = shower1.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
+                          if (match) { rVal = parseInt(match[1]); gVal = parseInt(match[2]); bVal = parseInt(match[3]); }
+                      } else if (shower1.color.startsWith('#')) {
+                          const rgbObj = hexToRgbForGradient(shower1.color);
+                          if (rgbObj) { rVal = rgbObj.r; gVal = rgbObj.g; bVal = rgbObj.b; }
+                      }
+                  }
+                  grad.addColorStop(0, `rgba(${rVal},${gVal},${bVal},0)`);
+                  grad.addColorStop(0.5, `rgba(${rVal},${gVal},${bVal},${overallAlphaFade.toFixed(2)})`);
+                  grad.addColorStop(1, `rgba(${rVal},${gVal},${bVal},0)`);
+                  strokeStyleToUse = grad;
+                  ctx.globalAlpha = 1.0; 
+              } catch (e) {
+                  ctx.globalAlpha = overallAlphaFade;
+                  if (typeof shower1.color === 'string' && shower1.color.startsWith('rgba')) {
+                      strokeStyleToUse = shower1.color.replace(/[\d\.]+\)$/g, `${overallAlphaFade.toFixed(2)})`);
+                  } else if (typeof shower1.color === 'string') {
+                      strokeStyleToUse = shower1.color;
+                  } else {
+                      strokeStyleToUse = `rgba(200,200,200,${overallAlphaFade.toFixed(2)})`;
+                  }
+              }
+              ctx.strokeStyle = strokeStyleToUse;
+              ctx.lineWidth = targetLineWidth;
+              ctx.stroke();
+              ctx.globalAlpha = originalGlobalAlphaCtx;
+          }
+
+          nodes.forEach(node => {
+              if (node.id === shower1.sourceNodeId || shower1.triggeredNodes.has(node.id) || node.type === "pulsar_meteorshower") {
+                  return;
+              }
+              const dxNode = node.x - shower1.originX;
+              const dyNode = node.y - shower1.originY;
+              const distNodeToOrigin = Math.sqrt(dxNode * dxNode + dyNode * dyNode);
+              const nodeRadius = (NODE_RADIUS_BASE * node.size);
+              const prevShowerRadius = shower1.currentRadius - (shower1.growthRate * deltaTime);
+
+              if (distNodeToOrigin < shower1.currentRadius + nodeRadius && distNodeToOrigin > prevShowerRadius - nodeRadius) {
+                  if (!shower1.triggeredNodes.has(node.id)) {
+                      shower1.triggeredNodes.add(node.id);
+                      const pulseId = `meteor_${shower1.id}_${node.id}`;
+
+                      
+                      const initialIntensity = shower1.pulseData?.intensity || DEFAULT_PULSE_INTENSITY;
+                      const expansionProgressForSound = Math.min(1.0, shower1.currentRadius / shower1.maxRadius);
+                      
+                      const minIntensityFactorAtEdge = 0.25; 
+                      const dynamicIntensity = initialIntensity * (1.0 - expansionProgressForSound * (1.0 - minIntensityFactorAtEdge));
+                      const finalSoundIntensity = Math.max(initialIntensity * minIntensityFactorAtEdge, dynamicIntensity);
+                      
+
+                      propagateTrigger(node, 0, pulseId, shower1.sourceNodeId, Infinity, {
+                          type: "trigger",
+                          data: { intensity: finalSoundIntensity, color: shower1.pulseData?.color || shower1.color }
+                      }, null);
+                      
+                      const canPropagateShowerTypes = ["sound", "nebula", PORTAL_NEBULA_TYPE, PRORB_TYPE];
+                      const isAllowedToPropagate = canPropagateShowerTypes.includes(node.type) || isPulsarType(node.type) || isDrumType(node.type);
+                      if (isAllowedToPropagate) {
+                          if (shower1.generation < MAX_METEOR_SHOWER_GENERATIONS) {
+                              startMeteorShower({ type: 'node', node: node, generation: shower1.generation + 1, previousShowerColor: shower1.color });
+                          }
+                      }
+                  }
+              }
+          });
+
+          for (let j = i + 1; j < currentShowersToProcess.length; j++) {
+              const shower2 = currentShowersToProcess[j];
+              if (!shower2 || shower2.currentRadius >= shower2.maxRadius) continue;
+
+              if ( (shower1.isCollisionProduct && now < shower1.canSpawnFromCollisionUntil) ||
+                   (shower2.isCollisionProduct && now < shower2.canSpawnFromCollisionUntil) ) {
+                  continue;
+              }
+
+              if (shower1.sourceNodeId === shower2.sourceNodeId && shower1.sourceNodeId !== 'COLLISION_SPAWNED_SHOWER') {
+                  continue;
+              }
+              if (shower1.sourceNodeId === 'COLLISION_SPAWNED_SHOWER' && shower2.sourceNodeId === 'COLLISION_SPAWNED_SHOWER') {
+                 continue;
+              }
+
+              const pairIdKey = shower1.id < shower2.id ? `${shower1.id}-${shower2.id}` : `${shower2.id}-${shower1.id}`;
+              
+              if (recentlyInteractedShowerPairs.has(pairIdKey) && now < recentlyInteractedShowerPairs.get(pairIdKey)) {
+                  continue; 
+              }
+
+              const distBetweenOrigins = distance(shower1.originX, shower1.originY, shower2.originX, shower2.originY);
+              const sumOfCurrentRadii = shower1.currentRadius + shower2.currentRadius;
+
+              if (distBetweenOrigins > 0.1 && distBetweenOrigins < sumOfCurrentRadii) {
+                  const newCollisionGeneration = Math.max(shower1.generation, shower2.generation) + 1;
+
+                  if (newCollisionGeneration < MAX_METEOR_SHOWER_GENERATIONS) {
+                      recentlyInteractedShowerPairs.set(pairIdKey, now + PAIR_INTERACTION_COOLDOWN_SECONDS);
+                      
+                      const collisionRatio = distBetweenOrigins > 0 ? shower1.currentRadius / sumOfCurrentRadii : 0.5;
+                      const collisionX = shower1.originX + (shower2.originX - shower1.originX) * collisionRatio;
+                      const collisionY = shower1.originY + (shower2.originY - shower1.originY) * collisionRatio;
+                      
+                      let mergedColor = 'rgba(220, 200, 255, 0.7)';
+                      try {
+                          const c1Match = (typeof shower1.color === 'string') ? shower1.color.match(/\d+/g) : null;
+                          const c2Match = (typeof shower2.color === 'string') ? shower2.color.match(/\d+/g) : null;
+                          if (c1Match && c1Match.length >=3 && c2Match && c2Match.length >= 3) {
+                              const c1 = c1Match.map(Number);
+                              const c2 = c2Match.map(Number);
+                              mergedColor = `rgba(${Math.round((c1[0]+c2[0])/2)}, ${Math.round((c1[1]+c2[1])/2)}, ${Math.round((c1[2]+c2[2])/2)}, 0.7)`;
+                          }
+                      } catch(e){}
+                      
+                      createCollisionImpactVisual(collisionX, collisionY, mergedColor);
+
+                      collisionSpawnConfigs.push({
+                          type: 'collision',
+                          x: collisionX,
+                          y: collisionY,
+                          generation: newCollisionGeneration,
+                          color: mergedColor,
+                          maxRadius: METEOR_SHOWER_DEFAULT_MAX_RADIUS * 0.6,
+                          growthRate: METEOR_SHOWER_DEFAULT_GROWTH_RATE * 1.3,
+                          parentSourceId: 'COLLISION_SPAWNED_SHOWER'
+                      });
+                  }
+              }
+          }
+          survivors.push(shower1);
+      }
+  }
+
+  activeMeteorShowers = survivors;
+  collisionSpawnConfigs.forEach(config => {
+      startMeteorShower(config);
+  });
+}
+
+function createCollisionImpactVisual(x, y, baseColorString) {
+    const numImpactParticles = 15 + Math.floor(Math.random() * 10); 
+    let particleColorForFlash = 'rgba(250, 250, 250, 0.9)'; 
+
+    if (baseColorString && typeof baseColorString === 'string') {
+        if (baseColorString.startsWith('rgba')) {
+            try {
+                const match = baseColorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
+                if (match) {
+                    const [r, g, b] = match.slice(1).map(Number);
+                    
+                    particleColorForFlash = `rgba(${r},${g},${b},0.9)`; 
+                }
+                
+            } catch (e) {
+                
+                particleColorForFlash = 'rgba(250, 250, 250, 0.9)';
+            }
+        } else if (baseColorString.startsWith('#')) {
+            
+            particleColorForFlash = hexToRgba(baseColorString, 0.9) || 'rgba(250, 250, 250, 0.9)';
+        } else {
+            
+            
+            particleColorForFlash = 'rgba(250, 250, 250, 0.9)';
+        }
+    }
+
+    for (let i = 0; i < numImpactParticles; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2.0 + Math.random() * 2.5; 
+        const life = 0.18 + Math.random() * 0.25; 
+        
+        if (typeof activeParticles !== 'undefined' && typeof particleIdCounter !== 'undefined') {
+            activeParticles.push({
+                id: particleIdCounter++,
+                x: x + (Math.random() - 0.5) * 3,
+                y: y + (Math.random() - 0.5) * 3,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: life,
+                maxLife: life,
+                radius: 1.8 + Math.random() * 2.2,
+                color: particleColorForFlash, 
+            });
+        }
+    }
 }
 
 function resetStartNodeTimers() {
@@ -19253,53 +19451,67 @@ function handleWaveTrailFileInputChange(event, connection) {
 }
 
 async function loadAndDecodeAudio(arrayBuffer, connection) {
-  if (!audioContext || !connection) return;
-  const fileNameDisplay = document.getElementById(
-    `edit-wavetrail-filename-${connection.id}`,
-  );
-  try {
-    let decodedBuffer;
-    if (audioContext.decodeAudioData.length !== 1) {
-      decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    } else {
-      decodedBuffer = await new Promise((resolve, reject) => {
-        audioContext.decodeAudioData(arrayBuffer, resolve, reject);
-      });
-    }
-    connection.audioParams.buffer = decodedBuffer;
-
-    connection.audioParams.waveformPath = generateWaveformPath(
-      decodedBuffer,
-      200,
-    );
-    if (connection.audioParams.waveformPath) {
-      console.log(
-        `Waveform path generated for WaveTrail ${connection.id}, points: ${connection.audioParams.waveformPath.length}`,
-      );
-    } else {
-      console.warn(
-        `Failed to generate waveform path for WaveTrail ${connection.id}`,
-      );
+    if (!audioContext || !connection || !arrayBuffer) {
+        console.error("[Wavetrail Debug] loadAndDecodeAudio: Called with invalid parameters.", { audioContextPresent: !!audioContext, connectionPresent: !!connection, arrayBufferPresent: !!arrayBuffer });
+        if (connection && connection.audioParams) {
+            connection.audioParams.buffer = null;
+            connection.audioParams.waveformPath = null;
+            const fileNameDisplay = document.getElementById(`edit-wavetrail-filename-${connection.id}`);
+            if (fileNameDisplay) fileNameDisplay.textContent = `Error: Invalid data for ${connection.audioParams.fileName || "file"}`;
+        }
+        populateEditPanel(); 
+        return;
     }
 
-    console.log(
-      `Audio decoded successfully for WaveTrail ${connection.id}:`,
-      connection.audioParams.buffer,
-    );
-    if (fileNameDisplay)
-      fileNameDisplay.textContent = `Current: ${connection.audioParams.fileName || "Unnamed"}`;
-    saveState();
-  } catch (error) {
-    console.error(
-      `Error decoding audio data for WaveTrail ${connection.id}:`,
-      error,
-    );
-    if (fileNameDisplay)
-      fileNameDisplay.textContent = `Error decoding: ${connection.audioParams.fileName || "file"}`;
-    connection.audioParams.buffer = null;
-    connection.audioParams.waveformPath = null;
-    connection.audioParams.fileName = null;
-  }
+    const fileNameDisplay = document.getElementById(`edit-wavetrail-filename-${connection.id}`);
+    console.log(`[Wavetrail Debug] loadAndDecodeAudio: Starting for connection ${connection.id}, file: ${connection.audioParams.fileName || 'unknown file'}`);
+
+    try {
+        console.log(`[Wavetrail Debug] loadAndDecodeAudio: Attempting to decode audio data for ${connection.id}...`);
+        let decodedBuffer;
+        if (audioContext.decodeAudioData.length !== 1) { 
+            decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        } else { 
+            decodedBuffer = await new Promise((resolve, reject) => {
+                audioContext.decodeAudioData(arrayBuffer, resolve, reject);
+            });
+        }
+        console.log(`[Wavetrail Debug] loadAndDecodeAudio: Audio decoding finished for ${connection.id}. Buffer valid: ${!!decodedBuffer}`);
+
+        if (!decodedBuffer) {
+            throw new Error("Decoded buffer is null or undefined after decodeAudioData.");
+        }
+
+        connection.audioParams.buffer = decodedBuffer;
+        console.log(`[Wavetrail Debug] loadAndDecodeAudio: Buffer set for ${connection.id}. Duration: ${decodedBuffer.duration}s, Channels: ${decodedBuffer.numberOfChannels}, SampleRate: ${decodedBuffer.sampleRate}`);
+
+        console.log(`[Wavetrail Debug] loadAndDecodeAudio: Generating waveform path for ${connection.id}...`);
+        connection.audioParams.waveformPath = generateWaveformPath(decodedBuffer, 200);
+
+        if (connection.audioParams.waveformPath && connection.audioParams.waveformPath.length > 0) {
+            console.log(`[Wavetrail Debug] loadAndDecodeAudio: Waveform path generated for ${connection.id}, points: ${connection.audioParams.waveformPath.length}`);
+        } else {
+            console.warn(`[Wavetrail Debug] loadAndDecodeAudio: Failed to generate a valid waveform path for ${connection.id}. Buffer duration: ${decodedBuffer?.duration}`);
+            
+        }
+
+        if (fileNameDisplay) fileNameDisplay.textContent = `Current: ${connection.audioParams.fileName || "Unnamed"}`;
+
+        if (connection.audioParams.endTimeOffset === null && connection.audioParams.buffer) {
+            connection.audioParams.endTimeOffset = connection.audioParams.buffer.duration;
+        }
+
+        populateEditPanel();
+        saveState(); 
+
+    } catch (error) {
+        console.error(`[Wavetrail Debug] Error in loadAndDecodeAudio for connection ${connection.id} (${connection.audioParams.fileName || 'unknown file'}):`, error);
+        if (fileNameDisplay) fileNameDisplay.textContent = `Error decoding: ${connection.audioParams.fileName || "file"}`;
+        connection.audioParams.buffer = null;
+        connection.audioParams.waveformPath = null;
+        populateEditPanel();
+        saveState();
+    }
 }
 
 function drawPianoRoll() {
@@ -19577,6 +19789,23 @@ function hexToRgba(hex, alpha = 1) {
   } catch (e) {
     return null;
   }
+}
+
+function hexToRgbForGradient(hex) {
+  if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return null;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) { 
+      r = parseInt(hex[1] + hex[1], 16);
+      g = parseInt(hex[2] + hex[2], 16);
+      b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) { 
+      r = parseInt(hex.substring(1, 3), 16);
+      g = parseInt(hex.substring(3, 5), 16);
+      b = parseInt(hex.substring(5, 7), 16);
+  } else {
+      return null;
+  }
+  return { r, g, b };
 }
 
 function triggerManualPulsar(node) {
