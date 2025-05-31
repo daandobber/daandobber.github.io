@@ -1,6 +1,7 @@
 const canvas = document.getElementById("mainCanvas");
 const ctx = canvas.getContext("2d");
 const startMessage = document.getElementById("startMessage");
+const appMenuAppearanceBackground = document.getElementById("app-menu-appearance-background");
 const loadingIndicator = document.getElementById("loadingIndicator");
 const appMenuBar = document.getElementById("app-menu-bar");
 const appMenuNew = document.getElementById("app-menu-new");
@@ -33,6 +34,11 @@ const appMenuHelpBtn = document.getElementById("app-menu-help-btn");
 const helpPopup = document.getElementById("help-popup");
 const closeHelpPopupBtn = document.getElementById("close-help-popup-btn");
 const scaleSelectTransport = document.getElementById("scaleSelectTransport");
+let currentBackgroundType = "swimming_stars";
+const silentNightBgElement = document.getElementById("silent-night-bg");
+const starsFarLayer = document.getElementById("stars-far");
+const starsMidLayer = document.getElementById("stars-mid");
+const starsNearLayer = document.getElementById("stars-near");
 const closeHamburgerBtn = document.getElementById("closeHamburgerBtn");
 const groupControlsDiv = document.getElementById("groupControls");
 const groupVolumeSlider = document.getElementById("groupVolumeSlider");
@@ -4625,29 +4631,24 @@ function propagateTrigger(
     }
 
     if (!isGlideArrival) {
-      if (currentNode.type === "sound" || isDrumType(currentNode.type)) {
-        if (
-          currentNode.audioParams &&
-          currentNode.audioParams.retriggerEnabled
-        ) {
-          startRetriggerSequence(currentNode, {
-            ...incomingPulse.data,
-          });
-          playPrimaryAudioEffect = false;
-        } else {
-          playPrimaryAudioEffect = true;
+        if (currentNode.type === "sound" || isDrumType(currentNode.type)) {
+             if (currentNode.audioParams && currentNode.audioParams.retriggerEnabled) {
+                startRetriggerSequence(currentNode, { ...incomingPulse.data });
+                playPrimaryAudioEffect = false; 
+            } else {
+                playPrimaryAudioEffect = true;
+            }
         }
-      }
     }
-
+    
     if (isPulsarType(currentNode.type)) {
       if (currentNode.type === "pulsar_triggerable") {
         if (sourceNodeId !== -1 && sourceNodeId !== currentNode.id) {
           currentNode.isEnabled = !currentNode.isEnabled;
           if (currentNode.isEnabled) {
-            const nowTime = audioContext
-              ? audioContext.currentTime
-              : performance.now() / 1000;
+            const nowTime = audioContext ?
+              audioContext.currentTime :
+              performance.now() / 1000;
             currentNode.lastTriggerTime = -1;
             currentNode.nextSyncTriggerTime = 0;
             currentNode.nextRandomTriggerTime = 0;
@@ -4683,10 +4684,8 @@ function propagateTrigger(
               const interval =
                 currentNode.audioParams.triggerInterval ||
                 DEFAULT_TRIGGER_INTERVAL;
-
               currentNode.lastTriggerTime = nowTime - interval;
             }
-          } else {
           }
           currentNode.animationState = 1;
         }
@@ -4793,9 +4792,9 @@ function propagateTrigger(
         }
         const neighborConn = connections.find(
           (c) =>
-            c.type === "string_violin" &&
-            ((c.nodeAId === currentNode.id && c.nodeBId === neighborId) ||
-              (c.nodeAId === neighborId && c.nodeBId === currentNode.id)),
+          c.type === "string_violin" &&
+          ((c.nodeAId === currentNode.id && c.nodeBId === neighborId) ||
+            (c.nodeAId === neighborId && c.nodeBId === currentNode.id)),
         );
         if (neighborConn) {
           const oldIndex = neighborConn.audioParams.scaleIndex;
@@ -4866,6 +4865,10 @@ function propagateTrigger(
           canPropagateOriginalPulseFurther = true;
         }
       }
+    } else if (currentNode.type === "global_key_setter") {
+        playPrimaryAudioEffect = false; 
+        canPropagateOriginalPulseFurther = true; 
+        activateGlobalKeySetter(currentNode);
     } else if (isDrumType(currentNode.type)) {
       if (
         !(currentNode.audioParams && currentNode.audioParams.retriggerEnabled)
@@ -4893,8 +4896,8 @@ function propagateTrigger(
           const neighborNode = findNodeById(neighborId);
           const connection = connections.find(
             (c) =>
-              (c.nodeAId === currentNode.id && c.nodeBId === neighborId) ||
-              (c.nodeAId === neighborId && c.nodeBId === currentNode.id),
+            (c.nodeAId === currentNode.id && c.nodeBId === neighborId) ||
+            (c.nodeAId === neighborId && c.nodeBId === currentNode.id),
           );
 
           if (
@@ -4932,6 +4935,56 @@ function propagateTrigger(
   }, actualTriggerDelay * 1000);
 }
 
+function activateGlobalKeySetter(nodeInstance) {
+    if (!nodeInstance || nodeInstance.type !== "global_key_setter" || !nodeInstance.audioParams) {
+        return false;
+    }
+
+    const keyParams = nodeInstance.audioParams;
+    const mode = keyParams.keySetterMode || "key";
+    let changed = false;
+
+    console.log(`activateGlobalKeySetter called for Node ${nodeInstance.id}. Mode: ${mode}`);
+
+    if (mode === "key") {
+        const targetKeyNoteValue = keyParams.targetKeyNote === undefined ? 0 : keyParams.targetKeyNote;
+        console.log(`Key Setter Node ${nodeInstance.id} [KEY MODE] attempting. Target Key: ${targetKeyNoteValue} (${noteNames[targetKeyNoteValue]}). Current Root: ${currentRootNote} (${noteNames[currentRootNote]})`);
+        if (currentRootNote !== targetKeyNoteValue) {
+            console.log(`Key Setter Node ${nodeInstance.id}: Changing root from ${currentRootNote} to ${targetKeyNoteValue}. No history save from node trigger.`);
+            setRootNote(targetKeyNoteValue, true); 
+            changed = true;
+        } else {
+            console.log(`Key Setter Node ${nodeInstance.id}: Target key ${targetKeyNoteValue} is already current root. No change.`);
+        }
+    } else { 
+        const targetOffsetValue = keyParams.targetTransposeOffset === undefined ? 0 : keyParams.targetTransposeOffset;
+        console.log(`Key Setter Node ${nodeInstance.id} [OFFSET MODE] attempting. Target Offset: ${targetOffsetValue}. Current Global Offset: ${globalTransposeOffset}`);
+        if (typeof targetOffsetValue === 'number' && globalTransposeOffset !== targetOffsetValue) {
+            console.log(`Key Setter Node ${nodeInstance.id}: Changing global offset from ${globalTransposeOffset} to ${targetOffsetValue}. No history save from node trigger.`);
+            globalTransposeOffset = targetOffsetValue;
+            updateAllPitchesAndUI(); 
+            changed = true;
+        } else {
+            console.log(`Key Setter Node ${nodeInstance.id}: Target offset ${targetOffsetValue} is already current global offset. No change.`);
+        }
+    }
+
+    if (changed) {
+        nodeInstance.animationState = 1;
+        setTimeout(() => {
+            const stillNode = findNodeById(nodeInstance.id);
+            if (stillNode) stillNode.animationState = 0;
+        }, 250);
+    } else {
+        nodeInstance.animationState = 0.5;
+        setTimeout(() => {
+            const stillNode = findNodeById(nodeInstance.id);
+            if (stillNode) stillNode.animationState = 0;
+        }, 150);
+    }
+    return changed; 
+}
+
 function playSingleRetrigger(
   node,
   retriggerIndex,
@@ -4949,9 +5002,9 @@ function playSingleRetrigger(
   const activeTabButton = document.querySelector(
     "#hamburgerMenuPanel .retrigger-tab-button.active",
   );
-  const activeParamTypeForHighlight = activeTabButton
-    ? activeTabButton.dataset.paramType
-    : "volume";
+  const activeParamTypeForHighlight = activeTabButton ?
+    activeTabButton.dataset.paramType :
+    "volume";
   const editorBarToHighlight = document.getElementById(
     `retrigger-bar-node${node.id}-param${activeParamTypeForHighlight}-step${retriggerIndex}`,
   );
@@ -5008,8 +5061,8 @@ function playSingleRetrigger(
       1,
       Math.round(
         (2 + Math.floor(node.size * 1.5)) *
-          particleMultiplier *
-          retriggerIntensity,
+        particleMultiplier *
+        retriggerIntensity,
       ),
     );
     createParticles(node.x, node.y, particleCountForRetrigger);
@@ -5019,18 +5072,18 @@ function playSingleRetrigger(
 
   let currentVolume =
     params.retriggerVolumeSteps &&
-    params.retriggerVolumeSteps[retriggerIndex] !== undefined
-      ? params.retriggerVolumeSteps[retriggerIndex]
-      : (basePulseData.intensity ?? 1.0);
-  currentVolume *= 0.9;
+    params.retriggerVolumeSteps[retriggerIndex] !== undefined ?
+    params.retriggerVolumeSteps[retriggerIndex] :
+    (basePulseData.intensity ?? 1.0);
+  currentVolume *= 0.9; 
   currentVolume = Math.max(0.005, currentVolume);
 
   let currentPitch = params.pitch;
   let pitchStepOffset =
     params.retriggerPitchSteps &&
-    params.retriggerPitchSteps[retriggerIndex] !== undefined
-      ? params.retriggerPitchSteps[retriggerIndex]
-      : 0;
+    params.retriggerPitchSteps[retriggerIndex] !== undefined ?
+    params.retriggerPitchSteps[retriggerIndex] :
+    0;
   currentPitch = getFrequency(
     currentScale,
     params.scaleIndex + pitchStepOffset,
@@ -5047,9 +5100,9 @@ function playSingleRetrigger(
   }
   let filterStepFactor =
     params.retriggerFilterSteps &&
-    params.retriggerFilterSteps[retriggerIndex] !== undefined
-      ? params.retriggerFilterSteps[retriggerIndex]
-      : 0;
+    params.retriggerFilterSteps[retriggerIndex] !== undefined ?
+    params.retriggerFilterSteps[retriggerIndex] :
+    0;
 
   if (filterStepFactor !== 0) {
     const baseCutoffForArc = params.lowPassFreq;
@@ -5075,169 +5128,111 @@ function playSingleRetrigger(
     lowPassFreq: currentFilterCutoff,
   };
 
-  if (
-    node.type === "sound" &&
-    audioNodes &&
-    audioNodes.oscillator1 &&
-    audioNodes.gainNode
-  ) {
-    const {
-      oscillator1,
-      oscillator2,
-      osc2Gain,
-      gainNode,
-      lowPassFilter,
-      modulatorOsc,
-      modulatorGain,
-    } = audioNodes;
-    const nodeSpecificAmpEnv = tempAudioParamsForRetrigger.ampEnv;
-    const generalAudibleDefaultEnv = {
-      attack: 0.01,
-      decay: 0.2,
-      sustain: 0.3,
-      release: 0.25,
-    };
-    const percussiveRetriggerEnv = {
-      attack: 0.005,
-      decay: 0.08,
-      sustain: 0.0,
-      release: 0.05,
-    };
-    let envToUse =
-      retriggerIndex === 0
-        ? nodeSpecificAmpEnv || generalAudibleDefaultEnv
-        : percussiveRetriggerEnv;
+  if (node.type === "sound" && audioNodes) {
+    if (tempAudioParamsForRetrigger.waveform && tempAudioParamsForRetrigger.waveform.startsWith("sampler_")) {
+      const samplerId = tempAudioParamsForRetrigger.waveform.replace("sampler_", "");
+      const definition = SAMPLER_DEFINITIONS.find((s) => s.id === samplerId);
 
-    gainNode.gain.cancelScheduledValues(scheduledPlayTime);
-    gainNode.gain.setValueAtTime(0, scheduledPlayTime);
-    gainNode.gain.linearRampToValueAtTime(
-      currentVolume,
-      scheduledPlayTime + envToUse.attack,
-    );
-    if (envToUse.sustain > 0.01 && envToUse.decay > 0.001) {
-      gainNode.gain.setTargetAtTime(
-        currentVolume * envToUse.sustain,
-        scheduledPlayTime + envToUse.attack,
-        envToUse.decay / 4 + 0.001,
-      );
-      const sustainDurationForRetrigger =
-        retriggerIndex === 0 && envToUse.sustain > 0.1
-          ? envToUse.sustain * 0.3 + envToUse.decay
-          : 0.05;
-      const noteOffTime =
-        scheduledPlayTime +
-        envToUse.attack +
-        envToUse.decay +
-        sustainDurationForRetrigger;
-      gainNode.gain.setTargetAtTime(
-        0.0001,
-        noteOffTime,
-        envToUse.release / 4 + 0.001,
-      );
-    } else {
-      gainNode.gain.setTargetAtTime(
-        0.0001,
-        scheduledPlayTime + envToUse.attack,
-        envToUse.decay / 3 + 0.001,
-      );
-    }
-    oscillator1.frequency.setValueAtTime(currentPitch, scheduledPlayTime);
-    if (oscillator2 && osc2Gain) {
-      const osc2Freq =
-        currentPitch * Math.pow(2, tempAudioParamsForRetrigger.osc2Octave || 0);
-      oscillator2.frequency.setValueAtTime(osc2Freq, scheduledPlayTime);
-    }
-    if (
-      modulatorOsc &&
-      modulatorGain &&
-      tempAudioParamsForRetrigger.carrierWaveform
-    ) {
-      const modRatio = tempAudioParamsForRetrigger.modulatorRatio || 1.0;
-      modulatorOsc.frequency.setValueAtTime(
-        currentPitch * modRatio,
-        scheduledPlayTime,
-      );
-      const modEnv = tempAudioParamsForRetrigger.modulatorEnv || {
-        attack: 0.002,
-        decay: 0.03,
-        sustain: 0,
-        release: 0.03,
-      };
-      const modDepthBaseFactor =
-        tempAudioParamsForRetrigger.fmModDepthScale !== undefined
-          ? tempAudioParamsForRetrigger.fmModDepthScale
-          : tempAudioParamsForRetrigger.waveform === "fmBell"
-            ? 4
-            : tempAudioParamsForRetrigger.waveform === "fmXylo"
-              ? 10
-              : 3;
-      const modDepth = currentPitch * modDepthBaseFactor;
-      modulatorGain.gain.cancelScheduledValues(scheduledPlayTime);
-      modulatorGain.gain.setValueAtTime(0, scheduledPlayTime);
-      modulatorGain.gain.linearRampToValueAtTime(
-        modDepth,
-        scheduledPlayTime + modEnv.attack,
-      );
-      modulatorGain.gain.setTargetAtTime(
-        0.0001,
-        scheduledPlayTime + modEnv.attack,
-        modEnv.decay / 3 || 0.01,
-      );
-    }
-    if (lowPassFilter && lowPassFilter.frequency) {
-      lowPassFilter.frequency.setValueAtTime(
-        currentFilterCutoff,
-        scheduledPlayTime,
-      );
-    }
-  } else if (
-    node.type === "sound" &&
-    tempAudioParamsForRetrigger.waveform &&
-    tempAudioParamsForRetrigger.waveform.startsWith("sampler_")
-  ) {
-    const samplerId = tempAudioParamsForRetrigger.waveform.replace(
-      "sampler_",
-      "",
-    );
-    const definition = SAMPLER_DEFINITIONS.find((s) => s.id === samplerId);
-    if (definition && definition.isLoaded && definition.buffer) {
-      const source = audioContext.createBufferSource();
-      source.buffer = definition.buffer;
-      let targetRate = 1.0;
-      if (definition.baseFreq > 0 && currentPitch > 0) {
-        targetRate = Math.max(
-          0.1,
-          Math.min(8, currentPitch / definition.baseFreq),
+      console.log(`[Retrigger Sampler V3] Node: ${node.id}, Step: ${retriggerIndex}, SamplerID: ${samplerId}, Def found: ${!!definition}, Loaded: ${definition?.isLoaded}, Buffer: ${!!definition?.buffer}`);
+      console.log(`[Retrigger Sampler V3] currentVolume: ${currentVolume}, currentPitch: ${currentPitch}, baseFreq: ${definition?.baseFreq}`);
+
+      if (definition && definition.isLoaded && definition.buffer && audioNodes.lowPassFilter && audioNodes.gainNode) {
+        const source = audioContext.createBufferSource();
+        source.buffer = definition.buffer;
+
+        let targetRate = 1.0;
+        if (definition.baseFreq > 0 && currentPitch > 0 && !isNaN(currentPitch) && !isNaN(definition.baseFreq)) {
+          targetRate = currentPitch / definition.baseFreq;
+          targetRate = Math.max(0.05, Math.min(16, targetRate));
+        } else {
+          console.warn(`[Retrigger Sampler V3] Invalid pitch (${currentPitch}) or baseFreq (${definition.baseFreq}) for rate calc. Using default rate 1.0.`);
+          targetRate = 1.0;
+        }
+
+        if (isNaN(targetRate) || !isFinite(targetRate)) {
+          console.error(`[Retrigger Sampler V3] FATAL: targetRate is ${targetRate}. Aborting retrigger step for ${samplerId}.`);
+          return;
+        }
+        console.log(`[Retrigger Sampler V3] Calculated TargetRate: ${targetRate} for sampler ${samplerId}`);
+
+        source.playbackRate.setValueAtTime(targetRate, scheduledPlayTime);
+        source.connect(audioNodes.lowPassFilter); // Connect source to the node's filter
+
+        const mainNodeGain = audioNodes.gainNode; // Node's main gain stage
+        mainNodeGain.gain.cancelScheduledValues(scheduledPlayTime);
+        mainNodeGain.gain.setValueAtTime(0, scheduledPlayTime); // Start clean for this retrigger hit
+        mainNodeGain.gain.linearRampToValueAtTime(
+          currentVolume, // Apply this step's volume
+          scheduledPlayTime + 0.005 // Quick attack
         );
+        mainNodeGain.gain.setTargetAtTime(
+          0.0001, // Decay to near silence
+          scheduledPlayTime + 0.005, // Start decay after attack
+          0.03 + (params.retriggerIntervalMs / 1000) * 0.15 // Decay relative to interval, but ensure it's short
+        );
+
+        source.start(scheduledPlayTime);
+        
+        const sampleDurationOriginal = definition.buffer.duration;
+        const effectiveSampleDuration = targetRate > 0 ? sampleDurationOriginal / targetRate : sampleDurationOriginal;
+        const envelopeDuration = 0.005 + 3 * (0.03 + (params.retriggerIntervalMs / 1000) * 0.15); // Approx. duration of the gain envelope
+        const stopTimeOffset = Math.min(effectiveSampleDuration, envelopeDuration + 0.05);
+
+
+        source.stop(scheduledPlayTime + stopTimeOffset);
+        source.onended = () => {
+          try { source.disconnect(); } catch (e) {}
+        };
+      } else {
+        console.warn(`[Retrigger Sampler V3] Sampler def/buffer not ready, or core audioNodes (filter/gain) missing for ${samplerId}. Node ID: ${node.id}`);
       }
-      source.playbackRate.setValueAtTime(targetRate, scheduledPlayTime);
-      const retriggerGain = audioContext.createGain();
-      retriggerGain.gain.setValueAtTime(0, scheduledPlayTime);
-      retriggerGain.gain.linearRampToValueAtTime(
-        currentVolume,
-        scheduledPlayTime + 0.005,
-      );
-      retriggerGain.gain.setTargetAtTime(
-        0.0001,
-        scheduledPlayTime + 0.005,
-        0.05,
-      );
-      source.connect(retriggerGain);
-      const mainOutputTarget =
-        audioNodes && (audioNodes.lowPassFilter || audioNodes.gainNode)
-          ? audioNodes.lowPassFilter || audioNodes.gainNode
-          : masterGain;
-      retriggerGain.connect(mainOutputTarget);
-      source.start(scheduledPlayTime);
-      const sampleDuration = definition.buffer.duration / targetRate;
-      const retriggerSoundDuration = Math.min(sampleDuration, 0.25);
-      source.stop(scheduledPlayTime + retriggerSoundDuration);
-      source.onended = () => {
-        try {
-          source.disconnect();
-          retriggerGain.disconnect();
-        } catch (e) {}
-      };
+    } else if (audioNodes.oscillator1 && audioNodes.gainNode) {
+      const {
+        oscillator1,
+        oscillator2,
+        osc2Gain,
+        gainNode,
+        lowPassFilter,
+        modulatorOsc1, // Corrected reference from your original file
+        modulatorGain1, // Corrected reference
+      } = audioNodes;
+      const nodeSpecificAmpEnv = tempAudioParamsForRetrigger.ampEnv;
+      const generalAudibleDefaultEnv = { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.25 };
+      const percussiveRetriggerEnv = { attack: 0.005, decay: 0.08, sustain: 0.0, release: 0.05 };
+      let envToUse = retriggerIndex === 0 ? (nodeSpecificAmpEnv || generalAudibleDefaultEnv) : percussiveRetriggerEnv;
+
+      gainNode.gain.cancelScheduledValues(scheduledPlayTime);
+      gainNode.gain.setValueAtTime(0, scheduledPlayTime);
+      gainNode.gain.linearRampToValueAtTime(currentVolume, scheduledPlayTime + envToUse.attack);
+      
+      if (envToUse.sustain > 0.01 && envToUse.decay > 0.001) {
+        gainNode.gain.setTargetAtTime(currentVolume * envToUse.sustain, scheduledPlayTime + envToUse.attack, envToUse.decay / 4 + 0.001);
+        const sustainDurationForRetrigger = (retriggerIndex === 0 && envToUse.sustain > 0.1) ? (envToUse.sustain * 0.3 + envToUse.decay) : 0.05;
+        const noteOffTime = scheduledPlayTime + envToUse.attack + envToUse.decay + sustainDurationForRetrigger;
+        gainNode.gain.setTargetAtTime(0.0001, noteOffTime, envToUse.release / 4 + 0.001);
+      } else {
+        gainNode.gain.setTargetAtTime(0.0001, scheduledPlayTime + envToUse.attack, (envToUse.decay / 3) + 0.001);
+      }
+
+      oscillator1.frequency.setValueAtTime(currentPitch, scheduledPlayTime);
+      if (oscillator2 && osc2Gain) {
+        const osc2Freq = currentPitch * Math.pow(2, tempAudioParamsForRetrigger.osc2Octave || 0);
+        oscillator2.frequency.setValueAtTime(osc2Freq, scheduledPlayTime);
+      }
+      if (modulatorOsc1 && modulatorGain1 && tempAudioParamsForRetrigger.carrierWaveform) {
+        const modRatio = tempAudioParamsForRetrigger.modulatorRatio || 1.0;
+        modulatorOsc1.frequency.setValueAtTime(currentPitch * modRatio, scheduledPlayTime);
+        const modEnv = tempAudioParamsForRetrigger.modulatorEnv || { attack: 0.002, decay: 0.03, sustain: 0, release: 0.03 };
+        const modDepthBaseFactor = tempAudioParamsForRetrigger.modulatorDepthScale !== undefined ? tempAudioParamsForRetrigger.modulatorDepthScale : 2;
+        const modDepth = currentPitch * modDepthBaseFactor;
+        modulatorGain1.gain.cancelScheduledValues(scheduledPlayTime);
+        modulatorGain1.gain.setValueAtTime(0, scheduledPlayTime);
+        modulatorGain1.gain.linearRampToValueAtTime(modDepth, scheduledPlayTime + modEnv.attack);
+        modulatorGain1.gain.setTargetAtTime(0.0001, scheduledPlayTime + modEnv.attack, (modEnv.decay / 3) || 0.01);
+      }
+      if (lowPassFilter && lowPassFilter.frequency) {
+        lowPassFilter.frequency.setValueAtTime(currentFilterCutoff, scheduledPlayTime);
+      }
     }
   } else if (isDrumType(node.type)) {
     const tempNodeForDrumHit = {
@@ -5283,306 +5278,345 @@ function playSingleRetrigger(
   setTimeout(finalRetriggerCleanup, 120);
 }
 
-function createRetriggerVisualEditor(
-  node,
-  selectedArray,
-  paramType = "volume",
-) {
-  const editorContainer = document.createElement("div");
-  editorContainer.classList.add("retrigger-editor-container");
-  editorContainer.dataset.activeParamType = paramType;
+function createRetriggerVisualEditor(node, selectedArray, initialParamType = "volume") {
+    const editorContainer = document.createElement("div");
+    editorContainer.classList.add("retrigger-editor-container");
 
-  const barsArea = document.createElement("div");
-  barsArea.classList.add("retrigger-bars-area");
+    const tabsContainer = document.createElement("div");
+    tabsContainer.classList.add("retrigger-editor-tabs");
 
-  let currentDisplayNode = node;
-  if (selectedArray && selectedArray.length > 0) {
-    const firstNode = findNodeById(selectedArray[0].id);
-    if (firstNode) currentDisplayNode = firstNode;
-  }
-  if (!currentDisplayNode.audioParams) currentDisplayNode.audioParams = {};
+    const barsArea = document.createElement("div");
+    barsArea.classList.add("retrigger-bars-area");
 
-  let stepsArrayRef;
-  let muteStepsArrayRef = currentDisplayNode.audioParams.retriggerMuteSteps;
+    const controlsDiv = document.createElement("div");
+    controlsDiv.classList.add("retrigger-editor-controls");
 
-  let valueMin,
-    valueMax,
-    valueStepInput,
-    defaultValue,
-    unit,
-    barColorClass,
-    tooltipSuffix;
+    let currentDisplayNode = node;
+    if (selectedArray && selectedArray.length > 0) {
+        const firstNode = findNodeById(selectedArray[0].id);
+        if (firstNode) currentDisplayNode = firstNode;
+    }
+    if (!currentDisplayNode.audioParams) currentDisplayNode.audioParams = {};
 
-  switch (paramType) {
-    case "pitch":
-      stepsArrayRef = currentDisplayNode.audioParams.retriggerPitchSteps;
-      valueMin = -12;
-      valueMax = 12;
-      valueStepInput = 1;
-      defaultValue = 0;
-      unit = "semi";
-      barColorClass = "retrigger-bar-pitch";
-      tooltipSuffix = " semitones";
-      break;
-    case "filter":
-      stepsArrayRef = currentDisplayNode.audioParams.retriggerFilterSteps;
-      valueMin = -1;
-      valueMax = 1;
-      valueStepInput = 0.01;
-      defaultValue = 0;
-      unit = "factor";
-      barColorClass = "retrigger-bar-filter";
-      tooltipSuffix = "";
-      break;
-    case "volume":
-    default:
-      stepsArrayRef = currentDisplayNode.audioParams.retriggerVolumeSteps;
-      valueMin = 0;
-      valueMax = 1;
-      valueStepInput = 0.01;
-      defaultValue = 0.5;
-      unit = "";
-      barColorClass = "retrigger-bar-volume";
-      tooltipSuffix = "";
-      break;
-  }
+    let activeParamType = initialParamType;
+    let activeStepsArrayRef, activeMuteStepsArrayRef;
+    let activeValueMin, activeValueMax, activeValueStepInput, activeDefaultValue, activeUnit, activeBarColorClass, activeTooltipSuffix;
 
-  const referenceStepCount = (
-    currentDisplayNode.audioParams.retriggerVolumeSteps || []
-  ).length;
+    function setupParamSpecifics(newParamType) {
+        activeParamType = newParamType;
+        editorContainer.dataset.activeParamType = newParamType;
 
-  const ensureArraySync = (
-    arrayName,
-    currentArray,
-    defaultVal,
-    isBoolean = false,
-  ) => {
-    let targetArray = currentDisplayNode.audioParams[arrayName];
-    if (
-      !targetArray ||
-      !Array.isArray(targetArray) ||
-      targetArray.length !== referenceStepCount
-    ) {
-      const newArr = Array(referenceStepCount)
-        .fill(null)
-        .map((_, i) => {
-          if (targetArray && i < targetArray.length) {
-            return targetArray[i];
-          }
-          return isBoolean ? false : defaultVal;
-        });
-      currentDisplayNode.audioParams[arrayName] = newArr;
-
-      selectedArray.forEach((elData) => {
-        const n = findNodeById(elData.id);
-        if (n && n.audioParams && n.id !== currentDisplayNode.id) {
-          let otherNodeArray = n.audioParams[arrayName];
-          const newOtherNodeArray = Array(referenceStepCount)
-            .fill(null)
-            .map((_, i) => {
-              if (otherNodeArray && i < otherNodeArray.length)
-                return otherNodeArray[i];
-              return isBoolean ? false : defaultVal;
-            });
-          n.audioParams[arrayName] = newOtherNodeArray;
+        switch (newParamType) {
+            case "pitch":
+                activeStepsArrayRef = currentDisplayNode.audioParams.retriggerPitchSteps;
+                activeValueMin = -12; activeValueMax = 12; activeValueStepInput = 1; activeDefaultValue = 0; activeUnit = "semi";
+                activeBarColorClass = "retrigger-bar-pitch"; activeTooltipSuffix = " semitones";
+                break;
+            case "filter":
+                activeStepsArrayRef = currentDisplayNode.audioParams.retriggerFilterSteps;
+                activeValueMin = -1; activeValueMax = 1; activeValueStepInput = 0.01; activeDefaultValue = 0; activeUnit = "factor";
+                activeBarColorClass = "retrigger-bar-filter"; activeTooltipSuffix = "";
+                break;
+            case "volume":
+            default:
+                activeStepsArrayRef = currentDisplayNode.audioParams.retriggerVolumeSteps;
+                activeValueMin = 0; activeValueMax = 1; activeValueStepInput = 0.01; activeDefaultValue = 0.5; activeUnit = "";
+                activeBarColorClass = "retrigger-bar-volume"; activeTooltipSuffix = "";
+                break;
         }
-      });
-      return newArr;
+
+        const referenceStepCount = (currentDisplayNode.audioParams.retriggerVolumeSteps || []).length;
+        const ensureArraySync = (arrayName, defaultVal, isBoolean = false) => {
+            let targetArray = currentDisplayNode.audioParams[arrayName];
+            if (!targetArray || !Array.isArray(targetArray) || targetArray.length !== referenceStepCount) {
+                const newArr = Array(referenceStepCount).fill(null).map((_, i) => {
+                    if (targetArray && i < targetArray.length) return targetArray[i];
+                    return isBoolean ? false : defaultVal;
+                });
+                currentDisplayNode.audioParams[arrayName] = newArr;
+                selectedArray.forEach((elData) => {
+                    const n = findNodeById(elData.id);
+                    if (n && n.audioParams && n.id !== currentDisplayNode.id) {
+                        let otherNodeArray = n.audioParams[arrayName];
+                        const newOtherNodeArray = Array(referenceStepCount).fill(null).map((_, i) => {
+                            if (otherNodeArray && i < otherNodeArray.length) return otherNodeArray[i];
+                            return isBoolean ? false : defaultVal;
+                        });
+                        n.audioParams[arrayName] = newOtherNodeArray;
+                    }
+                });
+                return newArr;
+            }
+            return targetArray;
+        };
+
+        activeStepsArrayRef = ensureArraySync(
+            newParamType === "volume" ? "retriggerVolumeSteps" : newParamType === "pitch" ? "retriggerPitchSteps" : "retriggerFilterSteps",
+            activeDefaultValue
+        );
+        activeMuteStepsArrayRef = ensureArraySync("retriggerMuteSteps", false, true);
     }
-    return targetArray;
-  };
 
-  stepsArrayRef = ensureArraySync(
-    paramType === "volume"
-      ? "retriggerVolumeSteps"
-      : paramType === "pitch"
-        ? "retriggerPitchSteps"
-        : "retriggerFilterSteps",
-    stepsArrayRef,
-    defaultValue,
-  );
-  muteStepsArrayRef = ensureArraySync(
-    "retriggerMuteSteps",
-    muteStepsArrayRef,
-    false,
-    true,
-  );
+    function renderBarsInternal() {
+        barsArea.innerHTML = "";
+        if (!activeStepsArrayRef || activeStepsArrayRef.length === 0) {
+            barsArea.textContent = "Adjust step count first.";
+            return;
+        }
 
-  function renderBars() {
-    barsArea.innerHTML = "";
-    if (!stepsArrayRef || stepsArrayRef.length === 0) {
-      barsArea.textContent = "Pas aantal stappen aan.";
-      return;
+        activeStepsArrayRef.forEach((currentValue, index) => {
+            const barWrapper = document.createElement("div");
+            barWrapper.classList.add("retrigger-bar-wrapper");
+            let displayValue = currentValue.toFixed(activeValueStepInput >= 1 ? 0 : 2);
+            if (activeParamType === "pitch" && currentValue > 0) displayValue = "+" + displayValue;
+            barWrapper.title = `Step ${index + 1}: ${activeParamType.charAt(0).toUpperCase() + activeParamType.slice(1)} ${displayValue}${activeTooltipSuffix}`;
+
+            const barVisualContainer = document.createElement("div");
+            barVisualContainer.classList.add("retrigger-bar-visual-container");
+
+            const bar = document.createElement("div");
+            bar.classList.add("retrigger-bar", activeBarColorClass);
+            bar.id = `retrigger-bar-node${currentDisplayNode.id}-param${activeParamType}-step${index}`;
+            bar.dataset.index = index;
+
+            let heightPercent;
+            if (activeValueMin < 0) {
+                heightPercent = ((currentValue - activeValueMin) / (activeValueMax - activeValueMin)) * 100;
+            } else {
+                heightPercent = (currentValue / activeValueMax) * 100;
+            }
+            bar.style.height = `${Math.max(2, Math.min(100, heightPercent))}%`;
+            const isCurrentlyMuted = activeMuteStepsArrayRef[index] || false;
+            bar.style.opacity = isCurrentlyMuted ? "0.3" : "1";
+
+            barVisualContainer.appendChild(bar);
+            barWrapper.appendChild(barVisualContainer);
+
+            const muteToggleLabel = document.createElement("label");
+            muteToggleLabel.classList.add("retrigger-step-mute-toggle-label");
+            muteToggleLabel.title = `Mute step ${index + 1}`;
+            muteToggleLabel.htmlFor = `retrigger-mute-node${currentDisplayNode.id}-param${activeParamType}-step${index}`;
+            if(isCurrentlyMuted) muteToggleLabel.classList.add('is-active-mute');
+
+
+            const muteToggleInput = document.createElement("input");
+            muteToggleInput.type = "checkbox";
+            muteToggleInput.classList.add("retrigger-step-mute-toggle-input");
+            muteToggleInput.id = `retrigger-mute-node${currentDisplayNode.id}-param${activeParamType}-step${index}`;
+            muteToggleInput.checked = !isCurrentlyMuted;
+            muteToggleInput.dataset.index = index;
+
+            muteToggleLabel.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const stepIndex = parseInt(muteToggleInput.dataset.index);
+                const newMuteState = !muteToggleInput.checked;
+
+                selectedArray.forEach((elData) => {
+                    const n = findNodeById(elData.id);
+                    if (n && n.audioParams && n.audioParams.retriggerMuteSteps && n.audioParams.retriggerMuteSteps[stepIndex] !== undefined) {
+                        n.audioParams.retriggerMuteSteps[stepIndex] = newMuteState;
+                    }
+                });
+                if (activeMuteStepsArrayRef && activeMuteStepsArrayRef[stepIndex] !== undefined) {
+                    activeMuteStepsArrayRef[stepIndex] = newMuteState;
+                }
+                saveState();
+                bar.style.opacity = newMuteState ? "0.3" : "1";
+                muteToggleLabel.classList.toggle('is-active-mute', newMuteState);
+                muteToggleInput.checked = !newMuteState;
+            });
+
+            muteToggleLabel.appendChild(muteToggleInput);
+            muteToggleLabel.appendChild(document.createElement("span"));
+            barWrapper.appendChild(muteToggleLabel);
+            barsArea.appendChild(barWrapper);
+        });
     }
 
-    stepsArrayRef.forEach((currentValue, index) => {
-      const barWrapper = document.createElement("div");
-      barWrapper.classList.add("retrigger-bar-wrapper");
-      let displayValue = currentValue.toFixed(valueStepInput >= 1 ? 0 : 2);
-      if (paramType === "pitch" && currentValue > 0)
-        displayValue = "+" + displayValue;
-      barWrapper.title = `Step ${index + 1}: ${paramType.charAt(0).toUpperCase() + paramType.slice(1)} ${displayValue}${tooltipSuffix}`;
+    let activeDraggedBarIndex = -1;
+    let initialMouseYForDrag;
+    let initialValueForDrag;
 
-      const barVisualContainer = document.createElement("div");
-      barVisualContainer.classList.add("retrigger-bar-visual-container");
+    barsArea.addEventListener("mousedown", (e_down) => {
+        const target = e_down.target;
+        const barElement = target.classList.contains("retrigger-bar") ? target : null;
+        if (barElement) {
+            e_down.preventDefault();
+            e_down.stopPropagation();
+            activeDraggedBarIndex = parseInt(barElement.dataset.index);
+            initialMouseYForDrag = e_down.clientY;
+            initialValueForDrag = activeStepsArrayRef[activeDraggedBarIndex];
+            document.addEventListener("mousemove", onBarDragMouseMove);
+            document.addEventListener("mouseup", onBarDragMouseUp);
+        }
+    });
 
-      const bar = document.createElement("div");
-      bar.classList.add("retrigger-bar", barColorClass);
-      bar.id = `retrigger-bar-node${currentDisplayNode.id}-param${paramType}-step${index}`;
-      bar.dataset.index = index;
+    function onBarDragMouseMove(e_move) {
+        if (activeDraggedBarIndex === -1) return;
+        e_move.preventDefault();
+        const dy = e_move.clientY - initialMouseYForDrag;
+        const barsVisualContainer = barsArea.querySelector(".retrigger-bar-visual-container");
+        if (!barsVisualContainer) return;
+        const barsAreaHeightPx = barsVisualContainer.clientHeight;
+        if (barsAreaHeightPx === 0) return;
 
-      let heightPercent;
-      if (valueMin < 0) {
-        heightPercent =
-          ((currentValue - valueMin) / (valueMax - valueMin)) * 100;
-      } else {
-        heightPercent = (currentValue / valueMax) * 100;
-      }
-      bar.style.height = `${Math.max(2, Math.min(100, heightPercent))}%`;
-      bar.style.opacity = muteStepsArrayRef[index] || false ? "0.3" : "1";
-
-      barVisualContainer.appendChild(bar);
-      barWrapper.appendChild(barVisualContainer);
-
-      const muteToggleLabel = document.createElement("label");
-      muteToggleLabel.classList.add("retrigger-step-mute-toggle-label");
-      muteToggleLabel.title = `Mute step ${index + 1}`;
-      muteToggleLabel.htmlFor = `retrigger-mute-node${currentDisplayNode.id}-param${paramType}-step${index}`;
-
-      const muteToggleInput = document.createElement("input");
-      muteToggleInput.type = "checkbox";
-      muteToggleInput.classList.add("retrigger-step-mute-toggle-input");
-      muteToggleInput.id = `retrigger-mute-node${currentDisplayNode.id}-param${paramType}-step${index}`;
-      muteToggleInput.checked = !(muteStepsArrayRef[index] || false);
-      muteToggleInput.dataset.index = index;
-
-      muteToggleLabel.appendChild(muteToggleInput);
-      muteToggleLabel.appendChild(document.createElement("span"));
-
-      muteToggleLabel.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const stepIndex = parseInt(muteToggleInput.dataset.index);
-        const isNowChecked = muteToggleInput.checked;
-        const isMuted = !isNowChecked;
+        let valueChangeRatio = -(dy / barsAreaHeightPx);
+        let newValue = initialValueForDrag + valueChangeRatio * (activeValueMax - activeValueMin);
+        newValue = parseFloat(newValue.toFixed(activeValueStepInput >= 1 ? 0 : 2));
+        newValue = Math.max(activeValueMin, Math.min(activeValueMax, newValue));
 
         selectedArray.forEach((elData) => {
-          const n = findNodeById(elData.id);
-          if (
-            n &&
-            n.audioParams &&
-            n.audioParams.retriggerMuteSteps &&
-            n.audioParams.retriggerMuteSteps[stepIndex] !== undefined
-          ) {
-            n.audioParams.retriggerMuteSteps[stepIndex] = isMuted;
-          }
+            const n = findNodeById(elData.id);
+            if (n && n.audioParams) {
+                let targetStepsArrayToUpdate;
+                if (activeParamType === "volume") targetStepsArrayToUpdate = n.audioParams.retriggerVolumeSteps;
+                else if (activeParamType === "pitch") targetStepsArrayToUpdate = n.audioParams.retriggerPitchSteps;
+                else if (activeParamType === "filter") targetStepsArrayToUpdate = n.audioParams.retriggerFilterSteps;
+                if (targetStepsArrayToUpdate && targetStepsArrayToUpdate[activeDraggedBarIndex] !== undefined) {
+                    targetStepsArrayToUpdate[activeDraggedBarIndex] = newValue;
+                }
+            }
         });
-        if (muteStepsArrayRef[stepIndex] !== undefined) {
-          muteStepsArrayRef[stepIndex] = isMuted;
+        if (activeStepsArrayRef && activeStepsArrayRef[activeDraggedBarIndex] !== undefined) {
+            activeStepsArrayRef[activeDraggedBarIndex] = newValue;
         }
-        saveState();
-        bar.style.opacity = isMuted ? "0.3" : "1";
-      });
 
-      barWrapper.appendChild(muteToggleLabel);
-      barsArea.appendChild(barWrapper);
-    });
-  }
-
-  renderBars();
-
-  let activeDraggedBarIndex = -1;
-  let initialMouseYForDrag;
-  let initialValueForDrag;
-
-  barsArea.addEventListener("mousedown", (e_down) => {
-    const target = e_down.target;
-    const barElement = target.classList.contains("retrigger-bar")
-      ? target
-      : null;
-
-    if (barElement) {
-      e_down.preventDefault();
-      e_down.stopPropagation();
-      activeDraggedBarIndex = parseInt(barElement.dataset.index);
-      initialMouseYForDrag = e_down.clientY;
-      initialValueForDrag = stepsArrayRef[activeDraggedBarIndex];
-
-      document.addEventListener("mousemove", onBarDragMouseMove);
-      document.addEventListener("mouseup", onBarDragMouseUp);
-    }
-  });
-
-  function onBarDragMouseMove(e_move) {
-    if (activeDraggedBarIndex === -1) return;
-    e_move.preventDefault();
-
-    const dy = e_move.clientY - initialMouseYForDrag;
-    const barsAreaHeightPx = barsArea.querySelector(
-      ".retrigger-bar-visual-container",
-    ).clientHeight;
-
-    let valueChangeRatio = -(dy / barsAreaHeightPx);
-    let newValue =
-      initialValueForDrag + valueChangeRatio * (valueMax - valueMin);
-
-    newValue = parseFloat(newValue.toFixed(valueStepInput >= 1 ? 0 : 2));
-    newValue = Math.max(valueMin, Math.min(valueMax, newValue));
-
-    selectedArray.forEach((elData) => {
-      const n = findNodeById(elData.id);
-      if (n && n.audioParams) {
-        let targetStepsArrayToUpdate;
-        if (paramType === "volume")
-          targetStepsArrayToUpdate = n.audioParams.retriggerVolumeSteps;
-        else if (paramType === "pitch")
-          targetStepsArrayToUpdate = n.audioParams.retriggerPitchSteps;
-        else if (paramType === "filter")
-          targetStepsArrayToUpdate = n.audioParams.retriggerFilterSteps;
-
-        if (
-          targetStepsArrayToUpdate &&
-          targetStepsArrayToUpdate[activeDraggedBarIndex] !== undefined
-        ) {
-          targetStepsArrayToUpdate[activeDraggedBarIndex] = newValue;
+        const barToUpdate = barsArea.querySelector(`.retrigger-bar[data-index="${activeDraggedBarIndex}"]`);
+        if (barToUpdate) {
+            let heightPercent;
+            if (activeValueMin < 0) {
+                heightPercent = ((newValue - activeValueMin) / (activeValueMax - activeValueMin)) * 100;
+            } else {
+                heightPercent = (newValue / activeValueMax) * 100;
+            }
+            barToUpdate.style.height = `${Math.max(2, Math.min(100, heightPercent))}%`;
+            let displayValue = newValue.toFixed(activeUnit === "factor" || activeUnit === "" ? 2 : 0);
+            if (activeParamType === "pitch" && newValue > 0) displayValue = "+" + displayValue;
+             const currentBarWrapper = barToUpdate.closest('.retrigger-bar-wrapper');
+            if(currentBarWrapper) currentBarWrapper.title = `Step ${activeDraggedBarIndex + 1}: ${activeParamType.charAt(0).toUpperCase() + activeParamType.slice(1)} ${displayValue}${activeTooltipSuffix}`;
         }
-      }
+    }
+
+    function onBarDragMouseUp() {
+        if (activeDraggedBarIndex !== -1) {
+            activeDraggedBarIndex = -1;
+            saveState();
+        }
+        document.removeEventListener("mousemove", onBarDragMouseMove);
+        document.removeEventListener("mouseup", onBarDragMouseUp);
+    }
+
+    function createAndAppendPresetButtonsInternal() {
+        controlsDiv.innerHTML = "";
+        const currentStepCount = (activeStepsArrayRef || []).length;
+         if (currentStepCount === 0 && activeParamType !== "filter") return;
+
+
+        const applyPreset = (newSteps) => {
+            const targetArrayName = activeParamType === "volume" ? "retriggerVolumeSteps" :
+                                   activeParamType === "pitch" ? "retriggerPitchSteps" :
+                                   "retriggerFilterSteps";
+            selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.audioParams) {
+                    if(n.audioParams[targetArrayName]) n.audioParams[targetArrayName] = [...newSteps];
+                    if(n.audioParams.retriggerMuteSteps) n.audioParams.retriggerMuteSteps = Array(newSteps.length).fill(false);
+                }
+            });
+            if(currentDisplayNode.audioParams[targetArrayName]) currentDisplayNode.audioParams[targetArrayName] = [...newSteps];
+            if(currentDisplayNode.audioParams.retriggerMuteSteps) currentDisplayNode.audioParams.retriggerMuteSteps = Array(newSteps.length).fill(false);
+            
+            setupParamSpecifics(activeParamType);
+            saveState();
+            renderBarsInternal();
+        };
+
+        const resetButton = document.createElement("button");
+        resetButton.textContent = "Reset Steps";
+        resetButton.title = "Reset all steps in this tab to default values";
+        resetButton.addEventListener("click", () => {
+            const newDefaultSteps = Array(currentStepCount).fill(activeDefaultValue);
+            applyPreset(newDefaultSteps);
+        });
+        controlsDiv.appendChild(resetButton);
+
+        const clearButton = document.createElement("button");
+        clearButton.textContent = "Clear Mutes";
+        clearButton.title = "Unmute all steps in this tab";
+        clearButton.addEventListener("click", () => {
+            const newMuteSteps = Array(currentStepCount).fill(false);
+            selectedArray.forEach(elData => {
+                const n = findNodeById(elData.id);
+                if (n && n.audioParams) n.audioParams.retriggerMuteSteps = [...newMuteSteps];
+            });
+            currentDisplayNode.audioParams.retriggerMuteSteps = [...newMuteSteps];
+            activeMuteStepsArrayRef = currentDisplayNode.audioParams.retriggerMuteSteps;
+            saveState();
+            renderBarsInternal();
+        });
+        controlsDiv.appendChild(clearButton);
+
+        if (activeParamType === "volume") {
+            const fadeInBtn = document.createElement("button"); fadeInBtn.textContent = "Fade In";
+            fadeInBtn.onclick = () => applyPreset(Array(currentStepCount).fill(0).map((_, i) => parseFloat(((i + 1) / currentStepCount).toFixed(2))));
+            controlsDiv.appendChild(fadeInBtn);
+
+            const fadeOutBtn = document.createElement("button"); fadeOutBtn.textContent = "Fade Out";
+            fadeOutBtn.onclick = () => applyPreset(Array(currentStepCount).fill(0).map((_, i) => parseFloat(((currentStepCount - i) / currentStepCount).toFixed(2))));
+            controlsDiv.appendChild(fadeOutBtn);
+
+            const fullVolBtn = document.createElement("button"); fullVolBtn.textContent = "Full";
+            fullVolBtn.onclick = () => applyPreset(Array(currentStepCount).fill(1.0));
+            controlsDiv.appendChild(fullVolBtn);
+        } else if (activeParamType === "pitch") {
+            const arpUpBtn = document.createElement("button"); arpUpBtn.textContent = "Arp Up";
+            arpUpBtn.onclick = () => {
+                const arpSteps = [0, 4, 7, 12];
+                applyPreset(Array(currentStepCount).fill(0).map((_, i) => arpSteps[i % arpSteps.length]));
+            };
+            controlsDiv.appendChild(arpUpBtn);
+
+            const arpDownBtn = document.createElement("button"); arpDownBtn.textContent = "Arp Down";
+            arpDownBtn.onclick = () => {
+                const arpSteps = [0, -3, -7, -12];
+                applyPreset(Array(currentStepCount).fill(0).map((_, i) => arpSteps[i % arpSteps.length]));
+            };
+            controlsDiv.appendChild(arpDownBtn);
+
+            const randomPitchBtn = document.createElement("button"); randomPitchBtn.textContent = "Random";
+            randomPitchBtn.onclick = () => applyPreset(Array(currentStepCount).fill(0).map(() => Math.floor(Math.random() * 25) - 12));
+            controlsDiv.appendChild(randomPitchBtn);
+        }
+    }
+
+    const paramTypesList = ["volume", "pitch", "filter"];
+    paramTypesList.forEach(pt => {
+        const tabButton = document.createElement("button");
+        tabButton.classList.add("retrigger-tab-button");
+        tabButton.textContent = pt.charAt(0).toUpperCase() + pt.slice(1);
+        tabButton.dataset.paramType = pt;
+        if (pt === initialParamType) {
+            tabButton.classList.add("active");
+        }
+        tabButton.addEventListener("click", () => {
+            tabsContainer.querySelectorAll(".retrigger-tab-button").forEach(btn => btn.classList.remove("active"));
+            tabButton.classList.add("active");
+            setupParamSpecifics(pt);
+            renderBarsInternal();
+            createAndAppendPresetButtonsInternal();
+        });
+        tabsContainer.appendChild(tabButton);
     });
-    if (stepsArrayRef && stepsArrayRef[activeDraggedBarIndex] !== undefined) {
-      stepsArrayRef[activeDraggedBarIndex] = newValue;
-    }
 
-    const barToUpdate = barsArea.querySelector(
-      `.retrigger-bar[data-index="${activeDraggedBarIndex}"]`,
-    );
-    if (barToUpdate) {
-      let heightPercent;
-      if (valueMin < 0) {
-        heightPercent = ((newValue - valueMin) / (valueMax - valueMin)) * 100;
-      } else {
-        heightPercent = (newValue / valueMax) * 100;
-      }
-      barToUpdate.style.height = `${Math.max(2, Math.min(100, heightPercent))}%`;
+    editorContainer.appendChild(tabsContainer);
+    editorContainer.appendChild(barsArea);
+    editorContainer.appendChild(controlsDiv);
 
-      let displayValue = newValue.toFixed(
-        unit === "factor" || unit === "" ? 2 : 0,
-      );
-      if (paramType === "pitch" && newValue > 0)
-        displayValue = "+" + displayValue;
-      barToUpdate.parentElement.parentElement.title = `Step ${activeDraggedBarIndex + 1}: ${paramType.charAt(0).toUpperCase() + paramType.slice(1)} ${displayValue}${tooltipSuffix}`;
-    }
-  }
+    setupParamSpecifics(initialParamType);
+    renderBarsInternal();
+    createAndAppendPresetButtonsInternal();
 
-  function onBarDragMouseUp() {
-    if (activeDraggedBarIndex !== -1) {
-      activeDraggedBarIndex = -1;
-      saveState();
-    }
-    document.removeEventListener("mousemove", onBarDragMouseMove);
-    document.removeEventListener("mouseup", onBarDragMouseUp);
-  }
-
-  editorContainer.appendChild(barsArea);
-  return editorContainer;
+    return editorContainer;
 }
 
 function createParticles(x, y, count) {
@@ -5646,40 +5680,45 @@ function updateAndDrawParticles(deltaTime, now) {
     } catch (e) {}
     return true;
   });
-  if (Math.random() < 0.25) createWindParticles(1);
-  windParticles.forEach((p) => {
-    p.x += p.vx * (deltaTime * 60);
-    p.y += p.vy * (deltaTime * 60);
-    const padding = 10;
-    const worldTopLeft = getWorldCoords(-padding, -padding);
-    const worldBottomRight = getWorldCoords(
-      canvas.width + padding,
-      canvas.height + padding,
-    );
-    const worldWidth = worldBottomRight.x - worldTopLeft.x;
-    const worldHeight = worldBottomRight.y - worldTopLeft.y;
-    if (p.y > worldBottomRight.y) {
-      p.y = worldTopLeft.y;
-      p.x = worldTopLeft.x + Math.random() * worldWidth;
-    } else if (p.y < worldTopLeft.y) {
-      p.y = worldBottomRight.y;
-      p.x = worldTopLeft.x + Math.random() * worldWidth;
-    }
-    if (p.x > worldBottomRight.x) {
-      p.x = worldTopLeft.x;
-      p.y = worldTopLeft.y + Math.random() * worldHeight;
-    } else if (p.x < worldTopLeft.x) {
-      p.x = worldBottomRight.x;
-      p.y = worldTopLeft.y + Math.random() * worldHeight;
-    }
-    const alpha = 0.3;
-    try {
-      ctx.fillStyle = p.color.replace(/[\d\.]+\)$/g, `${alpha})`);
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fill();
-    } catch (e) {}
-  });
+
+  // Only create and draw windParticles if "swimming_stars" is active
+  if (currentBackgroundType === "swimming_stars") {
+    if (Math.random() < 0.25) createWindParticles(1);
+    
+    windParticles.forEach((p) => {
+      p.x += p.vx * (deltaTime * 60);
+      p.y += p.vy * (deltaTime * 60);
+      const padding = 10;
+      const worldTopLeft = getWorldCoords(-padding, -padding);
+      const worldBottomRight = getWorldCoords(
+        canvas.width + padding,
+        canvas.height + padding,
+      );
+      const worldWidth = worldBottomRight.x - worldTopLeft.x;
+      const worldHeight = worldBottomRight.y - worldTopLeft.y;
+      if (p.y > worldBottomRight.y) {
+        p.y = worldTopLeft.y;
+        p.x = worldTopLeft.x + Math.random() * worldWidth;
+      } else if (p.y < worldTopLeft.y) {
+        p.y = worldBottomRight.y;
+        p.x = worldTopLeft.x + Math.random() * worldWidth;
+      }
+      if (p.x > worldBottomRight.x) {
+        p.x = worldTopLeft.x;
+        p.y = worldTopLeft.y + Math.random() * worldHeight;
+      } else if (p.x < worldTopLeft.x) {
+        p.x = worldBottomRight.x;
+        p.y = worldTopLeft.y + Math.random() * worldHeight;
+      }
+      const alpha = 0.3;
+      try {
+        ctx.fillStyle = p.color.replace(/[\d\.]+\)$/g, `${alpha})`);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      } catch (e) {}
+    });
+  }
 }
 
 function createVisualPulse(
@@ -5992,7 +6031,8 @@ function updateAndDrawPulses(now) {
               grainDuration / playbackRate,
               bufferDuration - offset,
             );
-
+            
+            console.log(`[Wavetrail Audio DEBUG] Pulse ${p.id} attempting grain: offset=${offset.toFixed(3)}, req_duration=${(grainDuration / playbackRate).toFixed(5)}, available_dur=${(bufferDuration - offset).toFixed(5)}, final_grain_duration=${duration.toFixed(5)}`);
             if (duration > 0.001) {
               grainSource.start(now, offset, duration);
               grainSource.onended = () => {
@@ -6002,6 +6042,7 @@ function updateAndDrawPulses(now) {
                 } catch (e) {}
               };
             } else {
+              console.log(`[Wavetrail Audio DEBUG] Pulse ${p.id}: SKIPPING grain due to final_grain_duration <= 0.001: ${duration.toFixed(5)}`);
               try {
                 grainSource.disconnect();
                 grainGain.disconnect();
@@ -6266,9 +6307,6 @@ function createHanningWindow(length) {
   return curve;
 }
 
-
-
-
 function deepCopyState(stateToCopy) {
     if (!stateToCopy) return null;
     try {
@@ -6329,576 +6367,568 @@ function deepCopyState(stateToCopy) {
 }
 
 function saveState() {
-    if (isPerformingUndoRedo) return;
-    unsavedChanges = true;
-    const currentState = {
-        nodes: nodes.map((node) => {
-            const nodeCopy = { ...node };
-            delete nodeCopy.triggeredInThisSweep;
-            delete nodeCopy.audioNodes;
+  if (isPerformingUndoRedo) return;
+  unsavedChanges = true;
+  const currentState = {
+      nodes: nodes.map((node) => {
+          const nodeCopy = { ...node };
+          delete nodeCopy.triggeredInThisSweep;
+          delete nodeCopy.audioNodes;
 
-            if (node.type === TIMELINE_GRID_TYPE) {
-                nodeCopy.scanlineDirection = node.scanlineDirection || "forward";
-                nodeCopy.isPingPongForward =
-                    node.isPingPongForward !== undefined ? node.isPingPongForward : true;
-                nodeCopy.timelineMusicalDurationBars =
-                    node.timelineMusicalDurationBars || 1;
-                nodeCopy.rotation = node.rotation || 0;
+          if (node.type === TIMELINE_GRID_TYPE) {
+              nodeCopy.scanlineDirection = node.scanlineDirection || "forward";
+              nodeCopy.isPingPongForward =
+                  node.isPingPongForward !== undefined ? node.isPingPongForward : true;
+              nodeCopy.timelineMusicalDurationBars =
+                  node.timelineMusicalDurationBars || 1;
+              nodeCopy.rotation = node.rotation || 0;
 
-                if (!nodeCopy.audioParams) {
-                    nodeCopy.audioParams = {};
-                }
-                nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
-                nodeCopy.audioParams.timelineMusicalDurationBars =
-                    nodeCopy.timelineMusicalDurationBars;
-                nodeCopy.audioParams.rotation = nodeCopy.rotation;
-                nodeCopy.audioParams.isTransposeEnabled =
-                    node.audioParams?.isTransposeEnabled ?? false;
-                nodeCopy.audioParams.transposeDirection =
-                    node.audioParams?.transposeDirection ?? "+";
-                nodeCopy.audioParams.transposeAmount =
-                    node.audioParams?.transposeAmount ?? 0;
-                nodeCopy.audioParams.autoRotateEnabled = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
-                nodeCopy.audioParams.autoRotateSpeedManual = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
-                nodeCopy.audioParams.autoRotateDirection = node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
-                nodeCopy.audioParams.autoRotateSyncSubdivisionIndex = node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
+              if (!nodeCopy.audioParams) {
+                  nodeCopy.audioParams = {};
+              }
+              nodeCopy.audioParams.scanlineDirection = nodeCopy.scanlineDirection;
+              nodeCopy.audioParams.timelineMusicalDurationBars =
+                  nodeCopy.timelineMusicalDurationBars;
+              nodeCopy.audioParams.rotation = nodeCopy.rotation;
+              nodeCopy.audioParams.isTransposeEnabled =
+                  node.audioParams?.isTransposeEnabled ?? false;
+              nodeCopy.audioParams.transposeDirection =
+                  node.audioParams?.transposeDirection ?? "+";
+              nodeCopy.audioParams.transposeAmount =
+                  node.audioParams?.transposeAmount ?? 0;
+              nodeCopy.audioParams.autoRotateEnabled = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+              nodeCopy.audioParams.autoRotateSpeedManual = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+              nodeCopy.audioParams.autoRotateDirection = node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
+              nodeCopy.audioParams.autoRotateSyncSubdivisionIndex = node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
 
-            } else if (node.audioParams) {
-                nodeCopy.audioParams = { ...node.audioParams };
-            }
+          } else if (node.audioParams) {
+              nodeCopy.audioParams = { ...node.audioParams };
+          }
 
-            return nodeCopy;
-        }),
-        connections: connections.map((conn) => {
-            const connCopy = { ...conn };
-            delete connCopy.audioNodes;
+          return nodeCopy;
+      }),
+      connections: connections.map((conn) => {
+          const connForHistory = { ...conn };
+          delete connForHistory.audioNodes;
 
-            if (conn.audioParams) {
-                connCopy.audioParams = { ...conn.audioParams };
-            }
+          if (conn.audioParams) {
+              connForHistory.audioParams = JSON.parse(JSON.stringify(conn.audioParams, (key, value) => {
+                  if (key === 'buffer' && value instanceof AudioBuffer) {
+                      return undefined;
+                  }
+                  return value;
+              }));
 
-            if (
-                connCopy.audioParams &&
-                connCopy.audioParams.buffer &&
-                connCopy.type === "wavetrail"
-            ) {
-                delete connCopy.audioParams.buffer;
-                delete connCopy.audioParams.waveformPath;
-            }
-            return connCopy;
-        }),
-        selectedElements: Array.from(selectedElements),
-        fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
-        nodeIdCounter: nodeIdCounter,
-        connectionIdCounter: connectionIdCounter,
-        isGlobalSyncEnabled: isGlobalSyncEnabled,
-        globalBPM: globalBPM,
-        viewOffsetX: viewOffsetX,
-        viewOffsetY: viewOffsetY,
-        viewScale: viewScale,
-        currentScaleKey: currentScaleKey,
-        currentRootNote: currentRootNote,
-        globalTransposeOffset: globalTransposeOffset,
-        masterVolume: masterGain?.gain.value ?? 0.8,
-        delaySend: masterDelaySendGain?.gain.value ?? 0.3,
-        delayTime: delayNode?.delayTime.value ?? 0.25,
-        delayFeedback: delayFeedbackGain?.gain.value ?? 0.4,
-        portalVolume: portalGroupGain?.gain.value ?? 0.7,
-        originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8,
-        currentIRUrl: currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav"),
-        reverbWetLevel: reverbWetGain?.gain.value ?? 0.5,
-        reverbPreDelayTime: reverbPreDelayNode?.delayTime.value ?? 0.02,
-        reverbDampingFreq: reverbLowPass?.frequency.value ?? 8000,
-        reverbLowCutFreq: reverbHighPass?.frequency.value ?? 100,
-    };
+              if (connForHistory.type === "wavetrail" && connForHistory.audioParams) {
+                  delete connForHistory.audioParams.buffer;
+                  delete connForHistory.audioParams.waveformPath;
+              }
+          } else {
+              connForHistory.audioParams = {};
+          }
+          return connForHistory;
+      }),
+      selectedElements: Array.from(selectedElements),
+      fluctuatingGroupNodeIDs: Array.from(fluctuatingGroupNodeIDs),
+      nodeIdCounter: nodeIdCounter,
+      connectionIdCounter: connectionIdCounter,
+      isGlobalSyncEnabled: isGlobalSyncEnabled,
+      globalBPM: globalBPM,
+      viewOffsetX: viewOffsetX,
+      viewOffsetY: viewOffsetY,
+      viewScale: viewScale,
+      currentScaleKey: currentScaleKey,
+      currentRootNote: currentRootNote,
+      globalTransposeOffset: globalTransposeOffset,
+      masterVolume: masterGain?.gain.value ?? 0.8,
+      delaySend: masterDelaySendGain?.gain.value ?? 0.3,
+      delayTime: delayNode?.delayTime.value ?? 0.25,
+      delayFeedback: delayFeedbackGain?.gain.value ?? 0.4,
+      portalVolume: portalGroupGain?.gain.value ?? 0.7,
+      originalNebulaVolume: originalNebulaGroupGain?.gain.value ?? 0.8,
+      currentBackgroundType: currentBackgroundType,
+      currentIRUrl: currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav"),
+      reverbWetLevel: reverbWetGain?.gain.value ?? 0.5,
+      reverbPreDelayTime: reverbPreDelayNode?.delayTime.value ?? 0.02,
+      reverbDampingFreq: reverbLowPass?.frequency.value ?? 8000,
+      reverbLowCutFreq: reverbHighPass?.frequency.value ?? 100,
+  };
 
-    const copiedState = deepCopyState(currentState);
-    if (!copiedState) {
-        console.error("Failed to deep copy state in saveState.");
-        return;
-    }
+  const copiedState = deepCopyState(currentState);
+  if (!copiedState) {
+      console.error("Failed to deep copy state in saveState.");
+      return;
+  }
 
-    if (historyIndex < historyStack.length - 1) {
-        historyStack = historyStack.slice(0, historyIndex + 1);
-    }
-    historyStack.push(copiedState);
-    if (historyStack.length > MAX_HISTORY_SIZE) {
-        historyStack.shift();
-    }
-    historyIndex = historyStack.length - 1;
-    console.log("State saved. History index:", historyIndex, "Stack size:", historyStack.length);
+  if (historyIndex < historyStack.length - 1) {
+      historyStack = historyStack.slice(0, historyIndex + 1);
+  }
+  historyStack.push(copiedState);
+  if (historyStack.length > MAX_HISTORY_SIZE) {
+      historyStack.shift();
+  }
+  historyIndex = historyStack.length - 1;
+  console.log("State saved. History index:", historyIndex, "Stack size:", historyStack.length);
 }
 
 async function loadState(stateToLoad) {
-    if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
-        console.error("Invalid state object provided to loadState.");
-        return;
-    }
+  if (!stateToLoad || !stateToLoad.nodes || !stateToLoad.connections) {
+      console.error("Invalid state object provided to loadState.");
+      return;
+  }
 
-    isPerformingUndoRedo = true;
+  isPerformingUndoRedo = true;
 
-    nodes.forEach((node) => stopNodeAudio(node));
-    connections.forEach((conn) => stopConnectionAudio(conn));
-    activeRockets.forEach((rocket) => {
-        if (rocket.audioNodes && rocket.audioNodes.engineSound) {
-            try {
-                rocket.audioNodes.engineSound.stop();
-                rocket.audioNodes.engineSound.disconnect();
-            } catch (e) {}
-        }
-    });
-    activeRockets = [];
+  nodes.forEach((node) => stopNodeAudio(node));
+  connections.forEach((conn) => stopConnectionAudio(conn));
+  activeRockets.forEach((rocket) => {
+      if (rocket.audioNodes && rocket.audioNodes.engineSound) {
+          try {
+              rocket.audioNodes.engineSound.stop();
+              rocket.audioNodes.engineSound.disconnect();
+          } catch (e) {}
+      }
+  });
+  activeRockets = [];
 
-    nodes = stateToLoad.nodes;
-    connections = stateToLoad.connections;
+  nodes = stateToLoad.nodes;
+  connections = stateToLoad.connections;
 
-    if (stateToLoad.selectedElements) {
-        const elementsToProcess = Array.isArray(stateToLoad.selectedElements) ?
-            stateToLoad.selectedElements :
-            Array.from(stateToLoad.selectedElements);
-        selectedElements = new Set(elementsToProcess.map((el) => ({ ...el })));
-    } else {
-        selectedElements = new Set();
-    }
+  if (stateToLoad.selectedElements) {
+      const elementsToProcess = Array.isArray(stateToLoad.selectedElements) ?
+          stateToLoad.selectedElements :
+          Array.from(stateToLoad.selectedElements);
+      selectedElements = new Set(elementsToProcess.map((el) => ({ ...el })));
+  } else {
+      selectedElements = new Set();
+  }
 
-    fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ?
-        new Set(stateToLoad.fluctuatingGroupNodeIDs) :
-        new Set();
-    nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
-    connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
-    isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
-    globalBPM = stateToLoad.globalBPM ?? 120;
-    currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
-    currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
-    currentRootNote = stateToLoad.currentRootNote ?? 0;
-    globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
-    viewOffsetX = stateToLoad.viewOffsetX ?? 0;
-    viewOffsetY = stateToLoad.viewOffsetY ?? 0;
-    viewScale = stateToLoad.viewScale ?? 1.0;
+  fluctuatingGroupNodeIDs = stateToLoad.fluctuatingGroupNodeIDs ?
+      new Set(stateToLoad.fluctuatingGroupNodeIDs) :
+      new Set();
+  nodeIdCounter = stateToLoad.nodeIdCounter ?? nodeIdCounter;
+  connectionIdCounter = stateToLoad.connectionIdCounter ?? connectionIdCounter;
+  isGlobalSyncEnabled = stateToLoad.isGlobalSyncEnabled ?? false;
+  globalBPM = stateToLoad.globalBPM ?? 120;
+  currentScaleKey = stateToLoad.currentScaleKey ?? "major_pentatonic";
+  currentScale = scales[currentScaleKey] ?? scales["major_pentatonic"];
+  currentRootNote = stateToLoad.currentRootNote ?? 0;
+  globalTransposeOffset = stateToLoad.globalTransposeOffset ?? 0;
+  viewOffsetX = stateToLoad.viewOffsetX ?? 0;
+  viewOffsetY = stateToLoad.viewOffsetY ?? 0;
+  viewScale = stateToLoad.viewScale ?? 1.0;
 
-    if (isAudioReady) {
-        const now = audioContext.currentTime;
-        const loadTimeConstant = 0.01;
-        if (masterGain)
-            masterGain.gain.setTargetAtTime(
-                stateToLoad.masterVolume ?? 0.8,
-                now,
-                loadTimeConstant,
-            );
-        if (masterDelaySendGain)
-            masterDelaySendGain.gain.setTargetAtTime(
-                stateToLoad.delaySend ?? 0.3,
-                now,
-                loadTimeConstant,
-            );
-        if (delayNode)
-            delayNode.delayTime.setTargetAtTime(
-                stateToLoad.delayTime ?? 0.25,
-                now,
-                loadTimeConstant,
-            );
-        if (delayFeedbackGain)
-            delayFeedbackGain.gain.setTargetAtTime(
-                stateToLoad.delayFeedback ?? 0.4,
-                now,
-                loadTimeConstant,
-            );
-        if (portalGroupGain)
-            portalGroupGain.gain.setTargetAtTime(
-                stateToLoad.portalVolume ?? 0.7,
-                now,
-                loadTimeConstant,
-            );
-        if (originalNebulaGroupGain)
-            originalNebulaGroupGain.gain.setTargetAtTime(
-                stateToLoad.originalNebulaVolume ?? 0.8,
-                now,
-                loadTimeConstant,
-            );
+  const backgroundToLoad = stateToLoad.currentBackgroundType || "swimming_stars";
+  if (typeof applyBackground === "function") {
+      applyBackground(backgroundToLoad);
+  } else {
+      currentBackgroundType = backgroundToLoad;
+  }
 
+  if (isAudioReady) {
+      const now = audioContext.currentTime;
+      const loadTimeConstant = 0.01;
+      if (masterGain)
+          masterGain.gain.setTargetAtTime(
+              stateToLoad.masterVolume ?? 0.8,
+              now,
+              loadTimeConstant,
+          );
+      if (masterDelaySendGain)
+          masterDelaySendGain.gain.setTargetAtTime(
+              stateToLoad.delaySend ?? 0.3,
+              now,
+              loadTimeConstant,
+          );
+      if (delayNode)
+          delayNode.delayTime.setTargetAtTime(
+              stateToLoad.delayTime ?? 0.25,
+              now,
+              loadTimeConstant,
+          );
+      if (delayFeedbackGain)
+          delayFeedbackGain.gain.setTargetAtTime(
+              stateToLoad.delayFeedback ?? 0.4,
+              now,
+              loadTimeConstant,
+          );
+      if (portalGroupGain)
+          portalGroupGain.gain.setTargetAtTime(
+              stateToLoad.portalVolume ?? 0.7,
+              now,
+              loadTimeConstant,
+          );
+      if (originalNebulaGroupGain)
+          originalNebulaGroupGain.gain.setTargetAtTime(
+              stateToLoad.originalNebulaVolume ?? 0.8,
+              now,
+              loadTimeConstant,
+          );
 
-        if (reverbWetGain) {
-            reverbWetGain.gain.setTargetAtTime(stateToLoad.reverbWetLevel ?? 0.5, now, loadTimeConstant);
-            if (reverbWetSlider) reverbWetSlider.value = stateToLoad.reverbWetLevel ?? 0.5;
-            if (reverbWetValue) reverbWetValue.textContent = (stateToLoad.reverbWetLevel ?? 0.5).toFixed(2);
-        }
-        if (reverbPreDelayNode) {
-            reverbPreDelayNode.delayTime.setTargetAtTime(stateToLoad.reverbPreDelayTime ?? 0.02, now, loadTimeConstant);
-            if (reverbPreDelaySlider) reverbPreDelaySlider.value = stateToLoad.reverbPreDelayTime ?? 0.02;
-            if (reverbPreDelayValue) reverbPreDelayValue.textContent = (stateToLoad.reverbPreDelayTime ?? 0.02).toFixed(3) + "s";
-        }
-        if (reverbLowPass) {
-            reverbLowPass.frequency.setTargetAtTime(stateToLoad.reverbDampingFreq ?? 8000, now, loadTimeConstant);
-            if (reverbDampingSlider) reverbDampingSlider.value = stateToLoad.reverbDampingFreq ?? 8000;
-            if (reverbDampingValue) reverbDampingValue.textContent = (stateToLoad.reverbDampingFreq ?? 8000).toFixed(0) + "Hz";
-        }
-        if (reverbHighPass) {
-            reverbHighPass.frequency.setTargetAtTime(stateToLoad.reverbLowCutFreq ?? 100, now, loadTimeConstant);
-            if (reverbLowCutSlider) reverbLowCutSlider.value = stateToLoad.reverbLowCutFreq ?? 100;
-            if (reverbLowCutValue) reverbLowCutValue.textContent = (stateToLoad.reverbLowCutFreq ?? 100).toFixed(0) + "Hz";
-        }
+      if (reverbWetGain) {
+          reverbWetGain.gain.setTargetAtTime(stateToLoad.reverbWetLevel ?? 0.5, now, loadTimeConstant);
+          if (reverbWetSlider) reverbWetSlider.value = stateToLoad.reverbWetLevel ?? 0.5;
+          if (reverbWetValue) reverbWetValue.textContent = (stateToLoad.reverbWetLevel ?? 0.5).toFixed(2);
+      }
+      if (reverbPreDelayNode) {
+          reverbPreDelayNode.delayTime.setTargetAtTime(stateToLoad.reverbPreDelayTime ?? 0.02, now, loadTimeConstant);
+          if (reverbPreDelaySlider) reverbPreDelaySlider.value = stateToLoad.reverbPreDelayTime ?? 0.02;
+          if (reverbPreDelayValue) reverbPreDelayValue.textContent = (stateToLoad.reverbPreDelayTime ?? 0.02).toFixed(3) + "s";
+      }
+      if (reverbLowPass) {
+          reverbLowPass.frequency.setTargetAtTime(stateToLoad.reverbDampingFreq ?? 8000, now, loadTimeConstant);
+          if (reverbDampingSlider) reverbDampingSlider.value = stateToLoad.reverbDampingFreq ?? 8000;
+          if (reverbDampingValue) reverbDampingValue.textContent = (stateToLoad.reverbDampingFreq ?? 8000).toFixed(0) + "Hz";
+      }
+      if (reverbHighPass) {
+          reverbHighPass.frequency.setTargetAtTime(stateToLoad.reverbLowCutFreq ?? 100, now, loadTimeConstant);
+          if (reverbLowCutSlider) reverbLowCutSlider.value = stateToLoad.reverbLowCutFreq ?? 100;
+          if (reverbLowCutValue) reverbLowCutValue.textContent = (stateToLoad.reverbLowCutFreq ?? 100).toFixed(0) + "Hz";
+      }
 
-        const newIRUrl = stateToLoad.currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
-        if (currentIRUrl !== newIRUrl || !isReverbReady) {
-             if (typeof updateReverbIR === "function") {
-                await updateReverbIR(newIRUrl);
-             } else {
-                currentIRUrl = newIRUrl;
-             }
-        }
-         if (reverbIRSelect) reverbIRSelect.value = currentIRUrl;
+      const newIRUrl = stateToLoad.currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
+      if (currentIRUrl !== newIRUrl || !isReverbReady) {
+           if (typeof updateReverbIR === "function") {
+              await updateReverbIR(newIRUrl);
+           } else {
+              currentIRUrl = newIRUrl;
+           }
+      }
+       if (reverbIRSelect) reverbIRSelect.value = currentIRUrl;
 
+  } else {
+       currentIRUrl = stateToLoad.currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
+  }
 
-    } else {
-        currentIRUrl = stateToLoad.currentIRUrl || (impulseResponses.length > 0 ? impulseResponses[0].url : "reverb.wav");
-    }
+  nodes.forEach((node) => {
+      node.audioNodes = null;
+      node.connections = node.connections ? new Set(node.connections) : new Set();
+      node.isSelected = isElementSelected("node", node.id);
+      node.isStartNode = isPulsarType(node.type);
+      node.isEnabled =
+          node.isEnabled !== undefined ?
+          node.isEnabled :
+          node.type !== "pulsar_triggerable";
+      if (node.type === "pulsar_manual") node.isEnabled = true;
+      node.primaryInputConnectionId =
+          node.primaryInputConnectionId ??
+          (node.type === "switch" ? null : undefined);
+      node.baseHue = node.baseHue ?? null;
+      node.activeRetriggers = [];
+      node.currentRetriggerVisualIndex = -1;
 
+      if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE && node.type !== "global_key_setter")
+          node.audioParams = {};
+      else if ((node.type === TIMELINE_GRID_TYPE || node.type === "global_key_setter") && !node.audioParams)
+          node.audioParams = {};
+      
+      if (node.type === "global_key_setter") {
+          node.audioParams.keySetterMode = node.audioParams.keySetterMode || "key";
+          node.audioParams.targetKeyNote = node.audioParams.targetKeyNote === undefined ? 0 : node.audioParams.targetKeyNote;
+          node.audioParams.targetTransposeOffset = node.audioParams.targetTransposeOffset === undefined ? 0 : node.audioParams.targetTransposeOffset;
+          node.isStartNode = false; 
+      }
 
-    nodes.forEach((node) => {
-        node.audioNodes = null;
-        node.connections = node.connections ? new Set(node.connections) : new Set();
-        node.isSelected = isElementSelected("node", node.id);
-        node.isStartNode = isPulsarType(node.type);
-        node.isEnabled =
-            node.isEnabled !== undefined ?
-            node.isEnabled :
-            node.type !== "pulsar_triggerable";
-        if (node.type === "pulsar_manual") node.isEnabled = true;
-        node.primaryInputConnectionId =
-            node.primaryInputConnectionId ??
-            (node.type === "switch" ? null : undefined);
-        node.baseHue = node.baseHue ?? null;
-        node.activeRetriggers = [];
-        node.currentRetriggerVisualIndex = -1;
+      if (node.type === TIMELINE_GRID_TYPE) {
+          node.width = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+          node.height = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+          node.timelineSpeed = node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+          node.timelineMusicalDurationBars = node.timelineMusicalDurationBars || 1;
+          node.timelineIsPlaying =
+              node.timelineIsPlaying !== undefined ? node.timelineIsPlaying : true;
+          node.timelineIsLooping =
+              node.timelineIsLooping !== undefined ? node.timelineIsLooping : true;
+          node.scanLinePosition = node.scanLinePosition || 0;
+          node.triggeredInThisSweep = new Set();
+          node.timelinePulseIntensity =
+              node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+          node.internalGridDivisions = node.internalGridDivisions || 8;
+          node.showInternalGrid =
+              node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+          node.snapToInternalGrid =
+              node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
+          node.isInResizeMode = node.isInResizeMode || false;
+          node.scanlineDirection = node.scanlineDirection || "forward";
+          node.isPingPongForward =
+              node.isPingPongForward !== undefined ? node.isPingPongForward : true;
+          node.rotation = node.rotation || node.audioParams?.rotation || 0;
 
-        if (!node.audioParams && node.type !== TIMELINE_GRID_TYPE)
-            node.audioParams = {};
-        else if (node.type === TIMELINE_GRID_TYPE && !node.audioParams)
-            node.audioParams = {};
+          if (!node.audioParams) node.audioParams = {};
+          node.audioParams.timelineSpeed = node.timelineSpeed;
+          node.audioParams.timelineMusicalDurationBars =
+              node.timelineMusicalDurationBars;
+          node.audioParams.timelineIsPlaying = node.timelineIsPlaying;
+          node.audioParams.timelineIsLooping = node.timelineIsLooping;
+          node.audioParams.timelinePulseIntensity = node.timelinePulseIntensity;
+          node.audioParams.width = node.width;
+          node.audioParams.height = node.height;
+          node.audioParams.internalGridDivisions = node.internalGridDivisions;
+          node.audioParams.showInternalGrid = node.showInternalGrid;
+          node.audioParams.snapToInternalGrid = node.snapToInternalGrid;
+          node.audioParams.scanlineDirection = node.scanlineDirection;
+          node.audioParams.isInResizeMode = node.isInResizeMode;
+          node.audioParams.rotation = node.rotation;
+          node.audioParams.isTransposeEnabled =
+              node.audioParams.isTransposeEnabled ?? false;
+          node.audioParams.transposeDirection =
+              node.audioParams.transposeDirection ?? "+";
+          node.audioParams.transposeAmount = node.audioParams.transposeAmount ?? 0;
+          node.audioParams.autoRotateEnabled = node.audioParams.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+          node.audioParams.autoRotateSpeedManual = node.audioParams.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+          node.audioParams.autoRotateDirection = node.audioParams.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
+          node.audioParams.autoRotateSyncSubdivisionIndex = node.audioParams.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
 
+          node.isStartNode = false;
+          node.audioNodes = null;
+          delete node.starPoints;
+          delete node.baseHue;
+          delete node.color;
+      } else if (node.type !== "global_key_setter") {
 
-        if (node.type === TIMELINE_GRID_TYPE) {
-            node.width = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
-            node.height = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
-            node.timelineSpeed = node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
-            node.timelineMusicalDurationBars = node.timelineMusicalDurationBars || 1;
-            node.timelineIsPlaying =
-                node.timelineIsPlaying !== undefined ? node.timelineIsPlaying : true;
-            node.timelineIsLooping =
-                node.timelineIsLooping !== undefined ? node.timelineIsLooping : true;
-            node.scanLinePosition = node.scanLinePosition || 0;
-            node.triggeredInThisSweep = new Set();
-            node.timelinePulseIntensity =
-                node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
-            node.internalGridDivisions = node.internalGridDivisions || 8;
-            node.showInternalGrid =
-                node.showInternalGrid !== undefined ? node.showInternalGrid : true;
-            node.snapToInternalGrid =
-                node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
-            node.isInResizeMode = node.isInResizeMode || false;
-            node.scanlineDirection = node.scanlineDirection || "forward";
-            node.isPingPongForward =
-                node.isPingPongForward !== undefined ? node.isPingPongForward : true;
-            node.rotation = node.rotation || node.audioParams?.rotation || 0;
+          const defaultVolumeSteps = [0.8, 0.65, 0.5];
+          const numDefaultSteps = defaultVolumeSteps.length;
 
+          const defaultRetriggerParams = {
+              retriggerEnabled: false,
+              retriggerVolumeSteps: [...defaultVolumeSteps],
+              retriggerPitchSteps: Array(numDefaultSteps).fill(0),
+              retriggerFilterSteps: Array(numDefaultSteps).fill(0),
+              retriggerMuteSteps: Array(numDefaultSteps).fill(false),
+              retriggerIntervalMs: 100,
+              retriggerRateMode: "constant",
+          };
 
-            if (!node.audioParams) node.audioParams = {};
-            node.audioParams.timelineSpeed = node.timelineSpeed;
-            node.audioParams.timelineMusicalDurationBars =
-                node.timelineMusicalDurationBars;
-            node.audioParams.timelineIsPlaying = node.timelineIsPlaying;
-            node.audioParams.timelineIsLooping = node.timelineIsLooping;
-            node.audioParams.timelinePulseIntensity = node.timelinePulseIntensity;
-            node.audioParams.width = node.width;
-            node.audioParams.height = node.height;
-            node.audioParams.internalGridDivisions = node.internalGridDivisions;
-            node.audioParams.showInternalGrid = node.showInternalGrid;
-            node.audioParams.snapToInternalGrid = node.snapToInternalGrid;
-            node.audioParams.scanlineDirection = node.scanlineDirection;
-            node.audioParams.isInResizeMode = node.isInResizeMode;
-            node.audioParams.rotation = node.rotation;
-            node.audioParams.isTransposeEnabled =
-                node.audioParams.isTransposeEnabled ?? false;
-            node.audioParams.transposeDirection =
-                node.audioParams.transposeDirection ?? "+";
-            node.audioParams.transposeAmount = node.audioParams.transposeAmount ?? 0;
+          for (const key in defaultRetriggerParams) {
+              if (node.audioParams[key] === undefined) {
+                  node.audioParams[key] = defaultRetriggerParams[key];
+              }
+          }
 
-            node.audioParams.autoRotateEnabled = node.audioParams.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
-            node.audioParams.autoRotateSpeedManual = node.audioParams.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
-            node.audioParams.autoRotateDirection = node.audioParams.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION;
-            node.audioParams.autoRotateSyncSubdivisionIndex = node.audioParams.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX;
+          if (node.audioParams.retriggerRate !== undefined) {
+              if (
+                  node.audioParams.retriggerIntervalMs ===
+                  defaultRetriggerParams.retriggerIntervalMs
+              ) {
+                  node.audioParams.retriggerIntervalMs = Math.max(
+                      20,
+                      Math.round(1000 / node.audioParams.retriggerRate),
+                  );
+              }
+              delete node.audioParams.retriggerRate;
+          }
 
+          let currentStepCount = (
+              node.audioParams.retriggerVolumeSteps ||
+              defaultRetriggerParams.retriggerVolumeSteps
+          ).length;
 
-            node.isStartNode = false;
-            node.audioNodes = null;
-            delete node.starPoints;
-            delete node.baseHue;
-            delete node.color;
-        } else {
+          if (
+              node.audioParams.retriggerCount !== undefined ||
+              node.audioParams.retriggerVolumeDecay !== undefined
+          ) {
+              const countFromOldParam =
+                  node.audioParams.retriggerCount || currentStepCount;
+              const decayType = node.audioParams.retriggerVolumeDecay || "linear";
+              const baseVol = 0.8;
+              const newVolumeSteps = [];
+              for (let i = 0; i < countFromOldParam; i++) {
+                  let vol = baseVol;
+                  if (decayType === "linear")
+                      vol *= Math.max(0, 1 - i / Math.max(1, countFromOldParam - 1));
+                  else if (decayType === "exponential") vol *= Math.pow(0.75, i);
+                  newVolumeSteps.push(parseFloat(vol.toFixed(2)));
+              }
+              node.audioParams.retriggerVolumeSteps =
+                  newVolumeSteps.length > 0 ?
+                  newVolumeSteps :
+                  [...defaultRetriggerParams.retriggerVolumeSteps];
+              currentStepCount = node.audioParams.retriggerVolumeSteps.length;
 
-            const defaultVolumeSteps = [0.8, 0.65, 0.5];
-            const numDefaultSteps = defaultVolumeSteps.length;
+              delete node.audioParams.retriggerCount;
+              delete node.audioParams.retriggerVolumeDecay;
+          }
 
-            const defaultRetriggerParams = {
-                retriggerEnabled: false,
-                retriggerVolumeSteps: [...defaultVolumeSteps],
-                retriggerPitchSteps: Array(numDefaultSteps).fill(0),
-                retriggerFilterSteps: Array(numDefaultSteps).fill(0),
-                retriggerMuteSteps: Array(numDefaultSteps).fill(false),
-                retriggerIntervalMs: 100,
-                retriggerRateMode: "constant",
-            };
+          const ensureStepArrayLength = (arrayName, defaultValue) => {
+              if (
+                  !node.audioParams[arrayName] ||
+                  !Array.isArray(node.audioParams[arrayName]) ||
+                  node.audioParams[arrayName].length !== currentStepCount
+              ) {
+                  node.audioParams[arrayName] =
+                      Array(currentStepCount).fill(defaultValue);
+              }
+          };
 
+          ensureStepArrayLength("retriggerPitchSteps", 0);
+          ensureStepArrayLength("retriggerFilterSteps", 0);
+          ensureStepArrayLength("retriggerMuteSteps", false);
 
-            for (const key in defaultRetriggerParams) {
-                if (node.audioParams[key] === undefined) {
-                    node.audioParams[key] = defaultRetriggerParams[key];
-                }
-            }
+          if (node.audioParams.retriggerFilterArcType !== undefined) {
+              const oldType = node.audioParams.retriggerFilterArcType;
+              const oldFactor = node.audioParams.retriggerFilterArcFactor;
+              if (oldType === "open") {
+                  node.audioParams.retriggerFilterArcAmount =
+                      oldFactor !== undefined ? oldFactor : 0.5;
+              } else if (oldType === "close") {
+                  node.audioParams.retriggerFilterArcAmount =
+                      oldFactor !== undefined ? -oldFactor : -0.5;
+              } else {
+                  node.audioParams.retriggerFilterArcAmount = 0;
+              }
+              delete node.audioParams.retriggerFilterArcType;
+              delete node.audioParams.retriggerFilterArcFactor;
+          }
 
+          if (node.audioParams.retriggerPitchArcType !== undefined) {
+              if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
+                  const oldStepFactor =
+                      node.audioParams.retriggerPitchArcStep === undefined ?
+                      0.03 :
+                      node.audioParams.retriggerPitchArcStep;
+                  const newType = "relative_factor";
+                  const newStep =
+                      node.audioParams.retriggerPitchArcType === "down" ?
+                      -Math.abs(oldStepFactor) :
+                      Math.abs(oldStepFactor);
+                  node.audioParams.retriggerPitchArcType = newType;
+                  node.audioParams.retriggerPitchArcStep = newStep;
+              } else if (node.audioParams.retriggerPitchArcType === "step") {
+                  node.audioParams.retriggerPitchArcType = "semitone_step";
+              } else if (
+                  node.audioParams.retriggerPitchArcType === "none" &&
+                  node.audioParams.retriggerPitchArcStep === undefined
+              ) {
+                  node.audioParams.retriggerPitchArcStep = 0;
+              }
+          }
 
-            if (node.audioParams.retriggerRate !== undefined) {
-                if (
-                    node.audioParams.retriggerIntervalMs ===
-                    defaultRetriggerParams.retriggerIntervalMs
-                ) {
-                    node.audioParams.retriggerIntervalMs = Math.max(
-                        20,
-                        Math.round(1000 / node.audioParams.retriggerRate),
-                    );
-                }
-                delete node.audioParams.retriggerRate;
-            }
+          node.audioParams.reverbSend =
+              node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
+          node.audioParams.delaySend =
+              node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
+          node.audioParams.probability =
+              node.audioParams.probability ?? DEFAULT_PROBABILITY;
+          node.audioParams.pulseIntensity =
+              node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+          node.audioParams.triggerInterval =
+              node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+          node.audioParams.syncSubdivisionIndex =
+              node.syncSubdivisionIndex ??
+              node.audioParams.syncSubdivisionIndex ??
+              DEFAULT_SUBDIVISION_INDEX;
+          node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
+          node.audioParams.gateModeIndex =
+              node.gateModeIndex ??
+              node.audioParams.gateModeIndex ??
+              DEFAULT_GATE_MODE_INDEX;
+          node.gateModeIndex = node.audioParams.gateModeIndex;
+          node.audioParams.pitchShiftIndex =
+              node.pitchShiftIndex ??
+              node.audioParams.pitchShiftIndex ??
+              DEFAULT_PITCH_SHIFT_INDEX;
+          node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
+          node.audioParams.volume = node.audioParams.volume ?? 1.0;
 
+          if (isDrumType(node.type)) {
+              const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
+              node.audioParams.baseFreq =
+                  node.audioParams.baseFreq ?? defaults?.baseFreq;
+              node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
+              node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
+              if (node.type === "drum_snare" || node.type === "drum_clap") {
+                  node.audioParams.noiseDecay =
+                      node.audioParams.noiseDecay ?? defaults?.noiseDecay;
+              }
+          }
+          if (["sound", "nebula"].includes(node.type)) {
+              node.audioParams.scaleIndex = Math.max(
+                  MIN_SCALE_INDEX,
+                  Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
+              );
+              node.audioParams.pitch = getFrequency(
+                  currentScale,
+                  node.audioParams.scaleIndex,
+              );
+              if (isNaN(node.audioParams.pitch)) {
+                  node.audioParams.scaleIndex = 0;
+                  node.audioParams.pitch = getFrequency(currentScale, 0);
+              }
+          }
+          if (node.type === PORTAL_NEBULA_TYPE) {
+              node.audioParams.pitch =
+                  node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
+              node.audioParams.volume = node.audioParams.volume ?? 0.6;
+          }
+      }
 
-            let currentStepCount = (
-                node.audioParams.retriggerVolumeSteps ||
-                defaultRetriggerParams.retriggerVolumeSteps
-            ).length;
+      if (isAudioReady) {
+          if (node.type !== TIMELINE_GRID_TYPE && node.type !== "global_key_setter") {
+              node.audioNodes = createAudioNodesForNode(node);
+              if (node.audioNodes) {
+                  updateNodeAudioParams(node);
+              }
+          } else {
+              node.audioNodes = null;
+          }
+      }
+  });
 
+  connections.forEach(async (conn) => {
+      conn.isSelected = isElementSelected("connection", conn.id);
+      if (!conn.audioParams) conn.audioParams = {};
 
-            if (
-                node.audioParams.retriggerCount !== undefined ||
-                node.audioParams.retriggerVolumeDecay !== undefined
-            ) {
-                const countFromOldParam =
-                    node.audioParams.retriggerCount || currentStepCount;
-                const decayType = node.audioParams.retriggerVolumeDecay || "linear";
-                const baseVol = 0.8;
-                const newVolumeSteps = [];
-                for (let i = 0; i < countFromOldParam; i++) {
-                    let vol = baseVol;
-                    if (decayType === "linear")
-                        vol *= Math.max(0, 1 - i / Math.max(1, countFromOldParam - 1));
-                    else if (decayType === "exponential") vol *= Math.pow(0.75, i);
-                    newVolumeSteps.push(parseFloat(vol.toFixed(2)));
-                }
-                node.audioParams.retriggerVolumeSteps =
-                    newVolumeSteps.length > 0 ?
-                    newVolumeSteps :
-                    [...defaultRetriggerParams.retriggerVolumeSteps];
-                currentStepCount = node.audioParams.retriggerVolumeSteps.length;
+      if (conn.type === "string_violin") {
+          const defaults = STRING_VIOLIN_DEFAULTS;
+          Object.keys(defaults).forEach((key) => {
+              conn.audioParams[key] = conn.audioParams[key] ?? defaults[key];
+          });
+          conn.audioParams.scaleIndex = Math.max(
+              MIN_SCALE_INDEX,
+              Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
+          );
+          conn.audioParams.pitch = getFrequency(
+              currentScale,
+              conn.audioParams.scaleIndex,
+          );
+          if (isNaN(conn.audioParams.pitch)) {
+              conn.audioParams.scaleIndex = 0;
+              conn.audioParams.pitch = getFrequency(currentScale, 0);
+          }
+          if (isAudioReady) {
+              conn.audioNodes = createAudioNodesForConnection(conn);
+              if (conn.audioNodes) {
+                  updateConnectionAudioParams(conn);
+              }
+          } else {
+              conn.audioNodes = null;
+          }
+      } else if (conn.type === "wavetrail") {
+          conn.audioParams.buffer = null;
+          conn.audioParams.waveformPath = null;
+          conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
+          conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset ?? null;
+          conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
+          conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
+          conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
+          conn.audioNodes = null;
+          if (conn.audioParams.fileName && isAudioReady && typeof fetch === 'function') {
+          }
+      } else {
+          conn.audioNodes = null;
+      }
+  });
 
-                delete node.audioParams.retriggerCount;
-                delete node.audioParams.retriggerVolumeDecay;
-            }
+  updateSyncUI();
+  updateScaleAndTransposeUI();
+  if (isAudioReady) updateMixerGUI();
+  updateConstellationGroup();
+  populateEditPanel();
+  drawPianoRoll();
+  identifyAndRouteAllGroups();
 
-
-            const ensureStepArrayLength = (arrayName, defaultValue) => {
-                if (
-                    !node.audioParams[arrayName] ||
-                    !Array.isArray(node.audioParams[arrayName]) ||
-                    node.audioParams[arrayName].length !== currentStepCount
-                ) {
-                    node.audioParams[arrayName] =
-                        Array(currentStepCount).fill(defaultValue);
-                }
-            };
-
-            ensureStepArrayLength("retriggerPitchSteps", 0);
-            ensureStepArrayLength("retriggerFilterSteps", 0);
-            ensureStepArrayLength("retriggerMuteSteps", false);
-
-
-            if (node.audioParams.retriggerFilterArcType !== undefined) {
-                const oldType = node.audioParams.retriggerFilterArcType;
-                const oldFactor = node.audioParams.retriggerFilterArcFactor;
-                if (oldType === "open") {
-                    node.audioParams.retriggerFilterArcAmount =
-                        oldFactor !== undefined ? oldFactor : 0.5;
-                } else if (oldType === "close") {
-                    node.audioParams.retriggerFilterArcAmount =
-                        oldFactor !== undefined ? -oldFactor : -0.5;
-                } else {
-                    node.audioParams.retriggerFilterArcAmount = 0;
-                }
-                delete node.audioParams.retriggerFilterArcType;
-                delete node.audioParams.retriggerFilterArcFactor;
-            }
-
-
-            if (node.audioParams.retriggerPitchArcType !== undefined) {
-                if (["up", "down"].includes(node.audioParams.retriggerPitchArcType)) {
-                    const oldStepFactor =
-                        node.audioParams.retriggerPitchArcStep === undefined ?
-                        0.03 :
-                        node.audioParams.retriggerPitchArcStep;
-                    const newType = "relative_factor";
-                    const newStep =
-                        node.audioParams.retriggerPitchArcType === "down" ?
-                        -Math.abs(oldStepFactor) :
-                        Math.abs(oldStepFactor);
-                    node.audioParams.retriggerPitchArcType = newType;
-                    node.audioParams.retriggerPitchArcStep = newStep;
-                } else if (node.audioParams.retriggerPitchArcType === "step") {
-                    node.audioParams.retriggerPitchArcType = "semitone_step";
-                } else if (
-                    node.audioParams.retriggerPitchArcType === "none" &&
-                    node.audioParams.retriggerPitchArcStep === undefined
-                ) {
-                    node.audioParams.retriggerPitchArcStep = 0;
-                }
-            }
-
-
-            node.audioParams.reverbSend =
-                node.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-            node.audioParams.delaySend =
-                node.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-            node.audioParams.probability =
-                node.audioParams.probability ?? DEFAULT_PROBABILITY;
-            node.audioParams.pulseIntensity =
-                node.audioParams.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-            node.audioParams.triggerInterval =
-                node.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-            node.audioParams.syncSubdivisionIndex =
-                node.syncSubdivisionIndex ??
-                node.audioParams.syncSubdivisionIndex ??
-                DEFAULT_SUBDIVISION_INDEX;
-            node.syncSubdivisionIndex = node.audioParams.syncSubdivisionIndex;
-            node.audioParams.gateModeIndex =
-                node.gateModeIndex ??
-                node.audioParams.gateModeIndex ??
-                DEFAULT_GATE_MODE_INDEX;
-            node.gateModeIndex = node.audioParams.gateModeIndex;
-            node.audioParams.pitchShiftIndex =
-                node.pitchShiftIndex ??
-                node.audioParams.pitchShiftIndex ??
-                DEFAULT_PITCH_SHIFT_INDEX;
-            node.pitchShiftIndex = node.audioParams.pitchShiftIndex;
-            node.audioParams.volume = node.audioParams.volume ?? 1.0;
-
-
-            if (isDrumType(node.type)) {
-                const defaults = DRUM_ELEMENT_DEFAULTS[node.type] || {};
-                node.audioParams.baseFreq =
-                    node.audioParams.baseFreq ?? defaults?.baseFreq;
-                node.audioParams.decay = node.audioParams.decay ?? defaults?.decay;
-                node.audioParams.volume = node.audioParams.volume ?? defaults?.volume;
-                if (node.type === "drum_snare" || node.type === "drum_clap") {
-                    node.audioParams.noiseDecay =
-                        node.audioParams.noiseDecay ?? defaults?.noiseDecay;
-                }
-            }
-            if (["sound", "nebula"].includes(node.type)) {
-                node.audioParams.scaleIndex = Math.max(
-                    MIN_SCALE_INDEX,
-                    Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
-                );
-                node.audioParams.pitch = getFrequency(
-                    currentScale,
-                    node.audioParams.scaleIndex,
-                );
-                if (isNaN(node.audioParams.pitch)) {
-                    node.audioParams.scaleIndex = 0;
-                    node.audioParams.pitch = getFrequency(currentScale, 0);
-                }
-            }
-            if (node.type === PORTAL_NEBULA_TYPE) {
-                node.audioParams.pitch =
-                    node.audioParams.pitch ?? PORTAL_NEBULA_DEFAULTS.droneBaseFreq;
-                node.audioParams.volume = node.audioParams.volume ?? 0.6;
-            }
-        }
-
-
-        if (isAudioReady) {
-            if (node.type !== TIMELINE_GRID_TYPE) {
-                node.audioNodes = createAudioNodesForNode(node);
-                if (node.audioNodes) {
-                    updateNodeAudioParams(node);
-                }
-            } else {
-                node.audioNodes = null;
-            }
-        }
-    });
-
-    connections.forEach(async (conn) => {
-        conn.isSelected = isElementSelected("connection", conn.id);
-        if (!conn.audioParams) conn.audioParams = {};
-
-        if (conn.type === "string_violin") {
-            const defaults = STRING_VIOLIN_DEFAULTS;
-            Object.keys(defaults).forEach((key) => {
-                conn.audioParams[key] = conn.audioParams[key] ?? defaults[key];
-            });
-            conn.audioParams.scaleIndex = Math.max(
-                MIN_SCALE_INDEX,
-                Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
-            );
-            conn.audioParams.pitch = getFrequency(
-                currentScale,
-                conn.audioParams.scaleIndex,
-            );
-            if (isNaN(conn.audioParams.pitch)) {
-                conn.audioParams.scaleIndex = 0;
-                conn.audioParams.pitch = getFrequency(currentScale, 0);
-            }
-            if (isAudioReady) {
-                conn.audioNodes = createAudioNodesForConnection(conn);
-                if (conn.audioNodes) {
-                    updateConnectionAudioParams(conn);
-                }
-            } else {
-                conn.audioNodes = null;
-            }
-        } else if (conn.type === "wavetrail") {
-
-
-            conn.audioParams.buffer = null;
-            conn.audioParams.waveformPath = null;
-
-            conn.audioParams.startTimeOffset = conn.audioParams.startTimeOffset || 0;
-            conn.audioParams.endTimeOffset = conn.audioParams.endTimeOffset ?? null;
-            conn.audioParams.grainDuration = conn.audioParams.grainDuration || 0.09;
-            conn.audioParams.grainOverlap = conn.audioParams.grainOverlap || 0.07;
-            conn.audioParams.playbackRate = conn.audioParams.playbackRate || 1.0;
-            conn.audioNodes = null;
-
-            if (conn.audioParams.fileName && isAudioReady && typeof fetch === 'function') {
-                 console.log(`WaveTrail ${conn.id} has fileName ${conn.audioParams.fileName}, needs buffer to be reloaded via UI or other mechanism.`);
-            }
-
-
-        } else {
-            conn.audioNodes = null;
-        }
-    });
-
-
-    updateSyncUI();
-    updateScaleAndTransposeUI();
-    if (isAudioReady) updateMixerGUI();
-    updateConstellationGroup();
-    populateEditPanel();
-    drawPianoRoll();
-    identifyAndRouteAllGroups();
-
-    isPerformingUndoRedo = false;
-    unsavedChanges = false;
-    updateAbletonLinkButton();
-    console.log("State loaded.");
+  isPerformingUndoRedo = false;
+  unsavedChanges = false;
+  updateAbletonLinkButton();
 }
 
 function startSamplerGlide_Granular(
@@ -7948,6 +7978,39 @@ function setupLoopHandles() {
   }
 }
 
+function updateAllPitchesAndUI() {
+    nodes.forEach(node => {
+        if (node.audioParams && (node.type === "sound" || node.type === "nebula" || node.type === PRORB_TYPE)) {
+            if (typeof node.audioParams.scaleIndex === 'number') {
+                node.audioParams.pitch = getFrequency(currentScale, node.audioParams.scaleIndex);
+                updateNodeAudioParams(node);
+            }
+        }
+    });
+    connections.forEach(conn => {
+        if (conn.type === "string_violin" && conn.audioParams) {
+            if (typeof conn.audioParams.scaleIndex === 'number') {
+                conn.audioParams.pitch = getFrequency(currentScale, conn.audioParams.scaleIndex);
+                updateConnectionAudioParams(conn);
+            }
+        }
+    });
+    drawPianoRoll();
+
+    if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden") && editPanelContent) {
+        let aSelectIsFocused = false;
+        if (document.activeElement && document.activeElement.tagName === 'SELECT' && editPanelContent.contains(document.activeElement)) {
+            aSelectIsFocused = true;
+        }
+
+        if (aSelectIsFocused) {
+            console.log("Edit panel update skipped during key change because a dropdown is active.");
+        } else {
+            populateEditPanel();
+        }
+    }
+}
+
 function playTapeLoop(scheduledPlayTime = 0, offsetWithinLoopSegment = 0) {
   if (!audioContext || !tapeLoopBuffer || isTapeLoopPlaying) {
     return;
@@ -8587,7 +8650,7 @@ function animationLoop() {
           node.type === "pulsar_random_particles" ||
           node.type === "pulsar_rocket" ||
           node.type === "pulsar_triggerable" ||
-          node.type === "pulsar_meteorshower") // Added pulsar_meteorshower here
+          node.type === "pulsar_meteorshower") 
       ) {
         let shouldPulse = false;
         let pulseData = {};
@@ -8772,7 +8835,7 @@ function animationLoop() {
             if (isGlobalSyncEnabled && node.audioParams.autoRotateSyncSubdivisionIndex !== undefined && globalBPM > 0) {
                 const subdivOpt = subdivisionOptions[node.audioParams.autoRotateSyncSubdivisionIndex];
                 if (subdivOpt && typeof subdivOpt.value === 'number') {
-                    const secondsPerFullRotation = (60.0 / globalBPM) * subdivOpt.value * 4;
+                    const secondsPerFullRotation = (60.0 / globalBPM) * subdivOpt.value * 4; 
                     if (secondsPerFullRotation > 0) {
                          rotationIncrement = (Math.PI * 2 / secondsPerFullRotation) * deltaTime;
                     }
@@ -8808,9 +8871,9 @@ function animationLoop() {
               (60.0 / globalBPM);
           } else {
             currentTimelineDurationSeconds =
-              node.timelineSpeed > 0
-                ? node.timelineSpeed
-                : TIMELINE_GRID_DEFAULT_SPEED;
+              node.timelineSpeed > 0 ?
+              node.timelineSpeed :
+              TIMELINE_GRID_DEFAULT_SPEED;
           }
 
           if (currentTimelineDurationSeconds <= 0) {
@@ -8929,7 +8992,8 @@ function animationLoop() {
                 !isDrumType(otherNode.type) &&
                 otherNode.type !== "sound" &&
                 otherNode.type !== "nebula" &&
-                otherNode.type !== PORTAL_NEBULA_TYPE
+                otherNode.type !== PORTAL_NEBULA_TYPE &&
+                otherNode.type !== "global_key_setter" 
               )
                 return;
 
@@ -8969,9 +9033,9 @@ function animationLoop() {
                       color:
                         node.audioParams &&
                         node.audioParams.color !== undefined &&
-                        node.audioParams.color !== null
-                          ? node.audioParams.color
-                          : TIMELINE_GRID_DEFAULT_COLOR,
+                        node.audioParams.color !== null ?
+                        node.audioParams.color :
+                        TIMELINE_GRID_DEFAULT_COLOR,
                       particleMultiplier: 0.6,
                     };
 
@@ -8996,13 +9060,15 @@ function animationLoop() {
                       };
                     }
 
-                    if (otherNode.type === "pulsar_triggerable") {
+                    if (otherNode.type === "global_key_setter") {
+                        activateGlobalKeySetter(otherNode);
+                    } else if (otherNode.type === "pulsar_triggerable") {
                       otherNode.isEnabled = !otherNode.isEnabled;
                       otherNode.animationState = 1;
                       if (otherNode.isEnabled) {
-                        const nowTime = audioContext
-                          ? audioContext.currentTime
-                          : performance.now() / 1000;
+                        const nowTime = audioContext ?
+                          audioContext.currentTime :
+                          performance.now() / 1000;
                         otherNode.lastTriggerTime = -1;
                         otherNode.nextSyncTriggerTime = 0;
                         otherNode.nextRandomTriggerTime = 0;
@@ -9093,7 +9159,7 @@ function animationLoop() {
                         }
                       }
                     }, 250);
-                    break;
+                    break; 
                   }
                 }
               }
@@ -9191,7 +9257,6 @@ function animationLoop() {
     }
     draw();
   } catch (loopError) {
-    console.error("Error in animationLoop:", loopError);
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
@@ -9334,13 +9399,19 @@ function drawConnection(conn) {
   } else if (conn.type === "wavetrail") {
     thickness = Math.max(0.5, 1.5 / viewScale);
     dash = [];
-    if (conn.audioParams?.buffer && conn.audioParams?.waveformPath) {
-      baseClr = "rgba(180, 255, 180, 0.8)";
-      drawAsWaveformBars = true;
+    if (conn.audioParams?.buffer && conn.audioParams?.waveformPath && conn.audioParams.waveformPath.length > 0) {
+        console.log(`[DrawConnection Wavetrail DEBUG] Conn ID: ${conn.id}, Buffer valid: ${!!conn.audioParams.buffer}, Path Length: ${conn.audioParams.waveformPath.length}`);
+        if (conn.audioParams.waveformPath.length > 2) { 
+             console.log(`[DrawConnection Wavetrail DEBUG] Sample Path Data [0]: min=${conn.audioParams.waveformPath[0]?.min?.toFixed(3)}, max=${conn.audioParams.waveformPath[0]?.max?.toFixed(3)}`);
+             console.log(`[DrawConnection Wavetrail DEBUG] Sample Path Data [mid]: min=${conn.audioParams.waveformPath[Math.floor(conn.audioParams.waveformPath.length / 2)]?.min?.toFixed(3)}, max=${conn.audioParams.waveformPath[Math.floor(conn.audioParams.waveformPath.length / 2)]?.max?.toFixed(3)}`);
+        }
+        baseClr = "rgba(180, 255, 180, 0.8)";
+        drawAsWaveformBars = true;
     } else {
-      baseClr = "rgba(200, 200, 200, 0.5)";
-      dash = [4 / viewScale, 4 / viewScale];
-      ctx.setLineDash(dash);
+        console.log(`[DrawConnection Wavetrail DEBUG] Conn ID: ${conn.id}, Drawing as DASHED. Buffer valid: ${!!conn.audioParams.buffer}, Path valid: ${!!conn.audioParams.waveformPath}, Path Length: ${conn.audioParams.waveformPath ? conn.audioParams.waveformPath.length : 'N/A'}`);
+        baseClr = "rgba(200, 200, 200, 0.5)";
+        dash = [4 / viewScale, 4 / viewScale];
+        ctx.setLineDash(dash);
     }
   } else {
     baseClr =
@@ -11469,8 +11540,40 @@ function drawSelectionRect() {
   }
 }
 
+function applyBackground(type) {
+  console.log("Applying background:", type);
+  const oldBackgroundType = currentBackgroundType;
+  currentBackgroundType = type;
+
+  document.body.classList.remove("bg-silent-night-active", "bg-none-active");
+  if (silentNightBgElement) silentNightBgElement.style.display = "none";
+  
+  if(canvas) canvas.style.background = ""; 
+
+  if (type === "silent_night") {
+      document.body.classList.add("bg-silent-night-active");
+      if (silentNightBgElement) silentNightBgElement.style.display = "block";
+      if (canvas) canvas.style.background = "transparent";
+      windParticles = []; 
+  } else if (type === "none") {
+      document.body.classList.add("bg-none-active");
+      if (canvas) canvas.style.background = "#0a0f1a";
+      windParticles = []; 
+  } else if (type === "swimming_stars") {
+      if (canvas) canvas.style.background = ""; 
+  }
+  
+  if (oldBackgroundType !== currentBackgroundType) {
+      saveState(); 
+  }
+}
+
 function drawBackground(now) {
-  bgAngle += 0.0002;
+  if (currentBackgroundType !== "swimming_stars") {
+      return; 
+  }
+
+  bgAngle += 0.0002; 
   const topLeft = getWorldCoords(0, 0);
   const bottomRight = getWorldCoords(canvas.width, canvas.height);
   const worldWidth = bottomRight.x - topLeft.x;
@@ -11478,17 +11581,17 @@ function drawBackground(now) {
   const worldCenterX = topLeft.x + worldWidth / 2;
   const worldCenterY = topLeft.y + worldHeight / 2;
   const diagonal =
-    Math.sqrt(worldWidth * worldWidth + worldHeight * worldHeight) * 0.7;
+      Math.sqrt(worldWidth * worldWidth + worldHeight * worldHeight) * 0.7;
   const gradX1 = worldCenterX + Math.cos(bgAngle) * diagonal;
   const gradY1 = worldCenterY + Math.sin(bgAngle) * diagonal;
   const gradX2 = worldCenterX + Math.cos(bgAngle + Math.PI) * diagonal;
   const gradY2 = worldCenterY + Math.sin(bgAngle + Math.PI) * diagonal;
   const color1 =
-    getComputedStyle(document.documentElement)
+      getComputedStyle(document.documentElement)
       .getPropertyValue("--bg-gradient-stop-1")
       .trim() || "#1a2a40";
   const color2 =
-    getComputedStyle(document.documentElement)
+      getComputedStyle(document.documentElement)
       .getPropertyValue("--bg-gradient-stop-2")
       .trim() || "#2c3a5f";
   const gradient = ctx.createLinearGradient(gradX1, gradY1, gradX2, gradY2);
@@ -11498,74 +11601,148 @@ function drawBackground(now) {
   ctx.fillRect(topLeft.x, topLeft.y, worldWidth, worldHeight);
 }
 
+function updateAndDrawParticles(deltaTime, now) {
+activeParticles = activeParticles.filter((p) => {
+  p.x += p.vx * (deltaTime * 60);
+  p.y += p.vy * (deltaTime * 60);
+  p.vy += 0.02;
+  p.life -= deltaTime;
+  if (p.life <= 0) return false;
+  const alpha = Math.max(0, (p.life / p.maxLife) * 0.9);
+  try {
+    ctx.fillStyle = p.color.replace(/[\d\.]+\)$/g, `${alpha})`);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+  } catch (e) {}
+  return true;
+});
+
+if (currentBackgroundType === "swimming_stars") {
+  if (Math.random() < 0.25) createWindParticles(1);
+  
+  windParticles.forEach((p) => {
+    p.x += p.vx * (deltaTime * 60);
+    p.y += p.vy * (deltaTime * 60);
+    const padding = 10;
+    const worldTopLeft = getWorldCoords(-padding, -padding);
+    const worldBottomRight = getWorldCoords(
+      canvas.width + padding,
+      canvas.height + padding,
+    );
+    const worldWidth = worldBottomRight.x - worldTopLeft.x;
+    const worldHeight = worldBottomRight.y - worldTopLeft.y;
+    if (p.y > worldBottomRight.y) {
+      p.y = worldTopLeft.y;
+      p.x = worldTopLeft.x + Math.random() * worldWidth;
+    } else if (p.y < worldTopLeft.y) {
+      p.y = worldBottomRight.y;
+      p.x = worldTopLeft.x + Math.random() * worldWidth;
+    }
+    if (p.x > worldBottomRight.x) {
+      p.x = worldTopLeft.x;
+      p.y = worldTopLeft.y + Math.random() * worldHeight;
+    } else if (p.x < worldTopLeft.x) {
+      p.x = worldBottomRight.x;
+      p.y = worldTopLeft.y + Math.random() * worldHeight;
+    }
+    const alpha = 0.3;
+    try {
+      ctx.fillStyle = p.color.replace(/[\d\.]+\)$/g, `${alpha})`);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    } catch (e) {}
+  });
+}
+}
+
 function draw() {
   const now = audioContext
-    ? audioContext.currentTime
-    : performance.now() / 1000;
+      ? audioContext.currentTime
+      : performance.now() / 1000;
 
   const localDeltaTime = Math.max(
-    0,
-    Math.min(0.1, now - (previousFrameTime || now)),
+      0,
+      Math.min(0.1, now - (previousFrameTime || now)),
   );
 
   ctx.save();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height); 
+
   ctx.translate(viewOffsetX, viewOffsetY);
   ctx.scale(viewScale, viewScale);
 
-  drawBackground(now);
+  drawBackground(now); 
+
+  if (currentBackgroundType === "silent_night") {
+      // Reduced parallax factors for much slower movement
+      const parallaxFactorFar = 0.05;  // Was 0.15
+      const parallaxFactorMid = 0.15; // Was 0.35
+      const parallaxFactorNear = 0.30; // Was 0.65
+      
+      const baseTranslateX = viewOffsetX / viewScale; 
+      const baseTranslateY = viewOffsetY / viewScale;
+
+      if (starsFarLayer) {
+          starsFarLayer.style.transform = `translate(${baseTranslateX * parallaxFactorFar}px, ${baseTranslateY * parallaxFactorFar}px)`;
+      }
+      if (starsMidLayer) {
+          starsMidLayer.style.transform = `translate(${baseTranslateX * parallaxFactorMid}px, ${baseTranslateY * parallaxFactorMid}px)`;
+      }
+      if (starsNearLayer) {
+          starsNearLayer.style.transform = `translate(${baseTranslateX * parallaxFactorNear}px, ${baseTranslateY * parallaxFactorNear}px)`;
+      }
+  }
+
   drawGrid();
-  updateAndDrawParticles(localDeltaTime, now);
-
+  updateAndDrawParticles(localDeltaTime, now); 
   updateAndDrawRockets(localDeltaTime, now);
-
   connections.forEach(drawConnection);
   nodes.forEach((node) => drawNode(node));
 
   const nebulas = nodes.filter((n) => n.type === "nebula");
   for (let i = 0; i < nebulas.length; i++) {
-    for (let j = i + 1; j < nebulas.length; j++) {
-      const a = nebulas[i];
-      const b = nebulas[j];
-      const dx = a.x - b.x;
-      const dy = a.y - b.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 120) {
-        const alpha = 0.35 * Math.max(0, 1 - dist / 120);
-        drawPlasmaBridge(ctx, a, b, alpha);
+      for (let j = i + 1; j < nebulas.length; j++) {
+          const a = nebulas[i];
+          const b = nebulas[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+              const alpha = 0.35 * Math.max(0, 1 - dist / 120);
+              drawPlasmaBridge(ctx, a, b, alpha);
+          }
       }
-    }
   }
 
   updateAndDrawPulses(now);
 
-  // Ensure this call is present and uses the correct arguments
   if (typeof updateAndDrawMeteorShowers === "function") {
-    updateAndDrawMeteorShowers(localDeltaTime, now);
+      updateAndDrawMeteorShowers(localDeltaTime, now);
   }
 
-
   if (
-    isConnecting &&
-    (currentTool === "connect" ||
+      isConnecting &&
+      (currentTool === "connect" ||
       currentTool === "connect_string" ||
       currentTool === "connect_glide" ||
       currentTool === "connect_wavetrail")
   ) {
-    drawTemporaryConnection();
+      drawTemporaryConnection();
   } else if (currentTool === "brush" && isBrushing && lastBrushNode) {
-    ctx.save();
-    const brushLineColor = "rgba(255, 255, 100, 0.7)";
-    const brushLineWidth = Math.max(0.6, 1.2 / viewScale);
-    const brushLineDash = [5 / viewScale, 3 / viewScale];
-    ctx.strokeStyle = brushLineColor;
-    ctx.lineWidth = brushLineWidth;
-    ctx.setLineDash(brushLineDash);
-    ctx.beginPath();
-    ctx.moveTo(lastBrushNode.x, lastBrushNode.y);
-    ctx.lineTo(mousePos.x, mousePos.y);
-    ctx.stroke();
-    ctx.restore();
+      ctx.save();
+      const brushLineColor = "rgba(255, 255, 100, 0.7)";
+      const brushLineWidth = Math.max(0.6, 1.2 / viewScale);
+      const brushLineDash = [5 / viewScale, 3 / viewScale];
+      ctx.strokeStyle = brushLineColor;
+      ctx.lineWidth = brushLineWidth;
+      ctx.setLineDash(brushLineDash);
+      ctx.beginPath();
+      ctx.moveTo(lastBrushNode.x, lastBrushNode.y);
+      ctx.lineTo(mousePos.x, mousePos.y);
+      ctx.stroke();
+      ctx.restore();
   }
 
   drawSelectionRect();
@@ -11871,81 +12048,84 @@ function drawPlasmaBridge(ctx, nodeA, nodeB, alpha) {
 }
 
 function generateWaveformPath(audioBuffer, targetPointCount = 200) {
-    console.log(`[Wavetrail Debug] generateWaveformPath: Called. Buffer valid: ${!!audioBuffer}, targetPoints: ${targetPointCount}`);
-    if (!audioBuffer || targetPointCount <= 0) {
-        console.warn("[Wavetrail Debug] generateWaveformPath: Invalid audioBuffer or targetPointCount <= 0. Returning null.");
-        return null;
-    }
-    try {
-        if (audioBuffer.numberOfChannels === 0) {
-            console.warn("[Wavetrail Debug] generateWaveformPath: AudioBuffer has 0 channels. Returning null.");
-            return null;
-        }
-        const channelData = audioBuffer.getChannelData(0);
-        const totalSamples = channelData.length;
-        console.log(`[Wavetrail Debug] generateWaveformPath: totalSamples: ${totalSamples}`);
+  console.log(`[Wavetrail Debug] generateWaveformPath: Called. Buffer valid: ${!!audioBuffer}, targetPoints: ${targetPointCount}`);
+  if (!audioBuffer || targetPointCount <= 0) {
+      console.warn("[Wavetrail Debug] generateWaveformPath: Invalid audioBuffer or targetPointCount <= 0. Returning null.");
+      return null;
+  }
+  try {
+      if (audioBuffer.numberOfChannels === 0) {
+          console.warn("[Wavetrail Debug] generateWaveformPath: AudioBuffer has 0 channels. Returning null.");
+          return null;
+      }
+      const channelData = audioBuffer.getChannelData(0);
+      const totalSamples = channelData.length;
+      console.log(`[Wavetrail Debug] generateWaveformPath: totalSamples: ${totalSamples}`);
 
-        if (totalSamples === 0) {
-            console.warn("[Wavetrail Debug] generateWaveformPath: AudioBuffer has 0 samples. Returning minimal path.");
-            return Array(targetPointCount).fill({ min: 0, max: 0 });
-        }
+      if (totalSamples === 0) {
+          console.warn("[Wavetrail Debug] generateWaveformPath: AudioBuffer has 0 samples. Returning minimal path.");
+          return Array(targetPointCount).fill({ min: 0, max: 0 });
+      }
 
-        const points = Math.min(targetPointCount, totalSamples);
-        if (points <= 0) { // Should not happen if totalSamples > 0
-            console.warn("[Wavetrail Debug] generateWaveformPath: Calculated points <= 0. Returning minimal path.");
-            return Array(targetPointCount).fill({ min: 0, max: 0 });
-        }
+      const points = Math.min(targetPointCount, totalSamples);
+      if (points <= 0) { 
+          console.warn("[Wavetrail Debug] generateWaveformPath: Calculated points <= 0. Returning minimal path.");
+          return Array(targetPointCount).fill({ min: 0, max: 0 });
+      }
 
-        const waveformPath = [];
-        // If totalSamples < points, samplesPerPoint might be 0. Calculate differently.
-        const samplesPerPoint = totalSamples < points ? 1 : Math.floor(totalSamples / points);
-        const actualPointsToGenerate = totalSamples < points ? totalSamples : points;
+      const waveformPath = [];
+      const samplesPerPoint = totalSamples < points ? 1 : Math.floor(totalSamples / points);
+      const actualPointsToGenerate = totalSamples < points ? totalSamples : points;
 
-        let currentSampleIndex = 0;
-        for (let i = 0; i < actualPointsToGenerate; i++) {
-            const chunkStart = (totalSamples < points) ? i : Math.floor(i * (totalSamples / actualPointsToGenerate));
-            const chunkEnd = (totalSamples < points) ? (i + 1) : Math.floor((i + 1) * (totalSamples / actualPointsToGenerate));
-            
-            let chunkMin = 1.0;
-            let chunkMax = -1.0;
-            let samplesInThisChunk = 0;
+      for (let i = 0; i < actualPointsToGenerate; i++) {
+          const chunkStart = (totalSamples < points) ? i : Math.floor(i * (totalSamples / actualPointsToGenerate));
+          const chunkEnd = (totalSamples < points) ? (i + 1) : Math.floor((i + 1) * (totalSamples / actualPointsToGenerate));
+          
+          let chunkMin = 1.0;
+          let chunkMax = -1.0;
+          let samplesInThisChunk = 0;
 
-            for (let j = chunkStart; j < chunkEnd && j < totalSamples; j++) {
-                const sample = channelData[j];
-                if (sample < chunkMin) chunkMin = sample;
-                if (sample > chunkMax) chunkMax = sample; // Corrected typo here (was 'max')
-                samplesInThisChunk++;
-            }
+          for (let j = chunkStart; j < chunkEnd && j < totalSamples; j++) {
+              const sample = channelData[j];
+              if (sample < chunkMin) chunkMin = sample;
+              if (sample > chunkMax) chunkMax = sample;
+              samplesInThisChunk++;
+          }
 
-            if (samplesInThisChunk === 0) { // Should only happen if chunkStart >= chunkEnd or chunkStart >= totalSamples
-                 const singleSampleIndex = Math.min(chunkStart, totalSamples - 1);
-                 if (singleSampleIndex >= 0) {
-                    chunkMin = channelData[singleSampleIndex] || 0;
-                    chunkMax = channelData[singleSampleIndex] || 0;
-                 } else {
-                    chunkMin = 0;
-                    chunkMax = 0;
-                 }
-            }
-             waveformPath.push({ min: chunkMin, max: chunkMax });
-        }
-        
-        // Pad if waveformPath is shorter than targetPointCount (e.g. short audio file)
-        while (waveformPath.length < targetPointCount && waveformPath.length > 0) {
-            waveformPath.push({ ...waveformPath[waveformPath.length - 1] });
-        }
-        
-        if (waveformPath.length === 0 && targetPointCount > 0) { // Fallback for safety
-             console.warn("[Wavetrail Debug] generateWaveformPath: WaveformPath ended up empty, returning minimal path.");
-            return Array(targetPointCount).fill({min: 0, max: 0});
-        }
-        console.log(`[Wavetrail Debug] generateWaveformPath: Generated path with ${waveformPath.length} points.`);
-        return waveformPath;
+          if (samplesInThisChunk === 0) { 
+               const singleSampleIndex = Math.min(chunkStart, totalSamples - 1);
+               if (singleSampleIndex >= 0) {
+                  chunkMin = channelData[singleSampleIndex] || 0;
+                  chunkMax = channelData[singleSampleIndex] || 0;
+               } else {
+                  chunkMin = 0;
+                  chunkMax = 0;
+               }
+          }
+          // Debug log for the first few chunks
+          if (samplesInThisChunk > 0 && i < 3) {
+              console.log(`[generateWaveformPath DEBUG] Chunk ${i} for wavetrail: min=${chunkMin.toFixed(4)}, max=${chunkMax.toFixed(4)}, samplesInChunk: ${samplesInThisChunk}`);
+          } else if (i < 3) {
+              console.log(`[generateWaveformPath DEBUG] Chunk ${i} for wavetrail (no samples or fallback): min=${chunkMin.toFixed(4)}, max=${chunkMax.toFixed(4)}, samplesInChunk: ${samplesInThisChunk}`);
+          }
+          waveformPath.push({ min: chunkMin, max: chunkMax });
+      }
+      
+      while (waveformPath.length < targetPointCount && waveformPath.length > 0) {
+          waveformPath.push({ ...waveformPath[waveformPath.length - 1] });
+      }
+      
+      if (waveformPath.length === 0 && targetPointCount > 0) { 
+           console.warn("[Wavetrail Debug] generateWaveformPath: WaveformPath ended up empty, returning minimal path.");
+          return Array(targetPointCount).fill({min: 0, max: 0});
+      }
+      console.log(`[Wavetrail Debug] generateWaveformPath: Generated path with ${waveformPath.length} points.`);
+      return waveformPath;
 
-    } catch (error) {
-        console.error("[Wavetrail Debug] Error in generateWaveformPath:", error);
-        return null;
-    }
+  } catch (error) {
+      console.error("[Wavetrail Debug] Error in generateWaveformPath:", error);
+      return null;
+  }
 }
 
 function launchRocket(pulsarNode, pulseData) {
@@ -14846,1525 +15026,1807 @@ function setActiveTool(toolName) {
 }
 
 function populateEditPanel() {
-  editPanelContent.innerHTML = "";
-  if (currentTool !== "edit" || selectedElements.size === 0) {
-      if (
-          hamburgerMenuPanel &&
-          !hamburgerMenuPanel.classList.contains("hidden") &&
-          selectedElements.size === 0
-      ) {
-          hamburgerMenuPanel.classList.add("hidden");
-          if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-      }
-      return;
-  }
+    editPanelContent.innerHTML = "";
+    if (currentTool !== "edit" || selectedElements.size === 0) {
+        if (
+            hamburgerMenuPanel &&
+            !hamburgerMenuPanel.classList.contains("hidden") &&
+            selectedElements.size === 0
+        ) {
+            hamburgerMenuPanel.classList.add("hidden");
+            if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+        }
+        return;
+    }
 
-  const selectedArray = Array.from(selectedElements);
-  const firstElementData = selectedArray[0];
-  const fragment = document.createDocumentFragment();
-  const title = document.createElement("p");
-  const nodeTypes = new Set(
-      selectedArray
-      .filter((el) => el.type === "node")
-      .map((el) => findNodeById(el.id)?.type),
-  );
-  const connectionTypesSet = new Set(
-      selectedArray
-      .filter((el) => el.type === "connection")
-      .map((el) => findConnectionById(el.id)?.type),
-  );
-  let titleText = "";
-  let allSameLogicalType = false;
-  let logicalType = "";
+    const selectedArray = Array.from(selectedElements);
+    const firstElementData = selectedArray[0];
+    const fragment = document.createDocumentFragment();
+    const title = document.createElement("p");
+    const nodeTypes = new Set(
+        selectedArray
+        .filter((el) => el.type === "node")
+        .map((el) => findNodeById(el.id)?.type),
+    );
+    const connectionTypesSet = new Set(
+        selectedArray
+        .filter((el) => el.type === "connection")
+        .map((el) => findConnectionById(el.id)?.type),
+    );
+    let titleText = "";
+    let allSameLogicalType = false;
+    let logicalType = "";
 
-  if (selectedArray.length === 1) {
-      const element =
-          firstElementData.type === "node" ?
-          findNodeById(firstElementData.id) :
-          findConnectionById(firstElementData.id);
-      if (element) {
-          logicalType = element.type.replace(/_/g, " ");
-          titleText = `Edit ${logicalType} #${element.id}`;
-          allSameLogicalType = true;
-      } else {
-          titleText = "Edit Element";
-      }
-  } else {
-      const types = new Set([...nodeTypes, ...connectionTypesSet]);
-      if (types.size === 1) {
-          logicalType = [...types][0].replace(/_/g, " ");
-          titleText = `Edit ${selectedArray.length} ${logicalType}s`;
-          allSameLogicalType = true;
-      } else {
-          titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
-          allSameLogicalType = false;
-      }
-  }
-  title.innerHTML = `<strong>${titleText}</strong>`;
-  fragment.appendChild(title);
+    if (selectedArray.length === 1) {
+        const element =
+            firstElementData.type === "node" ?
+            findNodeById(firstElementData.id) :
+            findConnectionById(firstElementData.id);
+        if (element) {
+            logicalType = element.type.replace(/_/g, " ");
+            titleText = `Edit ${logicalType} #${element.id}`;
+            allSameLogicalType = true;
+        } else {
+            titleText = "Edit Element";
+        }
+    } else {
+        const types = new Set([...nodeTypes, ...connectionTypesSet]);
+        if (types.size === 1) {
+            logicalType = [...types][0].replace(/_/g, " ");
+            titleText = `Edit ${selectedArray.length} ${logicalType}s`;
+            allSameLogicalType = true;
+        } else {
+            titleText = `Edit ${selectedArray.length} Elements (Mixed Types)`;
+            allSameLogicalType = false;
+        }
+    }
+    title.innerHTML = `<strong>${titleText}</strong>`;
+    fragment.appendChild(title);
 
-  if (selectedArray.length > 1) {
-      let hasNodesSelected = false;
-      for (const elData of selectedArray) {
-          if (elData.type === 'node') {
-              hasNodesSelected = true;
-              break;
-          }
-      }
+    if (selectedArray.length > 1) {
+        let hasNodesSelected = false;
+        for (const elData of selectedArray) {
+            if (elData.type === 'node') {
+                hasNodesSelected = true;
+                break;
+            }
+        }
 
-      if (hasNodesSelected) {
-          const makeGroupButton = document.createElement("button");
-          makeGroupButton.textContent = "Make User-Defined Group";
-          makeGroupButton.id = "edit-panel-make-group-btn";
-          makeGroupButton.classList.add("panel-button-like");
-          makeGroupButton.style.marginTop = "10px";
-          makeGroupButton.style.marginBottom = "10px";
-          makeGroupButton.style.display = "block";
-          makeGroupButton.style.width = "100%";
+        if (hasNodesSelected) {
+            const makeGroupButton = document.createElement("button");
+            makeGroupButton.textContent = "Make User-Defined Group";
+            makeGroupButton.id = "edit-panel-make-group-btn";
+            makeGroupButton.classList.add("panel-button-like");
+            makeGroupButton.style.marginTop = "10px";
+            makeGroupButton.style.marginBottom = "10px";
+            makeGroupButton.style.display = "block";
+            makeGroupButton.style.width = "100%";
 
+            makeGroupButton.addEventListener("click", () => {
+                if (typeof makeUserDefinedGroup === "function") {
+                    makeUserDefinedGroup();
+                    populateEditPanel();
+                } else {
+                    alert("Error: Grouping function not available.");
+                }
+            });
+            fragment.appendChild(makeGroupButton);
+        }
+    }
 
-          makeGroupButton.addEventListener("click", () => {
-              if (typeof makeUserDefinedGroup === "function") {
-                  makeUserDefinedGroup();
-                  populateEditPanel();
-              } else {
-                  console.error("makeUserDefinedGroup function is not defined.");
-                  alert("Error: Grouping function not available.");
-              }
-          });
-          fragment.appendChild(makeGroupButton);
-      }
-  }
+    const elementsWithNote = selectedArray.filter((elData) => {
+        const el =
+            elData.type === "node" ?
+            findNodeById(elData.id) :
+            findConnectionById(elData.id);
+        return (
+            el &&
+            (el.type === "sound" ||
+                el.type === "nebula" ||
+                (elData.type === "connection" && el.type === "string_violin"))
+        );
+    });
 
+    if (elementsWithNote.length > 0) {
+        const targetDataForNoteSelector = elementsWithNote.map((el) => ({
+            type: el.type,
+            id: el.id,
+        }));
+        createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
+    }
 
-  const elementsWithNote = selectedArray.filter((elData) => {
-      const el =
-          elData.type === "node" ?
-          findNodeById(elData.id) :
-          findConnectionById(elData.id);
-      return (
-          el &&
-          (el.type === "sound" ||
-              el.type === "nebula" ||
-              (elData.type === "connection" && el.type === "string_violin"))
-      );
-  });
-  
-  if (elementsWithNote.length > 0) {
-      const targetDataForNoteSelector = elementsWithNote.map((el) => ({
-          type: el.type,
-          id: el.id,
-      }));
-      createHexNoteSelectorDOM(fragment, targetDataForNoteSelector);
-  }
-  
-  if (allSameLogicalType) {
-      if (firstElementData.type === "node") {
-          const node = findNodeById(firstElementData.id);
-  
-          if (node && node.type === TIMELINE_GRID_TYPE) {
-              const section = document.createElement("div");
-              section.classList.add("panel-section");
-  
-              const playingLabel = document.createElement("label");
-              playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
-              playingLabel.textContent = "Playing:";
-              section.appendChild(playingLabel);
-              const playingCheckbox = document.createElement("input");
-              playingCheckbox.type = "checkbox";
-              playingCheckbox.id = `edit-timeline-playing-${node.id}`;
-              playingCheckbox.checked = node.timelineIsPlaying;
-              playingCheckbox.addEventListener("change", (e) => {
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE) {
-                          n.timelineIsPlaying = e.target.checked;
-                          if (
-                              n.timelineIsPlaying &&
-                              n.scanLinePosition >= 1.0 &&
-                              n.timelineIsLooping
-                          ) {
-                              n.scanLinePosition = 0;
-                              if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear();
-                              else n.triggeredInThisSweep = new Set();
-                          }
-                          if (n.audioParams)
-                              n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
-                      }
-                  });
-                  saveState();
-              });
-              section.appendChild(playingCheckbox);
-              section.appendChild(document.createElement("br"));
-  
-              const loopingLabel = document.createElement("label");
-              loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
-              loopingLabel.textContent = "Looping:";
-              section.appendChild(loopingLabel);
-              const loopingCheckbox = document.createElement("input");
-              loopingCheckbox.type = "checkbox";
-              loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
-              loopingCheckbox.checked = node.timelineIsLooping;
-              loopingCheckbox.addEventListener("change", (e) => {
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE) {
-                          n.timelineIsLooping = e.target.checked;
-                          if (n.audioParams)
-                              n.audioParams.timelineIsLooping = n.timelineIsLooping;
-                      }
-                  });
-                  saveState();
-              });
-              section.appendChild(loopingCheckbox);
-              section.appendChild(document.createElement("br"));
-  
-              if (isGlobalSyncEnabled) {
-                  const durationLabel = document.createElement("label");
-                  durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
-                  durationLabel.textContent = "Duration (Sync):";
-                  section.appendChild(durationLabel);
-                  const durationSelect = document.createElement("select");
-                  durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
-                  const barOptions = [
-                      { label: "1/4 Bar (1 Beat)", value: 0.25 },
-                      { label: "1/2 Bar (2 Beats)", value: 0.5 },
-                      { label: "1 Bar (4 Beats)", value: 1 },
-                      { label: "2 Bars (8 Beats)", value: 2 },
-                      { label: "4 Bars (16 Beats)", value: 4 },
-                      { label: "8 Bars (32 Beats)", value: 8 },
-                  ];
-                  let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
-                  barOptions.forEach((opt) => {
-                      const optionEl = document.createElement("option");
-                      optionEl.value = opt.value;
-                      optionEl.textContent = opt.label;
-                      if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
-                          optionEl.selected = true;
-                      }
-                      durationSelect.appendChild(optionEl);
-                  });
-                  durationSelect.addEventListener("change", (e) => {
-                      const newBars = parseFloat(e.target.value);
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE) {
-                              n.timelineMusicalDurationBars = newBars;
-                              if (n.audioParams)
-                                  n.audioParams.timelineMusicalDurationBars = newBars;
-                          }
-                      });
-                      saveState();
-                  });
-                  section.appendChild(durationSelect);
-              } else {
-                  const currentSpeed =
-                      node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
-                  const speedVal = currentSpeed.toFixed(1);
-                  const speedSliderContainer = createSlider(
-                      `edit-timeline-speed-${node.id}`,
-                      `Speed (${speedVal}s / sweep):`,
-                      0.2,
-                      30.0,
-                      0.1,
-                      currentSpeed,
-                      saveState,
-                      (e_input) => {
-                          const newSpeed = parseFloat(e_input.target.value);
-                          selectedArray.forEach((elData) => {
-                              const n = findNodeById(elData.id);
-                              if (n && n.type === TIMELINE_GRID_TYPE) {
-                                  n.timelineSpeed = newSpeed;
-                                  if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
-                              }
-                          });
-                          e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
-                      },
-                  );
-                  section.appendChild(speedSliderContainer);
-              }
-  
-              const MIN_TIMELINE_PIXEL_WIDTH = 50;
-              const MAX_TIMELINE_PIXEL_WIDTH = 1200;
-              const MIN_TIMELINE_PIXEL_HEIGHT = 50;
-              const MAX_TIMELINE_PIXEL_HEIGHT = 800;
-              const PIXEL_STEP = 10;
-  
-              const gridSpacing = calculateGridSpacing();
-              const halfGridSquare =
-                  isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
-  
-              let widthSliderMin,
-                  widthSliderMax,
-                  widthSliderStep,
-                  currentWidthInUnits,
-                  widthLabelUnitText;
-              const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
-  
-              if (isSnapEnabled && halfGridSquare > 0) {
-                  widthSliderMin = Math.max(
-                      1,
-                      Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
-                  );
-                  widthSliderMax = Math.round(
-                      MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
-                  );
-                  widthSliderStep = 1;
-                  currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
-                  widthLabelUnitText = " units";
-              } else {
-                  widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
-                  widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
-                  widthSliderStep = PIXEL_STEP;
-                  currentWidthInUnits = currentPixelWidth;
-                  widthLabelUnitText = "px";
-              }
-  
-              const widthDisplayValText =
-                  isSnapEnabled && halfGridSquare > 0 ?
-                  currentWidthInUnits.toFixed(0) :
-                  currentPixelWidth.toFixed(0);
-              const widthSliderContainer = createSlider(
-                  `edit-timeline-width-${node.id}`,
-                  `Width (${widthDisplayValText}${widthLabelUnitText}):`,
-                  widthSliderMin,
-                  widthSliderMax,
-                  widthSliderStep,
-                  currentWidthInUnits,
-                  saveState,
-                  (e_input) => {
-                      const newSliderValue = parseFloat(e_input.target.value);
-                      let newPixelWidth;
-                      if (isSnapEnabled && halfGridSquare > 0) {
-                          newPixelWidth = newSliderValue * halfGridSquare;
-                          newPixelWidth = Math.max(
-                              halfGridSquare,
-                              Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
-                          );
-                      } else {
-                          newPixelWidth = newSliderValue;
-                      }
-                      newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
-  
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE) {
-                              n.width = newPixelWidth;
-                              if (n.audioParams) n.audioParams.width = newPixelWidth;
-                          }
-                      });
-                      const displayVal =
-                          isSnapEnabled && halfGridSquare > 0 ?
-                          (newPixelWidth / halfGridSquare).toFixed(0) :
-                          newPixelWidth.toFixed(0);
-                      const displayUnit =
-                          isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
-                      e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
-                  },
-              );
-              section.appendChild(widthSliderContainer);
-  
-              let heightSliderMin,
-                  heightSliderMax,
-                  heightSliderStep,
-                  currentHeightInUnits,
-                  heightLabelUnitText;
-              const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
-  
-              if (isSnapEnabled && halfGridSquare > 0) {
-                  heightSliderMin = Math.max(
-                      1,
-                      Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
-                  );
-                  heightSliderMax = Math.round(
-                      MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
-                  );
-                  heightSliderStep = 1;
-                  currentHeightInUnits = Math.round(
-                      currentPixelHeight / halfGridSquare,
-                  );
-                  heightLabelUnitText = " units";
-              } else {
-                  heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
-                  heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
-                  heightSliderStep = PIXEL_STEP;
-                  currentHeightInUnits = currentPixelHeight;
-                  heightLabelUnitText = "px";
-              }
-  
-              const heightDisplayValText =
-                  isSnapEnabled && halfGridSquare > 0 ?
-                  currentHeightInUnits.toFixed(0) :
-                  currentPixelHeight.toFixed(0);
-              const heightSliderContainer = createSlider(
-                  `edit-timeline-height-${node.id}`,
-                  `Height (${heightDisplayValText}${heightLabelUnitText}):`,
-                  heightSliderMin,
-                  heightSliderMax,
-                  heightSliderStep,
-                  currentHeightInUnits,
-                  saveState,
-                  (e_input) => {
-                      const newSliderValue = parseFloat(e_input.target.value);
-                      let newPixelHeight;
-                      if (isSnapEnabled && halfGridSquare > 0) {
-                          newPixelHeight = newSliderValue * halfGridSquare;
-                          newPixelHeight = Math.max(
-                              halfGridSquare,
-                              Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
-                          );
-                      } else {
-                          newPixelHeight = newSliderValue;
-                      }
-                      newPixelHeight = Math.max(
-                          MIN_TIMELINE_PIXEL_HEIGHT,
-                          newPixelHeight,
-                      );
-  
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE) {
-                              n.height = newPixelHeight;
-                              if (n.audioParams) n.audioParams.height = newPixelHeight;
-                          }
-                      });
-                      const displayVal =
-                          isSnapEnabled && halfGridSquare > 0 ?
-                          (newPixelHeight / halfGridSquare).toFixed(0) :
-                          newPixelHeight.toFixed(0);
-                      const displayUnit =
-                          isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
-                      e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
-                  },
-              );
-              section.appendChild(heightSliderContainer);
-  
-              const currentPulseIntensity =
-                  node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
-              const intensityVal = currentPulseIntensity.toFixed(2);
-              const intensitySliderContainer = createSlider(
-                  `edit-timeline-intensity-${node.id}`,
-                  `Trigger Intensity (${intensityVal}):`,
-                  0.1,
-                  1.5,
-                  0.01,
-                  currentPulseIntensity,
-                  saveState,
-                  (e_input) => {
-                      const newIntensity = parseFloat(e_input.target.value);
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE) {
-                              n.timelinePulseIntensity = newIntensity;
-                              if (n.audioParams)
-                                  n.audioParams.timelinePulseIntensity = newIntensity;
-                          }
-                      });
-                      e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
-                  },
-              );
-              section.appendChild(intensitySliderContainer);
-  
-              const internalGridSection = document.createElement("div");
-              internalGridSection.classList.add("panel-section");
-              internalGridSection.style.borderTop = "1px solid var(--button-hover)";
-              internalGridSection.style.marginTop = "10px";
-              internalGridSection.style.paddingTop = "10px";
-  
-              const showInternalGridLabel = document.createElement("label");
-              showInternalGridLabel.textContent = "Show Internal Grid: ";
-              const showInternalGridCheckbox = document.createElement("input");
-              showInternalGridCheckbox.type = "checkbox";
-              showInternalGridCheckbox.checked =
-                  node.showInternalGrid !== undefined ? node.showInternalGrid : true;
-              showInternalGridCheckbox.addEventListener("change", (e) => {
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE) {
-                          n.showInternalGrid = e.target.checked;
-                          if (n.audioParams)
-                              n.audioParams.showInternalGrid = n.showInternalGrid;
-                      }
-                  });
-                  saveState();
-              });
-              internalGridSection.appendChild(showInternalGridLabel);
-              internalGridSection.appendChild(showInternalGridCheckbox);
-              internalGridSection.appendChild(document.createElement("br"));
-  
-              const snapToInternalGridLabel = document.createElement("label");
-              snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
-              const snapToInternalGridCheckbox = document.createElement("input");
-              snapToInternalGridCheckbox.type = "checkbox";
-              snapToInternalGridCheckbox.checked =
-                  node.snapToInternalGrid !== undefined ?
-                  node.snapToInternalGrid :
-                  true;
-              snapToInternalGridCheckbox.addEventListener("change", (e) => {
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE) {
-                          n.snapToInternalGrid = e.target.checked;
-                          if (n.audioParams)
-                              n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
-                      }
-                  });
-                  saveState();
-              });
-              internalGridSection.appendChild(snapToInternalGridLabel);
-              internalGridSection.appendChild(snapToInternalGridCheckbox);
-              internalGridSection.appendChild(document.createElement("br"));
-  
-              const currentDivisions = node.internalGridDivisions || 8;
-              const divisionsLabel = document.createElement("label");
-              divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
-              divisionsLabel.textContent = "Internal Grid Subdivisions:";
-              internalGridSection.appendChild(divisionsLabel);
-  
-              const divisionsSelect = document.createElement("select");
-              divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
-              const divisionOptions = [
-                  { label: "None (1)", value: 1 }, { label: "Halves (2)", value: 2 },
-                  { label: "Thirds (3)", value: 3 }, { label: "Quarters (4)", value: 4 },
-                  { label: "Sixths (6)", value: 6 }, { label: "Eighths (8)", value: 8 },
-                  { label: "Twelfths (12 - triplets)", value: 12 }, { label: "Sixteenths (16)", value: 16 },
-                  { label: "24ths (16th triplets)", value: 24 }, { label: "32nds (32)", value: 32 },
-                  { label: "64ths (64)", value: 64 },
-              ];
-              let currentDivisionValueForSelect = node.internalGridDivisions || 8;
-              divisionOptions.forEach((opt) => {
-                  const optionEl = document.createElement("option");
-                  optionEl.value = opt.value;
-                  optionEl.textContent = opt.label;
-                  if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
-                      optionEl.selected = true;
-                  }
-                  divisionsSelect.appendChild(optionEl);
-              });
-              divisionsSelect.addEventListener("change", (e) => {
-                  const newDivisions = parseInt(e.target.value);
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE) {
-                          n.internalGridDivisions = newDivisions;
-                          if (n.audioParams)
-                              n.audioParams.internalGridDivisions = newDivisions;
-                      }
-                  });
-                  saveState();
-              });
-              internalGridSection.appendChild(divisionsSelect);
-              section.appendChild(internalGridSection);
-  
-              const transposeSection = document.createElement("div");
-              transposeSection.classList.add("panel-section");
-              transposeSection.style.borderTop = "1px solid var(--button-hover)";
-              transposeSection.style.marginTop = "10px";
-              transposeSection.style.paddingTop = "10px";
-              transposeSection.innerHTML = "<p><strong>Timeline Transposition:</strong></p>";
-  
-              const enableTransposeLabel = document.createElement("label");
-              enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
-              enableTransposeLabel.textContent = "Enable Transposition: ";
-              const enableTransposeCheckbox = document.createElement("input");
-              enableTransposeCheckbox.type = "checkbox";
-              enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
-              enableTransposeCheckbox.checked =
-                  node.audioParams?.isTransposeEnabled || false;
-              enableTransposeCheckbox.addEventListener("change", (e) => {
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                          n.audioParams.isTransposeEnabled = e.target.checked;
-                      }
-                  });
-                  saveState();
-                  populateEditPanel();
-              });
-              transposeSection.appendChild(enableTransposeLabel);
-              transposeSection.appendChild(enableTransposeCheckbox);
-              transposeSection.appendChild(document.createElement("br"));
-  
-              if (node.audioParams?.isTransposeEnabled) {
-                  const directionContainer = document.createElement("div");
-                  directionContainer.style.marginBottom = "5px";
-                  const directionLabel = document.createElement("label");
-                  directionLabel.textContent = "Direction: ";
-                  directionLabel.style.marginRight = "5px";
-                  directionContainer.appendChild(directionLabel);
-  
-                  const plusButton = document.createElement("button");
-                  plusButton.textContent = "+";
-                  plusButton.classList.add("panel-button-like");
-                  if (node.audioParams.transposeDirection === "+") {
-                      plusButton.classList.add("active");
-                  }
-                  plusButton.addEventListener("click", () => {
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                              n.audioParams.transposeDirection = "+";
-                          }
-                      });
-                      saveState();
-                      populateEditPanel();
-                  });
-                  directionContainer.appendChild(plusButton);
-  
-                  const minusButton = document.createElement("button");
-                  minusButton.textContent = "-";
-                  minusButton.classList.add("panel-button-like");
-                  if (node.audioParams.transposeDirection === "-") {
-                      minusButton.classList.add("active");
-                  }
-                  minusButton.addEventListener("click", () => {
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                              n.audioParams.transposeDirection = "-";
-                          }
-                      });
-                      saveState();
-                      populateEditPanel();
-                  });
-                  directionContainer.appendChild(minusButton);
-                  transposeSection.appendChild(directionContainer);
-  
-                  const currentTransposeAmount = node.audioParams.transposeAmount || 0;
-                  const amountSliderContainer = createSlider(
-                      `edit-timeline-transpose-amount-${node.id}`,
-                      `Amount (${currentTransposeAmount} scale steps):`,
-                      0,
-                      24,
-                      1,
-                      currentTransposeAmount,
-                      () => {
-                          saveState();
-                      },
-                      (e_input) => {
-                          const newAmount = parseInt(e_input.target.value);
-                          selectedArray.forEach((elData) => {
-                              const n = findNodeById(elData.id);
-                              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                  n.audioParams.transposeAmount = newAmount;
-                              }
-                          });
-                          const labelElement = e_input.target.previousElementSibling;
-                          if (labelElement) {
-                              labelElement.textContent = `Amount (${newAmount} scale steps):`;
-                          }
-                      },
-                  );
-                  transposeSection.appendChild(amountSliderContainer);
-              }
-              section.appendChild(transposeSection);
-  
-              const autoRotateSection = document.createElement("div");
-              autoRotateSection.classList.add("panel-section");
-              autoRotateSection.style.borderTop = "1px solid var(--button-hover)";
-              autoRotateSection.style.marginTop = "10px";
-              autoRotateSection.style.paddingTop = "10px";
-              autoRotateSection.innerHTML = "<p><strong>Timeline Auto-Rotation:</strong></p>";
-  
-              const enableAutoRotateLabel = document.createElement("label");
-              enableAutoRotateLabel.htmlFor = `edit-timeline-autorotate-enable-${node.id}`;
-              enableAutoRotateLabel.textContent = "Enable Auto-Rotate: ";
-              const enableAutoRotateCheckbox = document.createElement("input");
-              enableAutoRotateCheckbox.type = "checkbox";
-              enableAutoRotateCheckbox.id = `edit-timeline-autorotate-enable-${node.id}`;
-              enableAutoRotateCheckbox.checked = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
-              enableAutoRotateCheckbox.addEventListener("change", (e) => {
-                  selectedArray.forEach((elData) => {
-                      const n = findNodeById(elData.id);
-                      if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                          n.audioParams.autoRotateEnabled = e.target.checked;
-                      }
-                  });
-                  saveState();
-                  populateEditPanel();
-              });
-              autoRotateSection.appendChild(enableAutoRotateLabel);
-              autoRotateSection.appendChild(enableAutoRotateCheckbox);
-              autoRotateSection.appendChild(document.createElement("br"));
-  
-              if (node.audioParams?.autoRotateEnabled) {
-                  const directionRotateLabel = document.createElement("label");
-                  directionRotateLabel.htmlFor = `edit-timeline-autorotate-direction-${node.id}`;
-                  directionRotateLabel.textContent = "Direction: ";
-                  autoRotateSection.appendChild(directionRotateLabel);
-  
-                  const directionRotateSelect = document.createElement("select");
-                  directionRotateSelect.id = `edit-timeline-autorotate-direction-${node.id}`;
-                  ["clockwise", "counter-clockwise"].forEach(dir => {
-                      const option = document.createElement("option");
-                      option.value = dir;
-                      option.textContent = dir.charAt(0).toUpperCase() + dir.slice(1);
-                      if (dir === (node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION)) {
-                          option.selected = true;
-                      }
-                      directionRotateSelect.appendChild(option);
-                  });
-                  directionRotateSelect.addEventListener("change", (e) => {
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                              n.audioParams.autoRotateDirection = e.target.value;
-                          }
-                      });
-                      saveState();
-                  });
-                  autoRotateSection.appendChild(directionRotateSelect);
-                  autoRotateSection.appendChild(document.createElement("br"));
-  
-                  if (isGlobalSyncEnabled) {
-                      const syncSpeedLabel = document.createElement("label");
-                      syncSpeedLabel.htmlFor = `edit-timeline-autorotate-syncspeed-${node.id}`;
-                      syncSpeedLabel.textContent = "Synced Speed (Full Rotation per):";
-                      autoRotateSection.appendChild(syncSpeedLabel);
-  
-                      const syncSpeedSelect = document.createElement("select");
-                      syncSpeedSelect.id = `edit-timeline-autorotate-syncspeed-${node.id}`;
-  
-                      const syncSubdivisionForRotation = [
-                          { label: "1/8 Note", originalIndex: 2 },
-                          { label: "1/4 Note", originalIndex: 4 },
-                          { label: "1/2 Note", originalIndex: 6 },
-                          { label: "1 Beat", originalIndex: 8 },
-                          { label: "2 Beats", originalIndex: 9 },
-                          { label: "1 Bar", originalIndex: 10 },
-                          { label: "2 Bars", originalIndex: 10, multiplier: 2 },
-                          { label: "4 Bars", originalIndex: 10, multiplier: 4 },
-                          { label: "8 Bars", originalIndex: 10, multiplier: 8 },
-                      ];
-  
-                      syncSubdivisionForRotation.forEach((opt, pseudoIndex) => {
-                          const optionEl = document.createElement("option");
-                          optionEl.value = pseudoIndex;
-                          optionEl.textContent = opt.label;
-                          if (pseudoIndex === (node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX)) {
-                              optionEl.selected = true;
-                          }
-                          syncSpeedSelect.appendChild(optionEl);
-                      });
-                      syncSpeedSelect.addEventListener("change", (e) => {
-                          const newPseudoIndex = parseInt(e.target.value, 10);
-                          selectedArray.forEach((elData) => {
-                              const n = findNodeById(elData.id);
-                              if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                  n.audioParams.autoRotateSyncSubdivisionIndex = newPseudoIndex;
-                              }
-                          });
-                          saveState();
-                      });
-                      autoRotateSection.appendChild(syncSpeedSelect);
-  
-                  } else {
-                      const currentManualSpeed = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
-                      const speedValManual = currentManualSpeed.toFixed(4);
-                      const speedManualSlider = createSlider(
-                          `edit-timeline-autorotate-speedmanual-${node.id}`,
-                          `Manual Speed (${speedValManual} rad/update):`,
-                          0.0001, 0.02, 0.0001, currentManualSpeed,
-                          saveState,
-                          (e_input) => {
-                              const newSpeed = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
-                                      n.audioParams.autoRotateSpeedManual = newSpeed;
-                                  }
-                              });
-                              e_input.target.previousElementSibling.textContent = `Manual Speed (${newSpeed.toFixed(4)} rad/update):`;
-                          }
-                      );
-                      autoRotateSection.appendChild(speedManualSlider);
-                  }
-              }
-              section.appendChild(autoRotateSection);
-              fragment.appendChild(section);
-  
-          } else if (node && node.audioParams) {
-              let sectionCreatedForThisType = false;
-              let currentSection;
-  
-              if (isPulsarType(node.type) || node.type === "sound" || isDrumType(node.type)) {
-                  currentSection = document.createElement("div");
-                  currentSection.classList.add("panel-section");
-                  sectionCreatedForThisType = true;
-  
-                  const syncIgnoreSection = document.createElement("div");
-                  syncIgnoreSection.classList.add("panel-section");
-                  const ignoreSyncLabel = document.createElement("label");
-                  ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
-                  ignoreSyncLabel.textContent = "Ignore Global Sync:";
-                  ignoreSyncLabel.style.marginRight = "5px";
-                  syncIgnoreSection.appendChild(ignoreSyncLabel);
-                  const ignoreSyncCheckbox = document.createElement("input");
-                  ignoreSyncCheckbox.type = "checkbox";
-                  ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`;
-                  ignoreSyncCheckbox.checked =
-                      node.audioParams.ignoreGlobalSync || false;
-                  ignoreSyncCheckbox.addEventListener("change", (e) => {
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.audioParams) {
-                              n.audioParams.ignoreGlobalSync = e.target.checked;
-                              if (isPulsarType(n.type)) {
-                                  n.lastTriggerTime = -1;
-                                  n.nextSyncTriggerTime = 0;
-                              }
-                          }
-                      });
-                      identifyAndRouteAllGroups();
-                      saveState();
-                      populateEditPanel();
-                  });
-                  syncIgnoreSection.appendChild(ignoreSyncCheckbox);
-                  currentSection.appendChild(syncIgnoreSection);
-              } else {
-                  currentSection = document.createElement("div");
-                  currentSection.classList.add("panel-section");
-                  sectionCreatedForThisType = true;
-              }
-  
-              if (isPulsarType(node.type)) {
-                  const enableLabel = document.createElement("label");
-                  enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
-                  enableLabel.textContent =
-                      node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
-                  currentSection.appendChild(enableLabel);
-                  const enableCheckbox = document.createElement("input");
-                  enableCheckbox.type = "checkbox";
-                  enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
-                  enableCheckbox.checked = node.isEnabled;
-                  enableCheckbox.disabled =
-                      selectedArray.length > 1 && node.type === "pulsar_triggerable";
-                  enableCheckbox.addEventListener("change", () => {
-                      handlePulsarTriggerToggle(node);
-                      identifyAndRouteAllGroups();
-                  });
-                  currentSection.appendChild(enableCheckbox);
-                  currentSection.appendChild(document.createElement("br"));
-                  const showSyncControls =
-                      isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
-                  if (
-                      node.type !== "pulsar_random_particles" &&
-                      node.type !== "pulsar_manual"
-                  ) {
-                      if (showSyncControls) {
-                          const subdivLabel = document.createElement("label");
-                          subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
-                          subdivLabel.textContent = "Sync Subdivision:";
-                          currentSection.appendChild(subdivLabel);
-                          const subdivSelect = document.createElement("select");
-                          subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
-                          subdivSelect.disabled = selectedArray.length > 1;
-                          subdivisionOptions.forEach((opt, index) => {
-                              const option = document.createElement("option");
-                              option.value = index;
-                              option.textContent = opt.label;
-                              if (
-                                  index ===
-                                  (node.audioParams.syncSubdivisionIndex ??
-                                      DEFAULT_SUBDIVISION_INDEX)
-                              )
-                                  option.selected = true;
-                              subdivSelect.appendChild(option);
-                          });
-                          subdivSelect.addEventListener("change", (e) => {
-                              const newIndex = parseInt(e.target.value, 10);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (
-                                      n &&
-                                      n.audioParams &&
-                                      isPulsarType(n.type) &&
-                                      n.type !== "pulsar_random_particles" &&
-                                      n.type !== "pulsar_manual"
-                                  ) {
-                                      n.audioParams.syncSubdivisionIndex = newIndex;
-                                      if (n.syncSubdivisionIndex !== undefined)
-                                          n.syncSubdivisionIndex = newIndex;
-                                      n.nextSyncTriggerTime = 0;
-                                  }
-                              });
-                              identifyAndRouteAllGroups();
-                              saveState();
-                          });
-                          currentSection.appendChild(subdivSelect);
-                      } else {
-                          const currentInterval =
-                              node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
-                          const intervalVal = currentInterval.toFixed(1);
-                          const intervalSliderContainer = createSlider(
-                              `edit-pulsar-interval-${node.id}`,
-                              `Interval (${intervalVal}s):`,
-                              0.1,
-                              10.0,
-                              0.1,
-                              currentInterval,
-                              () => { identifyAndRouteAllGroups(); saveState(); },
-                              (e_input) => {
-                                  const newInterval = parseFloat(e_input.target.value);
-                                  selectedArray.forEach((elData) => {
-                                      const n = findNodeById(elData.id);
-                                      if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual")
-                                          n.audioParams.triggerInterval = newInterval;
-                                  });
-                                  e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
-                              },
-                          );
-                          currentSection.appendChild(intervalSliderContainer);
-                      }
-                  } else if (node.type === "pulsar_random_particles") {
-                      const timingInfo = document.createElement("small");
-                      timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
-                      currentSection.appendChild(timingInfo);
-                  }
-                  currentSection.appendChild(document.createElement("br"));
-                  if (node.type !== "pulsar_random_volume") {
-                      const currentIntensity =
-                          node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
-                      const intensityVal = currentIntensity.toFixed(2);
-                      const intensitySliderContainer = createSlider(
-                          `edit-pulsar-intensity-${node.id}`,
-                          `Pulse Intensity (${intensityVal}):`,
-                          MIN_PULSE_INTENSITY,
-                          MAX_PULSE_INTENSITY,
-                          0.01,
-                          currentIntensity,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newIntensity = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n?.audioParams && n.type !== "pulsar_random_volume")
-                                      n.audioParams.pulseIntensity = newIntensity;
-                              });
-                              e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
-                          },
-                      );
-                      currentSection.appendChild(intensitySliderContainer);
-                  } else {
-                      const intensityInfo = document.createElement("small");
-                      intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
-                      currentSection.appendChild(intensityInfo);
-                  }
-                  currentSection.appendChild(document.createElement("br"));
-  
-                  if (node.type === "pulsar_meteorshower") {
-                      const meteorSubSection = document.createElement("div");
-                      meteorSubSection.classList.add("panel-section");
-                      meteorSubSection.style.marginTop = "10px";
-                      meteorSubSection.style.borderTop = "1px dashed var(--button-hover)";
-                      const meteorTitle = document.createElement("p");
-                      meteorTitle.innerHTML = "<strong>Meteor Shower Settings:</strong>";
-                      meteorSubSection.appendChild(meteorTitle);
-  
-                      const currentMaxRadius = node.audioParams?.meteorMaxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS;
-                      const radiusSlider = createSlider(
-                          `edit-meteor-radius-${node.id}`,
-                          `Shower Max Radius (${currentMaxRadius.toFixed(0)}px):`,
-                          50, 800, 10, currentMaxRadius,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newVal = parseFloat(e_input.target.value);
-                              selectedArray.forEach(elData => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorMaxRadius = newVal;
-                              });
-                              e_input.target.previousElementSibling.textContent = `Shower Max Radius (${newVal.toFixed(0)}px):`;
-                          }
-                      );
-                      meteorSubSection.appendChild(radiusSlider);
-  
-                      const currentGrowthRate = node.audioParams?.meteorGrowthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE;
-                      const growthSlider = createSlider(
-                          `edit-meteor-growth-${node.id}`,
-                          `Shower Growth Rate (${currentGrowthRate.toFixed(0)}px/s):`,
-                          20, 500, 5, currentGrowthRate,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newVal = parseFloat(e_input.target.value);
-                              selectedArray.forEach(elData => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorGrowthRate = newVal;
-                              });
-                              e_input.target.previousElementSibling.textContent = `Shower Growth Rate (${newVal.toFixed(0)}px/s):`;
-                          }
-                      );
-                      meteorSubSection.appendChild(growthSlider);
-                      currentSection.appendChild(meteorSubSection);
-                  }
-  
-  
-                  const colorLabel = document.createElement("label");
-                  colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
-                  colorLabel.textContent = "Pulsar Color:";
-                  currentSection.appendChild(colorLabel);
-                  const colorInput = document.createElement("input");
-                  colorInput.type = "color";
-                  colorInput.id = `edit-pulsar-color-${node.id}`;
-                  const styles = getComputedStyle(document.documentElement);
-                  const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
-                  const fallbackColorVar = "--start-node-color";
-                  const defaultColorRgba =
-                      styles.getPropertyValue(defaultColorVar).trim() ||
-                      styles.getPropertyValue(fallbackColorVar).trim();
-                  const defaultColorHex = rgbaToHex(defaultColorRgba);
-                  colorInput.value = node.color ?
-                      rgbaToHex(node.color) :
-                      defaultColorHex;
-                  colorInput.addEventListener("input", (e) => {
-                      const newColor = hexToRgba(e.target.value, 0.9);
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n) n.color = newColor;
-                      });
-                  });
-                  colorInput.addEventListener("change", () => {
-                      identifyAndRouteAllGroups();
-                      saveState();
-                  });
-                  currentSection.appendChild(colorInput);
-  
-                  if (node.type === "pulsar_rocket") {
-                      const rocketSubSection = document.createElement("div");
-                      rocketSubSection.classList.add("panel-section");
-                      const rocketTitle = document.createElement("p");
-                      rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
-                      rocketSubSection.appendChild(rocketTitle);
-                      let currentAngleDegVal = parseFloat(
-                          (
-                              ((node.audioParams.rocketDirectionAngle || 0) * 180) /
-                              Math.PI
-                          ).toFixed(0),
-                      );
-                      const dirSliderContainer = createSlider(
-                          `edit-rocket-dir-${node.id}`,
-                          `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newAngleDeg = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                      n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
-                                  }
-                              });
-                              e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
-                          },
-                      );
-                      rocketSubSection.appendChild(dirSliderContainer);
-                      let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
-                      const speedSliderContainer = createSlider(
-                          `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newSpeed = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                      n.audioParams.rocketSpeed = newSpeed;
-                                  }
-                              });
-                              e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
-                          },
-                      );
-                      rocketSubSection.appendChild(speedSliderContainer);
-                      let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
-                      const rangeSliderContainer = createSlider(
-                          `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newRange = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                      n.audioParams.rocketRange = newRange;
-                                  }
-                              });
-                              e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
-                          },
-                      );
-                      rocketSubSection.appendChild(rangeSliderContainer);
-                      let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
-                      const gravitySliderContainer = createSlider(
-                          `edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newGravity = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.type === "pulsar_rocket" && n.audioParams) {
-                                      n.audioParams.rocketGravity = newGravity;
-                                  }
-                              });
-                              e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
-                          },
-                      );
-                      rocketSubSection.appendChild(gravitySliderContainer);
-                      currentSection.appendChild(rocketSubSection);
-                  }
-  
-              } else if (node.type === "sound") {
-                  const orbitoneMainSection = document.createElement("div");
-                  orbitoneMainSection.classList.add("panel-section");
-                  orbitoneMainSection.innerHTML = "<p><strong>Orbitone Settings:</strong></p>";
-  
-                  const enableOrbitonesLabel = document.createElement("label");
-                  enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
-                  enableOrbitonesLabel.textContent = "Enable Orbitones:";
-                  enableOrbitonesLabel.style.marginRight = "8px";
-                  orbitoneMainSection.appendChild(enableOrbitonesLabel);
-  
-                  const enableOrbitonesCheckbox = document.createElement("input");
-                  enableOrbitonesCheckbox.type = "checkbox";
-                  enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
-                  enableOrbitonesCheckbox.checked = node.audioParams.orbitonesEnabled || false;
-                  enableOrbitonesCheckbox.addEventListener("change", (e) => {
-                      const isEnabled = e.target.checked;
-                      selectedArray.forEach((elData) => {
-                          const n = findNodeById(elData.id);
-                          if (n && n.audioParams && n.type === "sound") {
-                              n.audioParams.orbitonesEnabled = isEnabled;
-                              stopNodeAudio(n);
-                              n.audioNodes = createAudioNodesForNode(n);
-                              if (n.audioNodes) updateNodeAudioParams(n);
-                          }
-                      });
-                      identifyAndRouteAllGroups();
-                      saveState();
-                      populateEditPanel();
-                  });
-                  orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
-                  currentSection.appendChild(orbitoneMainSection);
-  
-                  if (node.audioParams.orbitonesEnabled) {
-                      const orbitoneSettingsSection = document.createElement("div");
-                      orbitoneSettingsSection.classList.add("panel-section");
-                      orbitoneSettingsSection.style.paddingLeft = "15px";
-                      orbitoneSettingsSection.style.borderLeft = "2px solid var(--button-bg)";
-                      orbitoneSettingsSection.style.marginTop = "5px";
-  
-                      const visualControllerPlaceholder = document.createElement("div");
-                      visualControllerPlaceholder.id = `orbitone-visual-controller-${node.id}`;
-                      visualControllerPlaceholder.innerHTML = "<em>Visual Orbitone Controller (Future)</em>";
-                      visualControllerPlaceholder.style.height = "auto";
-                      visualControllerPlaceholder.style.padding = "10px";
-                      visualControllerPlaceholder.style.border = "1px dashed var(--button-hover)";
-                      visualControllerPlaceholder.style.display = "flex";
-                      visualControllerPlaceholder.style.flexDirection = "column";
-                      visualControllerPlaceholder.style.alignItems = "center";
-                      visualControllerPlaceholder.style.justifyContent = "center";
-                      visualControllerPlaceholder.style.marginBottom = "15px";
-                      visualControllerPlaceholder.style.textAlign = "center";
-                      orbitoneSettingsSection.appendChild(visualControllerPlaceholder);
-  
-                      const currentOrbitoneCount = node.audioParams.orbitoneCount || 0;
-                      const orbitoneCountSliderContainer = createSlider(
-                          `edit-node-orbitone-count-${node.id}`,
-                          `Number of extra Orbitones (${currentOrbitoneCount}):`, 0, 5, 1, currentOrbitoneCount,
-                          (e_change_event) => {
-                              const newCount = parseInt(e_change_event.target.value);
-                              selectedArray.forEach((elData) => {
-                                  const n = findNodeById(elData.id);
-                                  if (n && n.audioParams && n.type === "sound") {
-                                      n.audioParams.orbitoneCount = newCount;
-                                      applyOrbitoneVoicingFromPhase(n);
-                                      applyOrbitoneTimingFromPhase(n);
-                                      stopNodeAudio(n);
-                                      n.audioNodes = createAudioNodesForNode(n);
-                                      if (n.audioNodes) updateNodeAudioParams(n);
-                                  }
-                              });
-                              identifyAndRouteAllGroups(); saveState(); populateEditPanel();
-                          },
-                          (e_input) => {
-                              e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`;
-                          },
-                      );
-                      orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
-  
-                      if (node.audioParams.orbitoneCount > 0) {
-                          const currentVoicingPhase = node.audioParams.orbitoneVoicingPhase || 0;
-                          const voicingPhaseSlider = createSlider(
-                              `edit-orbitone-voicing-phase-${node.id}`, `Orbitone Voicing Style (${currentVoicingPhase}):`, 0, 100, 1, currentVoicingPhase,
-                              (e_change) => {
-                                  const val = parseInt(e_change.target.value);
-                                  selectedArray.forEach((el) => {
-                                      const n = findNodeById(el.id);
-                                      if (n && n.audioParams && n.type === "sound") {
-                                          n.audioParams.orbitoneVoicingPhase = val;
-                                          applyOrbitoneVoicingFromPhase(n);
-                                          stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); if (n.audioNodes) updateNodeAudioParams(n);
-                                      }
-                                  });
-                                  identifyAndRouteAllGroups(); saveState(); populateEditPanel();
-                              },
-                              (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; },
-                          );
-                          orbitoneSettingsSection.appendChild(voicingPhaseSlider);
-  
-                          const currentTimingPhase = node.audioParams.orbitoneTimingPhase || 0;
-                          const timingPhaseSlider = createSlider(
-                              `edit-orbitone-timing-phase-${node.id}`, `Orbitone Timing Style (${currentTimingPhase}):`, 0, 100, 1, currentTimingPhase,
-                              (e_change) => {
-                                  const val = parseInt(e_change.target.value);
-                                  selectedArray.forEach((el) => {
-                                      const n = findNodeById(el.id);
-                                      if (n && n.audioParams && n.type === "sound") {
-                                          n.audioParams.orbitoneTimingPhase = val;
-                                          applyOrbitoneTimingFromPhase(n); updateNodeAudioParams(n);
-                                      }
-                                  });
-                                  identifyAndRouteAllGroups(); saveState();
-                              },
-                              (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; },
-                          );
-                          orbitoneSettingsSection.appendChild(timingPhaseSlider);
-  
-                          const currentMix = node.audioParams.orbitoneMix !== undefined ? node.audioParams.orbitoneMix : 0.5;
-                          const mixSliderContainer = createSlider(
-                              `edit-node-orbitone-mix-${node.id}`, `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`, 0, 1, 0.05, currentMix,
-                              (e_change_event) => {
-                                  const newMix = parseFloat(e_change_event.target.value);
-                                  selectedArray.forEach((elData) => {
-                                      const n = findNodeById(elData.id);
-                                      if (n && n.audioParams && n.type === "sound") {
-                                          n.audioParams.orbitoneMix = newMix; updateNodeAudioParams(n);
-                                      }
-                                  });
-                                  identifyAndRouteAllGroups(); saveState();
-                              },
-                              (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`; },
-                          );
-                          orbitoneSettingsSection.appendChild(mixSliderContainer);
-                      }
-                      currentSection.appendChild(orbitoneSettingsSection);
-                  }
-              } else if (isDrumType(node.type)) {
-                  const params = node.audioParams;
-                  const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
-                  const soundDiv = document.createElement("div");
-                  soundDiv.classList.add("edit-drum-sound");
-                  const soundLabel = document.createElement("strong");
-                  soundLabel.textContent = defaults.label;
-                  soundDiv.appendChild(soundLabel);
-  
-                  const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
-                  const tuneVal = currentBaseFreq.toFixed(0);
-                  const tuneSliderContainer = createSlider(
-                      `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20, node.type === "drum_hihat" ? 15000 : (node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000), 1, currentBaseFreq,
-                      () => { identifyAndRouteAllGroups(); saveState(); },
-                      (e_input) => {
-                          const newFreq = parseFloat(e_input.target.value);
-                          selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
-                          e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
-                      }
-                  );
-                  soundDiv.appendChild(tuneSliderContainer);
-  
-                  if (params?.decay !== undefined || defaults?.decay !== undefined) {
-                      const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
-                      const decayVal = currentDecay.toFixed(2);
-                      const decaySliderContainer = createSlider(
-                          `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newDecay = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
-                              e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
-                          }
-                      );
-                      soundDiv.appendChild(decaySliderContainer);
-                  }
-                  if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
-                      const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
-                      const noiseDecayVal = currentNoiseDecay.toFixed(2);
-                      const noiseDecaySliderContainer = createSlider(
-                          `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
-                          () => { identifyAndRouteAllGroups(); saveState(); },
-                          (e_input) => {
-                              const newNoiseDecay = parseFloat(e_input.target.value);
-                              selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
-                              e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
-                          }
-                      );
-                      soundDiv.appendChild(noiseDecaySliderContainer);
-                  }
-  
-                  const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
-                  const volVal = currentVolume.toFixed(2);
-                  const volSliderContainer = createSlider(
-                      `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
-                      () => { identifyAndRouteAllGroups(); saveState(); },
-                      (e_input) => {
-                          const newVol = parseFloat(e_input.target.value);
-                          selectedArray.forEach((elData) => {
-                              const n = findNodeById(elData.id);
-                              if (n?.audioParams) { n.audioParams.volume = newVol; updateNodeAudioParams(n); }
-                          });
-                          e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                      }
-                  );
-                  soundDiv.appendChild(volSliderContainer);
-                  currentSection.appendChild(soundDiv);
-              } else if (node.type === "switch" && selectedArray.length === 1) {
-                  const label = document.createElement("label");
-                  label.textContent = "Primary Input Connection:";
-                  currentSection.appendChild(label);
-  
-                  const select = document.createElement("select");
-                  select.id = `edit-switch-primary-${node.id}`;
-                  const noneOpt = document.createElement("option");
-                  noneOpt.value = "null";
-                  noneOpt.textContent = "None (Set on next pulse)";
-                  select.appendChild(noneOpt);
-                  node.connections.forEach(neighborId => {
-                      const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
-                      if (conn) {
-                          const otherNode = findNodeById(neighborId);
-                          const option = document.createElement("option");
-                          option.value = conn.id;
-                          option.textContent = `From Node #${neighborId} (${otherNode?.type || '?'})`;
-                          if (conn.id === node.primaryInputConnectionId) option.selected = true;
-                          select.appendChild(option);
-                      }
-                  });
-                  select.addEventListener("change", (e) => {
-                      node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
-                      identifyAndRouteAllGroups(); saveState();
-                  });
-                  currentSection.appendChild(select);
-              }
-  
-              if (sectionCreatedForThisType && currentSection.hasChildNodes()) {
-                  fragment.appendChild(currentSection);
-              }
-  
-          }
-      } else if (firstElementData.type === "connection") {
-          const connection = findConnectionById(firstElementData.id);
-          if (connection) {
-              const section = document.createElement("div");
-              section.classList.add("panel-section");
-  
-              if (connection.type === "string_violin") {
-                  const params = connection.audioParams;
-                  const defaults = STRING_VIOLIN_DEFAULTS;
-                  const currentVol = params?.volume ?? defaults.volume;
-                  const volVal = currentVol.toFixed(2);
-                  const volSliderContainer = createSlider(
-                      `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
-                      () => { identifyAndRouteAllGroups(); saveState(); },
-                      (e_input) => {
-                          const newVol = parseFloat(e_input.target.value);
-                          selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
-                          e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
-                      }
-                  );
-                  section.appendChild(volSliderContainer);
-                  const currentAttack = params?.attack ?? defaults.attack;
-                  const attackVal = currentAttack.toFixed(2);
-                  const attackSliderContainer = createSlider(
-                      `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
-                      () => { identifyAndRouteAllGroups(); saveState(); },
-                      (e_input) => {
-                          const newVal = parseFloat(e_input.target.value);
-                          selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
-                          e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
-                      }
-                  );
-                  section.appendChild(attackSliderContainer);
-                  const currentRelease = params?.release ?? defaults.release;
-                  const releaseVal = currentRelease.toFixed(2);
-                  const releaseSliderContainer = createSlider(
-                      `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
-                      () => { identifyAndRouteAllGroups(); saveState(); },
-                      (e_input) => {
-                          const newVal = parseFloat(e_input.target.value);
-                          selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
-                          e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
-                      }
-                  );
-                  section.appendChild(releaseSliderContainer);
-              
-            } else if (connection.type === "wavetrail") {
-                console.log(`[Wavetrail Debug] populateEditPanel: Processing Wavetrail connection ID ${connection.id}`);
+    if (allSameLogicalType) {
+        if (firstElementData.type === "node") {
+            const node = findNodeById(firstElementData.id);
+
+            if (node && node.type === TIMELINE_GRID_TYPE) {
+                const section = document.createElement("div");
                 section.classList.add("panel-section");
 
-                const fileLabel = document.createElement("label");
-                fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
-                fileLabel.textContent = "Audio File:";
-                section.appendChild(fileLabel);
-
-                const fileInput = document.createElement("input");
-                fileInput.type = "file";
-                fileInput.id = `edit-wavetrail-file-${connection.id}`;
-                fileInput.accept = ".wav,.mp3,audio/*";
-                fileInput.style.marginBottom = "5px";
-                // Ensure 'connection' here is the correctly scoped one from the outer 'populateEditPanel' call
-                fileInput.addEventListener("change", (e) => handleWaveTrailFileInputChange(e, connection));
-                section.appendChild(fileInput);
-
-                const fileNameDisplay = document.createElement("small");
-                fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
-                if (!connection.audioParams) {
-                    console.error(`[Wavetrail Debug] populateEditPanel: connection.audioParams is missing for ID ${connection.id}`);
-                    connection.audioParams = {}; // Initialize if missing to prevent further errors
-                }
-                fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || "None selected"}`;
-                fileNameDisplay.style.display = "block";
-                section.appendChild(fileNameDisplay);
-
-                console.log(`[Wavetrail Debug] populateEditPanel: Checking buffer for Wavetrail ${connection.id}. Buffer exists: ${!!connection.audioParams?.buffer}`);
-
-                if (connection.audioParams?.buffer) {
-                    console.log(`[Wavetrail Debug] populateEditPanel: Buffer found for Wavetrail ${connection.id}. Creating sliders.`);
-                    const bufferDuration = connection.audioParams.buffer.duration;
-                    const currentStartOffset = connection.audioParams.startTimeOffset || 0;
-                    // Use ?? to ensure endTimeOffset defaults to bufferDuration if it's null or undefined
-                    const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
-                    const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
-                    const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
-                    const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
-
-                    const offsetLabel = document.createElement("label");
-                    offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
-                    offsetLabel.style.marginTop = "10px";
-                    offsetLabel.textContent = `Start Offset (${currentStartOffset.toFixed(2)}s):`;
-                    section.appendChild(offsetLabel);
-                    const offsetSlider = document.createElement("input");
-                    offsetSlider.type = "range";
-                    offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
-                    offsetSlider.min = "0";
-                    offsetSlider.max = bufferDuration.toFixed(3);
-                    offsetSlider.step = "0.01";
-                    offsetSlider.value = currentStartOffset;
-                    offsetSlider.title = "Scrub Start Time";
-                    const offsetValueDisplay = document.createElement("span");
-                    offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
-                    offsetValueDisplay.textContent = `${currentStartOffset.toFixed(2)}s`;
-                    offsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
-                    section.appendChild(offsetSlider);
-                    section.appendChild(offsetValueDisplay);
-
-                    const endOffsetLabel = document.createElement("label");
-                    endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
-                    endOffsetLabel.style.marginTop = "10px";
-                    endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
-                    section.appendChild(endOffsetLabel);
-                    const endOffsetSlider = document.createElement("input");
-                    endOffsetSlider.type = "range";
-                    endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
-                    endOffsetSlider.min = currentStartOffset.toFixed(3); // Initial min based on start
-                    endOffsetSlider.max = bufferDuration.toFixed(3);
-                    endOffsetSlider.step = "0.01";
-                    endOffsetSlider.value = currentEndOffset;
-                    endOffsetSlider.title = "Scrub End Time";
-                    const endOffsetValueDisplay = document.createElement("span");
-                    endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
-                    endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
-                    endOffsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
-                    section.appendChild(endOffsetSlider);
-                    section.appendChild(endOffsetValueDisplay);
-
-                    offsetSlider.addEventListener("input", (e_input) => {
-                        const newStart = parseFloat(e_input.target.value);
-                        // IMPORTANT: Use the 'connection' from the outer scope of populateEditPanel for consistency
-                        // if it's guaranteed to be the correct one, or re-fetch if necessary.
-                        // For safety, let's re-fetch within the listener scope.
-                        const localConn = findConnectionById(connection.id); // Re-fetch or use captured 'connection'
-                        if (localConn && localConn.audioParams) {
-                            localConn.audioParams.startTimeOffset = newStart;
-                            const endSlider = document.getElementById(`edit-wavetrail-end-${localConn.id}`);
-                            if (endSlider) endSlider.min = newStart.toFixed(3);
-                            if (localConn.audioParams.endTimeOffset !== null && localConn.audioParams.endTimeOffset < newStart) {
-                                localConn.audioParams.endTimeOffset = newStart + 0.01;
-                                if (endSlider) endSlider.value = localConn.audioParams.endTimeOffset;
-                                const endValDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn.id}`);
-                                if (endValDisplay) endValDisplay.textContent = `${localConn.audioParams.endTimeOffset.toFixed(2)}s`;
+                const playingLabel = document.createElement("label");
+                playingLabel.htmlFor = `edit-timeline-playing-${node.id}`;
+                playingLabel.textContent = "Playing:";
+                section.appendChild(playingLabel);
+                const playingCheckbox = document.createElement("input");
+                playingCheckbox.type = "checkbox";
+                playingCheckbox.id = `edit-timeline-playing-${node.id}`;
+                playingCheckbox.checked = node.timelineIsPlaying;
+                playingCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.timelineIsPlaying = e.target.checked;
+                            if (
+                                n.timelineIsPlaying &&
+                                n.scanLinePosition >= 1.0 &&
+                                n.timelineIsLooping
+                            ) {
+                                n.scanLinePosition = 0;
+                                if (n.triggeredInThisSweep) n.triggeredInThisSweep.clear();
+                                else n.triggeredInThisSweep = new Set();
                             }
-                        }
-                        const valDisplay = document.getElementById(`edit-wavetrail-start-value-${localConn ? localConn.id : connection.id}`);
-                        if (valDisplay) valDisplay.textContent = `${newStart.toFixed(2)}s`;
-                        if (localConn && localConn.audioParams?.buffer) {
-                            localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
+                            if (n.audioParams)
+                                n.audioParams.timelineIsPlaying = n.timelineIsPlaying;
                         }
                     });
-                    offsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
+                    saveState();
+                });
+                section.appendChild(playingCheckbox);
+                section.appendChild(document.createElement("br"));
 
-                    endOffsetSlider.addEventListener("input", (e_input) => {
-                        const newEnd = parseFloat(e_input.target.value);
-                        const localConn = findConnectionById(connection.id);
-                        if (localConn && localConn.audioParams) {
-                            localConn.audioParams.endTimeOffset = newEnd;
-                        }
-                        const valDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn ? localConn.id : connection.id}`);
-                        if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
-                         if (localConn && localConn.audioParams?.buffer) {
-                            localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
+                const loopingLabel = document.createElement("label");
+                loopingLabel.htmlFor = `edit-timeline-looping-${node.id}`;
+                loopingLabel.textContent = "Looping:";
+                section.appendChild(loopingLabel);
+                const loopingCheckbox = document.createElement("input");
+                loopingCheckbox.type = "checkbox";
+                loopingCheckbox.id = `edit-timeline-looping-${node.id}`;
+                loopingCheckbox.checked = node.timelineIsLooping;
+                loopingCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.timelineIsLooping = e.target.checked;
+                            if (n.audioParams)
+                                n.audioParams.timelineIsLooping = n.timelineIsLooping;
                         }
                     });
-                    endOffsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
+                    saveState();
+                });
+                section.appendChild(loopingCheckbox);
+                section.appendChild(document.createElement("br"));
 
-                    const grainDurSlider = createSlider(`edit-wavetrail-graindur-${connection.id}`, `Grain Duration (${currentGrainDuration.toFixed(3)}s):`, 0.005, 0.5, 0.001, currentGrainDuration, saveState, (e) => {
-                        const localConn = findConnectionById(connection.id);
-                        if (localConn && localConn.audioParams) localConn.audioParams.grainDuration = parseFloat(e.target.value);
-                        e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
+                if (isGlobalSyncEnabled) {
+                    const durationLabel = document.createElement("label");
+                    durationLabel.htmlFor = `edit-timeline-duration-bars-${node.id}`;
+                    durationLabel.textContent = "Duration (Sync):";
+                    section.appendChild(durationLabel);
+                    const durationSelect = document.createElement("select");
+                    durationSelect.id = `edit-timeline-duration-bars-${node.id}`;
+                    const barOptions = [
+                        { label: "1/4 Bar (1 Beat)", value: 0.25 },
+                        { label: "1/2 Bar (2 Beats)", value: 0.5 },
+                        { label: "1 Bar (4 Beats)", value: 1 },
+                        { label: "2 Bars (8 Beats)", value: 2 },
+                        { label: "4 Bars (16 Beats)", value: 4 },
+                        { label: "8 Bars (32 Beats)", value: 8 },
+                    ];
+                    let currentMusicalDuration = node.timelineMusicalDurationBars || 1;
+                    barOptions.forEach((opt) => {
+                        const optionEl = document.createElement("option");
+                        optionEl.value = opt.value;
+                        optionEl.textContent = opt.label;
+                        if (parseFloat(opt.value) === parseFloat(currentMusicalDuration)) {
+                            optionEl.selected = true;
+                        }
+                        durationSelect.appendChild(optionEl);
                     });
-                    section.appendChild(grainDurSlider);
-                    const grainOvlSlider = createSlider(`edit-wavetrail-grainovl-${connection.id}`, `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`, 0.001, 0.49, 0.001, currentGrainOverlap, saveState, (e) => {
-                        const localConn = findConnectionById(connection.id);
-                        if (localConn && localConn.audioParams) localConn.audioParams.grainOverlap = parseFloat(e.target.value);
-                        e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
+                    durationSelect.addEventListener("change", (e) => {
+                        const newBars = parseFloat(e.target.value);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.timelineMusicalDurationBars = newBars;
+                                if (n.audioParams)
+                                    n.audioParams.timelineMusicalDurationBars = newBars;
+                            }
+                        });
+                        saveState();
                     });
-                    section.appendChild(grainOvlSlider);
-                    const rateSlider = createSlider(`edit-wavetrail-rate-${connection.id}`, `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`, 0.1, 4.0, 0.05, currentPlaybackRate, saveState, (e) => {
-                        const localConn = findConnectionById(connection.id);
-                        if (localConn && localConn.audioParams) localConn.audioParams.playbackRate = parseFloat(e.target.value);
-                        e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
-                    });
-                    section.appendChild(rateSlider);
+                    section.appendChild(durationSelect);
                 } else {
-                    console.log(`[Wavetrail Debug] populateEditPanel: Buffer NOT found for Wavetrail ${connection.id}. Not creating sliders.`);
-                    const noBufferMsg = document.createElement("small");
-                    noBufferMsg.textContent = " (Upload an audio file to enable more controls)";
-                    noBufferMsg.style.display = "block";
-                    noBufferMsg.style.opacity = "0.7";
-                    section.appendChild(noBufferMsg);
+                    const currentSpeed =
+                        node.timelineSpeed || TIMELINE_GRID_DEFAULT_SPEED;
+                    const speedVal = currentSpeed.toFixed(1);
+                    const speedSliderContainer = createSlider(
+                        `edit-timeline-speed-${node.id}`,
+                        `Speed (${speedVal}s / sweep):`,
+                        0.2,
+                        30.0,
+                        0.1,
+                        currentSpeed,
+                        saveState,
+                        (e_input) => {
+                            const newSpeed = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === TIMELINE_GRID_TYPE) {
+                                    n.timelineSpeed = newSpeed;
+                                    if (n.audioParams) n.audioParams.timelineSpeed = newSpeed;
+                                }
+                            });
+                            e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s / sweep):`;
+                        },
+                    );
+                    section.appendChild(speedSliderContainer);
+                }
+
+                const MIN_TIMELINE_PIXEL_WIDTH = 50;
+                const MAX_TIMELINE_PIXEL_WIDTH = 1200;
+                const MIN_TIMELINE_PIXEL_HEIGHT = 50;
+                const MAX_TIMELINE_PIXEL_HEIGHT = 800;
+                const PIXEL_STEP = 10;
+
+                const gridSpacing = calculateGridSpacing();
+                const halfGridSquare =
+                    isSnapEnabled && gridSpacing > 0.1 ? gridSpacing / 2 : 0;
+
+                let widthSliderMin,
+                    widthSliderMax,
+                    widthSliderStep,
+                    currentWidthInUnits,
+                    widthLabelUnitText;
+                const currentPixelWidth = node.width || TIMELINE_GRID_DEFAULT_WIDTH;
+
+                if (isSnapEnabled && halfGridSquare > 0) {
+                    widthSliderMin = Math.max(
+                        1,
+                        Math.round(MIN_TIMELINE_PIXEL_WIDTH / halfGridSquare),
+                    );
+                    widthSliderMax = Math.round(
+                        MAX_TIMELINE_PIXEL_WIDTH / halfGridSquare,
+                    );
+                    widthSliderStep = 1;
+                    currentWidthInUnits = Math.round(currentPixelWidth / halfGridSquare);
+                    widthLabelUnitText = " units";
+                } else {
+                    widthSliderMin = MIN_TIMELINE_PIXEL_WIDTH;
+                    widthSliderMax = MAX_TIMELINE_PIXEL_WIDTH;
+                    widthSliderStep = PIXEL_STEP;
+                    currentWidthInUnits = currentPixelWidth;
+                    widthLabelUnitText = "px";
+                }
+
+                const widthDisplayValText =
+                    isSnapEnabled && halfGridSquare > 0 ?
+                    currentWidthInUnits.toFixed(0) :
+                    currentPixelWidth.toFixed(0);
+                const widthSliderContainer = createSlider(
+                    `edit-timeline-width-${node.id}`,
+                    `Width (${widthDisplayValText}${widthLabelUnitText}):`,
+                    widthSliderMin,
+                    widthSliderMax,
+                    widthSliderStep,
+                    currentWidthInUnits,
+                    saveState,
+                    (e_input) => {
+                        const newSliderValue = parseFloat(e_input.target.value);
+                        let newPixelWidth;
+                        if (isSnapEnabled && halfGridSquare > 0) {
+                            newPixelWidth = newSliderValue * halfGridSquare;
+                            newPixelWidth = Math.max(
+                                halfGridSquare,
+                                Math.round(newPixelWidth / halfGridSquare) * halfGridSquare,
+                            );
+                        } else {
+                            newPixelWidth = newSliderValue;
+                        }
+                        newPixelWidth = Math.max(MIN_TIMELINE_PIXEL_WIDTH, newPixelWidth);
+
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.width = newPixelWidth;
+                                if (n.audioParams) n.audioParams.width = newPixelWidth;
+                            }
+                        });
+                        const displayVal =
+                            isSnapEnabled && halfGridSquare > 0 ?
+                            (newPixelWidth / halfGridSquare).toFixed(0) :
+                            newPixelWidth.toFixed(0);
+                        const displayUnit =
+                            isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+                        e_input.target.previousElementSibling.textContent = `Width (${displayVal}${displayUnit}):`;
+                    },
+                );
+                section.appendChild(widthSliderContainer);
+
+                let heightSliderMin,
+                    heightSliderMax,
+                    heightSliderStep,
+                    currentHeightInUnits,
+                    heightLabelUnitText;
+                const currentPixelHeight = node.height || TIMELINE_GRID_DEFAULT_HEIGHT;
+
+                if (isSnapEnabled && halfGridSquare > 0) {
+                    heightSliderMin = Math.max(
+                        1,
+                        Math.round(MIN_TIMELINE_PIXEL_HEIGHT / halfGridSquare),
+                    );
+                    heightSliderMax = Math.round(
+                        MAX_TIMELINE_PIXEL_HEIGHT / halfGridSquare,
+                    );
+                    heightSliderStep = 1;
+                    currentHeightInUnits = Math.round(
+                        currentPixelHeight / halfGridSquare,
+                    );
+                    heightLabelUnitText = " units";
+                } else {
+                    heightSliderMin = MIN_TIMELINE_PIXEL_HEIGHT;
+                    heightSliderMax = MAX_TIMELINE_PIXEL_HEIGHT;
+                    heightSliderStep = PIXEL_STEP;
+                    currentHeightInUnits = currentPixelHeight;
+                    heightLabelUnitText = "px";
+                }
+
+                const heightDisplayValText =
+                    isSnapEnabled && halfGridSquare > 0 ?
+                    currentHeightInUnits.toFixed(0) :
+                    currentPixelHeight.toFixed(0);
+                const heightSliderContainer = createSlider(
+                    `edit-timeline-height-${node.id}`,
+                    `Height (${heightDisplayValText}${heightLabelUnitText}):`,
+                    heightSliderMin,
+                    heightSliderMax,
+                    heightSliderStep,
+                    currentHeightInUnits,
+                    saveState,
+                    (e_input) => {
+                        const newSliderValue = parseFloat(e_input.target.value);
+                        let newPixelHeight;
+                        if (isSnapEnabled && halfGridSquare > 0) {
+                            newPixelHeight = newSliderValue * halfGridSquare;
+                            newPixelHeight = Math.max(
+                                halfGridSquare,
+                                Math.round(newPixelHeight / halfGridSquare) * halfGridSquare,
+                            );
+                        } else {
+                            newPixelHeight = newSliderValue;
+                        }
+                        newPixelHeight = Math.max(
+                            MIN_TIMELINE_PIXEL_HEIGHT,
+                            newPixelHeight,
+                        );
+
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.height = newPixelHeight;
+                                if (n.audioParams) n.audioParams.height = newPixelHeight;
+                            }
+                        });
+                        const displayVal =
+                            isSnapEnabled && halfGridSquare > 0 ?
+                            (newPixelHeight / halfGridSquare).toFixed(0) :
+                            newPixelHeight.toFixed(0);
+                        const displayUnit =
+                            isSnapEnabled && halfGridSquare > 0 ? " units" : "px";
+                        e_input.target.previousElementSibling.textContent = `Height (${displayVal}${displayUnit}):`;
+                    },
+                );
+                section.appendChild(heightSliderContainer);
+
+                const currentPulseIntensity =
+                    node.timelinePulseIntensity || TIMELINE_GRID_DEFAULT_PULSE_INTENSITY;
+                const intensityVal = currentPulseIntensity.toFixed(2);
+                const intensitySliderContainer = createSlider(
+                    `edit-timeline-intensity-${node.id}`,
+                    `Trigger Intensity (${intensityVal}):`,
+                    0.1,
+                    1.5,
+                    0.01,
+                    currentPulseIntensity,
+                    saveState,
+                    (e_input) => {
+                        const newIntensity = parseFloat(e_input.target.value);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE) {
+                                n.timelinePulseIntensity = newIntensity;
+                                if (n.audioParams)
+                                    n.audioParams.timelinePulseIntensity = newIntensity;
+                            }
+                        });
+                        e_input.target.previousElementSibling.textContent = `Trigger Intensity (${newIntensity.toFixed(2)}):`;
+                    },
+                );
+                section.appendChild(intensitySliderContainer);
+
+                const internalGridSection = document.createElement("div");
+                internalGridSection.classList.add("panel-section");
+                internalGridSection.style.borderTop = "1px solid var(--button-hover)";
+                internalGridSection.style.marginTop = "10px";
+                internalGridSection.style.paddingTop = "10px";
+
+                const showInternalGridLabel = document.createElement("label");
+                showInternalGridLabel.textContent = "Show Internal Grid: ";
+                const showInternalGridCheckbox = document.createElement("input");
+                showInternalGridCheckbox.type = "checkbox";
+                showInternalGridCheckbox.checked =
+                    node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+                showInternalGridCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.showInternalGrid = e.target.checked;
+                            if (n.audioParams)
+                                n.audioParams.showInternalGrid = n.showInternalGrid;
+                        }
+                    });
+                    saveState();
+                });
+                internalGridSection.appendChild(showInternalGridLabel);
+                internalGridSection.appendChild(showInternalGridCheckbox);
+                internalGridSection.appendChild(document.createElement("br"));
+
+                const snapToInternalGridLabel = document.createElement("label");
+                snapToInternalGridLabel.textContent = "Snap Nodes to Internal Grid: ";
+                const snapToInternalGridCheckbox = document.createElement("input");
+                snapToInternalGridCheckbox.type = "checkbox";
+                snapToInternalGridCheckbox.checked =
+                    node.snapToInternalGrid !== undefined ?
+                    node.snapToInternalGrid :
+                    true;
+                snapToInternalGridCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.snapToInternalGrid = e.target.checked;
+                            if (n.audioParams)
+                                n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
+                        }
+                    });
+                    saveState();
+                });
+                internalGridSection.appendChild(snapToInternalGridLabel);
+                internalGridSection.appendChild(snapToInternalGridCheckbox);
+                internalGridSection.appendChild(document.createElement("br"));
+
+                const currentDivisions = node.internalGridDivisions || 8;
+                const divisionsLabel = document.createElement("label");
+                divisionsLabel.htmlFor = `edit-timeline-divisions-select-${node.id}`;
+                divisionsLabel.textContent = "Internal Grid Subdivisions:";
+                internalGridSection.appendChild(divisionsLabel);
+
+                const divisionsSelect = document.createElement("select");
+                divisionsSelect.id = `edit-timeline-divisions-select-${node.id}`;
+                const divisionOptions = [
+                    { label: "None (1)", value: 1 }, { label: "Halves (2)", value: 2 },
+                    { label: "Thirds (3)", value: 3 }, { label: "Quarters (4)", value: 4 },
+                    { label: "Sixths (6)", value: 6 }, { label: "Eighths (8)", value: 8 },
+                    { label: "Twelfths (12 - triplets)", value: 12 }, { label: "Sixteenths (16)", value: 16 },
+                    { label: "24ths (16th triplets)", value: 24 }, { label: "32nds (32)", value: 32 },
+                    { label: "64ths (64)", value: 64 },
+                ];
+                let currentDivisionValueForSelect = node.internalGridDivisions || 8;
+                divisionOptions.forEach((opt) => {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = opt.value;
+                    optionEl.textContent = opt.label;
+                    if (parseInt(opt.value) === parseInt(currentDivisionValueForSelect)) {
+                        optionEl.selected = true;
+                    }
+                    divisionsSelect.appendChild(optionEl);
+                });
+                divisionsSelect.addEventListener("change", (e) => {
+                    const newDivisions = parseInt(e.target.value);
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE) {
+                            n.internalGridDivisions = newDivisions;
+                            if (n.audioParams)
+                                n.audioParams.internalGridDivisions = newDivisions;
+                        }
+                    });
+                    saveState();
+                });
+                internalGridSection.appendChild(divisionsSelect);
+                section.appendChild(internalGridSection);
+
+                const transposeSection = document.createElement("div");
+                transposeSection.classList.add("panel-section");
+                transposeSection.style.borderTop = "1px solid var(--button-hover)";
+                transposeSection.style.marginTop = "10px";
+                transposeSection.style.paddingTop = "10px";
+                transposeSection.innerHTML = "<p><strong>Timeline Transposition:</strong></p>";
+
+                const enableTransposeLabel = document.createElement("label");
+                enableTransposeLabel.htmlFor = `edit-timeline-transpose-enable-${node.id}`;
+                enableTransposeLabel.textContent = "Enable Transposition: ";
+                const enableTransposeCheckbox = document.createElement("input");
+                enableTransposeCheckbox.type = "checkbox";
+                enableTransposeCheckbox.id = `edit-timeline-transpose-enable-${node.id}`;
+                enableTransposeCheckbox.checked =
+                    node.audioParams?.isTransposeEnabled || false;
+                enableTransposeCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                            n.audioParams.isTransposeEnabled = e.target.checked;
+                        }
+                    });
+                    saveState();
+                    populateEditPanel();
+                });
+                transposeSection.appendChild(enableTransposeLabel);
+                transposeSection.appendChild(enableTransposeCheckbox);
+                transposeSection.appendChild(document.createElement("br"));
+
+                if (node.audioParams?.isTransposeEnabled) {
+                    const directionContainer = document.createElement("div");
+                    directionContainer.style.marginBottom = "5px";
+                    const directionLabel = document.createElement("label");
+                    directionLabel.textContent = "Direction: ";
+                    directionLabel.style.marginRight = "5px";
+                    directionContainer.appendChild(directionLabel);
+
+                    const plusButton = document.createElement("button");
+                    plusButton.textContent = "+";
+                    plusButton.classList.add("panel-button-like");
+                    if (node.audioParams.transposeDirection === "+") {
+                        plusButton.classList.add("active");
+                    }
+                    plusButton.addEventListener("click", () => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                n.audioParams.transposeDirection = "+";
+                            }
+                        });
+                        saveState();
+                        populateEditPanel();
+                    });
+                    directionContainer.appendChild(plusButton);
+
+                    const minusButton = document.createElement("button");
+                    minusButton.textContent = "-";
+                    minusButton.classList.add("panel-button-like");
+                    if (node.audioParams.transposeDirection === "-") {
+                        minusButton.classList.add("active");
+                    }
+                    minusButton.addEventListener("click", () => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                n.audioParams.transposeDirection = "-";
+                            }
+                        });
+                        saveState();
+                        populateEditPanel();
+                    });
+                    directionContainer.appendChild(minusButton);
+                    transposeSection.appendChild(directionContainer);
+
+                    const currentTransposeAmount = node.audioParams.transposeAmount || 0;
+                    const amountSliderContainer = createSlider(
+                        `edit-timeline-transpose-amount-${node.id}`,
+                        `Amount (${currentTransposeAmount} scale steps):`,
+                        0,
+                        24,
+                        1,
+                        currentTransposeAmount,
+                        () => {
+                            saveState();
+                        },
+                        (e_input) => {
+                            const newAmount = parseInt(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                    n.audioParams.transposeAmount = newAmount;
+                                }
+                            });
+                            const labelElement = e_input.target.previousElementSibling;
+                            if (labelElement) {
+                                labelElement.textContent = `Amount (${newAmount} scale steps):`;
+                            }
+                        },
+                    );
+                    transposeSection.appendChild(amountSliderContainer);
+                }
+                section.appendChild(transposeSection);
+
+                const autoRotateSection = document.createElement("div");
+                autoRotateSection.classList.add("panel-section");
+                autoRotateSection.style.borderTop = "1px solid var(--button-hover)";
+                autoRotateSection.style.marginTop = "10px";
+                autoRotateSection.style.paddingTop = "10px";
+                autoRotateSection.innerHTML = "<p><strong>Timeline Auto-Rotation:</strong></p>";
+
+                const enableAutoRotateLabel = document.createElement("label");
+                enableAutoRotateLabel.htmlFor = `edit-timeline-autorotate-enable-${node.id}`;
+                enableAutoRotateLabel.textContent = "Enable Auto-Rotate: ";
+                const enableAutoRotateCheckbox = document.createElement("input");
+                enableAutoRotateCheckbox.type = "checkbox";
+                enableAutoRotateCheckbox.id = `edit-timeline-autorotate-enable-${node.id}`;
+                enableAutoRotateCheckbox.checked = node.audioParams?.autoRotateEnabled ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED;
+                enableAutoRotateCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                            n.audioParams.autoRotateEnabled = e.target.checked;
+                        }
+                    });
+                    saveState();
+                    populateEditPanel();
+                });
+                autoRotateSection.appendChild(enableAutoRotateLabel);
+                autoRotateSection.appendChild(enableAutoRotateCheckbox);
+                autoRotateSection.appendChild(document.createElement("br"));
+
+                if (node.audioParams?.autoRotateEnabled) {
+                    const directionRotateLabel = document.createElement("label");
+                    directionRotateLabel.htmlFor = `edit-timeline-autorotate-direction-${node.id}`;
+                    directionRotateLabel.textContent = "Direction: ";
+                    autoRotateSection.appendChild(directionRotateLabel);
+
+                    const directionRotateSelect = document.createElement("select");
+                    directionRotateSelect.id = `edit-timeline-autorotate-direction-${node.id}`;
+                    ["clockwise", "counter-clockwise"].forEach(dir => {
+                        const option = document.createElement("option");
+                        option.value = dir;
+                        option.textContent = dir.charAt(0).toUpperCase() + dir.slice(1);
+                        if (dir === (node.audioParams?.autoRotateDirection ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION)) {
+                            option.selected = true;
+                        }
+                        directionRotateSelect.appendChild(option);
+                    });
+                    directionRotateSelect.addEventListener("change", (e) => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                n.audioParams.autoRotateDirection = e.target.value;
+                            }
+                        });
+                        saveState();
+                    });
+                    autoRotateSection.appendChild(directionRotateSelect);
+                    autoRotateSection.appendChild(document.createElement("br"));
+
+                    if (isGlobalSyncEnabled) {
+                        const syncSpeedLabel = document.createElement("label");
+                        syncSpeedLabel.htmlFor = `edit-timeline-autorotate-syncspeed-${node.id}`;
+                        syncSpeedLabel.textContent = "Synced Speed (Full Rotation per):";
+                        autoRotateSection.appendChild(syncSpeedLabel);
+
+                        const syncSpeedSelect = document.createElement("select");
+                        syncSpeedSelect.id = `edit-timeline-autorotate-syncspeed-${node.id}`;
+
+                        const syncSubdivisionForRotation = [
+                            { label: "1/8 Note", originalIndex: 2 },
+                            { label: "1/4 Note", originalIndex: 4 },
+                            { label: "1/2 Note", originalIndex: 6 },
+                            { label: "1 Beat", originalIndex: 8 },
+                            { label: "2 Beats", originalIndex: 9 },
+                            { label: "1 Bar", originalIndex: 10 },
+                            { label: "2 Bars", originalIndex: 10, multiplier: 2 },
+                            { label: "4 Bars", originalIndex: 10, multiplier: 4 },
+                            { label: "8 Bars", originalIndex: 10, multiplier: 8 },
+                        ];
+
+                        syncSubdivisionForRotation.forEach((opt, pseudoIndex) => {
+                            const optionEl = document.createElement("option");
+                            optionEl.value = pseudoIndex;
+                            optionEl.textContent = opt.label;
+                            if (pseudoIndex === (node.audioParams?.autoRotateSyncSubdivisionIndex ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX)) {
+                                optionEl.selected = true;
+                            }
+                            syncSpeedSelect.appendChild(optionEl);
+                        });
+                        syncSpeedSelect.addEventListener("change", (e) => {
+                            const newPseudoIndex = parseInt(e.target.value, 10);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                    n.audioParams.autoRotateSyncSubdivisionIndex = newPseudoIndex;
+                                }
+                            });
+                            saveState();
+                        });
+                        autoRotateSection.appendChild(syncSpeedSelect);
+
+                    } else {
+                        const currentManualSpeed = node.audioParams?.autoRotateSpeedManual ?? TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL;
+                        const speedValManual = currentManualSpeed.toFixed(4);
+                        const speedManualSlider = createSlider(
+                            `edit-timeline-autorotate-speedmanual-${node.id}`,
+                            `Manual Speed (${speedValManual} rad/update):`,
+                            0.0001, 0.02, 0.0001, currentManualSpeed,
+                            saveState,
+                            (e_input) => {
+                                const newSpeed = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === TIMELINE_GRID_TYPE && n.audioParams) {
+                                        n.audioParams.autoRotateSpeedManual = newSpeed;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Manual Speed (${newSpeed.toFixed(4)} rad/update):`;
+                            }
+                        );
+                        autoRotateSection.appendChild(speedManualSlider);
+                    }
+                }
+                section.appendChild(autoRotateSection);
+                fragment.appendChild(section);
+
+            } else if (node && node.type === "global_key_setter") {
+                const keySetterSection = document.createElement("div");
+                keySetterSection.classList.add("panel-section");
+
+                const modeDiv = document.createElement("div");
+                modeDiv.style.marginBottom = "10px";
+                const modeLabel = document.createElement("label");
+                modeLabel.textContent = "Mode: ";
+                modeDiv.appendChild(modeLabel);
+
+                const modes = ["key", "offset"];
+                modes.forEach(modeValue => {
+                    const radioLabel = document.createElement("label");
+                    radioLabel.style.marginRight = "10px";
+                    const radio = document.createElement("input");
+                    radio.type = "radio";
+                    radio.name = `keysetter-mode-${node.id}`;
+                    radio.value = modeValue;
+                    radio.checked = (node.audioParams.keySetterMode || "key") === modeValue;
+                    radio.addEventListener("change", (e) => {
+                        if (e.target.checked) {
+                            selectedArray.forEach(el => {
+                                const n = findNodeById(el.id);
+                                if (n && n.type === "global_key_setter") n.audioParams.keySetterMode = e.target.value;
+                            });
+                            saveState();
+                            populateEditPanel();
+                        }
+                    });
+                    radioLabel.appendChild(radio);
+                    radioLabel.appendChild(document.createTextNode(" " + modeValue.charAt(0).toUpperCase() + modeValue.slice(1)));
+                    modeDiv.appendChild(radioLabel);
+                });
+                keySetterSection.appendChild(modeDiv);
+
+                if ((node.audioParams.keySetterMode || "key") === "key") {
+                    const keySelectLabel = document.createElement("label");
+                    keySelectLabel.htmlFor = `edit-keysetter-key-${node.id}`;
+                    keySelectLabel.textContent = "Target Key for Project Root (C):";
+                    keySetterSection.appendChild(keySelectLabel);
+
+                    const keySelect = document.createElement("select");
+                    keySelect.id = `edit-keysetter-key-${node.id}`;
+                    noteNames.forEach((name, index) => {
+                        const option = document.createElement("option");
+                        option.value = index;
+                        option.textContent = name;
+                        if ((node.audioParams.targetKeyNote || 0) === index) {
+                            option.selected = true;
+                        }
+                        keySelect.appendChild(option);
+                    });
+                    keySelect.addEventListener("change", (e) => {
+                        const newKeyNote = parseInt(e.target.value);
+                        selectedArray.forEach(el => {
+                            const n = findNodeById(el.id);
+                            if (n && n.type === "global_key_setter") n.audioParams.targetKeyNote = newKeyNote;
+                        });
+                        saveState();
+                    });
+                    keySetterSection.appendChild(keySelect);
+
+                } else {
+                    const currentOffset = node.audioParams.targetTransposeOffset || 0;
+                    const offsetSliderContainer = createSlider(
+                        `edit-keysetter-offset-${node.id}`,
+                        `Target Global Transpose (${currentOffset > 0 ? '+' : ''}${currentOffset} st):`,
+                        -24, 24, 1, currentOffset,
+                        saveState,
+                        (e_input) => {
+                            const newOffset = parseInt(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === "global_key_setter" && n.audioParams) {
+                                    n.audioParams.targetTransposeOffset = newOffset;
+                                }
+                            });
+                            e_input.target.previousElementSibling.textContent = `Target Global Transpose (${newOffset > 0 ? '+' : ''}${newOffset} st):`;
+                        }
+                    );
+                    keySetterSection.appendChild(offsetSliderContainer);
+                }
+                fragment.appendChild(keySetterSection);
+
+            } else if (node && node.audioParams) {
+                let sectionCreatedForThisType = false;
+                let currentSection;
+
+                if (isPulsarType(node.type) || node.type === "sound" || isDrumType(node.type) || node.type === PRORB_TYPE ) {
+                    currentSection = document.createElement("div");
+                    currentSection.classList.add("panel-section");
+                    sectionCreatedForThisType = true;
+
+                    const syncIgnoreSection = document.createElement("div");
+                    syncIgnoreSection.classList.add("panel-section");
+                    const ignoreSyncLabel = document.createElement("label");
+                    ignoreSyncLabel.htmlFor = `edit-node-ignore-sync-${node.id}`;
+                    ignoreSyncLabel.textContent = "Ignore Global Sync:";
+                    ignoreSyncLabel.style.marginRight = "5px";
+                    syncIgnoreSection.appendChild(ignoreSyncLabel);
+                    const ignoreSyncCheckbox = document.createElement("input");
+                    ignoreSyncCheckbox.type = "checkbox";
+                    ignoreSyncCheckbox.id = `edit-node-ignore-sync-${node.id}`;
+                    ignoreSyncCheckbox.checked =
+                        node.audioParams.ignoreGlobalSync || false;
+                    ignoreSyncCheckbox.addEventListener("change", (e) => {
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams) {
+                                n.audioParams.ignoreGlobalSync = e.target.checked;
+                                if (isPulsarType(n.type)) {
+                                    n.lastTriggerTime = -1;
+                                    n.nextSyncTriggerTime = 0;
+                                }
+                            }
+                        });
+                        identifyAndRouteAllGroups();
+                        saveState();
+                        populateEditPanel();
+                    });
+                    syncIgnoreSection.appendChild(ignoreSyncCheckbox);
+                    currentSection.appendChild(syncIgnoreSection);
+                } else {
+                    currentSection = document.createElement("div");
+                    currentSection.classList.add("panel-section");
+                    sectionCreatedForThisType = true;
+                }
+
+                if (isPulsarType(node.type)) {
+                    const enableLabel = document.createElement("label");
+                    enableLabel.htmlFor = `edit-pulsar-enable-${node.id}`;
+                    enableLabel.textContent =
+                        node.type === "pulsar_triggerable" ? "Current State:" : "Enabled:";
+                    currentSection.appendChild(enableLabel);
+                    const enableCheckbox = document.createElement("input");
+                    enableCheckbox.type = "checkbox";
+                    enableCheckbox.id = `edit-pulsar-enable-${node.id}`;
+                    enableCheckbox.checked = node.isEnabled;
+                    enableCheckbox.disabled =
+                        selectedArray.length > 1 && node.type === "pulsar_triggerable";
+                    enableCheckbox.addEventListener("change", () => {
+                        handlePulsarTriggerToggle(node);
+                        identifyAndRouteAllGroups();
+                    });
+                    currentSection.appendChild(enableCheckbox);
+                    currentSection.appendChild(document.createElement("br"));
+                    const showSyncControls =
+                        isGlobalSyncEnabled && !node.audioParams.ignoreGlobalSync;
+                    if (
+                        node.type !== "pulsar_random_particles" &&
+                        node.type !== "pulsar_manual"
+                    ) {
+                        if (showSyncControls) {
+                            const subdivLabel = document.createElement("label");
+                            subdivLabel.htmlFor = `edit-pulsar-subdiv-${node.id}`;
+                            subdivLabel.textContent = "Sync Subdivision:";
+                            currentSection.appendChild(subdivLabel);
+                            const subdivSelect = document.createElement("select");
+                            subdivSelect.id = `edit-pulsar-subdiv-${node.id}`;
+                            subdivSelect.disabled = selectedArray.length > 1;
+                            subdivisionOptions.forEach((opt, index) => {
+                                const option = document.createElement("option");
+                                option.value = index;
+                                option.textContent = opt.label;
+                                if (
+                                    index ===
+                                    (node.audioParams.syncSubdivisionIndex ??
+                                        DEFAULT_SUBDIVISION_INDEX)
+                                )
+                                    option.selected = true;
+                                subdivSelect.appendChild(option);
+                            });
+                            subdivSelect.addEventListener("change", (e) => {
+                                const newIndex = parseInt(e.target.value, 10);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (
+                                        n &&
+                                        n.audioParams &&
+                                        isPulsarType(n.type) &&
+                                        n.type !== "pulsar_random_particles" &&
+                                        n.type !== "pulsar_manual"
+                                    ) {
+                                        n.audioParams.syncSubdivisionIndex = newIndex;
+                                        if (n.syncSubdivisionIndex !== undefined)
+                                            n.syncSubdivisionIndex = newIndex;
+                                        n.nextSyncTriggerTime = 0;
+                                    }
+                                });
+                                identifyAndRouteAllGroups();
+                                saveState();
+                            });
+                            currentSection.appendChild(subdivSelect);
+                        } else {
+                            const currentInterval =
+                                node.audioParams?.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
+                            const intervalVal = currentInterval.toFixed(1);
+                            const intervalSliderContainer = createSlider(
+                                `edit-pulsar-interval-${node.id}`,
+                                `Interval (${intervalVal}s):`,
+                                0.1,
+                                10.0,
+                                0.1,
+                                currentInterval,
+                                () => { identifyAndRouteAllGroups(); saveState(); },
+                                (e_input) => {
+                                    const newInterval = parseFloat(e_input.target.value);
+                                    selectedArray.forEach((elData) => {
+                                        const n = findNodeById(elData.id);
+                                        if (n?.audioParams && n.type !== "pulsar_random_particles" && n.type !== "pulsar_manual")
+                                            n.audioParams.triggerInterval = newInterval;
+                                    });
+                                    e_input.target.previousElementSibling.textContent = `Interval (${newInterval.toFixed(1)}s):`;
+                                },
+                            );
+                            currentSection.appendChild(intervalSliderContainer);
+                        }
+                    } else if (node.type === "pulsar_random_particles") {
+                        const timingInfo = document.createElement("small");
+                        timingInfo.textContent = `Timing: Random (~${PULSAR_RANDOM_TIMING_CHANCE_PER_SEC.toFixed(1)}/sec avg)`;
+                        currentSection.appendChild(timingInfo);
+                    }
+                    currentSection.appendChild(document.createElement("br"));
+                    if (node.type !== "pulsar_random_volume") {
+                        const currentIntensity =
+                            node.audioParams?.pulseIntensity ?? DEFAULT_PULSE_INTENSITY;
+                        const intensityVal = currentIntensity.toFixed(2);
+                        const intensitySliderContainer = createSlider(
+                            `edit-pulsar-intensity-${node.id}`,
+                            `Pulse Intensity (${intensityVal}):`,
+                            MIN_PULSE_INTENSITY,
+                            MAX_PULSE_INTENSITY,
+                            0.01,
+                            currentIntensity,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newIntensity = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n?.audioParams && n.type !== "pulsar_random_volume")
+                                        n.audioParams.pulseIntensity = newIntensity;
+                                });
+                                e_input.target.previousElementSibling.textContent = `Pulse Intensity (${newIntensity.toFixed(2)}):`;
+                            },
+                        );
+                        currentSection.appendChild(intensitySliderContainer);
+                    } else {
+                        const intensityInfo = document.createElement("small");
+                        intensityInfo.textContent = `Intensity: Random (${MIN_PULSE_INTENSITY.toFixed(1)} - ${MAX_PULSE_INTENSITY.toFixed(1)})`;
+                        currentSection.appendChild(intensityInfo);
+                    }
+                    currentSection.appendChild(document.createElement("br"));
+
+                    if (node.type === "pulsar_meteorshower") {
+                        const meteorSubSection = document.createElement("div");
+                        meteorSubSection.classList.add("panel-section");
+                        meteorSubSection.style.marginTop = "10px";
+                        meteorSubSection.style.borderTop = "1px dashed var(--button-hover)";
+                        const meteorTitle = document.createElement("p");
+                        meteorTitle.innerHTML = "<strong>Meteor Shower Settings:</strong>";
+                        meteorSubSection.appendChild(meteorTitle);
+
+                        const currentMaxRadius = node.audioParams?.meteorMaxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS;
+                        const radiusSlider = createSlider(
+                            `edit-meteor-radius-${node.id}`,
+                            `Shower Max Radius (${currentMaxRadius.toFixed(0)}px):`,
+                            50, 800, 10, currentMaxRadius,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newVal = parseFloat(e_input.target.value);
+                                selectedArray.forEach(elData => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorMaxRadius = newVal;
+                                });
+                                e_input.target.previousElementSibling.textContent = `Shower Max Radius (${newVal.toFixed(0)}px):`;
+                            }
+                        );
+                        meteorSubSection.appendChild(radiusSlider);
+
+                        const currentGrowthRate = node.audioParams?.meteorGrowthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE;
+                        const growthSlider = createSlider(
+                            `edit-meteor-growth-${node.id}`,
+                            `Shower Growth Rate (${currentGrowthRate.toFixed(0)}px/s):`,
+                            20, 500, 5, currentGrowthRate,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newVal = parseFloat(e_input.target.value);
+                                selectedArray.forEach(elData => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_meteorshower" && n.audioParams) n.audioParams.meteorGrowthRate = newVal;
+                                });
+                                e_input.target.previousElementSibling.textContent = `Shower Growth Rate (${newVal.toFixed(0)}px/s):`;
+                            }
+                        );
+                        meteorSubSection.appendChild(growthSlider);
+                        currentSection.appendChild(meteorSubSection);
+                    }
+
+                    const colorLabel = document.createElement("label");
+                    colorLabel.htmlFor = `edit-pulsar-color-${node.id}`;
+                    colorLabel.textContent = "Pulsar Color:";
+                    currentSection.appendChild(colorLabel);
+                    const colorInput = document.createElement("input");
+                    colorInput.type = "color";
+                    colorInput.id = `edit-pulsar-color-${node.id}`;
+                    const styles = getComputedStyle(document.documentElement);
+                    const defaultColorVar = `--${node.type.replace("_", "-")}-color`;
+                    const fallbackColorVar = "--start-node-color";
+                    const defaultColorRgba =
+                        styles.getPropertyValue(defaultColorVar).trim() ||
+                        styles.getPropertyValue(fallbackColorVar).trim();
+                    const defaultColorHex = rgbaToHex(defaultColorRgba);
+                    colorInput.value = node.color ?
+                        rgbaToHex(node.color) :
+                        defaultColorHex;
+                    colorInput.addEventListener("input", (e) => {
+                        const newColor = hexToRgba(e.target.value, 0.9);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n) n.color = newColor;
+                        });
+                    });
+                    colorInput.addEventListener("change", () => {
+                        identifyAndRouteAllGroups();
+                        saveState();
+                    });
+                    currentSection.appendChild(colorInput);
+
+                    if (node.type === "pulsar_rocket") {
+                        const rocketSubSection = document.createElement("div");
+                        rocketSubSection.classList.add("panel-section");
+                        const rocketTitle = document.createElement("p");
+                        rocketTitle.innerHTML = "<strong>Rocket Settings:</strong>";
+                        rocketSubSection.appendChild(rocketTitle);
+                        let currentAngleDegVal = parseFloat(
+                            (
+                                ((node.audioParams.rocketDirectionAngle || 0) * 180) /
+                                Math.PI
+                            ).toFixed(0),
+                        );
+                        const dirSliderContainer = createSlider(
+                            `edit-rocket-dir-${node.id}`,
+                            `Direction (${currentAngleDegVal}°):`, 0, 359, 1, currentAngleDegVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newAngleDeg = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketDirectionAngle = (newAngleDeg / 180) * Math.PI;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Direction (${newAngleDeg.toFixed(0)}°):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(dirSliderContainer);
+                        let currentSpeedVal = parseFloat((node.audioParams.rocketSpeed || ROCKET_DEFAULT_SPEED).toFixed(1));
+                        const speedSliderContainer = createSlider(
+                            `edit-rocket-speed-${node.id}`, `Speed (${currentSpeedVal.toFixed(1)}):`, 50, 500, 1, currentSpeedVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newSpeed = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketSpeed = newSpeed;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(speedSliderContainer);
+                        let currentRangeVal = parseFloat((node.audioParams.rocketRange || ROCKET_DEFAULT_RANGE).toFixed(0));
+                        const rangeSliderContainer = createSlider(
+                            `edit-rocket-range-${node.id}`, `Range (${currentRangeVal.toFixed(0)}):`, 50, 2000, 10, currentRangeVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newRange = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketRange = newRange;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Range (${newRange.toFixed(0)}):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(rangeSliderContainer);
+                        let currentGravityVal = parseFloat((node.audioParams.rocketGravity || ROCKET_DEFAULT_GRAVITY).toFixed(0));
+                        const gravitySliderContainer = createSlider(
+                            `edit-rocket-gravity-${node.id}`, `Gravity (${currentGravityVal.toFixed(0)}):`, -200, 200, 1, currentGravityVal,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newGravity = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.type === "pulsar_rocket" && n.audioParams) {
+                                        n.audioParams.rocketGravity = newGravity;
+                                    }
+                                });
+                                e_input.target.previousElementSibling.textContent = `Gravity (${newGravity.toFixed(0)}):`;
+                            },
+                        );
+                        rocketSubSection.appendChild(gravitySliderContainer);
+                        currentSection.appendChild(rocketSubSection);
+                    }
+
+                } else if (node.type === "sound") {
+                    const orbitoneMainSection = document.createElement("div");
+                    orbitoneMainSection.classList.add("panel-section");
+                    orbitoneMainSection.innerHTML = "<p><strong>Orbitone Settings:</strong></p>";
+
+                    const enableOrbitonesLabel = document.createElement("label");
+                    enableOrbitonesLabel.htmlFor = `edit-node-orbitones-enable-${node.id}`;
+                    enableOrbitonesLabel.textContent = "Enable Orbitones:";
+                    enableOrbitonesLabel.style.marginRight = "8px";
+                    orbitoneMainSection.appendChild(enableOrbitonesLabel);
+
+                    const enableOrbitonesCheckbox = document.createElement("input");
+                    enableOrbitonesCheckbox.type = "checkbox";
+                    enableOrbitonesCheckbox.id = `edit-node-orbitones-enable-${node.id}`;
+                    enableOrbitonesCheckbox.checked = node.audioParams.orbitonesEnabled || false;
+                    enableOrbitonesCheckbox.addEventListener("change", (e) => {
+                        const isEnabled = e.target.checked;
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams && n.type === "sound") {
+                                n.audioParams.orbitonesEnabled = isEnabled;
+                                stopNodeAudio(n);
+                                n.audioNodes = createAudioNodesForNode(n);
+                                if (n.audioNodes) updateNodeAudioParams(n);
+                            }
+                        });
+                        identifyAndRouteAllGroups();
+                        saveState();
+                        populateEditPanel();
+                    });
+                    orbitoneMainSection.appendChild(enableOrbitonesCheckbox);
+                    fragment.appendChild(orbitoneMainSection);
+
+                    if (node.audioParams.orbitonesEnabled) {
+                        const orbitoneSettingsSection = document.createElement("div");
+                        orbitoneSettingsSection.classList.add("panel-section");
+                        orbitoneSettingsSection.style.paddingLeft = "15px";
+                        orbitoneSettingsSection.style.borderLeft = "2px solid var(--button-bg)";
+                        orbitoneSettingsSection.style.marginTop = "5px";
+
+                        const currentOrbitoneCount = node.audioParams.orbitoneCount || 0;
+                        const orbitoneCountSliderContainer = createSlider(
+                            `edit-node-orbitone-count-${node.id}`,
+                            `Number of extra Orbitones (${currentOrbitoneCount}):`, 0, 5, 1, currentOrbitoneCount,
+                            (e_change_event) => {
+                                const newCount = parseInt(e_change_event.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.audioParams && n.type === "sound") {
+                                        n.audioParams.orbitoneCount = newCount;
+                                        applyOrbitoneVoicingFromPhase(n);
+                                        applyOrbitoneTimingFromPhase(n);
+                                        stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); if (n.audioNodes) updateNodeAudioParams(n);
+                                    }
+                                });
+                                identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+                            },
+                            (e_input) => {
+                                e_input.target.previousElementSibling.textContent = `Number of extra Orbitones (${e_input.target.value}):`;
+                            },
+                        );
+                        orbitoneSettingsSection.appendChild(orbitoneCountSliderContainer);
+
+                        if (node.audioParams.orbitoneCount > 0) {
+                            const currentVoicingPhase = node.audioParams.orbitoneVoicingPhase || 0;
+                            const voicingPhaseSlider = createSlider(
+                                `edit-orbitone-voicing-phase-${node.id}`, `Orbitone Voicing Style (${currentVoicingPhase}):`, 0, 100, 1, currentVoicingPhase,
+                                (e_change) => {
+                                    const val = parseInt(e_change.target.value);
+                                    selectedArray.forEach((el) => {
+                                        const n = findNodeById(el.id);
+                                        if (n && n.audioParams && n.type === "sound") {
+                                            n.audioParams.orbitoneVoicingPhase = val;
+                                            applyOrbitoneVoicingFromPhase(n);
+                                            stopNodeAudio(n); n.audioNodes = createAudioNodesForNode(n); if (n.audioNodes) updateNodeAudioParams(n);
+                                        }
+                                    });
+                                    identifyAndRouteAllGroups(); saveState(); populateEditPanel();
+                                },
+                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Voicing Style (${e_input.target.value}):`; },
+                            );
+                            orbitoneSettingsSection.appendChild(voicingPhaseSlider);
+
+                            const currentTimingPhase = node.audioParams.orbitoneTimingPhase || 0;
+                            const timingPhaseSlider = createSlider(
+                                `edit-orbitone-timing-phase-${node.id}`, `Orbitone Timing Style (${currentTimingPhase}):`, 0, 100, 1, currentTimingPhase,
+                                (e_change) => {
+                                    const val = parseInt(e_change.target.value);
+                                    selectedArray.forEach((el) => {
+                                        const n = findNodeById(el.id);
+                                        if (n && n.audioParams && n.type === "sound") {
+                                            n.audioParams.orbitoneTimingPhase = val;
+                                            applyOrbitoneTimingFromPhase(n); updateNodeAudioParams(n);
+                                        }
+                                    });
+                                    identifyAndRouteAllGroups(); saveState();
+                                },
+                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Timing Style (${e_input.target.value}):`; },
+                            );
+                            orbitoneSettingsSection.appendChild(timingPhaseSlider);
+
+                            const currentMix = node.audioParams.orbitoneMix !== undefined ? node.audioParams.orbitoneMix : 0.5;
+                            const mixSliderContainer = createSlider(
+                                `edit-node-orbitone-mix-${node.id}`, `Orbitone Mix (Main <-> Orbitones) (${currentMix.toFixed(2)}):`, 0, 1, 0.05, currentMix,
+                                (e_change_event) => {
+                                    const newMix = parseFloat(e_change_event.target.value);
+                                    selectedArray.forEach((elData) => {
+                                        const n = findNodeById(elData.id);
+                                        if (n && n.audioParams && n.type === "sound") {
+                                            n.audioParams.orbitoneMix = newMix; updateNodeAudioParams(n);
+                                        }
+                                    });
+                                    identifyAndRouteAllGroups(); saveState();
+                                },
+                                (e_input) => { e_input.target.previousElementSibling.textContent = `Orbitone Mix (Main <-> Orbitones) (${parseFloat(e_input.target.value).toFixed(2)}):`; },
+                            );
+                            orbitoneSettingsSection.appendChild(mixSliderContainer);
+                        }
+                        fragment.appendChild(orbitoneSettingsSection);
+                    }
+                } else if (isDrumType(node.type)) {
+                    const params = node.audioParams;
+                    const defaults = DRUM_ELEMENT_DEFAULTS[node.type];
+                    const soundDiv = document.createElement("div");
+                    soundDiv.classList.add("edit-drum-sound");
+                    const soundLabel = document.createElement("strong");
+                    soundLabel.textContent = defaults.label;
+                    soundDiv.appendChild(soundLabel);
+
+                    const currentBaseFreq = params?.baseFreq ?? defaults?.baseFreq ?? 60;
+                    const tuneVal = currentBaseFreq.toFixed(0);
+                    const tuneSliderContainer = createSlider(
+                        `edit-drum-tune-${node.id}`, `Tune (${tuneVal}Hz):`, 20, node.type === "drum_hihat" ? 15000 : (node.type === "drum_cowbell" || node.type === "drum_clap" ? 2000 : 1000), 1, currentBaseFreq,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newFreq = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.baseFreq = newFreq; });
+                            e_input.target.previousElementSibling.textContent = `Tune (${newFreq.toFixed(0)}Hz):`;
+                        }
+                    );
+                    soundDiv.appendChild(tuneSliderContainer);
+
+                    if (params?.decay !== undefined || defaults?.decay !== undefined) {
+                        const currentDecay = params?.decay ?? defaults?.decay ?? 0.5;
+                        const decayVal = currentDecay.toFixed(2);
+                        const decaySliderContainer = createSlider(
+                            `edit-drum-decay-${node.id}`, `Decay (${decayVal}s):`, 0.01, 1.5, 0.01, currentDecay,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newDecay = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.decay = newDecay; });
+                                e_input.target.previousElementSibling.textContent = `Decay (${newDecay.toFixed(2)}s):`;
+                            }
+                        );
+                        soundDiv.appendChild(decaySliderContainer);
+                    }
+                    if (params?.noiseDecay !== undefined || defaults?.noiseDecay !== undefined) {
+                        const currentNoiseDecay = params?.noiseDecay ?? defaults?.noiseDecay ?? 0.1;
+                        const noiseDecayVal = currentNoiseDecay.toFixed(2);
+                        const noiseDecaySliderContainer = createSlider(
+                            `edit-drum-noisedecay-${node.id}`, `Noise Decay (${noiseDecayVal}s):`, 0.01, 0.5, 0.01, currentNoiseDecay,
+                            () => { identifyAndRouteAllGroups(); saveState(); },
+                            (e_input) => {
+                                const newNoiseDecay = parseFloat(e_input.target.value);
+                                selectedArray.forEach((elData) => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.noiseDecay = newNoiseDecay; });
+                                e_input.target.previousElementSibling.textContent = `Noise Decay (${newNoiseDecay.toFixed(2)}s):`;
+                            }
+                        );
+                        soundDiv.appendChild(noiseDecaySliderContainer);
+                    }
+
+                    const currentVolume = params?.volume ?? defaults?.volume ?? 1.0;
+                    const volVal = currentVolume.toFixed(2);
+                    const volSliderContainer = createSlider(
+                        `edit-drum-vol-${node.id}`, `Volume (${volVal}):`, 0, 1.5, 0.01, currentVolume,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newVol = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n?.audioParams) { n.audioParams.volume = newVol; updateNodeAudioParams(n); }
+                            });
+                            e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                        }
+                    );
+                    soundDiv.appendChild(volSliderContainer);
+                    currentSection.appendChild(soundDiv);
+                } else if (node.type === "switch" && selectedArray.length === 1) {
+                    const label = document.createElement("label");
+                    label.textContent = "Primary Input Connection:";
+                    currentSection.appendChild(label);
+
+                    const select = document.createElement("select");
+                    select.id = `edit-switch-primary-${node.id}`;
+                    const noneOpt = document.createElement("option");
+                    noneOpt.value = "null";
+                    noneOpt.textContent = "None (Set on next pulse)";
+                    select.appendChild(noneOpt);
+                    node.connections.forEach(neighborId => {
+                        const conn = connections.find(c => (c.nodeAId === node.id && c.nodeBId === neighborId) || (c.nodeAId === neighborId && c.nodeBId === node.id));
+                        if (conn) {
+                            const otherNode = findNodeById(neighborId);
+                            const option = document.createElement("option");
+                            option.value = conn.id;
+                            option.textContent = `From Node #${neighborId} (${otherNode?.type || '?'})`;
+                            if (conn.id === node.primaryInputConnectionId) option.selected = true;
+                            select.appendChild(option);
+                        }
+                    });
+                    select.addEventListener("change", (e) => {
+                        node.primaryInputConnectionId = e.target.value === "null" ? null : parseInt(e.target.value, 10);
+                        identifyAndRouteAllGroups(); saveState();
+                    });
+                    currentSection.appendChild(select);
+                }
+
+                if (node && (node.type === "sound" || isDrumType(node.type))) {
+                    const retriggerSection = document.createElement("div");
+                    retriggerSection.classList.add("panel-section");
+                    retriggerSection.style.borderTop = "1px solid var(--button-hover)";
+                    retriggerSection.style.marginTop = "10px";
+                    retriggerSection.style.paddingTop = "10px";
+
+                    const retriggerTitle = document.createElement("p");
+                    retriggerTitle.innerHTML = "<strong>Retrigger Settings:</strong>";
+                    retriggerSection.appendChild(retriggerTitle);
+
+                    const enableRetriggerLabel = document.createElement("label");
+                    enableRetriggerLabel.htmlFor = `edit-node-retrigger-enable-${node.id}`;
+                    enableRetriggerLabel.textContent = "Enable Retrigger Mode:";
+                    enableRetriggerLabel.style.marginRight = "8px";
+                    retriggerSection.appendChild(enableRetriggerLabel);
+
+                    const enableRetriggerCheckbox = document.createElement("input");
+                    enableRetriggerCheckbox.type = "checkbox";
+                    enableRetriggerCheckbox.id = `edit-node-retrigger-enable-${node.id}`;
+                    enableRetriggerCheckbox.checked = (node.audioParams && node.audioParams.retriggerEnabled) || false;
+
+                    enableRetriggerCheckbox.addEventListener("change", (e) => {
+                        const isEnabled = e.target.checked;
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.audioParams && (n.type === "sound" || isDrumType(n.type))) {
+                                n.audioParams.retriggerEnabled = isEnabled;
+                                if (isEnabled) {
+                                    const defaultSteps = [0.8, 0.65, 0.5];
+                                    const numSteps = (n.audioParams.retriggerVolumeSteps && n.audioParams.retriggerVolumeSteps.length > 0) ? n.audioParams.retriggerVolumeSteps.length : defaultSteps.length;
+
+                                    if (!n.audioParams.retriggerVolumeSteps || n.audioParams.retriggerVolumeSteps.length === 0) {
+                                        n.audioParams.retriggerVolumeSteps = Array(numSteps).fill(0).map((_, i) => defaultSteps[i] !== undefined ? defaultSteps[i] : 0.5);
+                                    }
+                                     if (!n.audioParams.retriggerPitchSteps || n.audioParams.retriggerPitchSteps.length !== numSteps) {
+                                        n.audioParams.retriggerPitchSteps = Array(numSteps).fill(0);
+                                    }
+                                    if (!n.audioParams.retriggerFilterSteps || n.audioParams.retriggerFilterSteps.length !== numSteps) {
+                                        n.audioParams.retriggerFilterSteps = Array(numSteps).fill(0);
+                                    }
+                                    if (!n.audioParams.retriggerMuteSteps || n.audioParams.retriggerMuteSteps.length !== numSteps) {
+                                        n.audioParams.retriggerMuteSteps = Array(numSteps).fill(false);
+                                    }
+                                    if (n.audioParams.retriggerIntervalMs === undefined) n.audioParams.retriggerIntervalMs = 100;
+                                    if (n.audioParams.retriggerRateMode === undefined) n.audioParams.retriggerRateMode = "constant";
+                                    if (n.audioParams.retriggerSyncSubdivisionIndex === undefined) n.audioParams.retriggerSyncSubdivisionIndex = DEFAULT_SUBDIVISION_INDEX;
+                                }
+                            }
+                        });
+                        saveState();
+                        populateEditPanel();
+                    });
+                    retriggerSection.appendChild(enableRetriggerCheckbox);
+                    fragment.appendChild(retriggerSection);
+
+                    if (node.audioParams && node.audioParams.retriggerEnabled) {
+                        const retriggerControlsSection = document.createElement("div");
+                        retriggerControlsSection.classList.add("panel-section");
+                        retriggerControlsSection.style.paddingLeft = "15px";
+                        retriggerControlsSection.style.borderLeft = "2px solid var(--button-bg)";
+                        retriggerControlsSection.style.marginTop = "5px";
+
+                        const firstNodeWithRetrigger = selectedArray
+                            .map(elData => findNodeById(elData.id))
+                            .find(n => n && n.audioParams && n.audioParams.retriggerEnabled);
+
+                        const currentStepCount = firstNodeWithRetrigger ? (firstNodeWithRetrigger.audioParams.retriggerVolumeSteps || [0.8, 0.65, 0.5]).length : 3;
+
+                        const stepsSliderContainer = createSlider(
+                            `edit-node-retrigger-steps-${node.id}`,
+                            `Number of Steps (${currentStepCount}):`, 1, 16, 1, currentStepCount,
+                            (e_change) => {
+                                const newCount = parseInt(e_change.target.value);
+                                selectedArray.forEach((elData) => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.audioParams && n.audioParams.retriggerEnabled) {
+                                        const oldVolumeSteps = n.audioParams.retriggerVolumeSteps || [];
+                                        const oldPitchSteps = n.audioParams.retriggerPitchSteps || [];
+                                        const oldFilterSteps = n.audioParams.retriggerFilterSteps || [];
+                                        const oldMuteSteps = n.audioParams.retriggerMuteSteps || [];
+                                        const defaultBaseVolumes = [0.8, 0.65, 0.5];
+
+                                        n.audioParams.retriggerVolumeSteps = Array(newCount).fill(0).map((_, i) => oldVolumeSteps[i] !== undefined ? oldVolumeSteps[i] : (defaultBaseVolumes[i] !== undefined ? defaultBaseVolumes[i] : 0.5));
+                                        n.audioParams.retriggerPitchSteps = Array(newCount).fill(0).map((_, i) => oldPitchSteps[i] !== undefined ? oldPitchSteps[i] : 0);
+                                        n.audioParams.retriggerFilterSteps = Array(newCount).fill(0).map((_, i) => oldFilterSteps[i] !== undefined ? oldFilterSteps[i] : 0);
+                                        n.audioParams.retriggerMuteSteps = Array(newCount).fill(false).map((_, i) => oldMuteSteps[i] !== undefined ? oldMuteSteps[i] : false);
+                                    }
+                                });
+                                saveState();
+                                populateEditPanel();
+                            },
+                            (e_input) => {
+                                e_input.target.previousElementSibling.textContent = `Number of Steps (${e_input.target.value}):`;
+                            }
+                        );
+                        retriggerControlsSection.appendChild(stepsSliderContainer);
+
+                        const showSyncRetrigger = isGlobalSyncEnabled && !(node.audioParams.ignoreGlobalSync || false);
+                        if (showSyncRetrigger) {
+                            const subdivRetriggerLabel = document.createElement("label");
+                            subdivRetriggerLabel.htmlFor = `edit-retrigger-sync-subdiv-${node.id}`;
+                            subdivRetriggerLabel.textContent = "Retrigger Interval (Synced):";
+                            retriggerControlsSection.appendChild(subdivRetriggerLabel);
+
+                            const subdivRetriggerSelect = document.createElement("select");
+                            subdivRetriggerSelect.id = `edit-retrigger-sync-subdiv-${node.id}`;
+                            subdivisionOptions.forEach((opt, index) => {
+                                const option = document.createElement("option");
+                                option.value = index;
+                                option.textContent = opt.label;
+                                if (index === (node.audioParams.retriggerSyncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX)) option.selected = true;
+                                subdivRetriggerSelect.appendChild(option);
+                            });
+                            subdivRetriggerSelect.addEventListener("change", (e) => {
+                                const newIdx = parseInt(e.target.value, 10);
+                                selectedArray.forEach(elData => {
+                                    const n = findNodeById(elData.id);
+                                    if (n && n.audioParams && n.audioParams.retriggerEnabled) n.audioParams.retriggerSyncSubdivisionIndex = newIdx;
+                                });
+                                saveState();
+                            });
+                            retriggerControlsSection.appendChild(subdivRetriggerSelect);
+                            retriggerControlsSection.appendChild(document.createElement("br"));
+                        } else {
+                            const currentIntervalMs = node.audioParams.retriggerIntervalMs || 100;
+                            const intervalSliderContainer = createSlider(
+                                `edit-node-retrigger-interval-${node.id}`,
+                                `Interval (${currentIntervalMs}ms):`, 20, 500, 5, currentIntervalMs,
+                                saveState,
+                                (e_input) => {
+                                    const newMs = parseInt(e_input.target.value);
+                                    selectedArray.forEach((elData) => {
+                                        const n = findNodeById(elData.id);
+                                        if (n && n.audioParams && n.audioParams.retriggerEnabled) n.audioParams.retriggerIntervalMs = newMs;
+                                    });
+                                    e_input.target.previousElementSibling.textContent = `Interval (${newMs}ms):`;
+                                }
+                            );
+                            retriggerControlsSection.appendChild(intervalSliderContainer);
+                        }
+
+                        const rateModeLabel = document.createElement("label");
+                        rateModeLabel.htmlFor = `edit-node-retrigger-ratemode-${node.id}`;
+                        rateModeLabel.textContent = "Rate Mode:";
+                        retriggerControlsSection.appendChild(rateModeLabel);
+
+                        const rateModeSelect = document.createElement("select");
+                        rateModeSelect.id = `edit-node-retrigger-ratemode-${node.id}`;
+                        const rateModes = ["constant", "accelerate", "decelerate", "random"];
+                        rateModes.forEach(modeVal => {
+                            const option = document.createElement("option");
+                            option.value = modeVal;
+                            option.textContent = modeVal.charAt(0).toUpperCase() + modeVal.slice(1);
+                            if (modeVal === (node.audioParams.retriggerRateMode || "constant")) option.selected = true;
+                            rateModeSelect.appendChild(option);
+                        });
+                        rateModeSelect.addEventListener("change", (e) => {
+                            const newMode = e.target.value;
+                            selectedArray.forEach(elData => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.audioParams && n.audioParams.retriggerEnabled) n.audioParams.retriggerRateMode = newMode;
+                            });
+                            saveState();
+                        });
+                        retriggerControlsSection.appendChild(rateModeSelect);
+                        retriggerControlsSection.appendChild(document.createElement("br"));
+
+                        if (typeof createRetriggerVisualEditor === "function") {
+                             const retriggerEditor = createRetriggerVisualEditor(node, selectedArray);
+                             if (retriggerEditor) {
+                                retriggerControlsSection.appendChild(retriggerEditor);
+                             }
+                        }
+                        fragment.appendChild(retriggerControlsSection);
+                    }
+                }
+
+                if (node.type === PRORB_TYPE) {
+                    const prorbSection = document.createElement("div");
+                    prorbSection.classList.add("panel-section");
+                    prorbSection.innerHTML = "<p><strong>PrOrb Synth Settings:</strong></p>";
+
+                    const currentPrOrbVolume = node.audioParams?.volume ?? 0.7;
+                    const prOrbVolumeSlider = createSlider(
+                        `edit-prorb-volume-${node.id}`, `PrOrb Volume (${currentPrOrbVolume.toFixed(2)}):`, 0, 1.5, 0.01, currentPrOrbVolume, saveState,
+                        (e_input) => {
+                            const newVol = parseFloat(e_input.target.value);
+                            selectedArray.forEach((el) => { const n = findNodeById(el.id); if (n && n.type === PRORB_TYPE && n.audioParams) n.audioParams.volume = newVol; });
+                            e_input.target.previousElementSibling.textContent = `PrOrb Volume (${newVol.toFixed(2)}):`;
+                        }
+                    );
+                    prorbSection.appendChild(prOrbVolumeSlider);
+                    fragment.appendChild(prorbSection);
+                }
+
+                if (node.type === "sound" || node.type === "nebula" || node.type === PORTAL_NEBULA_TYPE || isDrumType(node.type) || node.type === PRORB_TYPE) {
+                    const effectsSection = document.createElement("div");
+                    effectsSection.classList.add("panel-section");
+                    effectsSection.style.marginTop = "10px";
+                    effectsSection.style.paddingTop = "10px";
+                    effectsSection.style.borderTop = "1px solid var(--button-hover)";
+                    effectsSection.innerHTML = "<p><strong>Node Effects Sends:</strong></p>";
+
+                    const currentReverb = node.audioParams?.reverbSend ?? DEFAULT_REVERB_SEND;
+                    const reverbVal = currentReverb.toFixed(2);
+                    const reverbSliderContainer = createSlider(
+                        `edit-node-reverb-${node.id}`, `Reverb Send (${reverbVal}):`, 0, 1, 0.01, currentReverb, saveState,
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.reverbSend = newVal; updateNodeAudioParams(n); });
+                            e_input.target.previousElementSibling.textContent = `Reverb Send (${newVal.toFixed(2)}):`;
+                        }
+                    );
+                    effectsSection.appendChild(reverbSliderContainer);
+
+                    const currentDelay = node.audioParams?.delaySend ?? DEFAULT_DELAY_SEND;
+                    const delayVal = currentDelay.toFixed(2);
+                    const delaySliderContainer = createSlider(
+                        `edit-node-delay-${node.id}`, `Delay Send (${delayVal}):`, 0, 1, 0.01, currentDelay, saveState,
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const n = findNodeById(elData.id); if (n?.audioParams) n.audioParams.delaySend = newVal; updateNodeAudioParams(n); });
+                            e_input.target.previousElementSibling.textContent = `Delay Send (${newVal.toFixed(2)}):`;
+                        }
+                    );
+                    effectsSection.appendChild(delaySliderContainer);
+                    fragment.appendChild(effectsSection);
+                }
+
+                if (sectionCreatedForThisType && currentSection && currentSection.hasChildNodes()) {
+                    fragment.appendChild(currentSection);
+                }
+            }
+        } else if (firstElementData.type === "connection") {
+            const connection = findConnectionById(firstElementData.id);
+            if (connection) {
+                const section = document.createElement("div");
+                section.classList.add("panel-section");
+
+                if (connection.type === "string_violin") {
+                    const params = connection.audioParams;
+                    const defaults = STRING_VIOLIN_DEFAULTS;
+                    const currentVol = params?.volume ?? defaults.volume;
+                    const volVal = currentVol.toFixed(2);
+                    const volSliderContainer = createSlider(
+                        `edit-string-vol-${connection.id}`, `Volume (${volVal}):`, 0, 1.0, 0.01, currentVol,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newVol = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.volume = newVol; });
+                            e_input.target.previousElementSibling.textContent = `Volume (${newVol.toFixed(2)}):`;
+                        }
+                    );
+                    section.appendChild(volSliderContainer);
+                    const currentAttack = params?.attack ?? defaults.attack;
+                    const attackVal = currentAttack.toFixed(2);
+                    const attackSliderContainer = createSlider(
+                        `edit-string-attack-${connection.id}`, `Attack (${attackVal}s):`, 0.01, 1.0, 0.01, currentAttack,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.attack = newVal; });
+                            e_input.target.previousElementSibling.textContent = `Attack (${newVal.toFixed(2)}s):`;
+                        }
+                    );
+                    section.appendChild(attackSliderContainer);
+                    const currentRelease = params?.release ?? defaults.release;
+                    const releaseVal = currentRelease.toFixed(2);
+                    const releaseSliderContainer = createSlider(
+                        `edit-string-release-${connection.id}`, `Release (${releaseVal}s):`, 0.1, 5.0, 0.01, currentRelease,
+                        () => { identifyAndRouteAllGroups(); saveState(); },
+                        (e_input) => {
+                            const newVal = parseFloat(e_input.target.value);
+                            selectedArray.forEach(elData => { const c = findConnectionById(elData.id); if (c?.audioParams) c.audioParams.release = newVal; });
+                            e_input.target.previousElementSibling.textContent = `Release (${newVal.toFixed(2)}s):`;
+                        }
+                    );
+                    section.appendChild(releaseSliderContainer);
+
+                } else if (connection.type === "wavetrail") {
+                    section.classList.add("panel-section");
+
+                    const fileLabel = document.createElement("label");
+                    fileLabel.htmlFor = `edit-wavetrail-file-${connection.id}`;
+                    fileLabel.textContent = "Audio File:";
+                    section.appendChild(fileLabel);
+
+                    const fileInput = document.createElement("input");
+                    fileInput.type = "file";
+                    fileInput.id = `edit-wavetrail-file-${connection.id}`;
+                    fileInput.accept = ".wav,.mp3,audio/*";
+                    fileInput.style.marginBottom = "5px";
+                    fileInput.addEventListener("change", (e) => handleWaveTrailFileInputChange(e, connection));
+                    section.appendChild(fileInput);
+
+                    const fileNameDisplay = document.createElement("small");
+                    fileNameDisplay.id = `edit-wavetrail-filename-${connection.id}`;
+                    if (!connection.audioParams) {
+                        connection.audioParams = {};
+                    }
+                    fileNameDisplay.textContent = `Current: ${connection.audioParams?.fileName || "None selected"}`;
+                    fileNameDisplay.style.display = "block";
+                    section.appendChild(fileNameDisplay);
+
+                    if (connection.audioParams?.buffer) {
+                        const bufferDuration = connection.audioParams.buffer.duration;
+                        const currentStartOffset = connection.audioParams.startTimeOffset || 0;
+                        const currentEndOffset = connection.audioParams.endTimeOffset ?? bufferDuration;
+                        const currentGrainDuration = connection.audioParams.grainDuration || 0.09;
+                        const currentGrainOverlap = connection.audioParams.grainOverlap || 0.07;
+                        const currentPlaybackRate = connection.audioParams.playbackRate || 1.0;
+
+                        const offsetLabel = document.createElement("label");
+                        offsetLabel.htmlFor = `edit-wavetrail-start-${connection.id}`;
+                        offsetLabel.style.marginTop = "10px";
+                        offsetLabel.textContent = `Start Offset (${currentStartOffset.toFixed(2)}s):`;
+                        section.appendChild(offsetLabel);
+                        const offsetSlider = document.createElement("input");
+                        offsetSlider.type = "range";
+                        offsetSlider.id = `edit-wavetrail-start-${connection.id}`;
+                        offsetSlider.min = "0";
+                        offsetSlider.max = bufferDuration.toFixed(3);
+                        offsetSlider.step = "0.01";
+                        offsetSlider.value = currentStartOffset;
+                        offsetSlider.title = "Scrub Start Time";
+                        const offsetValueDisplay = document.createElement("span");
+                        offsetValueDisplay.id = `edit-wavetrail-start-value-${connection.id}`;
+                        offsetValueDisplay.textContent = `${currentStartOffset.toFixed(2)}s`;
+                        offsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
+                        section.appendChild(offsetSlider);
+                        section.appendChild(offsetValueDisplay);
+
+                        const endOffsetLabel = document.createElement("label");
+                        endOffsetLabel.htmlFor = `edit-wavetrail-end-${connection.id}`;
+                        endOffsetLabel.style.marginTop = "10px";
+                        endOffsetLabel.textContent = `End Offset (${currentEndOffset.toFixed(2)}s):`;
+                        section.appendChild(endOffsetLabel);
+                        const endOffsetSlider = document.createElement("input");
+                        endOffsetSlider.type = "range";
+                        endOffsetSlider.id = `edit-wavetrail-end-${connection.id}`;
+                        endOffsetSlider.min = currentStartOffset.toFixed(3);
+                        endOffsetSlider.max = bufferDuration.toFixed(3);
+                        endOffsetSlider.step = "0.01";
+                        endOffsetSlider.value = currentEndOffset;
+                        endOffsetSlider.title = "Scrub End Time";
+                        const endOffsetValueDisplay = document.createElement("span");
+                        endOffsetValueDisplay.id = `edit-wavetrail-end-value-${connection.id}`;
+                        endOffsetValueDisplay.textContent = `${currentEndOffset.toFixed(2)}s`;
+                        endOffsetValueDisplay.style.cssText = "font-size: 0.8em; margin-left: 5px; opacity: 0.8;";
+                        section.appendChild(endOffsetSlider);
+                        section.appendChild(endOffsetValueDisplay);
+
+                        offsetSlider.addEventListener("input", (e_input) => {
+                            const newStart = parseFloat(e_input.target.value);
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) {
+                                localConn.audioParams.startTimeOffset = newStart;
+                                const endSlider = document.getElementById(`edit-wavetrail-end-${localConn.id}`);
+                                if (endSlider) endSlider.min = newStart.toFixed(3);
+                                if (localConn.audioParams.endTimeOffset !== null && localConn.audioParams.endTimeOffset < newStart) {
+                                    localConn.audioParams.endTimeOffset = newStart + 0.01;
+                                    if (endSlider) endSlider.value = localConn.audioParams.endTimeOffset;
+                                    const endValDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn.id}`);
+                                    if (endValDisplay) endValDisplay.textContent = `${localConn.audioParams.endTimeOffset.toFixed(2)}s`;
+                                }
+                            }
+                            const valDisplay = document.getElementById(`edit-wavetrail-start-value-${localConn ? localConn.id : connection.id}`);
+                            if (valDisplay) valDisplay.textContent = `${newStart.toFixed(2)}s`;
+                            if (localConn && localConn.audioParams?.buffer) {
+                                localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
+                            }
+                        });
+                        offsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
+
+                        endOffsetSlider.addEventListener("input", (e_input) => {
+                            const newEnd = parseFloat(e_input.target.value);
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) {
+                                localConn.audioParams.endTimeOffset = newEnd;
+                            }
+                            const valDisplay = document.getElementById(`edit-wavetrail-end-value-${localConn ? localConn.id : connection.id}`);
+                            if (valDisplay) valDisplay.textContent = `${newEnd.toFixed(2)}s`;
+                            if (localConn && localConn.audioParams?.buffer) {
+                                localConn.audioParams.waveformPath = generateWaveformPath(localConn.audioParams.buffer, 200);
+                            }
+                        });
+                        endOffsetSlider.addEventListener("change", () => { identifyAndRouteAllGroups(); saveState(); });
+
+                        const grainDurSlider = createSlider(`edit-wavetrail-graindur-${connection.id}`, `Grain Duration (${currentGrainDuration.toFixed(3)}s):`, 0.005, 0.5, 0.001, currentGrainDuration, saveState, (e) => {
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) localConn.audioParams.grainDuration = parseFloat(e.target.value);
+                            e.target.previousElementSibling.textContent = `Grain Duration (${parseFloat(e.target.value).toFixed(3)}s):`;
+                        });
+                        section.appendChild(grainDurSlider);
+                        const grainOvlSlider = createSlider(`edit-wavetrail-grainovl-${connection.id}`, `Grain Overlap (${currentGrainOverlap.toFixed(3)}s):`, 0.001, 0.49, 0.001, currentGrainOverlap, saveState, (e) => {
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) localConn.audioParams.grainOverlap = parseFloat(e.target.value);
+                            e.target.previousElementSibling.textContent = `Grain Overlap (${parseFloat(e.target.value).toFixed(3)}s):`;
+                        });
+                        section.appendChild(grainOvlSlider);
+                        const rateSlider = createSlider(`edit-wavetrail-rate-${connection.id}`, `Playback Rate (${currentPlaybackRate.toFixed(2)}x):`, 0.1, 4.0, 0.05, currentPlaybackRate, saveState, (e) => {
+                            const localConn = findConnectionById(connection.id);
+                            if (localConn && localConn.audioParams) localConn.audioParams.playbackRate = parseFloat(e.target.value);
+                            e.target.previousElementSibling.textContent = `Playback Rate (${parseFloat(e.target.value).toFixed(2)}x):`;
+                        });
+                        section.appendChild(rateSlider);
+                    } else {
+                        const noBufferMsg = document.createElement("small");
+                        noBufferMsg.textContent = " (Upload an audio file to enable more controls)";
+                        noBufferMsg.style.display = "block";
+                        noBufferMsg.style.opacity = "0.7";
+                        section.appendChild(noBufferMsg);
+                    }
                 }
                 if (section.hasChildNodes()) fragment.appendChild(section);
-              }
-          }
-      }
-  } else {
-      const multiInfo = document.createElement("small");
-      multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
-      fragment.appendChild(multiInfo);
-  }
+            }
+        }
+    } else {
+        const multiInfo = document.createElement("small");
+        multiInfo.textContent = "Editing multiple elements of different types. Only common properties might be available if implemented.";
+        fragment.appendChild(multiInfo);
+    }
 
-  editPanelContent.appendChild(fragment);
+    editPanelContent.appendChild(fragment);
 
-  if (hamburgerMenuPanel && currentTool === "edit" && selectedElements.size > 0) {
-      if (hamburgerMenuPanel.classList.contains("hidden")) {
-           hamburgerMenuPanel.classList.remove("hidden");
-           if (hamburgerBtn) hamburgerBtn.classList.add("active");
-      }
-  } else if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden")) {
-      hamburgerMenuPanel.classList.add("hidden");
-      if (hamburgerBtn) hamburgerBtn.classList.remove("active");
-  }
+    if (hamburgerMenuPanel && currentTool === "edit" && selectedElements.size > 0) {
+        if (hamburgerMenuPanel.classList.contains("hidden")) {
+            hamburgerMenuPanel.classList.remove("hidden");
+            if (hamburgerBtn) hamburgerBtn.classList.add("active");
+        }
+    } else if (hamburgerMenuPanel && !hamburgerMenuPanel.classList.contains("hidden")) {
+        hamburgerMenuPanel.classList.add("hidden");
+        if (hamburgerBtn) hamburgerBtn.classList.remove("active");
+    }
 
-  if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
-      sideToolbar.classList.add("hidden");
-      const addBrushButtons = toolbar.querySelectorAll(
-          "#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button"
-      );
-      addBrushButtons.forEach(btn => btn.classList.remove("active"));
-      if (brushBtn) brushBtn.classList.remove("active");
-  }
+    if (sideToolbar && !sideToolbar.classList.contains("hidden")) {
+        sideToolbar.classList.add("hidden");
+        const addBrushButtons = toolbar.querySelectorAll(
+            "#toolbar-add-elements button, #toolbar-sound-generators button, #toolbar-pulsars button, #toolbar-logic-nodes button, #toolbar-environment-nodes button"
+        );
+        addBrushButtons.forEach(btn => btn.classList.remove("active"));
+        if (brushBtn) brushBtn.classList.remove("active");
+    }
 }
 
 function populateSideToolbar(contentType, title) {
@@ -17753,9 +18215,9 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     ) {
       const samplerId = nodeSubtypeForAudioParams.replace("sampler_", "");
       const definition =
-        typeof SAMPLER_DEFINITIONS !== "undefined"
-          ? SAMPLER_DEFINITIONS.find((s) => s.id === samplerId)
-          : null;
+        typeof SAMPLER_DEFINITIONS !== "undefined" ?
+        SAMPLER_DEFINITIONS.find((s) => s.id === samplerId) :
+        null;
       if (!definition || definition.loadFailed) {
         nodeSubtypeForAudioParams = "sine";
         const sinePreset = analogWaveformPresets.find((p) => p.type === "sine");
@@ -17799,12 +18261,12 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       waveformToAdd || audioDetails.osc1Type || "sawtooth";
     visualStyle = visualStyle || "nebula_default";
     initialScaleIndex =
-      noteIndexToAdd !== -1 && noteIndexToAdd !== null
-        ? noteIndexToAdd
-        : Math.floor(
-            Math.random() * currentScale.notes.length * 2 -
-              currentScale.notes.length,
-          );
+      noteIndexToAdd !== -1 && noteIndexToAdd !== null ?
+      noteIndexToAdd :
+      Math.floor(
+        Math.random() * currentScale.notes.length * 2 -
+        currentScale.notes.length,
+      );
     initialScaleIndex = Math.max(
       MIN_SCALE_INDEX,
       Math.min(MAX_SCALE_INDEX, initialScaleIndex),
@@ -17819,7 +18281,13 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     nodeSubtypeForAudioParams = null;
     visualStyle = visualStyle || "portal_default";
     audioDetails.actualOscillatorType = "triangle";
+  } else if (type === "global_key_setter") {
+    nodeSubtypeForAudioParams = type;
+    initialPitch = null;
+    initialScaleIndex = null;
+    visualStyle = "key_setter_default";
   }
+
 
   const drumDefaults = isDrumType(type) ? DRUM_ELEMENT_DEFAULTS[type] : {};
   if (isDrumType(type) && !visualStyle) visualStyle = type;
@@ -17841,7 +18309,8 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     type === "relay" ||
     type === "reflector" ||
     type === "switch" ||
-    type === TIMELINE_GRID_TYPE
+    type === TIMELINE_GRID_TYPE ||
+    type === "global_key_setter"
   ) {
     determinedNodeSize = 0.7;
   } else {
@@ -17872,14 +18341,14 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       type === "gate" ||
       (type === "sound" &&
         type !== PRORB_TYPE &&
-        nodeSubtypeForAudioParams?.startsWith("sampler_"))
-        ? Math.random() * Math.PI * 2
-        : 0,
+        nodeSubtypeForAudioParams?.startsWith("sampler_")) ?
+      Math.random() * Math.PI * 2 :
+      0,
     innerAngle: 0,
     pulsePhase:
-      type === "nebula" || type === PORTAL_NEBULA_TYPE
-        ? Math.random() * Math.PI * 2
-        : 0,
+      type === "nebula" || type === PORTAL_NEBULA_TYPE ?
+      Math.random() * Math.PI * 2 :
+      0,
     primaryInputConnectionId: type === "switch" ? null : undefined,
     lastTriggerTime: -1,
     nextSyncTriggerTime: 0,
@@ -17889,6 +18358,10 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
 
   if (newNode.type === "pulsar_triggerable") {
     newNode.isEnabled = false;
+  }
+  
+  if (type === "global_key_setter") {
+     newNode.isStartNode = false;
   }
 
   if (type === PRORB_TYPE) {
@@ -17930,14 +18403,14 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     };
   } else {
     const initialLowPassFreq =
-      audioDetails.lowPassFreq !== undefined
-        ? audioDetails.lowPassFreq
-        : MAX_FILTER_FREQ;
+      audioDetails.lowPassFreq !== undefined ?
+      audioDetails.lowPassFreq :
+      MAX_FILTER_FREQ;
     const initialFilterType = audioDetails.filterType || "lowpass";
     const initialFilterResonance =
-      audioDetails.filterResonance !== undefined
-        ? audioDetails.filterResonance
-        : 1.2;
+      audioDetails.filterResonance !== undefined ?
+      audioDetails.filterResonance :
+      1.2;
 
     newNode.audioParams = {
       waveform: nodeSubtypeForAudioParams,
@@ -17946,20 +18419,19 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       scaleIndex: initialScaleIndex,
       volume: drumDefaults?.volume ?? (type === PORTAL_NEBULA_TYPE ? 0.6 : 1.0),
       reverbSend:
-        type === PORTAL_NEBULA_TYPE
-          ? DEFAULT_REVERB_SEND * 1.5
-          : DEFAULT_REVERB_SEND,
+        type === PORTAL_NEBULA_TYPE ?
+        DEFAULT_REVERB_SEND * 1.5 :
+        DEFAULT_REVERB_SEND,
       delaySend:
-        type === PORTAL_NEBULA_TYPE
-          ? DEFAULT_DELAY_SEND * 1.2
-          : DEFAULT_DELAY_SEND,
+        type === PORTAL_NEBULA_TYPE ?
+        DEFAULT_DELAY_SEND * 1.2 :
+        DEFAULT_DELAY_SEND,
       lowPassFreq: initialLowPassFreq,
       filterType: initialFilterType,
       filterResonance: initialFilterResonance,
       ...audioDetails,
       triggerInterval: audioDetails.triggerInterval || DEFAULT_TRIGGER_INTERVAL,
-      syncSubdivisionIndex:
-        audioDetails.syncSubdivisionIndex || DEFAULT_SUBDIVISION_INDEX,
+      syncSubdivisionIndex: audioDetails.syncSubdivisionIndex || DEFAULT_SUBDIVISION_INDEX,
       probability: audioDetails.probability || DEFAULT_PROBABILITY,
       pulseIntensity: audioDetails.pulseIntensity || DEFAULT_PULSE_INTENSITY,
       volLfoRate: audioDetails.volLfoRate || 0.1 + Math.random() * 0.2,
@@ -17969,26 +18441,11 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       baseFreq: audioDetails.baseFreq || drumDefaults?.baseFreq,
       decay: audioDetails.decay || drumDefaults?.decay,
       noiseDecay: audioDetails.noiseDecay || drumDefaults?.noiseDecay,
-      pitchShiftIndex:
-        type === "pitchShift"
-          ? audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX
-          : 0,
-      pitchShiftAmount:
-        type === "pitchShift"
-          ? PITCH_SHIFT_AMOUNTS[
-              audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX
-            ]
-          : 0,
-      pitchShiftAlternating:
-        type === "pitchShift"
-          ? audioDetails.pitchShiftAlternating || false
-          : false,
-      pitchShiftDirection:
-        type === "pitchShift" ? audioDetails.pitchShiftDirection || 1 : 1,
-      gateModeIndex:
-        type === "gate"
-          ? audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX
-          : 0,
+      pitchShiftIndex: type === "pitchShift" ? (audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX) : 0,
+      pitchShiftAmount: type === "pitchShift" ? PITCH_SHIFT_AMOUNTS[audioDetails.pitchShiftIndex || DEFAULT_PITCH_SHIFT_INDEX] : 0,
+      pitchShiftAlternating: type === "pitchShift" ? (audioDetails.pitchShiftAlternating || false) : false,
+      pitchShiftDirection: type === "pitchShift" ? (audioDetails.pitchShiftDirection || 1) : 1,
+      gateModeIndex: type === "gate" ? (audioDetails.gateModeIndex || DEFAULT_GATE_MODE_INDEX) : 0,
       gateCounter: 0,
       lastRandomGateResult: true,
       midiOutEnabled: false,
@@ -18014,6 +18471,21 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       ignoreGlobalSync: false,
     };
   }
+  
+  if (type === "global_key_setter") {
+      newNode.audioParams.keySetterMode = "key";
+      newNode.audioParams.targetKeyNote = 0; 
+      newNode.audioParams.targetTransposeOffset = 0;
+      newNode.audioParams.pitch = null; 
+      newNode.audioParams.scaleIndex = null;
+      newNode.audioParams.volume = null; 
+      newNode.audioParams.reverbSend = null;
+      newNode.audioParams.delaySend = null;
+      newNode.audioParams.lowPassFreq = null;
+      newNode.audioParams.filterType = null;
+      newNode.audioParams.filterResonance = null;
+      newNode.audioParams.waveform = type;
+  }
 
   if (type === "pulsar_meteorshower") {
       newNode.audioParams.meteorMaxRadius = METEOR_SHOWER_DEFAULT_MAX_RADIUS;
@@ -18023,13 +18495,13 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
       newNode.audioParams.syncSubdivisionIndex = newNode.audioParams.syncSubdivisionIndex ?? DEFAULT_SUBDIVISION_INDEX;
       newNode.audioParams.triggerInterval = newNode.audioParams.triggerInterval ?? DEFAULT_TRIGGER_INTERVAL;
       
-      // --- ADD THIS FOR NODE COLOR ---
       const themeMeteorColorsForNode = getThemeMeteorColors();
       if (themeMeteorColorsForNode.length > 0) {
           newNode.color = themeMeteorColorsForNode[Math.floor(Math.random() * themeMeteorColorsForNode.length)];
       } else {
-          newNode.color = 'rgba(255, 150, 50, 0.7)'; // Default meteor pulsar color
-      }}
+          newNode.color = 'rgba(255, 150, 50, 0.7)';
+      }
+  }
 
   applyOrbitoneVoicingFromPhase(newNode);
   applyOrbitoneTimingFromPhase(newNode);
@@ -18042,12 +18514,12 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
   }
 
   if (type === TIMELINE_GRID_TYPE) {
-    newNode.width = optionalDimensions
-      ? optionalDimensions.width
-      : TIMELINE_GRID_DEFAULT_WIDTH;
-    newNode.height = optionalDimensions
-      ? optionalDimensions.height
-      : TIMELINE_GRID_DEFAULT_HEIGHT;
+    newNode.width = optionalDimensions ?
+      optionalDimensions.width :
+      TIMELINE_GRID_DEFAULT_WIDTH;
+    newNode.height = optionalDimensions ?
+      optionalDimensions.height :
+      TIMELINE_GRID_DEFAULT_HEIGHT;
     newNode.timelineSpeed = TIMELINE_GRID_DEFAULT_SPEED;
     newNode.timelineMusicalDurationBars = 1;
     newNode.timelineIsPlaying = true;
@@ -18131,12 +18603,12 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     }
   }
 
-  if (isAudioReady && newNode.type !== TIMELINE_GRID_TYPE) {
+  if (isAudioReady && newNode.type !== TIMELINE_GRID_TYPE && newNode.type !== "global_key_setter") {
     newNode.audioNodes = createAudioNodesForNode(newNode);
     if (newNode.audioNodes) {
       updateNodeAudioParams(newNode);
     }
-  } else if (newNode.type === TIMELINE_GRID_TYPE) {
+  } else if (newNode.type === TIMELINE_GRID_TYPE || newNode.type === "global_key_setter") {
     newNode.audioNodes = null;
   }
 
@@ -18834,6 +19306,12 @@ addPulsarBtn.addEventListener("click", (e) => {
 addDrumElementBtn.addEventListener("click", (e) => {
   setupAddTool(e.currentTarget, null, true, "drumElements", "Drum Elements");
 });
+const addKeySetterBtn = document.getElementById("addKeySetterBtn");
+if (addKeySetterBtn) {
+    addKeySetterBtn.addEventListener("click", (e) => {
+        setupAddTool(e.currentTarget, "global_key_setter", false);
+    });
+}
 const addPortalNebulaBtn = document.getElementById("addPortalNebulaBtn");
 if (addPortalNebulaBtn) {
   addPortalNebulaBtn.addEventListener("click", (e) => {
@@ -19441,69 +19919,19 @@ function handlePianoRollClick(event) {
   }
 }
 
-/**
- * Stelt de globale grondtoon in, werkt UI en audio bij.
- * @param {number} newRootNote - De nieuwe grondtoon (0-11).
- */
-function setRootNote(newRootNote) {
-  const newRootMod = newRootNote % 12;
-  if (currentRootNote === newRootMod) {
-    return;
-  }
-  currentRootNote = newRootMod;
-  console.log(
-    "New Root Note set to:",
-    noteNames[currentRootNote],
-    `(${currentRootNote})`,
-  );
-
-  nodes.forEach((node) => {
-    if (node.type === "sound" || node.type === "nebula") {
-      node.audioParams.scaleIndex = Math.max(
-        MIN_SCALE_INDEX,
-        Math.min(MAX_SCALE_INDEX, node.audioParams.scaleIndex ?? 0),
-      );
-      node.audioParams.pitch = getFrequency(
-        currentScale,
-        node.audioParams.scaleIndex,
-      );
-      if (isNaN(node.audioParams.pitch)) {
-        console.warn(
-          `Pitch NaN voor node ${node.id} na root note change, index gereset.`,
-        );
-        node.audioParams.scaleIndex = 0;
-        node.audioParams.pitch = getFrequency(currentScale, 0);
-      }
-      updateNodeAudioParams(node);
+function setRootNote(newRootNote, preventSave = false) {
+    const newRootMod = newRootNote % 12;
+    if (currentRootNote === newRootMod) {
+        return;
     }
-  });
+    console.log(`setRootNote called with newRootNote: ${newRootNote} (${noteNames[newRootMod]}). Prevent save: ${preventSave}`);
+    currentRootNote = newRootMod;
+    
+    updateAllPitchesAndUI(); 
 
-  connections.forEach((conn) => {
-    if (conn.type === "string_violin") {
-      conn.audioParams.scaleIndex = Math.max(
-        MIN_SCALE_INDEX,
-        Math.min(MAX_SCALE_INDEX, conn.audioParams.scaleIndex ?? 0),
-      );
-      conn.audioParams.pitch = getFrequency(
-        currentScale,
-        conn.audioParams.scaleIndex,
-      );
-      if (isNaN(conn.audioParams.pitch)) {
-        console.warn(
-          `Pitch NaN voor connectie ${conn.id} na root note change, index gereset.`,
-        );
-        conn.audioParams.scaleIndex = 0;
-        conn.audioParams.pitch = getFrequency(currentScale, 0);
-      }
-      updateConnectionAudioParams(conn);
+    if (!preventSave) {
+        saveState();
     }
-  });
-
-  drawPianoRoll();
-
-  populateEditPanel();
-
-  saveState();
 }
 
 function rgbaToHex(rgba) {
@@ -19848,162 +20276,164 @@ window.addEventListener("resize", () => {
 });
 window.addEventListener("load", () => {
   if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
   }
 
   pianoRollCanvas = document.getElementById("pianoRollCanvas");
   if (pianoRollCanvas) {
-    pianoRollCtx = pianoRollCanvas.getContext("2d");
-    try {
-      pianoRollCanvas.width = pianoRollCanvas.clientWidth;
-      pianoRollCanvas.height = pianoRollCanvas.clientHeight;
-    } catch (e) {
-      pianoRollCanvas.width = 300;
-      pianoRollCanvas.height = 80;
-    }
-    pianoRollCanvas.addEventListener("mousedown", handlePianoRollClick);
+      pianoRollCtx = pianoRollCanvas.getContext("2d");
+      try {
+          pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+          pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+      } catch (e) {
+          pianoRollCanvas.width = 300;
+          pianoRollCanvas.height = 80;
+      }
+      pianoRollCanvas.addEventListener("mousedown", handlePianoRollClick);
   }
 
   if (tapeLoopSetLoopPointsBtn) {
-    tapeLoopSetLoopPointsBtn.addEventListener("click", () => {
-      if (!tapeLoopBuffer) return;
-
-      let newStart = parseFloat(tapeLoopStartInput.value);
-      let newEnd = parseFloat(tapeLoopEndInput.value);
-
-      const bufferDuration = tapeLoopBuffer.duration;
-
-      if (isNaN(newStart) || newStart < 0 || newStart >= bufferDuration) {
-        newStart = 0;
-      }
-      if (isNaN(newEnd) || newEnd <= newStart || newEnd > bufferDuration) {
-        newEnd = bufferDuration;
-      }
-
-      userDefinedLoopStart = newStart;
-      userDefinedLoopEnd =
-        Math.abs(newEnd - bufferDuration) < 0.005 && newEnd > newStart
-          ? -1
-          : newEnd;
-
-      tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
-      tapeLoopEndInput.value = (
-        userDefinedLoopEnd === -1 || userDefinedLoopEnd > bufferDuration
-          ? bufferDuration
-          : userDefinedLoopEnd
-      ).toFixed(2);
-
-      updateLoopRegionAndInputs();
-
-      if (isTapeLoopPlaying && tapeLoopSourceNode) {
-        const wasPlaying = isTapeLoopPlaying;
-        const currentTime =
-          tapeLoopSourceNode.loopStart +
-          (((audioContext.currentTime - tapeLoopSourceNodeStartTime) *
-            tapeLoopSourceNode.playbackRate.value) %
-            (tapeLoopSourceNode.loopEnd - tapeLoopSourceNode.loopStart));
-        stopTapeLoopPlayback();
-        if (wasPlaying) {
-          playTapeLoop(audioContext.currentTime, currentTime);
-        }
-      }
-      saveState();
-    });
+      tapeLoopSetLoopPointsBtn.addEventListener("click", () => {
+          if (!tapeLoopBuffer) return;
+          let newStart = parseFloat(tapeLoopStartInput.value);
+          let newEnd = parseFloat(tapeLoopEndInput.value);
+          const bufferDuration = tapeLoopBuffer.duration;
+          if (isNaN(newStart) || newStart < 0 || newStart >= bufferDuration) {
+              newStart = 0;
+          }
+          if (isNaN(newEnd) || newEnd <= newStart || newEnd > bufferDuration) {
+              newEnd = bufferDuration;
+          }
+          userDefinedLoopStart = newStart;
+          userDefinedLoopEnd =
+              Math.abs(newEnd - bufferDuration) < 0.005 && newEnd > newStart ?
+              -1 :
+              newEnd;
+          tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
+          tapeLoopEndInput.value = (
+              userDefinedLoopEnd === -1 || userDefinedLoopEnd > bufferDuration ?
+              bufferDuration :
+              userDefinedLoopEnd
+          ).toFixed(2);
+          updateLoopRegionAndInputs();
+          if (isTapeLoopPlaying && tapeLoopSourceNode) {
+              const wasPlaying = isTapeLoopPlaying;
+              const currentTime =
+                  tapeLoopSourceNode.loopStart +
+                  (((audioContext.currentTime - tapeLoopSourceNodeStartTime) *
+                          tapeLoopSourceNode.playbackRate.value) %
+                      (tapeLoopSourceNode.loopEnd - tapeLoopSourceNode.loopStart));
+              stopTapeLoopPlayback();
+              if (wasPlaying) {
+                  playTapeLoop(audioContext.currentTime, currentTime);
+              }
+          }
+          saveState();
+      });
   }
 
   if (tapeLoopSpeedSlider) {
-    tapeLoopSpeedSlider.addEventListener("input", () => {
-      currentPlaybackRate = parseFloat(tapeLoopSpeedSlider.value);
-      if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
-        tapeLoopSourceNode.playbackRate.value = currentPlaybackRate;
-      }
-      if (tapeLoopSpeedValue)
-        tapeLoopSpeedValue.textContent = currentPlaybackRate.toFixed(2) + "x";
-    });
-    tapeLoopSpeedSlider.addEventListener("change", () => {
-      if (!isGlobalSyncEnabled) saveState();
-    });
+      tapeLoopSpeedSlider.addEventListener("input", () => {
+          currentPlaybackRate = parseFloat(tapeLoopSpeedSlider.value);
+          if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
+              tapeLoopSourceNode.playbackRate.value = currentPlaybackRate;
+          }
+          if (tapeLoopSpeedValue)
+              tapeLoopSpeedValue.textContent = currentPlaybackRate.toFixed(2) + "x";
+      });
+      tapeLoopSpeedSlider.addEventListener("change", () => {
+          if (!isGlobalSyncEnabled) saveState();
+      });
   }
 
   if (tapeLoopResetSpeedBtn) {
-    tapeLoopResetSpeedBtn.addEventListener("click", () => {
-      currentPlaybackRate = 1.0;
-      if (tapeLoopSpeedSlider) tapeLoopSpeedSlider.value = 1.0;
-      if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
-        tapeLoopSourceNode.playbackRate.value = 1.0;
-      }
-      if (tapeLoopSpeedValue) tapeLoopSpeedValue.textContent = "1.00x";
-      if (!isGlobalSyncEnabled) saveState();
-    });
+      tapeLoopResetSpeedBtn.addEventListener("click", () => {
+          currentPlaybackRate = 1.0;
+          if (tapeLoopSpeedSlider) tapeLoopSpeedSlider.value = 1.0;
+          if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
+              tapeLoopSourceNode.playbackRate.value = 1.0;
+          }
+          if (tapeLoopSpeedValue) tapeLoopSpeedValue.textContent = "1.00x";
+          if (!isGlobalSyncEnabled) saveState();
+      });
   }
 
   const tapeLoopFitToLoopBtn = document.getElementById("tapeLoopFitToLoopBtn");
   const tapeLoopResetZoomBtn = document.getElementById("tapeLoopResetZoomBtn");
 
   if (tapeLoopFitToLoopBtn) {
-    tapeLoopFitToLoopBtn.addEventListener("click", () => {
-      const hasContent =
-        !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
-      if (!hasContent) return;
-
-      const loopStartToUse = userDefinedLoopStart;
-      let loopEndToUse = userDefinedLoopEnd;
-
-      const maxDuration = tapeLoopBuffer
-        ? tapeLoopEffectivelyRecordedDuration > 0
-          ? tapeLoopEffectivelyRecordedDuration
-          : tapeLoopBuffer.duration
-        : configuredTapeLoopDurationSeconds;
-
-      if (
-        loopEndToUse === -1 ||
-        loopEndToUse > maxDuration ||
-        loopEndToUse <= loopStartToUse
-      ) {
-        loopEndToUse = maxDuration;
-      }
-
-      if (loopEndToUse > loopStartToUse) {
-        tapeDisplayStartTime = loopStartToUse;
-        tapeDisplayEndTime = loopEndToUse;
-        waveformPathData = null;
-        drawTapeWaveform();
-        updateLoopRegionAndInputs();
-      }
-    });
+      tapeLoopFitToLoopBtn.addEventListener("click", () => {
+          const hasContent =
+              !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+          if (!hasContent) return;
+          const loopStartToUse = userDefinedLoopStart;
+          let loopEndToUse = userDefinedLoopEnd;
+          const maxDuration = tapeLoopBuffer ?
+              (tapeLoopEffectivelyRecordedDuration > 0 ?
+                  tapeLoopEffectivelyRecordedDuration :
+                  tapeLoopBuffer.duration) :
+              configuredTapeLoopDurationSeconds;
+          if (
+              loopEndToUse === -1 ||
+              loopEndToUse > maxDuration ||
+              loopEndToUse <= loopStartToUse
+          ) {
+              loopEndToUse = maxDuration;
+          }
+          if (loopEndToUse > loopStartToUse) {
+              tapeDisplayStartTime = loopStartToUse;
+              tapeDisplayEndTime = loopEndToUse;
+              waveformPathData = null;
+              drawTapeWaveform();
+              updateLoopRegionAndInputs();
+          }
+      });
   }
 
   if (tapeLoopResetZoomBtn) {
-    tapeLoopResetZoomBtn.addEventListener("click", () => {
-      const hasContent =
-        !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
-      if (!hasContent) return;
-
-      tapeDisplayStartTime = 0;
-      tapeDisplayEndTime = tapeLoopBuffer
-        ? tapeLoopEffectivelyRecordedDuration > 0
-          ? tapeLoopEffectivelyRecordedDuration
-          : tapeLoopBuffer.duration
-        : configuredTapeLoopDurationSeconds;
-
-      if (tapeDisplayEndTime <= tapeDisplayStartTime)
-        tapeDisplayEndTime = tapeDisplayStartTime + 0.1;
-
-      waveformPathData = null;
-      drawTapeWaveform();
-      updateLoopRegionAndInputs();
-    });
+      tapeLoopResetZoomBtn.addEventListener("click", () => {
+          const hasContent =
+              !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+          if (!hasContent) return;
+          tapeDisplayStartTime = 0;
+          tapeDisplayEndTime = tapeLoopBuffer ?
+              (tapeLoopEffectivelyRecordedDuration > 0 ?
+                  tapeLoopEffectivelyRecordedDuration :
+                  tapeLoopBuffer.duration) :
+              configuredTapeLoopDurationSeconds;
+          if (tapeDisplayEndTime <= tapeDisplayStartTime)
+              tapeDisplayEndTime = tapeDisplayStartTime + 0.1;
+          waveformPathData = null;
+          drawTapeWaveform();
+          updateLoopRegionAndInputs();
+      });
   }
 
   Object.keys(scales).forEach((key) => {
-    const o = document.createElement("option");
-    o.value = key;
-    o.textContent = scales[key].name;
-    scaleSelectTransport.appendChild(o.cloneNode(true));
+      const o = document.createElement("option");
+      o.value = key;
+      o.textContent = scales[key].name;
+      scaleSelectTransport.appendChild(o.cloneNode(true));
   });
 
   scaleSelectTransport.value = currentScaleKey;
+
+  // Event listener for the main "Appearance" menu item that opens the submenu
+  // For the fly-out menu, this item ("Background") itself doesn't need a direct JS click listener
+  // if the fly-out is CSS-driven on hover/focus.
+  // However, if you want to ensure other panels close when "Appearance" is interacted with,
+  // you might add a listener to the parent ".app-menu-dropdown" or the "Appearance" button.
+
+  // Direct event listeners for the actual background selection items
+  const appMenuBgNone = document.getElementById("app-menu-bg-none");
+  const appMenuBgStars = document.getElementById("app-menu-bg-stars");
+  const appMenuBgSilentNight = document.getElementById("app-menu-bg-silent-night");
+
+  if (appMenuBgNone) appMenuBgNone.addEventListener("click", (e) => { e.preventDefault(); applyBackground("none"); });
+  if (appMenuBgStars) appMenuBgStars.addEventListener("click", (e) => { e.preventDefault(); applyBackground("swimming_stars"); });
+  if (appMenuBgSilentNight) appMenuBgSilentNight.addEventListener("click", (e) => { e.preventDefault(); applyBackground("silent_night"); });
+
 
   setActiveTool("edit");
   resetSideToolbars();
@@ -20012,30 +20442,32 @@ window.addEventListener("load", () => {
   noteSelectContainer = null;
 
   startMessage.style.display = "block";
-
   setupLoopHandles();
 
   setupAudio()
-    .then((context) => {
-      if (context) {
-        isAudioReady = true;
-        updateMixerUI();
-        updateScaleAndTransposeUI();
-        identifyAndRouteAllGroups();
-        drawPianoRoll();
-        setActiveTool("edit");
-        resetSideToolbars();
-        hideOverlappingPanels();
-        updateTapeLooperUI();
-      } else {
-        startMessage.textContent = "Error loading audio.";
-        startMessage.style.display = "block";
-        if (loadingIndicator) loadingIndicator.style.display = "none";
-      }
-    })
-    .catch((err) => {
-      startMessage.textContent = "Error loading audio.";
-      startMessage.style.display = "block";
-      if (loadingIndicator) loadingIndicator.style.display = "none";
-    });
+      .then((context) => {
+          if (context) {
+              isAudioReady = true;
+              if (typeof applyBackground === "function"){ // Ensure applyBackground is defined
+                  applyBackground(currentBackgroundType); // Apply initial/loaded background
+              }
+              updateMixerUI();
+              updateScaleAndTransposeUI();
+              identifyAndRouteAllGroups();
+              drawPianoRoll();
+              setActiveTool("edit");
+              resetSideToolbars();
+              hideOverlappingPanels();
+              updateTapeLooperUI();
+          } else {
+              startMessage.textContent = "Error loading audio.";
+              startMessage.style.display = "block";
+              if (loadingIndicator) loadingIndicator.style.display = "none";
+          }
+      })
+      .catch((err) => {
+          startMessage.textContent = "Error loading audio.";
+          startMessage.style.display = "block";
+          if (loadingIndicator) loadingIndicator.style.display = "none";
+      });
 });
