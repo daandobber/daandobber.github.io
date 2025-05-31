@@ -7,9 +7,15 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="theme-major-pentatonic">
+
+<div id="silent-night-bg">
+    <div id="stars-far" class="star-layer"></div>
+    <div id="stars-mid" class="star-layer"></div>
+    <div id="stars-near" class="star-layer"></div>
+</div>
+
 <div id="tapeLooperPanel" class="floating-panel cassette-panel hidden">
     <button class="close-panel-button" id="closeTapeLooperPanelBtn">&times;</button>
-    
     <div class="cassette-main-body">
         <div class="cassette-top-label">
             ResonAut Loop Tape C-90
@@ -30,8 +36,6 @@
                 </div>
             </div>
         </div>
-
-        
         <div class="cassette-tape-visual-container">
             <canvas id="tapeWaveformCanvas" class="tape-waveform-canvas"></canvas>
             <div id="tapeVisualLoopRegion" class="tape-visual-loop-region">
@@ -40,18 +44,15 @@
             </div>
             <div id="tapeVisualPlayhead" class="tape-visual-playhead"></div>
         </div>
-
         <div class="cassette-zoom-controls" style="display: flex; justify-content: space-around; margin-top: 8px; padding: 5px; background-color: rgba(0,0,0,0.1); border-radius: 4px;">
             <button id="tapeLoopFitToLoopBtn" title="Zoom to Loop Selection" style="flex-grow:1; margin-right: 4px; background-color: var(--button-bg, #555); color: var(--text-color, #fff); border: 1px solid var(--button-hover, #666); padding: 6px 8px; font-size: 0.8em; border-radius: 3px; cursor: pointer;">Fit to Loop</button>
             <button id="tapeLoopResetZoomBtn" title="View Full Recording" style="flex-grow:1; margin-left: 4px; background-color: var(--button-bg, #555); color: var(--text-color, #fff); border: 1px solid var(--button-hover, #666); padding: 6px 8px; font-size: 0.8em; border-radius: 3px; cursor: pointer;">View Full</button>
         </div>
-
         <div class="cassette-bottom-label">
             <input type="number" id="tapeLoopDurationInput" min="1" max="60" step="0.1" value="4">
             <span>Record Length</span>
         </div>
     </div>
-
     <div class="cassette-loop-controls">
         <label for="tapeLoopStartInput">Start (s):</label>
         <input type="number" id="tapeLoopStartInput" min="0" step="0.1" value="0">
@@ -59,16 +60,12 @@
         <input type="number" id="tapeLoopEndInput" min="0.1" step="0.1" value="4">
         <button id="tapeLoopSetLoopPointsBtn" title="Set Loop Points">Set</button>
     </div>
-    
-
     <div id="tapeLooperControls" class="cassette-controls">
         <button id="tapeLoopRecordBtn" title="Record/Arm Loop">⏺️</button>
         <button id="tapeLoopPlayBtn" title="Play Loop" disabled>▶️</button>
         <button id="tapeLoopStopBtn" title="Stop Loop" disabled>⏹️</button>
         <button id="tapeLoopClearBtn" title="Clear Loop" disabled>🗑️</button>
     </div>
-    
-
     <div class="cassette-speed-controls">
         <label for="tapeLoopSpeedSlider">Speed:</label>
         <input type="range" id="tapeLoopSpeedSlider" min="0.25" max="2.0" step="0.05" value="1.0">
@@ -76,199 +73,210 @@
         <button id="tapeLoopResetSpeedBtn" title="Reset Speed">Reset</button>
     </div>
 </div>
-    <div id="app-menu-bar">
-        <div class="app-menu-dropdown">
-            <button class="app-menu-button">File</button>
-            <div class="app-menu-content">
-                <a href="#" id="app-menu-new">New</a>
-                <a href="#" id="app-menu-load">Load</a>
-                <a href="#" id="app-menu-save">Save</a>
-            </div>
+
+<div id="app-menu-bar">
+    <div class="app-menu-dropdown">
+        <button class="app-menu-button">File</button>
+        <div class="app-menu-content">
+            <a href="#" id="app-menu-new">New</a>
+            <a href="#" id="app-menu-load">Load</a>
+            <a href="#" id="app-menu-save">Save</a>
         </div>
-        <div class="app-menu-dropdown">
-            <button class="app-menu-button">MIDI</button>
-            <div class="app-menu-content">
-                <a href="#" id="app-menu-midi-coming-soon">Coming Soon</a>
-            </div>
-        </div>
-        <div class="app-menu-dropdown">
-            <button class="app-menu-button">Advanced</button>
-            <div class="app-menu-content">
-                <a href="#" id="app-menu-advanced-coming-soon">Coming Soon</a>
-            </div>
-        </div>
-
-        <button id="app-menu-undo-btn" class="app-menu-bar-button" title="Undo (Ctrl/Cmd+Z)">↩️</button>
-        <button id="app-menu-redo-btn" class="app-menu-bar-button" title="Redo (Ctrl/Cmd+Y)">↪️</button>
-        <button id="app-menu-ableton-link-btn" class="app-menu-bar-button" title="Ableton Link">Link</button>
-
-        <div class="app-menu-separator"></div>
-
-        <button id="app-menu-grid-toggle-btn" class="app-menu-bar-button" title="Toggle Grid Visibility (G)">Grid: OFF</button>
-        <button id="app-menu-grid-snap-btn" class="app-menu-bar-button" title="Toggle Snap to Grid (N)">Snap: OFF</button>
-
-        <div class="app-menu-separator"></div>
-
-        <button id="app-menu-sync-toggle-btn" class="app-menu-bar-button" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
-        <div id="app-menu-bpm-controls" class="app-menu-bar-item hidden">
-             <label for="app-menu-bpm-input">BPM:</label>
-             <input type="number" id="app-menu-bpm-input" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
-        </div>
-        <button id="app-menu-play-pause-btn" class="app-menu-bar-button">Play ▶</button>
-        <button id="app-menu-restart-pulsars-btn" class="app-menu-bar-button hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
-        <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
-        <button id="app-menu-record-btn" class="app-menu-bar-button" title="Record Session">🔴 Record</button>
-        <button id="app-menu-toggle-tape-looper-btn" class="app-menu-bar-button" title="Toggle Tape Looper">📼 Tape</button>
-        <div class="app-menu-spacer"></div> <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
     </div>
-    <canvas id="mainCanvas"></canvas>
-
-    <div id="toolbar">
-        <div id="toolbar-column-left">
-            <p class="toolbar-column-title">Logic & Effects</p>
-            <div id="toolbar-pulsars">
-                <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
-                <button id="addTimelineGridBtn" title="Add Timeline Grid">⏳</button>
-                <button id="addMeteorShowerBtn" title="Add Meteor Shower Pulsar">☄️</button>
-            </div>
-            <hr class="toolbar-divider-compact">
-            <div id="toolbar-logic-nodes">
-                <button id="addGateBtn" title="Add Gate">🚦</button>
-                <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
-                <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
-                <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
-                <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
-                <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
-            </div>
-            <hr class="toolbar-divider-compact">
-            <div id="toolbar-environment-nodes">
-                <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
-                <button id="addPortalNebulaBtn" title="Add Portal Nebula (X)">🌀</button>
-            </div>
+    <div class="app-menu-dropdown">
+        <button class="app-menu-button">MIDI</button>
+        <div class="app-menu-content">
+            <a href="#" id="app-menu-midi-coming-soon">Coming Soon</a>
         </div>
-
-        <div id="toolbar-column-right">
-            <p class="toolbar-column-title">Sound & Tools</p>
-            <div id="toolbar-sound-generators">
-                <button id="addAnalogSynthBtn" title="Add Analog Synth (A)">🎹</button>
-                <button id="addFmSynthBtn" title="Add FM Synth (F)">🔔</button>
-                <button id="addSamplerBtn" title="Add Sampler Instrument (S)">🛰️</button>
-                <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
-                <button id="addPrOrbBtn" class="tool-button" title="Add Pro-Orb Synth">🎛️</button>
-            </div>
-            <hr class="toolbar-divider-compact">
-            <div id="toolbar-connection-tools">
-                <button id="connectBtn" title="Connect Tool (C)">🔗</button>
-                <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
-                <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
-                <button id="connectWaveTrailBtn" title="Connect with WaveTrail (W)">〰️</button>
-            </div>
-             <hr class="toolbar-divider-compact">
-            <div id="toolbar-utility-tools">
-                <button id="brushBtn" title="Brush Tool (B)">🖌️</button>
-                <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
-                <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
-            </div>
-            <hr class="toolbar-divider-compact">
-            <div id="toolbar-app-tools">
-                <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
+    </div>
+    <div class="app-menu-dropdown">
+        <button class="app-menu-button">Advanced</button>
+        <div class="app-menu-content">
+            <a href="#" id="app-menu-advanced-coming-soon">Coming Soon</a>
+        </div>
+    </div>
+    <div class="app-menu-dropdown">
+        <button class="app-menu-button">Appearance</button>
+        <div class="app-menu-content">
+            <div class="app-menu-item-with-submenu">
+                <a href="#" class="app-menu-submenu-trigger" aria-haspopup="true">
+                    Background
+                    <span class="submenu-arrow">&rarr;</span>
+                </a>
+                <div class="app-menu-submenu app-menu-content">
+                    <a href="#" id="app-menu-bg-none">No Background</a>
+                    <a href="#" id="app-menu-bg-stars">Swimming Stars (Default)</a>
+                    <a href="#" id="app-menu-bg-silent-night">Silent Night (Parallax)</a>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="hamburgerMenuPanel" class="panel slide-panel hidden">
-         <div id="groupControls" class="hidden">
-             <p><strong>Constellation Controls:</strong> (<span id="groupNodeCount">0</span> nodes)</p>
-             <label for="groupVolumeSlider">Group Volume:</label>
-             <input type="range" id="groupVolumeSlider" min="0" max="1.5" step="0.01" value="1.0" title="Adjust volume for the selected constellation">
-             <label for="groupFluctuateToggle">Volume Fluctuation:</label>
-             <input type="checkbox" id="groupFluctuateToggle" title="Enable/Disable slow volume fluctuation">
-             <label for="groupFluctuateAmount">Fluctuation Amount:</label>
-             <input type="range" id="groupFluctuateAmount" min="0" max="0.3" step="0.01" value="0.08" title="Adjust intensity of volume fluctuation (Requires Fluctuation Enabled)">
-             <hr>
+    <button id="app-menu-undo-btn" class="app-menu-bar-button" title="Undo (Ctrl/Cmd+Z)">↩️</button>
+    <button id="app-menu-redo-btn" class="app-menu-bar-button" title="Redo (Ctrl/Cmd+Y)">↪️</button>
+    <button id="app-menu-ableton-link-btn" class="app-menu-bar-button" title="Ableton Link">Link</button>
+    <div class="app-menu-separator"></div>
+    <button id="app-menu-grid-toggle-btn" class="app-menu-bar-button" title="Toggle Grid Visibility (G)">Grid: OFF</button>
+    <button id="app-menu-grid-snap-btn" class="app-menu-bar-button" title="Toggle Snap to Grid (N)">Snap: OFF</button>
+    <div class="app-menu-separator"></div>
+    <button id="app-menu-sync-toggle-btn" class="app-menu-bar-button" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+    <div id="app-menu-bpm-controls" class="app-menu-bar-item hidden">
+         <label for="app-menu-bpm-input">BPM:</label>
+         <input type="number" id="app-menu-bpm-input" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
+    </div>
+    <button id="app-menu-play-pause-btn" class="app-menu-bar-button">Play ▶</button>
+    <button id="app-menu-restart-pulsars-btn" class="app-menu-bar-button hidden" title="Restart selected Pulsars (Only when Sync is OFF)">Restart</button>
+    <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
+    <button id="app-menu-record-btn" class="app-menu-bar-button" title="Record Session">🔴 Record</button>
+    <button id="app-menu-toggle-tape-looper-btn" class="app-menu-bar-button" title="Toggle Tape Looper">📼 Tape</button>
+    <div class="app-menu-spacer"></div> 
+    <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
+</div>
+
+<canvas id="mainCanvas"></canvas>
+
+<div id="toolbar">
+    <div id="toolbar-column-left">
+        <p class="toolbar-column-title">Logic & Effects</p>
+        <div id="toolbar-pulsars">
+            <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
+            <button id="addTimelineGridBtn" title="Add Timeline Grid">⏳</button>
+            <button id="addMeteorShowerBtn" title="Add Meteor Shower Pulsar">☄️</button>
         </div>
-        <p><strong>Global Settings:</strong></p>
-        <div id="editPanelContent">
-            </div>
+        <hr class="toolbar-divider-compact">
+        <div id="toolbar-logic-nodes">
+            <button id="addGateBtn" title="Add Gate">🚦</button>
+            <button id="addProbabilityGateBtn" title="Add Probability Gate (%)">%</button>
+            <button id="addPitchShiftBtn" title="Add Pitch Shifter">🎶</button>
+            <button id="addRelayBtn" title="Add Relay Node (R)">·</button>
+            <button id="addReflectorBtn" title="Add Reflector Node">⟲</button>
+            <button id="addSwitchBtn" title="Add Switch Node">⭬</button>
+            <button id="addKeySetterBtn" title="Add Global Key Setter">🔑</button>
+        </div>
+        <hr class="toolbar-divider-compact">
+        <div id="toolbar-environment-nodes">
+            <button id="addNebulaBtn" title="Add Nebula (W)">🌌</button>
+            <button id="addPortalNebulaBtn" title="Add Portal Nebula (X)">🌀</button>
+        </div>
+    </div>
+    <div id="toolbar-column-right">
+        <p class="toolbar-column-title">Sound & Tools</p>
+        <div id="toolbar-sound-generators">
+            <button id="addAnalogSynthBtn" title="Add Analog Synth (A)">🎹</button>
+            <button id="addFmSynthBtn" title="Add FM Synth (F)">🔔</button>
+            <button id="addSamplerBtn" title="Add Sampler Instrument (S)">🛰️</button>
+            <button id="addDrumElementBtn" title="Add Drum Element (D)">🥁</button>
+            <button id="addPrOrbBtn" class="tool-button" title="Add Pro-Orb Synth">🎛️</button>
+        </div>
+        <hr class="toolbar-divider-compact">
+        <div id="toolbar-connection-tools">
+            <button id="connectBtn" title="Connect Tool (C)">🔗</button>
+            <button id="connectStringBtn" title="Connect with Violin String (V)">🎻</button>
+            <button id="glide-tool-button" title="Connect with Glide (G)">🌠</button>
+            <button id="connectWaveTrailBtn" title="Connect with WaveTrail (W)">〰️</button>
+        </div>
+         <hr class="toolbar-divider-compact">
+        <div id="toolbar-utility-tools">
+            <button id="brushBtn" title="Brush Tool (B)">🖌️</button>
+            <button id="editBtn" title="Edit/Select Tool (E)">✏️</button>
+            <button id="deleteBtn" title="Delete Tool (Del/Backspace)">🗑️</button>
+        </div>
+        <hr class="toolbar-divider-compact">
+        <div id="toolbar-app-tools">
+            <button id="hamburgerBtn" title="Open Settings Menu (M)">☰</button>
+        </div>
+    </div>
+</div>
+
+<div id="hamburgerMenuPanel" class="panel slide-panel hidden">
+     <div id="groupControls" class="hidden">
+         <p><strong>Constellation Controls:</strong> (<span id="groupNodeCount">0</span> nodes)</p>
+         <label for="groupVolumeSlider">Group Volume:</label>
+         <input type="range" id="groupVolumeSlider" min="0" max="1.5" step="0.01" value="1.0" title="Adjust volume for the selected constellation">
+         <label for="groupFluctuateToggle">Volume Fluctuation:</label>
+         <input type="checkbox" id="groupFluctuateToggle" title="Enable/Disable slow volume fluctuation">
+         <label for="groupFluctuateAmount">Fluctuation Amount:</label>
+         <input type="range" id="groupFluctuateAmount" min="0" max="0.3" step="0.01" value="0.08" title="Adjust intensity of volume fluctuation (Requires Fluctuation Enabled)">
          <hr>
-         <button id="closeHamburgerBtn" class="close-panel-button">Close Menu</button>
     </div>
+    <p><strong>Global Settings:</strong></p>
+    <div id="editPanelContent"></div>
+     <hr>
+     <button id="closeHamburgerBtn" class="close-panel-button">Close Menu</button>
+</div>
 
-    <div id="sideToolbar" class="panel slide-panel hidden">
-        <h3 id="sideToolbarTitle">Elements</h3>
-        <div id="sideToolbarContent">
-            </div>
+<div id="sideToolbar" class="panel slide-panel hidden">
+    <h3 id="sideToolbarTitle">Elements</h3>
+    <div id="sideToolbarContent"></div>
+</div>
+
+<div id="transportControls">
+    <select id="scaleSelectTransport" title="Change musical scale and theme"></select>
+    <div class="transport-divider"></div> 
+    <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button> 
+    <div class="transport-divider"></div>
+    <canvas id="pianoRollCanvas"></canvas> 
+</div>
+
+<div id="mixerPanel" class="panel right-panel slide-panel hidden">
+    <h3>Mixer</h3>
+    <div class="panel-section">
+        <label for="masterVolumeSlider">Master Volume:</label>
+        <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
+        <span id="masterVolumeValue">0.80</span>
     </div>
-
-    <div id="transportControls">
-        <select id="scaleSelectTransport" title="Change musical scale and theme">
-            </select>
-        <div class="transport-divider"></div> <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button> <div class="transport-divider"></div>
-        <canvas id="pianoRollCanvas"></canvas> </div>
-
-    
-    <div id="mixerPanel" class="panel right-panel slide-panel hidden">
-        <h3>Mixer</h3>
-        <div class="panel-section">
-            <label for="masterVolumeSlider">Master Volume:</label>
-            <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
-            <span id="masterVolumeValue">0.80</span>
+    <div id="mixerGroupControlsContainer" class="panel-section"></div>
+    <div class="panel-section">
+        <label for="delaySendSlider">Delay Send:</label>
+        <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount">
+        <span id="delaySendValue">0.30</span>
+        <label for="delayTimeSlider">Delay Time:</label>
+        <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)">
+        <span id="delayTimeValue">0.25s</span>
+         <label for="delayFeedbackSlider">Delay Feedback:</label>
+        <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
+        <span id="delayFeedbackValue">0.40</span>
+        <div class="mixer-control-item">
+            <label for="reverbIRSelect">Reverb Type (IR):</label>
+            <select id="reverbIRSelect"></select>
         </div>
-        <div id="mixerGroupControlsContainer" class="panel-section">
-            </div>
-        <div class="panel-section">
-            <label for="delaySendSlider">Delay Send:</label>
-            <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount">
-            <span id="delaySendValue">0.30</span>
-            <label for="delayTimeSlider">Delay Time:</label>
-            <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)">
-            <span id="delayTimeValue">0.25s</span>
-             <label for="delayFeedbackSlider">Delay Feedback:</label>
-            <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
-            <span id="delayFeedbackValue">0.40</span>
-            <div class="mixer-control-item">
-    <label for="reverbIRSelect">Reverb Type (IR):</label>
-    <select id="reverbIRSelect"></select>
-</div>
-
-<div class="mixer-control-item">
-    <label for="reverbWetSlider">Reverb Wet Level:</label>
-    <input type="range" id="reverbWetSlider" min="0" max="1" step="0.01" value="0.5">
-    <span id="reverbWetValue">0.50</span>
-</div>
-
-<div class="mixer-control-item">
-    <label for="reverbPreDelaySlider">Pre-delay:</label>
-    <input type="range" id="reverbPreDelaySlider" min="0" max="0.5" step="0.001" value="0.020">
-    <span id="reverbPreDelayValue">0.020s</span>
-</div>
-
-<div class="mixer-control-item">
-    <label for="reverbDampingSlider">Damping (LPF):</label>
-    <input type="range" id="reverbDampingSlider" min="500" max="20000" step="100" value="8000">
-    <span id="reverbDampingValue">8000Hz</span>
-</div>
-
-<div class="mixer-control-item">
-    <label for="reverbLowCutSlider">Low Cut (HPF):</label>
-    <input type="range" id="reverbLowCutSlider" min="20" max="1000" step="10" value="100">
-    <span id="reverbLowCutValue">100Hz</span>
-</div>
+        <div class="mixer-control-item">
+            <label for="reverbWetSlider">Reverb Wet Level:</label>
+            <input type="range" id="reverbWetSlider" min="0" max="1" step="0.01" value="0.5">
+            <span id="reverbWetValue">0.50</span>
+        </div>
+        <div class="mixer-control-item">
+            <label for="reverbPreDelaySlider">Pre-delay:</label>
+            <input type="range" id="reverbPreDelaySlider" min="0" max="0.5" step="0.001" value="0.020">
+            <span id="reverbPreDelayValue">0.020s</span>
+        </div>
+        <div class="mixer-control-item">
+            <label for="reverbDampingSlider">Damping (LPF):</label>
+            <input type="range" id="reverbDampingSlider" min="500" max="20000" step="100" value="8000">
+            <span id="reverbDampingValue">8000Hz</span>
+        </div>
+        <div class="mixer-control-item">
+            <label for="reverbLowCutSlider">Low Cut (HPF):</label>
+            <input type="range" id="reverbLowCutSlider" min="20" max="1000" step="10" value="100">
+            <span id="reverbLowCutValue">100Hz</span>
         </div>
     </div>
+</div>
 
-    <div id="mixerToggleBtn" title="Open/Close Mixer">
-        <span>Mixer</span>
-    </div>
+<div id="mixerToggleBtn" title="Open/Close Mixer">
+    <span>Mixer</span>
+</div>
 
-    <div id="help-popup" class="floating-panel hidden">
-        <button id="close-help-popup-btn" class="close-panel-button">&times;</button> <h3>Help</h3>
-        <p>Coming Soon...</p>
-    </div>
+<div id="help-popup" class="floating-panel hidden">
+    <button id="close-help-popup-btn" class="close-panel-button">&times;</button> 
+    <h3>Help</h3>
+    <p>Coming Soon...</p>
+</div>
 
-    <div id="startMessage">Create musical constellations. Click or tap anywhere to start. Hover over elements for more info.</div>
-    <div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
-    <script src="samplers.js"></script>
-    <script src="app.js"></script>
+<div id="startMessage">Create musical constellations. Click or tap anywhere to start. Hover over elements for more info.</div>
+<div id="loadingIndicator" style="display: none;">Loading Samples... 0%</div>
+
+<script src="samplers.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
