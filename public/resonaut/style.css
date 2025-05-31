@@ -86,6 +86,9 @@
     --prorb-color: rgba(200, 210, 220, 0.75);
     --prorb-border-color: rgba(0, 0, 0, 0.9);
     --prorb-text-color: rgba(50, 60, 70, 0.9);
+    --meteorshower-style-color-1: rgba(255, 180, 120, 0.7);
+    --meteorshower-style-color-2: rgba(150, 220, 255, 0.7);
+    --meteorshower-style-color-3: rgba(220, 150, 255, 0.7);
 }
 
 body.theme-minor-pentatonic {
@@ -159,6 +162,9 @@ body.theme-minor-pentatonic {
     --timeline-grid-default-border-color: rgba(180, 120, 160, 0.7);
     --timeline-grid-default-scanline-color: rgba(220, 150, 200, 0.9);
     --timeline-grid-internal-lines-color: rgba(180, 120, 160, 0.2);
+    --meteorshower-style-color-1: rgba(200, 130, 255, 0.7);
+    --meteorshower-style-color-2: rgba(130, 200, 220, 0.7);
+    --meteorshower-style-color-3: rgba(255, 170, 200, 0.7);
 }
 
 body.theme-major {
@@ -232,6 +238,9 @@ body.theme-major {
     --timeline-grid-default-border-color: rgba(120, 180, 220, 0.7);
     --timeline-grid-default-scanline-color: rgba(150, 200, 255, 0.9);
     --timeline-grid-internal-lines-color: rgba(120, 180, 220, 0.2);
+    --meteorshower-style-color-1: rgba(130, 255, 180, 0.7);
+    --meteorshower-style-color-2: rgba(130, 180, 255, 0.7);
+    --meteorshower-style-color-3: rgba(255, 220, 130, 0.7);
 }
 
 body.theme-minor {
@@ -305,6 +314,9 @@ body.theme-minor {
     --timeline-grid-default-border-color: rgba(255, 190, 190, 0.75);
     --timeline-grid-default-scanline-color: rgba(255, 210, 180, 0.9);
     --timeline-grid-internal-lines-color: rgba(180, 130, 110, 0.25);
+    --meteorshower-style-color-1: rgba(255, 130, 130, 0.7);
+    --meteorshower-style-color-2: rgba(255, 180, 130, 0.7);
+    --meteorshower-style-color-3: rgba(180, 130, 255, 0.7);
 }
 
 body.theme-chromatic {
@@ -378,6 +390,9 @@ body.theme-chromatic {
     --timeline-grid-default-border-color: rgba(210, 210, 210, 0.75);
     --timeline-grid-default-scanline-color: rgba(255, 255, 255, 0.9);
     --timeline-grid-internal-lines-color: rgba(150, 150, 160, 0.25);
+    --meteorshower-style-color-1: rgba(200, 200, 200, 0.7);
+    --meteorshower-style-color-2: rgba(220, 220, 255, 0.7);
+    --meteorshower-style-color-3: rgba(255, 220, 220, 0.7);
 }
 
 body {
@@ -386,12 +401,12 @@ body {
     color: var(--text-color);
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     display: flex;
-    flex-direction: column; /* Zorg dat menubalk en canvas onder elkaar komen */
-    justify-content: flex-start; /* Lijn bovenaan uit */
-    align-items: stretch; /* Strek items uit in de breedte */
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
     height: 100vh;
     transition: background 0.8s ease;
-    padding-top: var(--app-menu-bar-height); /* Ruimte voor de menubalk */
+    padding-top: var(--app-menu-bar-height);
     box-sizing: border-box;
 }
 
@@ -422,14 +437,14 @@ body {
 .app-menu-bar-button {
     background-color: transparent;
     color: var(--text-color, #ddeeff);
-    padding: 0 12px; /* Padding aangepast voor hoogte */
+    padding: 0 12px;
     font-size: 0.9em;
     border: none;
     cursor: pointer;
     border-radius: 3px;
     transition: background-color 0.2s ease;
-    height: calc(var(--app-menu-bar-height) - 10px); /* Iets minder dan balkhoogte voor marge */
-    margin: 5px 0; /* Verticale marge */
+    height: calc(var(--app-menu-bar-height) - 10px);
+    margin: 5px 0;
     display: flex;
     align-items: center;
     white-space: nowrap;
@@ -456,7 +471,7 @@ body {
     border-top: none;
     border-radius: 0 0 4px 4px;
     padding: 5px 0;
-    top: 100%; /* Laat het direct onder de knop vallen */
+    top: 100%;
     left: 0;
 }
 
@@ -544,19 +559,160 @@ body {
     flex-grow: 1;
 }
 
+.app-menu-item-with-submenu {
+    position: relative;
+}
+
+.app-menu-submenu-trigger {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.app-menu-content .app-menu-item-with-submenu > .app-menu-submenu-trigger {
+    color: var(--text-color, #ddeeff);
+    padding: 10px 15px;
+    text-decoration: none;
+    display: flex;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.app-menu-content .app-menu-item-with-submenu > .app-menu-submenu-trigger:hover {
+    background-color: var(--button-hover, #405088);
+}
+
+.app-menu-submenu {
+    display: none;
+    position: absolute;
+    left: 100%; 
+    top: -5px; 
+    background-color: var(--panel-bg, rgba(25, 35, 60, 0.98));
+    min-width: 220px; 
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 5px 0;
+    z-index: 1002; 
+}
+
+.app-menu-item-with-submenu:hover > .app-menu-submenu,
+.app-menu-item-with-submenu .app-menu-submenu-trigger:focus + .app-menu-submenu,
+.app-menu-item-with-submenu:focus-within > .app-menu-submenu {
+    display: block;
+}
+
+.app-menu-submenu-trigger .submenu-arrow {
+    margin-left: auto;
+    padding-left: 10px;
+    font-size: 0.9em;
+    color: var(--text-color, #ddeeff);
+    opacity: 0.7;
+}
+
 #mainCanvas {
     display: block;
     width: 100%;
-    height: 100%; /* Canvas vult nu de resterende ruimte door flexbox op body */
+    height: 100%;
     cursor: crosshair;
     background: linear-gradient(135deg, var(--bg-gradient-stop-1), var(--bg-gradient-stop-2));
     touch-action: none;
-    /* top en height worden nu beheerd door de body padding-top */
 }
 
+body.bg-silent-night-active #mainCanvas {
+    background: transparent !important;
+}
+
+body.bg-none-active #mainCanvas {
+    background: #0a0f1a !important; 
+}
+
+#silent-night-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    background-color: #00000c; 
+    display: none;
+    z-index: -10; 
+}
+
+body.bg-silent-night-active #silent-night-bg {
+    display: block;
+}
+
+.star-layer {
+    position: absolute;
+    top: -50%; 
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background-repeat: repeat;
+    transition: transform 0.5s linear; /* Slower transition for parallax */
+    will-change: transform;
+    opacity: 0; 
+}
+
+body.bg-silent-night-active .star-layer {
+    opacity: 1; 
+    transition: opacity 0.5s ease-in-out, transform 0.5s linear; /* Slower transition for parallax */
+}
+
+#stars-far {
+    background-image: 
+        radial-gradient(0.7px 0.7px at 50px 80px, rgba(180,190,220,0.3), transparent),
+        radial-gradient(0.9px 0.9px at 150px 120px, rgba(200,210,240,0.4), transparent),
+        radial-gradient(0.6px 0.6px at 250px 200px, rgba(170,180,210,0.25), transparent),
+        radial-gradient(1px 1px at 350px 280px, rgba(210,220,250,0.45), transparent),
+        radial-gradient(0.7px 0.7px at 80px 320px, rgba(185,195,225,0.3), transparent),
+        radial-gradient(0.9px 0.9px at 220px 380px, rgba(205,215,245,0.4), transparent),
+        radial-gradient(0.6px 0.6px at 400px 50px, rgba(175,185,215,0.25), transparent),
+        radial-gradient(1.1px 1.1px at 480px 150px, rgba(215,225,255,0.5), transparent),
+        radial-gradient(0.8px 0.8px at 100px 450px, rgba(190,200,230,0.35), transparent),
+        radial-gradient(0.9px 0.9px at 300px 480px, rgba(220,230,250,0.4), transparent);
+    background-size: 650px 600px;
+    background-position: 17px 33px;
+    z-index: -9;
+}
+
+#stars-mid {
+    background-image:
+        radial-gradient(1.6px 1.6px at 80px 150px, rgba(240,240,255,0.65), transparent),
+        radial-gradient(1.3px 1.3px at 250px 100px, rgba(220,220,250,0.6), transparent),
+        radial-gradient(1.7px 1.7px at 350px 300px, rgba(250,250,255,0.7), transparent),
+        radial-gradient(1.4px 1.4px at 60px 320px, rgba(210,220,245,0.55), transparent),
+        radial-gradient(1.6px 1.6px at 420px 180px, rgba(245,245,255,0.65), transparent),
+        radial-gradient(1.3px 1.3px at 500px 350px, rgba(225,225,250,0.6), transparent),
+        radial-gradient(1.5px 1.5px at 150px 450px, rgba(230,230,255,0.6), transparent),
+        radial-gradient(1.7px 1.7px at 550px 80px, rgba(255,255,255,0.7), transparent);
+    background-size: 800px 750px;
+    background-position: 42px 22px;
+    z-index: -8;
+}
+
+#stars-near {
+    background-image:
+        radial-gradient(2.3px 2.3px at 150px 80px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(2.9px 2.9px at 350px 250px, rgba(245,245,255,0.75), transparent),
+        radial-gradient(2.1px 2.1px at 500px 120px, rgba(250,250,255,0.75), transparent),
+        radial-gradient(2.6px 2.6px at 100px 380px, rgba(230,230,250,0.7), transparent),
+        radial-gradient(2.4px 2.4px at 600px 320px, rgba(250,250,255,0.8), transparent),
+        radial-gradient(2.7px 2.7px at 250px 500px, rgba(240,240,255,0.75), transparent),
+        radial-gradient(2.2px 2.2px at 700px 150px, rgba(255,255,255,0.8), transparent);
+    background-size: 950px 900px;
+    background-position: 8px 41px;
+    z-index: -7;
+}
+
+
 #startMessage, #loadingIndicator {
-    position: fixed; /* Veranderd naar fixed om mee te scrollen met body padding */
-    top: calc(var(--app-menu-bar-height) + 50%); /* Houd rekening met menubalk */
+    position: fixed;
+    top: calc(var(--app-menu-bar-height) + 50%);
     left: 50%;
     transform: translate(-50%, -50%);
     padding: 20px 30px;
@@ -579,8 +735,8 @@ body {
 #toolbar {
     position: fixed;
     left: 10px;
-    top: calc(var(--app-menu-bar-height) + 10px); /* Onder de nieuwe menubalk */
-    z-index: 9; /* Lager dan app-menu-bar maar boven canvas */
+    top: calc(var(--app-menu-bar-height) + 10px);
+    z-index: 9;
     background-color: var(--panel-bg);
     border-radius: 5px;
     padding: 4px;
@@ -655,12 +811,6 @@ body {
     gap: 4px;
 }
 
-/* Undo/Redo knoppen zijn nu weg uit deze specifieke div, maar de div blijft voor hamburger */
-#toolbar-app-tools {
-    /* Als er alleen nog de hamburger knop in zit, kun je specifieke layout aanpassen indien nodig */
-}
-
-
 .toolbar-divider-compact,
 .toolbar-divider {
     border: none;
@@ -672,7 +822,7 @@ body {
 
 .panel {
     position: fixed;
-    top: calc(var(--app-menu-bar-height) + 10px); /* Panelen beginnen ook onder de menubalk */
+    top: calc(var(--app-menu-bar-height) + 10px);
     background-color: var(--panel-bg);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 5px;
@@ -680,7 +830,7 @@ body {
     box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
     color: var(--text-color);
     transition: transform 0.3s ease-out, opacity 0.3s ease-out, visibility 0s 0.3s;
-    height: calc(100vh - var(--app-menu-bar-height) - 20px); /* Hoogte aangepast */
+    height: calc(100vh - var(--app-menu-bar-height) - 20px);
     overflow-y: auto;
     overflow-x: hidden;
     box-sizing: border-box;
@@ -703,9 +853,9 @@ body {
 .panel::-webkit-scrollbar-thumb { background-color: var(--button-active); border-radius: 3px; }
 
 #hamburgerMenuPanel {
-    left: calc(var(--toolbar-width) * 2 + 20px); /* Positie relatief aan de verticale toolbars */
+    left: calc(var(--toolbar-width) * 2 + 20px);
     width: var(--hamburger-panel-width);
-    transform: translateX(-100%); /* Start verborgen links */
+    transform: translateX(-100%);
     z-index: 9;
 }
 #hamburgerMenuPanel:not(.hidden) {
@@ -713,7 +863,7 @@ body {
 }
 
 #sideToolbar {
-    left: calc(var(--toolbar-width) * 2 + 20px); /* Positie relatief aan de verticale toolbars */
+    left: calc(var(--toolbar-width) * 2 + 20px);
     width: var(--side-toolbar-width);
     transform: translateX(-100%);
     z-index: 8;
@@ -722,13 +872,13 @@ body {
      transform: translateX(0);
 }
 
-.right-panel { /* Mixer panel */
+.right-panel {
     right: 0;
     width: var(--side-toolbar-width);
     transform: translateX(100%);
     z-index: 7;
-    top: calc(var(--app-menu-bar-height) + 10px); /* Zorg dat mixer ook onder de menubalk start */
-    height: calc(100vh - var(--app-menu-bar-height) - 20px); /* Hoogte aangepast */
+    top: calc(var(--app-menu-bar-height) + 10px);
+    height: calc(100vh - var(--app-menu-bar-height) - 20px);
 }
 .right-panel:not(.hidden) {
     transform: translateX(0);
@@ -914,28 +1064,28 @@ body {
 #groupControls label[for="groupFluctuateAmount"], #groupControls #groupFluctuateAmount { margin-left: 20px; width: calc(100% - 20px); }
 
 #gridControls, #gridOptions {
-    display: none; /* Worden niet meer direct gebruikt, logica zit in knoppen */
+    display: none;
 }
 
 #transportControls {
-    position: fixed; /* Veranderd naar fixed */
-    bottom: 10px; /* Afstand van onderkant */
+    position: fixed;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 6;
-    background-color: var(--panel-bg); /* Achtergrond toegevoegd voor consistentie */
+    background-color: var(--panel-bg);
     border: 1px solid rgba(100, 130, 180, 0.4);
     border-radius: 25px;
     padding: 5px 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    width: auto; /* Auto breedte */
-    max-width: calc(100% - 40px); /* Zorg dat het niet te breed wordt */
+    width: auto;
+    max-width: calc(100% - 40px);
     display: flex;
-    justify-content: center; /* Centreer de overgebleven items */
+    justify-content: center;
     align-items: center;
-    gap: 10px; /* Aangepaste gap */
-    height: 50px; /* Vaste hoogte voor de balk */
-    overflow: visible; /* Zodat piano roll er niet uitvalt als te smal */
+    gap: 10px;
+    height: 50px;
+    overflow: visible;
     white-space: nowrap;
 }
 
@@ -963,7 +1113,7 @@ body {
 }
 
 #transportControls select {
-    min-width: 100px; /* Iets minder breed misschien */
+    min-width: 100px;
 }
 
 .transport-divider {
@@ -976,24 +1126,20 @@ body {
 
 #transportControls #pianoRollCanvas {
     display: block;
-    width: 250px; /* Aangepaste breedte */
-    height: 40px; /* Aangepaste hoogte */
-    background-color: rgba(0,0,0,0.1); /* Lichte achtergrond voor zichtbaarheid */
+    width: 250px;
+    height: 40px;
+    background-color: rgba(0,0,0,0.1);
     border-radius: 4px;
     cursor: pointer;
     flex-shrink: 0;
     margin-left: 5px;
 }
 
-/* Verwijder de oude globale beatIndicator, die zit nu in de menubalk */
-/* #beatIndicator { ... } */
-
-
 #mixerToggleBtn {
     position: fixed;
-    top: calc(var(--app-menu-bar-height) + 20px); /* Onder de menubalk + marge */
+    top: calc(var(--app-menu-bar-height) + 20px);
     right: 0px;
-    transform: translateY(0); /* Geen Y translatie meer nodig */
+    transform: translateY(0);
     z-index: 11;
     background-color: var(--button-bg);
     color: var(--text-color);
@@ -1056,7 +1202,6 @@ body {
     border-bottom: none;
     padding-bottom: 0;
 }
-
 
 #mixerPanel label {
     font-size: 0.9em;
@@ -1452,7 +1597,7 @@ body {
     background-color: #222;
     border: 1px solid #111;
     border-radius: 4px;
-    padding: 8px 5px; /* Iets minder padding voor status/timer */
+    padding: 8px 5px;
     margin: 5px 0;
     display: flex;
     justify-content: space-between;
@@ -1479,14 +1624,13 @@ body {
     font-size: 0.75em;
     color: #ccc;
     margin-top: 2px;
-    font-family: 'Orbitron', sans-serif; /* Voor een meer digitale look, optioneel */
+    font-family: 'Orbitron', sans-serif;
 }
-
 
 .cassette-tape-visual-container {
     width: 100%;
-    height: 28px; /* Verhoogd voor waveform en handles */
-    background-color: #282828; /* Donkere achtergrond voor de track */
+    height: 28px;
+    background-color: #282828;
     border-radius: 3px;
     margin: 10px 0;
     position: relative;
@@ -1507,8 +1651,7 @@ body {
 .tape-visual-loop-region {
     position: absolute;
     top: 0;
-    left: 0; /* Startpositie wordt door JS ingesteld op 0% */
-    /* width: 50%; */ /* VERWIJDER OF COMMENTARIEER DEZE REGEL */
+    left: 0;
     height: 100%;
     background-color: rgba(100, 150, 255, 0.3);
     z-index: 2;
@@ -1520,19 +1663,19 @@ body {
 .tape-loop-handle {
     position: absolute;
     top: 0;
-    width: 6px; /* Breedte van de handle */
+    width: 6px;
     height: 100%;
     background-color: rgba(220, 220, 255, 0.7);
     cursor: ew-resize;
-    z-index: 4; /* Boven de loop regio en playhead */
+    z-index: 4;
 }
 .tape-loop-handle.start {
-    left: -3px; /* Gecentreerd op de linker rand */
+    left: -3px;
     border-top-left-radius: 2px;
     border-bottom-left-radius: 2px;
 }
 .tape-loop-handle.end {
-    right: -3px; /* Gecentreerd op de rechter rand */
+    right: -3px;
     border-top-right-radius: 2px;
     border-bottom-right-radius: 2px;
 }
@@ -1540,19 +1683,17 @@ body {
     background-color: rgba(255, 255, 255, 0.9);
 }
 
-
 .tape-visual-playhead {
     position: absolute;
     top: 0;
     left: 0; 
     width: 2px;
     height: 100%;
-    background-color: #ff6060; /* Iets helderder rood */
+    background-color: #ff6060;
     box-shadow: 0 0 3px #ff6060;
-    z-index: 3; /* Boven loop region, onder handles */
+    z-index: 3;
     transition: left 0.05s linear; 
 }
-
 
 .cassette-reels {
     display: flex;
@@ -1562,7 +1703,7 @@ body {
 }
 
 .reel {
-    width: 45px; /* Iets kleiner om ruimte te maken voor status/timer */
+    width: 45px;
     height: 45px;
     background-color: #1a1a1a;
     border-radius: 50%;
@@ -1594,7 +1735,6 @@ body {
 }
 .reel .reel-spoke.rot-1 { transform: translate(-50%, 0%) rotate(120deg); }
 .reel .reel-spoke.rot-2 { transform: translate(-50%, 0%) rotate(240deg); }
-
 
 .cassette-loop-controls {
     display: flex;
@@ -1637,7 +1777,6 @@ body {
 .cassette-loop-controls button:hover {
     background-color: var(--button-hover, #666);
 }
-
 
 .cassette-controls {
     display: flex;
@@ -1731,7 +1870,6 @@ body {
     cursor: pointer;
 }
 
-
 .cassette-speed-controls span {
     font-size: 0.8em;
     width: 40px;
@@ -1751,8 +1889,6 @@ body {
     background-color: var(--button-hover, #666);
 }
 
-
-
 .retrigger-editor-container {
     margin-top: 10px;
     margin-bottom: 10px;
@@ -1765,89 +1901,77 @@ body {
     display: flex;
     align-items: flex-end;
     gap: 2px;
-    padding: 8px 2px 0px 2px; /* Meer padding boven voor ruimte mute toggles */
+    padding: 8px 2px 0px 2px;
     border: 1px solid var(--button-hover);
     background-color: rgba(0,0,0,0.2);
     min-height: 80px;
-    height: 120px; /* Iets meer hoogte voor de toggles onder de balken */
-    overflow-x: hidden; /* Voorkom horizontaal scrollen */
+    height: 120px;
+    overflow-x: hidden;
     overflow-y: hidden;
     box-sizing: border-box;
     border-radius: 3px;
     width: 100%;
 }
 
-.retrigger-editor-container {
-    margin-top: 10px;
-    margin-bottom: 10px;
-    padding: 8px;
-    border: 1px solid var(--button-disabled-bg);
-    border-radius: 4px;
-}
-
 .retrigger-bar-wrapper {
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Balk boven, toggle onder */
+    justify-content: space-between;
     align-items: center;
-    height: 100%; /* Vul de .retrigger-bars-area hoogte */
+    height: 100%;
     flex-basis: 0;
     flex-grow: 1;
     flex-shrink: 1;
-    min-width: 10px; /* Zorgt dat balkjes en toggles niet te smal worden */
+    min-width: 10px;
     position: relative;
-    padding: 4px 1px; /* Kleine padding binnen de wrapper */
+    padding: 4px 1px;
     box-sizing: border-box;
 }
 
 .retrigger-bar-visual-container {
     width: 100%;
-    height: calc(100% - 20px); /* Ruimte voor de toggle onderaan (16px + 4px margin) */
+    height: calc(100% - 20px);
     display: flex;
-    align-items: flex-end; /* Balk start vanaf de bodem van deze container */
+    align-items: flex-end;
     cursor: ns-resize;
 }
 
 .retrigger-bar {
     width: 100%;
-    min-height: 2%; /* Zelfs waarde 0 is een beetje zichtbaar */
+    min-height: 2%;
     border-radius: 2px 2px 0 0;
     transition: background-color 0.05s ease-out, transform 0.05s ease-out, box-shadow 0.05s ease-out, opacity 0.1s ease-out;
     will-change: height, background-color, transform, opacity;
 }
 
-.retrigger-bar-wrapper:hover .retrigger-bar {
-    /* Hover effect kan hier als je de wrapper hover wilt gebruiken */
-}
-
 .retrigger-bar.playing {
     background-color: var(--start-node-color) !important;
     box-shadow: 0 0 8px var(--start-node-border), inset 0 0 5px rgba(255,255,255,0.3);
-    transform: scaleY(1.03); /* Subtiele verticale scale */
+    transform: scaleY(1.03);
 }
-.retrigger-bar.playing.muted-style { /* Stijl voor als de spelende balk gemute is */
-    background-color: var(--relay-node-color) !important; /* Gedimd */
-    box-shadow: 0 0 5px var(--relay-node-border);
+.retrigger-bar.playing.muted-style {
+    background-color: var(--relay-node-color, #888) !important;
+    box-shadow: 0 0 5px var(--relay-node-border, #aaa);
     transform: scaleY(1.0);
+    opacity: 0.5 !important;
 }
 
-
-/* Custom Mute Toggle Styling */
 .retrigger-step-mute-toggle-label {
     display: block;
-    width: 14px;  /* Grootte van het klikbare "blokje" */
+    width: 14px;
     height: 14px;
-    background-color: var(--button-disabled-bg);
+    background-color: var(--button-active);
     border: 1px solid var(--button-hover);
     border-radius: 3px;
     cursor: pointer;
-    position: relative; /* Voor het pseudo-element */
-    margin-top: 4px; /* Ruimte tussen balk en toggle */
-    transition: background-color 0.2s ease;
+    position: relative;
+    margin-top: 4px;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+    opacity: 1;
 }
 
 .retrigger-step-mute-toggle-input {
-    opacity: 0; /* Verberg de daadwerkelijke checkbox */
+    opacity: 0;
     width: 0;
     height: 0;
     position: absolute;
@@ -1857,19 +1981,25 @@ body {
     border-color: var(--text-color);
 }
 
-/* Stijl voor "aan" (niet gemute) staat */
-.retrigger-step-mute-toggle-input:checked + span {
-    /* Dit span element moet je toevoegen binnen de label als je een visuele indicator wilt */
-}
-.retrigger-step-mute-toggle-input:checked ~ span { /* Alternatief als span na input komt */
-    /* Voor nu gebruiken we de achtergrond van de label zelf */
+.retrigger-step-mute-toggle-label:not(.is-active-mute) span::before {
+    content: '';
+    display: block;
+    box-sizing: border-box;
+    position: absolute;
+    left: 4px; 
+    top: 2px;  
+    width: 5px;
+    height: 8px;
+    border: solid var(--text-color);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
-.retrigger-step-mute-toggle-label { /* Standaard "uit" (gemute) */
+.retrigger-step-mute-toggle-label {
     background-color: var(--button-disabled-bg);
     opacity: 0.6;
 }
-.retrigger-step-mute-toggle-input:checked + span::before { /* Simpel vinkje */
+.retrigger-step-mute-toggle-input:checked + span::before {
     content: '';
     display: block;
     width: 4px;
@@ -1879,25 +2009,15 @@ body {
     transform: translate(3px, 0px) rotate(45deg);
 }
 
-.retrigger-step-mute-toggle-input:checked ~ /* directe sibling */ label, /* Of als label de parent is */
-.retrigger-step-mute-toggle-input:checked + /* directe sibling als label na input */ span {
-    /* Geen specifieke stijl hier nodig als we de parent label stylen */
-}
-/* Als de input IN de label zit (zoals nu), style de label gebaseerd op :checked van de input */
-.retrigger-step-mute-toggle-label input:checked {
-    /* Dit werkt niet direct zo voor parent styling, we stylen de label zelf */
-}
-input.retrigger-step-mute-toggle-input:checked ~ label, /* Als label na de input komt */
-label.retrigger-step-mute-toggle-label:has(input.retrigger-step-mute-toggle-input:checked) { /* Als input in label zit (nieuwere browsers) */
-    background-color: var(--button-active); /* "Aan" kleur */
-    opacity: 1;
-}
-/* Fallback voor oudere browsers zonder :has, JavaScript moet de class 'is-active-mute' op label zetten */
-.retrigger-step-mute-toggle-label.is-active-mute {
+label.retrigger-step-mute-toggle-label:has(input.retrigger-step-mute-toggle-input:checked) {
     background-color: var(--button-active);
     opacity: 1;
 }
 
+.retrigger-step-mute-toggle-label.is-active-mute {
+    background-color: var(--button-disabled-bg);
+    opacity: 0.6;
+}
 
 .retrigger-editor-controls {
     margin-top: 10px;
@@ -1906,7 +2026,7 @@ label.retrigger-step-mute-toggle-label:has(input.retrigger-step-mute-toggle-inpu
     justify-content: center;
 }
 
-.panel button {
+.panel button.panel-button-like {
     font-size: 0.85em;
     padding: 5px 10px;
 }
@@ -1954,8 +2074,4 @@ label.retrigger-step-mute-toggle-label:has(input.retrigger-step-mute-toggle-inpu
     color: var(--text-color);
     font-weight: bold;
     box-shadow: none;
-}
-
-.retrigger-editor-display-area {
-    /* Kan leeg blijven */
 }
