@@ -51,14 +51,6 @@ const transportControlsDiv = document.getElementById("transportControls");
 const restartPulsarsBtn = document.getElementById("restartPulsarsBtn");
 const beatIndicatorElement = document.getElementById("app-menu-beat-indicator");
 const mixerPanel = document.getElementById("mixerPanel");
-const masterVolumeSlider = document.getElementById("masterVolumeSlider");
-const masterVolumeValue = document.getElementById("masterVolumeValue");
-const delaySendSlider = document.getElementById("delaySendSlider");
-const delaySendValue = document.getElementById("delaySendValue");
-const delayTimeSlider = document.getElementById("delayTimeSlider");
-const delayTimeValue = document.getElementById("delayTimeValue");
-const delayFeedbackSlider = document.getElementById("delayFeedbackSlider");
-const delayFeedbackValue = document.getElementById("delayFeedbackValue");
 const mixerGroupControlsContainer = document.getElementById(
   "mixerGroupControlsContainer",
 );
@@ -153,9 +145,9 @@ const TIMELINE_GRID_DEFAULT_SPEED = 4.0;
 const TIMELINE_GRID_DEFAULT_COLOR = "rgba(120, 220, 120, 0.7)";
 const TIMELINE_GRID_DEFAULT_PULSE_INTENSITY = 0.9;
 const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED = false;
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL = 0.005; // Radians per frame, adjust as needed
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION = "clockwise"; // "clockwise" or "counter-clockwise"
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8; // Index for subdivisionOptions (e.g., 1/4 notes)
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL = 0.005; 
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION = "clockwise"; 
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8; 
 const addTimelineGridBtn = document.getElementById("addTimelineGridBtn");
 if (addTimelineGridBtn) {
   addTimelineGridBtn.addEventListener("click", (e) => {
@@ -198,15 +190,6 @@ let masterDelaySendGain;
 let isReverbReady = false;
 let isDelayReady = false;
 const REVERB_IR_URL = "reverb.wav";
-const reverbIRSelect = document.getElementById("reverbIRSelect");
-const reverbWetSlider = document.getElementById("reverbWetSlider");
-const reverbWetValue = document.getElementById("reverbWetValue");
-const reverbPreDelaySlider = document.getElementById("reverbPreDelaySlider");
-const reverbPreDelayValue = document.getElementById("reverbPreDelayValue");
-const reverbDampingSlider = document.getElementById("reverbDampingSlider");
-const reverbDampingValue = document.getElementById("reverbDampingValue");
-const reverbLowCutSlider = document.getElementById("reverbLowCutSlider");
-const reverbLowCutValue = document.getElementById("reverbLowCutValue");
 
 
 let reverbPreDelayNode;
@@ -688,8 +671,8 @@ let activeMidiOutput = null;
 let activeMeteorShowers = [];
 let meteorShowerIdCounter = 0;
 const METEOR_SHOWER_DEFAULT_MAX_RADIUS = 250;
-const METEOR_SHOWER_DEFAULT_GROWTH_RATE = 100; // pixels per second
-const MAX_METEOR_SHOWER_GENERATIONS = 2; // Try 2 or even 1 to see if it stops crashing
+const METEOR_SHOWER_DEFAULT_GROWTH_RATE = 100; 
+const MAX_METEOR_SHOWER_GENERATIONS = 2; 
 let recentlyInteractedShowerPairs = new Map();
 const PAIR_INTERACTION_COOLDOWN_SECONDS = 5;
 const COLLISION_SPAWN_COOLDOWN_SECONDS = 5;
@@ -726,9 +709,9 @@ const pulsarTypes = [
     icon: "🚀",
   },
   {
-    type: "pulsar_meteorshower", // Added new type
-    label: "Meteor Shower",     // Name for UI
-    icon: "☄️",                 // Icon for the button
+    type: "pulsar_meteorshower", 
+    label: "Meteor Shower",     
+    icon: "☄️",                 
   },
 ];
 
@@ -1576,7 +1559,9 @@ async function setupAudio() {
         originalMasterGainDestination = audioContext.destination;
 
         masterGain = audioContext.createGain();
-        masterGain.gain.value = parseFloat(masterVolumeSlider.value);
+        
+        
+        masterGain.gain.value = 0.8; 
         masterGain.connect(originalMasterGainDestination);
 
         portalGroupGain = audioContext.createGain();
@@ -1603,9 +1588,6 @@ async function setupAudio() {
 
         reverbWetGain = audioContext.createGain();
         reverbWetGain.gain.value = 0.5; 
-
-        
-        
         
         reverbPreDelayNode.connect(reverbNode);
         reverbNode.connect(reverbHighPass);
@@ -1617,9 +1599,11 @@ async function setupAudio() {
         delayNode = audioContext.createDelay(1.0);
         delayFeedbackGain = audioContext.createGain();
         masterDelaySendGain = audioContext.createGain();
-        masterDelaySendGain.gain.value = parseFloat(delaySendSlider.value);
-        delayNode.delayTime.value = parseFloat(delayTimeSlider.value);
-        delayFeedbackGain.gain.value = parseFloat(delayFeedbackSlider.value);
+        
+        masterDelaySendGain.gain.value = 0.3; 
+        delayNode.delayTime.value = 0.25; 
+        delayFeedbackGain.gain.value = 0.4; 
+
         masterDelaySendGain.connect(delayNode);
         delayNode.connect(delayFeedbackGain);
         delayFeedbackGain.connect(delayNode);
@@ -1636,7 +1620,7 @@ async function setupAudio() {
                     audioContext.decodeAudioData(
                         ab,
                         (b) => {
-                            reverbNode.buffer = b;
+                            if (reverbNode) reverbNode.buffer = b; 
                             isReverbReady = true;
                             res();
                         },
@@ -1649,7 +1633,7 @@ async function setupAudio() {
                 });
             } else {
                 const b = await audioContext.decodeAudioData(ab);
-                reverbNode.buffer = b;
+                if (reverbNode) reverbNode.buffer = b; 
                 isReverbReady = true;
             }
         } catch (e) {
@@ -1711,130 +1695,100 @@ async function setupAudio() {
 
         updateLoadingIndicator();
         isAudioReady = true;
-        resetSideToolbars();
-        changeScale(scaleSelectTransport.value, true);
-        updateSyncUI();
-        updateGroupControlsUI();
-        updateInfoToggleUI();
-        setupMIDI();
+        resetSideToolbars(); 
+        changeScale(currentScaleKey, true); 
+        updateSyncUI(); 
+        updateGroupControlsUI(); 
+        updateInfoToggleUI(); 
+        setupMIDI(); 
 
-        if (historyStack.length === 0) {
+        if (historyStack.length === 0) { 
             saveState();
         }
-        identifyAndRouteAllGroups();
-        updateMixerGUI();
-        drawPianoRoll();
+        identifyAndRouteAllGroups(); 
+        updateMixerGUI(); 
+        
+        
+        drawPianoRoll(); 
 
         return audioContext;
     } catch (e) {
-        startMessage.textContent = "Audio Context Error";
+        startMessage.textContent = "Audio Context Error"; 
         startMessage.style.display = "block";
-        console.error("Fout tijdens setupAudio:", e);
+        console.error("Fout tijdens setupAudio:", e); 
         isAudioReady = false;
         return null;
     }
 }
 
 
-function populateReverbIRSelect() {
-    if (!reverbIRSelect) return;
-    reverbIRSelect.innerHTML = ""; 
-    impulseResponses.forEach(ir => {
-        const option = document.createElement("option");
-        option.value = ir.url;
-        option.textContent = ir.name;
-        reverbIRSelect.appendChild(option);
-    });
-    reverbIRSelect.value = currentIRUrl; 
-}
-
-
 async function updateReverbIR(newIRUrl) {
-    if (!audioContext || !reverbNode) return;
-    currentIRUrl = newIRUrl;
+    if (!audioContext || !reverbNode) {
+        console.warn("updateReverbIR: AudioContext or ReverbNode not ready.");
+        return;
+    }
+    currentIRUrl = newIRUrl; 
     isReverbReady = false; 
+
+    console.log(`[Reverb] Attempting to load new IR: ${currentIRUrl}`);
+
     try {
-        const r = await fetch(currentIRUrl);
-        if (!r.ok) throw new Error(`HTTP error! status: ${r.status} for ${currentIRUrl}`);
-        const ab = await r.arrayBuffer();
-        let decodedBuffer;
-        if (audioContext.decodeAudioData.length === 1) { 
-            decodedBuffer = await new Promise((res, rej) => {
-                audioContext.decodeAudioData(ab, buffer => res(buffer), error => rej(error));
-            });
-        } else {
-            decodedBuffer = await audioContext.decodeAudioData(ab);
+        const response = await fetch(currentIRUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status} for ${currentIRUrl}`);
         }
+        const arrayBuffer = await response.arrayBuffer();
+        
+        let decodedBuffer;
+        
+        if (audioContext.decodeAudioData.length !== 1) { 
+            decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        } else { 
+            decodedBuffer = await new Promise((resolve, reject) => {
+                audioContext.decodeAudioData(arrayBuffer, 
+                    (buffer) => resolve(buffer), 
+                    (error) => {
+                        console.error(`[Reverb] decodeAudioData (callback) error for ${currentIRUrl}:`, error);
+                        reject(error);
+                    }
+                );
+            });
+        }
+
+        if (!decodedBuffer) {
+            throw new Error("Decoded buffer is null or undefined after decodeAudioData.");
+        }
+
         reverbNode.buffer = decodedBuffer;
         isReverbReady = true;
-        console.log(`Reverb IR updated to: ${currentIRUrl}`);
+        console.log(`[Reverb] IR updated successfully to: ${currentIRUrl}`);
+        
+        
+        const mixerReverbSelect = document.getElementById("mixerReverbTypeSelect");
+        if (mixerReverbSelect && mixerReverbSelect.value !== currentIRUrl) {
+            mixerReverbSelect.value = currentIRUrl;
+        }
+
         saveState(); 
     } catch (e) {
-        console.error(`Failed to load or process new reverb IR: ${currentIRUrl}`, e);
-        
+        console.error(`[Reverb] Failed to load or process new reverb IR: ${currentIRUrl}`, e);
         isReverbReady = false;
+        
+        const mixerReverbSelect = document.getElementById("mixerReverbTypeSelect");
+        if (mixerReverbSelect && impulseResponses.length > 0) {
+            const defaultIRUrl = impulseResponses[0].url;
+            if (currentIRUrl !== defaultIRUrl) { 
+                console.warn(`[Reverb] Attempting to revert to default IR: ${defaultIRUrl}`);
+                
+                
+                updateReverbIR(defaultIRUrl).catch(revertErr => console.error("Error reverting to default IR", revertErr));
+            } else {
+                 mixerReverbSelect.value = defaultIRUrl; 
+            }
+        }
     }
 }
 
-
-
-
-
-if (reverbIRSelect) {
-    populateReverbIRSelect(); 
-    reverbIRSelect.addEventListener("change", (e) => {
-        updateReverbIR(e.target.value);
-    });
-}
-
-if (reverbWetSlider && reverbWetValue && reverbWetGain) {
-    reverbWetSlider.value = reverbWetGain.gain.value; 
-    reverbWetValue.textContent = parseFloat(reverbWetSlider.value).toFixed(2);
-    reverbWetSlider.addEventListener("input", (e) => {
-        if (reverbWetGain) {
-            reverbWetGain.gain.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
-        }
-        if (reverbWetValue) reverbWetValue.textContent = parseFloat(e.target.value).toFixed(2);
-    });
-    reverbWetSlider.addEventListener("change", saveState);
-}
-
-
-if (reverbPreDelaySlider && reverbPreDelayValue && typeof reverbPreDelayNode !== 'undefined') {
-    reverbPreDelaySlider.value = reverbPreDelayNode.delayTime.value;
-    reverbPreDelayValue.textContent = parseFloat(reverbPreDelaySlider.value).toFixed(3) + "s";
-    reverbPreDelaySlider.addEventListener("input", (e) => {
-        if (reverbPreDelayNode) {
-            reverbPreDelayNode.delayTime.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
-        }
-        if (reverbPreDelayValue) reverbPreDelayValue.textContent = parseFloat(e.target.value).toFixed(3) + "s";
-    });
-    reverbPreDelaySlider.addEventListener("change", saveState);
-}
-
-if (reverbDampingSlider && reverbDampingValue && typeof reverbLowPass !== 'undefined') {
-    reverbDampingSlider.value = reverbLowPass.frequency.value;
-    reverbDampingValue.textContent = parseFloat(reverbDampingSlider.value).toFixed(0) + "Hz";
-    reverbDampingSlider.addEventListener("input", (e) => {
-        if (reverbLowPass) {
-            reverbLowPass.frequency.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
-        }
-        if (reverbDampingValue) reverbDampingValue.textContent = parseFloat(e.target.value).toFixed(0) + "Hz";
-    });
-    reverbDampingSlider.addEventListener("change", saveState);
-}
-
-if (reverbLowCutSlider && reverbLowCutValue && typeof reverbHighPass !== 'undefined') {
-    reverbLowCutSlider.value = reverbHighPass.frequency.value;
-    reverbLowCutValue.textContent = parseFloat(reverbLowCutSlider.value).toFixed(0) + "Hz";
-    reverbLowCutSlider.addEventListener("input", (e) => {
-        if (reverbHighPass) {
-            reverbHighPass.frequency.setTargetAtTime(parseFloat(e.target.value), audioContext.currentTime, 0.01);
-        }
-        if (reverbLowCutValue) reverbLowCutValue.textContent = parseFloat(e.target.value).toFixed(0) + "Hz";
-    });
-    reverbLowCutSlider.addEventListener("change", saveState);
-}
 
 function startRecording() {
   if (!audioContext || audioContext.state !== "running" || !masterGain) {
@@ -2845,647 +2799,602 @@ function isInAnyIdentifiedGroup(nodeId) {
 }
 
 function setSpecificGroupDelaySend(groupId, level) {
-  const group = identifiedGroups.find((g) => g.id === groupId);
-
-  if (!group || !group.gainNode || !audioContext) {
+  if (!audioContext || !masterDelaySendGain) {
     console.warn(
-      `setSpecificGroupDelaySend: Group ${groupId} or its gainNode not found, or audioContext not ready.`,
+      `setSpecificGroupDelaySend: AudioContext or masterDelaySendGain not ready for group ${groupId}. Level: ${level}`,
     );
     return;
   }
 
+  const group = identifiedGroups.find((g) => g.id === groupId);
   const newLevel = Math.max(0, Math.min(1.0, parseFloat(level)));
   const now = audioContext.currentTime;
-  console.log(`Setting Group ${groupId} Delay Send to: ${newLevel.toFixed(2)}`);
+  const timeConstant = 0.01;
 
-  group.nodeIds.forEach((nodeId) => {
-    const node = findNodeById(nodeId);
-
-    if (node && node.audioParams && node.audioNodes) {
-      node.audioParams.delaySend = newLevel;
-
-      const delaySendGain = node.audioNodes.delaySendGain;
-      if (delaySendGain) {
-        console.log(
-          `  - Node ${nodeId}: Updating delaySendGain to ${newLevel.toFixed(2)}`,
-        );
-        delaySendGain.gain.cancelScheduledValues(now);
-        delaySendGain.gain.setTargetAtTime(newLevel, now, 0.01);
-      } else {
-        console.log(`  - Node ${nodeId}: No delaySendGain found.`);
-      }
+  if (group) {
+    if (group.userDefined && group.delaySendGainNode) {
+      
+      group.delaySendGainNode.gain.setTargetAtTime(newLevel, now, timeConstant);
+      group.delaySendLevel = newLevel; 
+    } else if (!group.userDefined) {
+      
+      
+      
+      group.nodeIds.forEach((nodeId) => {
+        const node = findNodeById(nodeId);
+        if (node && node.audioNodes && node.audioNodes.delaySendGain) {
+          if (node.audioParams) node.audioParams.delaySend = newLevel;
+          node.audioNodes.delaySendGain.gain.setTargetAtTime(newLevel, now, timeConstant);
+        }
+      });
+    } else {
+      console.warn(`setSpecificGroupDelaySend: Group ${groupId} is user-defined but missing delaySendGainNode.`);
     }
-  });
+  } else {
+    
+    
+    
+    let nodesToUpdate = [];
+    if (groupId === "portalDrones") {
+        nodesToUpdate = nodes.filter(n => n.type === PORTAL_NEBULA_TYPE && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
+    } else if (groupId === "nebulaSounds") {
+        nodesToUpdate = nodes.filter(n => n.type === "nebula" && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
+    }
 
-  const delayValueSpan = document.getElementById(
-    `mixerGroupDelayValue_${groupId}`,
-  );
-  if (delayValueSpan) {
-    delayValueSpan.textContent = newLevel.toFixed(2);
-  }
-
-  const delaySlider = document.getElementById(
-    `mixerGroupDelaySlider_${groupId}`,
-  );
-  if (delaySlider) {
-    delaySlider.value = newLevel;
+    if (nodesToUpdate.length > 0) {
+        nodesToUpdate.forEach(node => {
+            if (node.audioNodes && node.audioNodes.delaySendGain) {
+                 if (node.audioParams) node.audioParams.delaySend = newLevel;
+                node.audioNodes.delaySendGain.gain.setTargetAtTime(newLevel, now, timeConstant);
+            }
+        });
+    } else {
+        console.warn(`setSpecificGroupDelaySend: Group ${groupId} not found in identifiedGroups or special groups.`);
+    }
   }
 }
+
 
 function setSpecificGroupVolume(groupId, volume) {
+  if (!audioContext) return;
   const group = identifiedGroups.find((g) => g.id === groupId);
-  if (!group || !group.gainNode || !audioContext) return;
+  
+  if (!group || !group.gainNode) {
+    
+    
+    
+    let specialGroupNode = null;
+    if (groupId === "portalDrones" && typeof portalGroupGain !== 'undefined' && portalGroupGain) {
+        specialGroupNode = portalGroupGain;
+    } else if (groupId === "nebulaSounds" && typeof originalNebulaGroupGain !== 'undefined' && originalNebulaGroupGain) {
+        specialGroupNode = originalNebulaGroupGain;
+    }
 
-  const newVol = Math.max(0, Math.min(1.5, parseFloat(volume)));
-
-  group.gainNode.gain.setTargetAtTime(newVol, audioContext.currentTime, 0.01);
-
-  const mixerSlider = document.getElementById(`mixerGroupSlider_${groupId}`);
-  const mixerValueSpan = document.getElementById(`mixerGroupValue_${groupId}`);
-
-  if (mixerSlider) {
-    mixerSlider.value = newVol;
-  }
-  if (mixerValueSpan) {
-    mixerValueSpan.textContent = newVol.toFixed(2);
-  }
-}
-
-function setSpecificGroupReverbSend(groupId, level) {
-  const group = identifiedGroups.find((g) => g.id === groupId);
-  if (!group || !group.gainNode || !audioContext || !isReverbReady) {
+    if (specialGroupNode) {
+        const newVol = Math.max(0, Math.min(1.5, parseFloat(volume)));
+        specialGroupNode.gain.setTargetAtTime(newVol, audioContext.currentTime, 0.01);
+    } else {
+        console.warn(`setSpecificGroupVolume: Group ${groupId} or its gainNode not found.`);
+    }
     return;
   }
 
+  const newVol = Math.max(0, Math.min(1.5, parseFloat(volume)));
+  group.gainNode.gain.setTargetAtTime(newVol, audioContext.currentTime, 0.01);
+  
+  
+  if (group.userDefined) {
+    group.volume = newVol;
+  }
+}
+
+
+function setSpecificGroupReverbSend(groupId, level) {
+  if (!audioContext || !reverbPreDelayNode || !isReverbReady) { 
+    console.warn(
+      `setSpecificGroupReverbSend: AudioContext or Reverb system not ready for group ${groupId}. Level: ${level}`,
+    );
+    return;
+  }
+
+  const group = identifiedGroups.find((g) => g.id === groupId);
   const newLevel = Math.max(0, Math.min(1.0, parseFloat(level)));
   const now = audioContext.currentTime;
+  const timeConstant = 0.01;
 
-  group.nodeIds.forEach((nodeId) => {
-    const node = findNodeById(nodeId);
-
-    if (node && node.audioParams && node.audioNodes) {
-      node.audioParams.reverbSend = newLevel;
-
-      const reverbSendGain = node.audioNodes.reverbSendGain;
-      if (reverbSendGain) {
-        reverbSendGain.gain.cancelScheduledValues(now);
-        reverbSendGain.gain.setTargetAtTime(newLevel, now, 0.01);
-      } else {
-      }
+  if (group) {
+    if (group.userDefined && group.reverbSendGainNode) {
+      
+      group.reverbSendGainNode.gain.setTargetAtTime(newLevel, now, timeConstant);
+      group.reverbSendLevel = newLevel; 
+    } else if (!group.userDefined) {
+      
+      group.nodeIds.forEach((nodeId) => {
+        const node = findNodeById(nodeId);
+        if (node && node.audioNodes && node.audioNodes.reverbSendGain) {
+          if (node.audioParams) node.audioParams.reverbSend = newLevel;
+          node.audioNodes.reverbSendGain.gain.setTargetAtTime(newLevel, now, timeConstant);
+        }
+      });
+    } else {
+      console.warn(`setSpecificGroupReverbSend: Group ${groupId} is user-defined but missing reverbSendGainNode.`);
     }
-  });
+  } else {
+    
+    let nodesToUpdate = [];
+    if (groupId === "portalDrones") {
+        nodesToUpdate = nodes.filter(n => n.type === PORTAL_NEBULA_TYPE && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
+    } else if (groupId === "nebulaSounds") {
+        nodesToUpdate = nodes.filter(n => n.type === "nebula" && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
+    }
 
-  const reverbValueSpan = document.getElementById(
-    `mixerGroupReverbValue_${groupId}`,
-  );
-  if (reverbValueSpan) {
-    reverbValueSpan.textContent = newLevel.toFixed(2);
-  }
-
-  const reverbSlider = document.getElementById(
-    `mixerGroupReverbSlider_${groupId}`,
-  );
-  if (reverbSlider) {
-    reverbSlider.value = newLevel;
+    if (nodesToUpdate.length > 0) {
+        nodesToUpdate.forEach(node => {
+            if (node.audioNodes && node.audioNodes.reverbSendGain) {
+                if (node.audioParams) node.audioParams.reverbSend = newLevel;
+                node.audioNodes.reverbSendGain.gain.setTargetAtTime(newLevel, now, timeConstant);
+            }
+        });
+    } else {
+        console.warn(`setSpecificGroupReverbSend: Group ${groupId} not found in identifiedGroups or special groups.`);
+    }
   }
 }
+
 
 function updateMixerGUI() {
-    if (!mixerGroupControlsContainer || !isAudioReady) {
-        if (mixerGroupControlsContainer) {
-            mixerGroupControlsContainer.innerHTML = "<small>(Mixer not ready...)</small>";
+    if (!mixerPanel || !mixerGroupControlsContainer || !isAudioReady || !audioContext) {
+        if (mixerPanel && !mixerPanel.querySelector('h3')) {
+            
+        } else if (mixerPanel) {
+            const oldTitle = mixerPanel.querySelector('h3');
+            if (oldTitle) oldTitle.style.display = 'none'; 
         }
+        if (mixerGroupControlsContainer) {
+            mixerGroupControlsContainer.innerHTML = "<small>(Mixer not ready or no groups to display)</small>";
+        }
+        let globalSection = document.getElementById('mixerGlobalEffectsSection');
+        if (globalSection) globalSection.innerHTML = "<small>(Global effects not ready)</small>";
+        
+        let advancedSection = document.getElementById('mixerAdvancedControlsSection');
+        if (advancedSection) advancedSection.innerHTML = "<small>(Advanced controls not ready)</small>";
         return;
     }
-    mixerGroupControlsContainer.innerHTML = ""; 
+
+    mixerGroupControlsContainer.innerHTML = "";
+
+    let globalEffectsSection = document.getElementById('mixerGlobalEffectsSection');
+    if (!globalEffectsSection) {
+        globalEffectsSection = document.createElement("div");
+        globalEffectsSection.id = "mixerGlobalEffectsSection";
+        mixerPanel.insertBefore(globalEffectsSection, mixerGroupControlsContainer);
+    }
+    globalEffectsSection.innerHTML = "";
+
+    let advancedControlsSection = document.getElementById('mixerAdvancedControlsSection');
+    if (!advancedControlsSection) {
+        advancedControlsSection = document.createElement("div");
+        advancedControlsSection.id = "mixerAdvancedControlsSection";
+        mixerPanel.appendChild(advancedControlsSection); 
+    }
+    advancedControlsSection.innerHTML = "";
+
+
     const fragment = document.createDocumentFragment();
-    const now = audioContext ? audioContext.currentTime : 0;
+    const globalEffectsFragment = document.createDocumentFragment();
+    const advancedControlsFragment = document.createDocumentFragment();
+
+    const now = audioContext.currentTime;
     const timeConstant = 0.01;
+    const nexusElementsToInitialize = [];
+    const nexusPositionElementsToInitialize = [];
 
+
+    const masterStrip = document.createElement("section");
+    masterStrip.classList.add("channel-strip");
+    masterStrip.id = "master-channel-strip";
+
+    const masterSendsDiv = document.createElement("div");
+    masterSendsDiv.classList.add("channel-sends");
+
+    const masterDelaySendDialContainerId = 'nexus-master-delay-send-dial';
+    const masterDelaySendDialContainer = document.createElement('div');
+    masterDelaySendDialContainer.id = masterDelaySendDialContainerId;
+    masterDelaySendDialContainer.classList.add('send-control-wrapper');
+    const masterDelaySendLabel = document.createElement('label');
+    masterDelaySendLabel.htmlFor = masterDelaySendDialContainerId;
+    masterDelaySendLabel.textContent = "DELAY";
+    masterSendsDiv.appendChild(masterDelaySendLabel);
+    masterSendsDiv.appendChild(masterDelaySendDialContainer);
+    nexusElementsToInitialize.push({
+        id: masterDelaySendDialContainerId, type: 'Dial',
+        options: {'size': [38, 38], 'interaction': 'radial', 'mode': 'relative', 'min': 0, 'max': 1, 'step': 0.01, 'value': masterDelaySendGain ? masterDelaySendGain.gain.value : 0.3},
+        changeCallback: function(v) { if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+
+    const masterReverbSendDialContainerId = 'nexus-master-reverb-send-dial';
+    const masterReverbSendDialContainer = document.createElement('div');
+    masterReverbSendDialContainer.id = masterReverbSendDialContainerId;
+    masterReverbSendDialContainer.classList.add('send-control-wrapper');
+    const masterReverbSendLabel = document.createElement('label');
+    masterReverbSendLabel.htmlFor = masterReverbSendDialContainerId;
+    masterReverbSendLabel.textContent = "REVERB";
+    masterSendsDiv.appendChild(masterReverbSendLabel);
+    masterSendsDiv.appendChild(masterReverbSendDialContainer);
+    nexusElementsToInitialize.push({
+        id: masterReverbSendDialContainerId, type: 'Dial',
+        options: {'size': [38, 38], 'interaction': 'radial', 'mode': 'relative', 'min': 0, 'max': 1, 'step': 0.01, 'value': reverbWetGain ? reverbWetGain.gain.value : 0.5},
+        changeCallback: function(v) { if (reverbWetGain) reverbWetGain.gain.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+    masterStrip.appendChild(masterSendsDiv);
+
+    const masterFaderAndMeterContainer = document.createElement("div");
+    masterFaderAndMeterContainer.classList.add("fader-and-meter-container");
     
-    if (portalGroupGain) {
-        const standalonePortalNodesExist = nodes.some(n =>
-            n.type === PORTAL_NEBULA_TYPE &&
-            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))
-        );
+    const masterVolumeMeterContainerId = 'nexus-master-volume-meter';
+    const masterVolumeMeterDiv = document.createElement('div');
+    masterVolumeMeterDiv.id = masterVolumeMeterContainerId;
+    masterFaderAndMeterContainer.appendChild(masterVolumeMeterDiv);
 
-        if (standalonePortalNodesExist) {
-            const portalContainer = document.createElement("div");
-            portalContainer.classList.add("mixer-group-control-section", "mixer-special-group");
-            portalContainer.style.borderLeft = "3px solid var(--pulsar-triggerable-border, #aaf)";
-
-            const portalVolControlDiv = document.createElement("div");
-            portalVolControlDiv.classList.add("mixer-control-item");
-            const portalVolLabel = document.createElement("label");
-            portalVolLabel.htmlFor = "mixerPortalGroupSlider";
-            portalVolLabel.textContent = `Portal Drones Vol:`;
-            portalVolControlDiv.appendChild(portalVolLabel);
-            const portalVolSlider = document.createElement("input");
-            portalVolSlider.type = "range";
-            portalVolSlider.id = "mixerPortalGroupSlider";
-            portalVolSlider.min = "0";
-            portalVolSlider.max = "1.5";
-            portalVolSlider.step = "0.01";
-            try {
-                portalVolSlider.value = portalGroupGain.gain.value.toFixed(2);
-            } catch (e) {
-                portalVolSlider.value = "0.7";
-            }
-            portalVolSlider.title = `Volume for Portal Drones (not in user groups)`;
-            portalVolSlider.addEventListener("input", (e) => {
-                const newVol = parseFloat(e.target.value);
-                if (portalGroupGain && audioContext) {
-                    portalGroupGain.gain.setTargetAtTime(newVol, audioContext.currentTime, timeConstant);
-                }
-                const span = document.getElementById("mixerPortalGroupValue");
-                if (span) span.textContent = newVol.toFixed(2);
-            });
-            portalVolSlider.addEventListener("change", saveState);
-            portalVolControlDiv.appendChild(portalVolSlider);
-            const portalVolValueSpan = document.createElement("span");
-            portalVolValueSpan.id = "mixerPortalGroupValue";
-            portalVolValueSpan.textContent = portalVolSlider.value;
-            portalVolControlDiv.appendChild(portalVolValueSpan);
-            portalContainer.appendChild(portalVolControlDiv);
-
-            const portalDelayControlDiv = document.createElement("div");
-            portalDelayControlDiv.classList.add("mixer-control-item");
-            const portalDelayLabel = document.createElement("label");
-            portalDelayLabel.htmlFor = "mixerPortalDelaySlider";
-            portalDelayLabel.textContent = `Portal Delay Send:`;
-            portalDelayControlDiv.appendChild(portalDelayLabel);
-            const portalDelaySlider = document.createElement("input");
-            portalDelaySlider.type = "range";
-            portalDelaySlider.id = "mixerPortalDelaySlider";
-            portalDelaySlider.min = "0";
-            portalDelaySlider.max = "1";
-            portalDelaySlider.step = "0.01";
-            let initialPortalDelay = DEFAULT_DELAY_SEND * 1.2;
-            const firstPortal = nodes.find((n) => n.type === PORTAL_NEBULA_TYPE && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
-            if (firstPortal && firstPortal.audioParams) {
-                initialPortalDelay = firstPortal.audioParams.delaySend !== undefined ? firstPortal.audioParams.delaySend : DEFAULT_DELAY_SEND * 1.2;
-            }
-            portalDelaySlider.value = initialPortalDelay.toFixed(2);
-            portalDelaySlider.title = `Delay Send for all Portal Drones (not in user groups)`;
-            portalDelaySlider.addEventListener("input", (e) => {
-                const newSend = parseFloat(e.target.value);
-                nodes.forEach((node) => {
-                    if (
-                        node.type === PORTAL_NEBULA_TYPE &&
-                        !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
-                        node.audioNodes?.delaySendGain?.gain
-                    ) {
-                        node.audioParams.delaySend = newSend;
-                        node.audioNodes.delaySendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
-                    }
-                });
-                const span = document.getElementById("mixerPortalDelayValue");
-                if (span) span.textContent = newSend.toFixed(2);
-            });
-            portalDelaySlider.addEventListener("change", saveState);
-            portalDelayControlDiv.appendChild(portalDelaySlider);
-            const portalDelayValueSpan = document.createElement("span");
-            portalDelayValueSpan.id = "mixerPortalDelayValue";
-            portalDelayValueSpan.textContent = portalDelaySlider.value;
-            portalDelayControlDiv.appendChild(portalDelayValueSpan);
-            portalContainer.appendChild(portalDelayControlDiv);
-
-            if (isReverbReady && reverbPreDelayNode) { 
-                const portalReverbControlDiv = document.createElement("div");
-                portalReverbControlDiv.classList.add("mixer-control-item");
-                const portalReverbLabel = document.createElement("label");
-                portalReverbLabel.htmlFor = "mixerPortalReverbSlider";
-                portalReverbLabel.textContent = `Portal Reverb Send:`;
-                portalReverbControlDiv.appendChild(portalReverbLabel);
-                const portalReverbSlider = document.createElement("input");
-                portalReverbSlider.type = "range";
-                portalReverbSlider.id = "mixerPortalReverbSlider";
-                portalReverbSlider.min = "0";
-                portalReverbSlider.max = "1";
-                portalReverbSlider.step = "0.01";
-                let initialPortalReverb = DEFAULT_REVERB_SEND * 1.5;
-                if (firstPortal && firstPortal.audioParams) {
-                    initialPortalReverb = firstPortal.audioParams.reverbSend !== undefined ? firstPortal.audioParams.reverbSend : DEFAULT_REVERB_SEND * 1.5;
-                }
-                portalReverbSlider.value = initialPortalReverb.toFixed(2);
-                portalReverbSlider.title = `Reverb Send for all Portal Drones (not in user groups)`;
-                portalReverbSlider.addEventListener("input", (e) => {
-                    const newSend = parseFloat(e.target.value);
-                    nodes.forEach((node) => {
-                        if (
-                            node.type === PORTAL_NEBULA_TYPE &&
-                            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
-                            node.audioNodes?.reverbSendGain?.gain
-                        ) {
-                            node.audioParams.reverbSend = newSend;
-                            node.audioNodes.reverbSendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
-                        }
-                    });
-                    const span = document.getElementById("mixerPortalReverbValue");
-                    if (span) span.textContent = newSend.toFixed(2);
-                });
-                portalReverbSlider.addEventListener("change", saveState);
-                portalReverbControlDiv.appendChild(portalReverbSlider);
-                const portalReverbValueSpan = document.createElement("span");
-                portalReverbValueSpan.id = "mixerPortalReverbValue";
-                portalReverbValueSpan.textContent = portalReverbSlider.value;
-                portalReverbControlDiv.appendChild(portalReverbValueSpan);
-                portalContainer.appendChild(portalReverbControlDiv);
-            }
-            fragment.appendChild(portalContainer);
-        }
-    }
-
-    if (originalNebulaGroupGain) {
-        const standaloneNebulaNodesExist = nodes.some(n =>
-            n.type === "nebula" &&
-            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))
-        );
-        if (standaloneNebulaNodesExist) {
-            const nebulaContainer = document.createElement("div");
-            nebulaContainer.classList.add("mixer-group-control-section", "mixer-special-group");
-            nebulaContainer.style.borderLeft = "3px solid var(--nebula-border, #adf)";
-
-            const nebulaVolControlDiv = document.createElement("div");
-            nebulaVolControlDiv.classList.add("mixer-control-item");
-            const nebulaVolLabel = document.createElement("label");
-            nebulaVolLabel.htmlFor = "mixerNebulaGroupSlider";
-            nebulaVolLabel.textContent = `Nebula Sounds Vol:`;
-            nebulaVolControlDiv.appendChild(nebulaVolLabel);
-            const nebulaVolSlider = document.createElement("input");
-            nebulaVolSlider.type = "range";
-            nebulaVolSlider.id = "mixerNebulaGroupSlider";
-            nebulaVolSlider.min = "0";
-            nebulaVolSlider.max = "1.5";
-            nebulaVolSlider.step = "0.01";
-            try {
-                nebulaVolSlider.value = originalNebulaGroupGain.gain.value.toFixed(2);
-            } catch (e) {
-                nebulaVolSlider.value = "0.8";
-            }
-            nebulaVolSlider.title = `Volume for Nebula Sounds (not in user groups)`;
-            nebulaVolSlider.addEventListener("input", (e) => {
-                const newVol = parseFloat(e.target.value);
-                if (originalNebulaGroupGain && audioContext) {
-                    originalNebulaGroupGain.gain.setTargetAtTime(newVol, audioContext.currentTime, timeConstant);
-                }
-                const span = document.getElementById("mixerNebulaGroupValue");
-                if (span) span.textContent = newVol.toFixed(2);
-            });
-            nebulaVolSlider.addEventListener("change", saveState);
-            nebulaVolControlDiv.appendChild(nebulaVolSlider);
-            const nebulaVolValueSpan = document.createElement("span");
-            nebulaVolValueSpan.id = "mixerNebulaGroupValue";
-            nebulaVolValueSpan.textContent = nebulaVolSlider.value;
-            nebulaVolControlDiv.appendChild(nebulaVolValueSpan);
-            nebulaContainer.appendChild(nebulaVolControlDiv);
-
-            const nebulaDelayControlDiv = document.createElement("div");
-            nebulaDelayControlDiv.classList.add("mixer-control-item");
-            const nebulaDelayLabel = document.createElement("label");
-            nebulaDelayLabel.htmlFor = "mixerNebulaDelaySlider";
-            nebulaDelayLabel.textContent = `Nebula Delay Send:`;
-            nebulaDelayControlDiv.appendChild(nebulaDelayLabel);
-            const nebulaDelaySlider = document.createElement("input");
-            nebulaDelaySlider.type = "range";
-            nebulaDelaySlider.id = "mixerNebulaDelaySlider";
-            nebulaDelaySlider.min = "0";
-            nebulaDelaySlider.max = "1";
-            nebulaDelaySlider.step = "0.01";
-            let initialNebulaDelay = DEFAULT_DELAY_SEND;
-            const firstNebula = nodes.find((n) => n.type === "nebula" && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id)));
-            if (firstNebula && firstNebula.audioParams) {
-                initialNebulaDelay = firstNebula.audioParams.delaySend !== undefined ? firstNebula.audioParams.delaySend : DEFAULT_DELAY_SEND;
-            }
-            nebulaDelaySlider.value = initialNebulaDelay.toFixed(2);
-            nebulaDelaySlider.title = `Delay Send for all Nebula sounds (not in user groups)`;
-            nebulaDelaySlider.addEventListener("input", (e) => {
-                const newSend = parseFloat(e.target.value);
-                nodes.forEach((node) => {
-                    if (
-                        node.type === "nebula" &&
-                        !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
-                        node.audioNodes?.delaySendGain?.gain
-                    ) {
-                        node.audioParams.delaySend = newSend;
-                        node.audioNodes.delaySendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
-                    }
-                });
-                const span = document.getElementById("mixerNebulaDelayValue");
-                if (span) span.textContent = newSend.toFixed(2);
-            });
-            nebulaDelaySlider.addEventListener("change", saveState);
-            nebulaDelayControlDiv.appendChild(nebulaDelaySlider);
-            const nebulaDelayValueSpan = document.createElement("span");
-            nebulaDelayValueSpan.id = "mixerNebulaDelayValue";
-            nebulaDelayValueSpan.textContent = nebulaDelaySlider.value;
-            nebulaDelayControlDiv.appendChild(nebulaDelayValueSpan);
-            nebulaContainer.appendChild(nebulaDelayControlDiv);
-
-            if (isReverbReady && reverbPreDelayNode) {
-                const nebulaReverbControlDiv = document.createElement("div");
-                nebulaReverbControlDiv.classList.add("mixer-control-item");
-                const nebulaReverbLabel = document.createElement("label");
-                nebulaReverbLabel.htmlFor = "mixerNebulaReverbSlider";
-                nebulaReverbLabel.textContent = `Nebula Reverb Send:`;
-                nebulaReverbControlDiv.appendChild(nebulaReverbLabel);
-                const nebulaReverbSlider = document.createElement("input");
-                nebulaReverbSlider.type = "range";
-                nebulaReverbSlider.id = "mixerNebulaReverbSlider";
-                nebulaReverbSlider.min = "0";
-                nebulaReverbSlider.max = "1";
-                nebulaReverbSlider.step = "0.01";
-                let initialNebulaReverb = DEFAULT_REVERB_SEND;
-                if (firstNebula && firstNebula.audioParams) {
-                     initialNebulaReverb = firstNebula.audioParams.reverbSend !== undefined ? firstNebula.audioParams.reverbSend : DEFAULT_REVERB_SEND;
-                }
-                nebulaReverbSlider.value = initialNebulaReverb.toFixed(2);
-                nebulaReverbSlider.title = `Reverb Send for all Nebula sounds (not in user groups)`;
-                nebulaReverbSlider.addEventListener("input", (e) => {
-                    const newSend = parseFloat(e.target.value);
-                    nodes.forEach((node) => {
-                        if (
-                            node.type === "nebula" &&
-                            !(userDefinedGroups || []).some(ug => ug.nodeIds.has(node.id)) &&
-                            node.audioNodes?.reverbSendGain?.gain
-                        ) {
-                            node.audioParams.reverbSend = newSend;
-                            node.audioNodes.reverbSendGain.gain.setTargetAtTime(newSend, audioContext.currentTime, timeConstant);
-                        }
-                    });
-                    const span = document.getElementById("mixerNebulaReverbValue");
-                    if (span) span.textContent = newSend.toFixed(2);
-                });
-                nebulaReverbSlider.addEventListener("change", saveState);
-                nebulaReverbControlDiv.appendChild(nebulaReverbSlider);
-                const nebulaReverbValueSpan = document.createElement("span");
-                nebulaReverbValueSpan.id = "mixerNebulaReverbValue";
-                nebulaReverbValueSpan.textContent = nebulaReverbSlider.value;
-                nebulaReverbControlDiv.appendChild(nebulaReverbValueSpan);
-                nebulaContainer.appendChild(nebulaReverbControlDiv);
-            }
-            fragment.appendChild(nebulaContainer);
-        }
-    }
+    const masterVolumeSliderContainerId = 'nexus-master-volume-slider';
+    const masterVolumeSliderDiv = document.createElement('div');
+    masterVolumeSliderDiv.id = masterVolumeSliderContainerId;
+    masterFaderAndMeterContainer.appendChild(masterVolumeSliderDiv);
+    masterStrip.appendChild(masterFaderAndMeterContainer);
     
+    nexusElementsToInitialize.push({
+        id: masterVolumeSliderContainerId, type: 'Slider',
+        options: {'size': [20, 140], 'mode': 'absolute', 'min': 0, 'max': 1.2, 'step': 0.01, 'value': masterGain ? masterGain.gain.value : 0.8},
+        isVolumeSlider: true, meterId: masterVolumeMeterContainerId, gainNodeToControl: masterGain
+    });
+    nexusElementsToInitialize.push({
+        id: masterVolumeMeterContainerId, type: 'Meter',
+        options: {'size': [15, 140]},
+        audioNodeToAnalyze: masterGain
+    });
 
+    const masterLabelP = document.createElement("p");
+    masterLabelP.classList.add("channel-label");
+    masterLabelP.textContent = "MASTER";
+    masterStrip.appendChild(masterLabelP);
+    fragment.appendChild(masterStrip);
+
+    const delayGlobalGroup = document.createElement('div');
+    delayGlobalGroup.classList.add('global-effect-group');
+    const delayGlobalTitle = document.createElement('h4');
+    delayGlobalTitle.textContent = "Global Delay";
+    delayGlobalGroup.appendChild(delayGlobalTitle);
+
+    const masterDelayTimeDialContainerId = 'nexus-global-delay-time-dial';
+    const masterDelayTimeDialContainer = document.createElement('div');
+    masterDelayTimeDialContainer.id = masterDelayTimeDialContainerId;
+    masterDelayTimeDialContainer.classList.add('send-control-wrapper');
+    const masterDelayTimeLabel = document.createElement('label');
+    masterDelayTimeLabel.textContent = "TIME";
+    delayGlobalGroup.appendChild(masterDelayTimeLabel);
+    delayGlobalGroup.appendChild(masterDelayTimeDialContainer);
+    nexusElementsToInitialize.push({
+        id: masterDelayTimeDialContainerId, type: 'Dial',
+        options: {'size': [40, 40], 'interaction': 'radial', 'mode': 'relative', 'min': 0.05, 'max': 1, 'step': 0.01, 'value': delayNode ? delayNode.delayTime.value : 0.25},
+        changeCallback: function(v) { if (delayNode) delayNode.delayTime.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+
+    const masterDelayFeedbackDialContainerId = 'nexus-global-delay-feedback-dial';
+    const masterDelayFeedbackDialContainer = document.createElement('div');
+    masterDelayFeedbackDialContainer.id = masterDelayFeedbackDialContainerId;
+    masterDelayFeedbackDialContainer.classList.add('send-control-wrapper');
+    const masterDelayFeedbackLabel = document.createElement('label');
+    masterDelayFeedbackLabel.textContent = "FEEDBACK";
+    delayGlobalGroup.appendChild(masterDelayFeedbackLabel);
+    delayGlobalGroup.appendChild(masterDelayFeedbackDialContainer);
+    nexusElementsToInitialize.push({
+        id: masterDelayFeedbackDialContainerId, type: 'Dial',
+        options: {'size': [40, 40], 'interaction': 'radial', 'mode': 'relative', 'min': 0, 'max': 0.9, 'step': 0.01, 'value': delayFeedbackGain ? delayFeedbackGain.gain.value : 0.4},
+        changeCallback: function(v) { if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+    globalEffectsFragment.appendChild(delayGlobalGroup);
+
+    const reverbGlobalGroup = document.createElement('div');
+    reverbGlobalGroup.classList.add('global-effect-group');
+    const reverbGlobalTitle = document.createElement('h4');
+    reverbGlobalTitle.textContent = "Global Reverb";
+    reverbGlobalGroup.appendChild(reverbGlobalTitle);
     
-    if (userDefinedGroups && userDefinedGroups.length > 0) {
-        const userGroupSectionTitle = document.createElement("h4");
-        userGroupSectionTitle.textContent = "User Groups";
-        userGroupSectionTitle.style.marginTop = "15px"; 
-        userGroupSectionTitle.style.textAlign = "center";
-        fragment.appendChild(userGroupSectionTitle);
-
-        userDefinedGroups.forEach((group, index) => {
-            if (!group.gainNode) { 
-                 if(audioContext) { 
-                    group.gainNode = audioContext.createGain();
-                    group.gainNode.gain.value = group.volume !== undefined ? group.volume : 1.0;
-                    group.gainNode.connect(masterGain);
-
-                    if (!group.delaySendGainNode && masterDelaySendGain) {
-                        group.delaySendGainNode = audioContext.createGain();
-                        group.delaySendGainNode.gain.value = group.delaySendLevel !== undefined ? group.delaySendLevel : DEFAULT_DELAY_SEND;
-                        group.gainNode.connect(group.delaySendGainNode);
-                        group.delaySendGainNode.connect(masterDelaySendGain);
-                    }
-                    if (!group.reverbSendGainNode && reverbPreDelayNode) {
-                        group.reverbSendGainNode = audioContext.createGain();
-                        group.reverbSendGainNode.gain.value = group.reverbSendLevel !== undefined ? group.reverbSendLevel : DEFAULT_REVERB_SEND;
-                        group.gainNode.connect(group.reverbSendGainNode);
-                        group.reverbSendGainNode.connect(reverbPreDelayNode);
-                    }
-                 } else return; 
-            }
-            
-            const groupContainer = document.createElement("div");
-            groupContainer.classList.add("mixer-group-control-section", "mixer-user-group");
-            groupContainer.dataset.groupId = group.id;
-            groupContainer.style.borderLeft = "3px solid var(--user-group-color, #FFA500)";
-
-            const volumeControlDiv = document.createElement("div");
-            volumeControlDiv.classList.add("mixer-control-item");
-            const volumeLabel = document.createElement("label");
-            const volumeSliderId = `mixerUserGroupSlider_${group.id.replace(/\s+/g, '_')}`;
-            volumeLabel.htmlFor = volumeSliderId;
-            volumeLabel.textContent = `User Group ${index + 1} (${group.nodeIds?.size ?? "N/A"} nodes) Vol:`;
-            volumeControlDiv.appendChild(volumeLabel);
-            const volumeSlider = document.createElement("input");
-            volumeSlider.type = "range";
-            volumeSlider.id = volumeSliderId;
-            volumeSlider.min = "0";
-            volumeSlider.max = "1.5";
-            volumeSlider.step = "0.01";
-            volumeSlider.value = (group.gainNode.gain.value !== undefined ? group.gainNode.gain.value : group.volume).toFixed(2);
-            volumeSlider.title = `Volume for User Group ${index + 1}`;
-            volumeSlider.addEventListener("input", (e) => {
-                const newVol = parseFloat(e.target.value);
-                group.gainNode.gain.setTargetAtTime(newVol, audioContext.currentTime, timeConstant);
-                group.volume = newVol; 
-                const valueSpan = document.getElementById(`mixerUserGroupValue_${group.id.replace(/\s+/g, '_')}`);
-                if (valueSpan) valueSpan.textContent = newVol.toFixed(2);
-            });
-            volumeSlider.addEventListener("change", saveState);
-            volumeControlDiv.appendChild(volumeSlider);
-            const volumeValueSpan = document.createElement("span");
-            volumeValueSpan.id = `mixerUserGroupValue_${group.id.replace(/\s+/g, '_')}`;
-            volumeValueSpan.textContent = volumeSlider.value;
-            volumeControlDiv.appendChild(volumeValueSpan);
-            groupContainer.appendChild(volumeControlDiv);
-
-            if (group.delaySendGainNode && masterDelaySendGain) {
-                const groupDelayControlDiv = document.createElement("div");
-                groupDelayControlDiv.classList.add("mixer-control-item");
-                const groupDelayLabel = document.createElement("label");
-                const groupDelaySliderId = `mixerUserGroupDelaySlider_${group.id.replace(/\s+/g, '_')}`;
-                groupDelayLabel.htmlFor = groupDelaySliderId;
-                groupDelayLabel.textContent = `Delay Send:`;
-                groupDelayControlDiv.appendChild(groupDelayLabel);
-                const groupDelaySlider = document.createElement("input");
-                groupDelaySlider.type = "range";
-                groupDelaySlider.id = groupDelaySliderId;
-                groupDelaySlider.min = "0";
-                groupDelaySlider.max = "1";
-                groupDelaySlider.step = "0.01";
-                groupDelaySlider.title = `Delay Send for User Group ${index + 1}`;
-                groupDelaySlider.value = (group.delaySendGainNode.gain.value !== undefined ? group.delaySendGainNode.gain.value : group.delaySendLevel).toFixed(2);
-                groupDelaySlider.addEventListener("input", (e) => {
-                    const newSendLevel = parseFloat(e.target.value);
-                    group.delaySendGainNode.gain.setTargetAtTime(newSendLevel, audioContext.currentTime, timeConstant);
-                    group.delaySendLevel = newSendLevel;
-                    const valueSpan = document.getElementById(`mixerUserGroupDelayValue_${group.id.replace(/\s+/g, '_')}`);
-                    if (valueSpan) valueSpan.textContent = newSendLevel.toFixed(2);
-                });
-                groupDelaySlider.addEventListener("change", saveState);
-                groupDelayControlDiv.appendChild(groupDelaySlider);
-                const groupDelayValueSpan = document.createElement("span");
-                groupDelayValueSpan.id = `mixerUserGroupDelayValue_${group.id.replace(/\s+/g, '_')}`;
-                groupDelayValueSpan.textContent = groupDelaySlider.value;
-                groupDelayControlDiv.appendChild(groupDelayValueSpan);
-                groupContainer.appendChild(groupDelayControlDiv);
-            }
-
-            if (isReverbReady && group.reverbSendGainNode && reverbPreDelayNode) {
-                const groupReverbControlDiv = document.createElement("div");
-                groupReverbControlDiv.classList.add("mixer-control-item");
-                const groupReverbLabel = document.createElement("label");
-                const groupReverbSliderId = `mixerUserGroupReverbSlider_${group.id.replace(/\s+/g, '_')}`;
-                groupReverbLabel.htmlFor = groupReverbSliderId;
-                groupReverbLabel.textContent = `Reverb Send:`;
-                groupReverbControlDiv.appendChild(groupReverbLabel);
-                const groupReverbSlider = document.createElement("input");
-                groupReverbSlider.type = "range";
-                groupReverbSlider.id = groupReverbSliderId;
-                groupReverbSlider.min = "0";
-                groupReverbSlider.max = "1";
-                groupReverbSlider.step = "0.01";
-                groupReverbSlider.title = `Reverb Send for User Group ${index + 1}`;
-                groupReverbSlider.value = (group.reverbSendGainNode.gain.value !== undefined ? group.reverbSendGainNode.gain.value : group.reverbSendLevel).toFixed(2);
-                groupReverbSlider.addEventListener("input", (e) => {
-                    const newSendLevel = parseFloat(e.target.value);
-                    group.reverbSendGainNode.gain.setTargetAtTime(newSendLevel, audioContext.currentTime, timeConstant);
-                    group.reverbSendLevel = newSendLevel;
-                    const valueSpan = document.getElementById(`mixerUserGroupReverbValue_${group.id.replace(/\s+/g, '_')}`);
-                    if (valueSpan) valueSpan.textContent = newSendLevel.toFixed(2);
-                });
-                groupReverbSlider.addEventListener("change", saveState);
-                groupReverbControlDiv.appendChild(groupReverbSlider);
-                const groupReverbValueSpan = document.createElement("span");
-                groupReverbValueSpan.id = `mixerUserGroupReverbValue_${group.id.replace(/\s+/g, '_')}`;
-                groupReverbValueSpan.textContent = groupReverbSlider.value;
-                groupReverbControlDiv.appendChild(groupReverbValueSpan);
-                groupContainer.appendChild(groupReverbControlDiv);
-            }
-            fragment.appendChild(groupContainer);
+    const masterReverbTypeSelectContainer = document.createElement('div');
+    masterReverbTypeSelectContainer.classList.add('send-control-wrapper');
+    const masterReverbTypeLabel = document.createElement('label');
+    masterReverbTypeLabel.htmlFor = 'mixerReverbTypeSelect';
+    masterReverbTypeLabel.textContent = 'TYPE';
+    reverbGlobalGroup.appendChild(masterReverbTypeLabel);
+    const masterReverbSelect = document.createElement("select");
+    masterReverbSelect.id = "mixerReverbTypeSelect";
+    masterReverbSelect.style.width = "calc(100% - 4px)"; masterReverbSelect.style.fontSize = "0.7em"; masterReverbSelect.style.padding = "3px"; masterReverbSelect.style.margin = "0 auto"; masterReverbSelect.style.boxSizing = "border-box";
+    if (typeof impulseResponses !== 'undefined' && impulseResponses.length > 0) {
+        impulseResponses.forEach(ir => {
+            const option = document.createElement("option");
+            option.value = ir.url; option.textContent = ir.name;
+            if (currentIRUrl === ir.url) option.selected = true;
+            masterReverbSelect.appendChild(option);
         });
     }
+    masterReverbSelect.addEventListener("change", (e) => { if (typeof updateReverbIR === "function") updateReverbIR(e.target.value); });
+    masterReverbTypeSelectContainer.appendChild(masterReverbSelect);
+    reverbGlobalGroup.appendChild(masterReverbTypeSelectContainer);
+    globalEffectsFragment.appendChild(reverbGlobalGroup);
 
-    
-    const autoGroups = identifiedGroups.filter(g => !g.userDefined && g.nodeIds && g.nodeIds.size > 0);
-    if (autoGroups.length > 0) {
-        const autoGroupSectionTitle = document.createElement("h4");
-        autoGroupSectionTitle.textContent = "Constellation Groups";
-        autoGroupSectionTitle.style.marginTop = "15px";
-        autoGroupSectionTitle.style.textAlign = "center";
-        fragment.appendChild(autoGroupSectionTitle);
+    const specialGroups = [
+        { id: "portalDrones", label: "PORTALS", volumeGainNode: portalGroupGain, getNodes: () => nodes.filter(n => n.type === PORTAL_NEBULA_TYPE && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))), defaultVolume: 0.7, defaultDelaySend: DEFAULT_DELAY_SEND * 1.2, defaultReverbSend: DEFAULT_REVERB_SEND * 1.5 },
+        { id: "nebulaSounds", label: "NEBULAE", volumeGainNode: originalNebulaGroupGain, getNodes: () => nodes.filter(n => n.type === "nebula" && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))), defaultVolume: 0.8, defaultDelaySend: DEFAULT_DELAY_SEND, defaultReverbSend: DEFAULT_REVERB_SEND }
+    ];
 
-        autoGroups.forEach((group, index) => {
-            if (!group.gainNode) return;
-            const groupContainer = document.createElement("div");
-            groupContainer.classList.add("mixer-group-control-section", "mixer-auto-group");
-            groupContainer.dataset.groupId = group.id; 
+    specialGroups.forEach(sg => {
+        const groupNodes = sg.getNodes();
+        if (groupNodes.length === 0 && !(sg.volumeGainNode && sg.volumeGainNode.gain.value > 0.001)){
+             if (!((sg.id === "portalDrones" && portalGroupGain && portalGroupGain.gain.value > 0.001) || (sg.id === "nebulaSounds" && originalNebulaGroupGain && originalNebulaGroupGain.gain.value > 0.001))) return;
+        }
+        const strip = document.createElement("section");
+        strip.classList.add("channel-strip", `special-group-${sg.id}`); strip.id = `channel-strip-${sg.id}`;
+        const sendsDiv = document.createElement("div");
+        sendsDiv.classList.add("channel-sends");
 
-            const volumeControlDiv = document.createElement("div");
-            volumeControlDiv.classList.add("mixer-control-item");
-            const volumeLabel = document.createElement("label");
-            const volumeSliderId = `mixerGroupSlider_${group.id.replace(/\s+/g, '_')}`;
-            volumeLabel.htmlFor = volumeSliderId;
-            volumeLabel.textContent = `Constellation ${index + 1} (${group.nodeIds?.size ?? "N/A"} nodes) Vol:`;
-            volumeControlDiv.appendChild(volumeLabel);
-            const volumeSlider = document.createElement("input");
-            volumeSlider.type = "range";
-            volumeSlider.id = volumeSliderId;
-            volumeSlider.min = "0";
-            volumeSlider.max = "1.5";
-            volumeSlider.step = "0.01";
-            volumeSlider.value = group.gainNode.gain.value.toFixed(2);
-            volumeSlider.title = `Volume for Constellation Group ${index + 1}`;
-            volumeSlider.addEventListener("input", (e) => {
-                setSpecificGroupVolume(group.id, parseFloat(e.target.value));
-            });
-            volumeSlider.addEventListener("change", saveState);
-            volumeControlDiv.appendChild(volumeSlider);
-            const volumeValueSpan = document.createElement("span");
-            volumeValueSpan.id = `mixerGroupValue_${group.id.replace(/\s+/g, '_')}`;
-            volumeValueSpan.textContent = volumeSlider.value;
-            volumeControlDiv.appendChild(volumeValueSpan);
-            groupContainer.appendChild(volumeControlDiv);
-
-            const delayControlDiv = document.createElement("div");
-            delayControlDiv.classList.add("mixer-control-item");
-            const delayLabel = document.createElement("label");
-            const delaySliderId = `mixerGroupDelaySlider_${group.id.replace(/\s+/g, '_')}`;
-            delayLabel.htmlFor = delaySliderId;
-            delayLabel.textContent = `Delay Send:`;
-            delayControlDiv.appendChild(delayLabel);
-            const delaySlider = document.createElement("input");
-            delaySlider.type = "range";
-            delaySlider.id = delaySliderId;
-            delaySlider.min = "0";
-            delaySlider.max = "1";
-            delaySlider.step = "0.01";
-            delaySlider.title = `Delay Send for Constellation Group ${index + 1}`;
-            let initialDelaySend = DEFAULT_DELAY_SEND;
-            if (group.nodeIds.size > 0) {
-                const firstNodeId = group.nodeIds.values().next().value;
-                const firstNode = findNodeById(firstNodeId);
-                if (firstNode && firstNode.audioParams) {
-                    initialDelaySend =
-                        firstNode.audioParams.delaySend ?? DEFAULT_DELAY_SEND;
-                }
-            }
-            delaySlider.value = initialDelaySend.toFixed(2);
-            delaySlider.addEventListener("input", (e) => {
-                setSpecificGroupDelaySend(group.id, parseFloat(e.target.value));
-            });
-            delaySlider.addEventListener("change", saveState);
-            delayControlDiv.appendChild(delaySlider);
-            const delayValueSpan = document.createElement("span");
-            delayValueSpan.id = `mixerGroupDelayValue_${group.id.replace(/\s+/g, '_')}`;
-            delayValueSpan.textContent = delaySlider.value;
-            delayControlDiv.appendChild(delayValueSpan);
-            groupContainer.appendChild(delayControlDiv);
-
-            if (isReverbReady) {
-                const reverbControlDiv = document.createElement("div");
-                reverbControlDiv.classList.add("mixer-control-item");
-                const reverbLabel = document.createElement("label");
-                const reverbSliderId = `mixerGroupReverbSlider_${group.id.replace(/\s+/g, '_')}`;
-                reverbLabel.htmlFor = reverbSliderId;
-                reverbLabel.textContent = `Reverb Send:`;
-                reverbControlDiv.appendChild(reverbLabel);
-                const reverbSlider = document.createElement("input");
-                reverbSlider.type = "range";
-                reverbSlider.id = reverbSliderId;
-                reverbSlider.min = "0";
-                reverbSlider.max = "1";
-                reverbSlider.step = "0.01";
-                reverbSlider.title = `Reverb Send for Constellation Group ${index + 1}`;
-                let initialReverbSend = DEFAULT_REVERB_SEND;
-                if (group.nodeIds.size > 0) {
-                    const firstNodeId = group.nodeIds.values().next().value;
-                    const firstNode = findNodeById(firstNodeId);
-                    if (firstNode && firstNode.audioParams) {
-                        initialReverbSend =
-                            firstNode.audioParams.reverbSend ?? DEFAULT_REVERB_SEND;
-                    }
-                }
-                reverbSlider.value = initialReverbSend.toFixed(2);
-                reverbSlider.addEventListener("input", (e) => {
-                    setSpecificGroupReverbSend(group.id, parseFloat(e.target.value));
-                });
-                reverbSlider.addEventListener("change", saveState);
-                reverbControlDiv.appendChild(reverbSlider);
-                const reverbValueSpan = document.createElement("span");
-                reverbValueSpan.id = `mixerGroupReverbValue_${group.id.replace(/\s+/g, '_')}`;
-                reverbValueSpan.textContent = reverbSlider.value;
-                reverbControlDiv.appendChild(reverbValueSpan);
-                groupContainer.appendChild(reverbControlDiv);
-            }
-            fragment.appendChild(groupContainer);
+        let initialDelaySend = sg.defaultDelaySend;
+        let initialReverbSend = sg.defaultReverbSend;
+        if (groupNodes.length > 0 && groupNodes[0].audioParams) {
+            initialDelaySend = groupNodes[0].audioParams.delaySend !== undefined ? groupNodes[0].audioParams.delaySend : sg.defaultDelaySend;
+            initialReverbSend = groupNodes[0].audioParams.reverbSend !== undefined ? groupNodes[0].audioParams.reverbSend : sg.defaultReverbSend;
+        }
+        
+        const sgDelayDialId = `nexus-delay-dial-${sg.id}`;
+        const sgDelayDialDiv = document.createElement('div'); sgDelayDialDiv.id = sgDelayDialId; sgDelayDialDiv.classList.add('send-control-wrapper');
+        const sgDelayLabel = document.createElement('label'); sgDelayLabel.textContent = "DELAY";
+        sendsDiv.appendChild(sgDelayLabel); sendsDiv.appendChild(sgDelayDialDiv);
+        nexusElementsToInitialize.push({
+            id: sgDelayDialId, type: 'Dial', options: {'size': [38,38], 'interaction':'radial', 'mode':'relative', 'min':0,'max':1,'step':0.01, 'value':initialDelaySend},
+            changeCallback: function(v) { groupNodes.forEach(node => { if(node.audioNodes?.delaySendGain?.gain) { if(node.audioParams) node.audioParams.delaySend = v; node.audioNodes.delaySendGain.gain.setTargetAtTime(v, now, timeConstant);}}); saveState(); }
         });
-    }
 
+        const sgReverbDialId = `nexus-reverb-dial-${sg.id}`;
+        const sgReverbDialDiv = document.createElement('div'); sgReverbDialDiv.id = sgReverbDialId; sgReverbDialDiv.classList.add('send-control-wrapper');
+        const sgReverbLabel = document.createElement('label'); sgReverbLabel.textContent = "REVERB";
+        sendsDiv.appendChild(sgReverbLabel); sendsDiv.appendChild(sgReverbDialDiv);
+        nexusElementsToInitialize.push({
+            id: sgReverbDialId, type: 'Dial', options: {'size': [38,38], 'interaction':'radial', 'mode':'relative', 'min':0,'max':1,'step':0.01, 'value':initialReverbSend},
+            changeCallback: function(v) { groupNodes.forEach(node => { if(node.audioNodes?.reverbSendGain?.gain) { if(node.audioParams) node.audioParams.reverbSend = v; node.audioNodes.reverbSendGain.gain.setTargetAtTime(v, now, timeConstant);}}); saveState(); }
+        });
+        strip.appendChild(sendsDiv);
+
+        const sgFaderAndMeterContainer = document.createElement("div"); sgFaderAndMeterContainer.classList.add("fader-and-meter-container");
+        const sgVolumeMeterId = `nexus-volume-meter-${sg.id}`;
+        const sgVolumeMeterDiv = document.createElement('div'); sgVolumeMeterDiv.id = sgVolumeMeterId;
+        sgFaderAndMeterContainer.appendChild(sgVolumeMeterDiv);
+        const sgVolumeSliderId = `nexus-volume-slider-${sg.id}`;
+        const sgVolumeSliderDiv = document.createElement('div'); sgVolumeSliderDiv.id = sgVolumeSliderId;
+        sgFaderAndMeterContainer.appendChild(sgVolumeSliderDiv);
+        strip.appendChild(sgFaderAndMeterContainer);
+        const initialSgVolume = sg.volumeGainNode ? sg.volumeGainNode.gain.value : sg.defaultVolume;
+        nexusElementsToInitialize.push({
+            id: sgVolumeSliderId, type: 'Slider', options: {'size':[20,100],'mode':'absolute','min':0,'max':1.5,'step':0.01,'value':initialSgVolume},
+            isVolumeSlider: true, meterId: sgVolumeMeterId, gainNodeToControl: sg.volumeGainNode
+        });
+        nexusElementsToInitialize.push({id: sgVolumeMeterId, type: 'Meter', options: {'size':[15,100]}, audioNodeToAnalyze: sg.volumeGainNode });
+
+        const sgLabelP = document.createElement("p"); sgLabelP.classList.add("channel-label"); sgLabelP.textContent = sg.label;
+        strip.appendChild(sgLabelP);
+        fragment.appendChild(strip);
+    });
+
+    const allOtherGroups = identifiedGroups.filter(g => g.nodeIds && g.nodeIds.size > 0);
+    allOtherGroups.forEach((group, index) => {
+        const strip = document.createElement("section");
+        strip.classList.add("channel-strip", group.userDefined ? "user-group" : "auto-group"); strip.id = `channel-strip-${group.id.replace(/\s+/g, '_')}`;
+        const sendsDiv = document.createElement("div"); sendsDiv.classList.add("channel-sends");
+
+        const groupDelaySendNode = group.userDefined ? group.delaySendGainNode : null;
+        let initialGroupDelaySend = DEFAULT_DELAY_SEND;
+        if(groupDelaySendNode) initialGroupDelaySend = groupDelaySendNode.gain.value;
+        else if (!group.userDefined && group.nodeIds.size > 0) { const firstNode = findNodeById(group.nodeIds.values().next().value); if (firstNode?.audioParams) initialGroupDelaySend = firstNode.audioParams.delaySend ?? DEFAULT_DELAY_SEND; }
+
+        const groupDelayDialId = `nexus-group-delay-dial-${group.id.replace(/\s+/g, '_')}`;
+        const groupDelayDialDiv = document.createElement('div'); groupDelayDialDiv.id = groupDelayDialId; groupDelayDialDiv.classList.add('send-control-wrapper');
+        const groupDelayLabel = document.createElement('label'); groupDelayLabel.textContent = "DELAY";
+        sendsDiv.appendChild(groupDelayLabel); sendsDiv.appendChild(groupDelayDialDiv);
+        nexusElementsToInitialize.push({
+            id: groupDelayDialId, type: 'Dial', options: {'size':[38,38],'interaction':'radial','mode':'relative','min':0,'max':1,'step':0.01,'value':initialGroupDelaySend},
+            changeCallback: function(v) { setSpecificGroupDelaySend(group.id, v); saveState(); }
+        });
+        
+        const groupReverbSendNode = group.userDefined ? group.reverbSendGainNode : null;
+        let initialGroupReverbSend = DEFAULT_REVERB_SEND;
+        if(groupReverbSendNode) initialGroupReverbSend = groupReverbSendNode.gain.value;
+        else if (!group.userDefined && group.nodeIds.size > 0) { const firstNode = findNodeById(group.nodeIds.values().next().value); if (firstNode?.audioParams) initialGroupReverbSend = firstNode.audioParams.reverbSend ?? DEFAULT_REVERB_SEND; }
+
+        const groupReverbDialId = `nexus-group-reverb-dial-${group.id.replace(/\s+/g, '_')}`;
+        const groupReverbDialDiv = document.createElement('div'); groupReverbDialDiv.id = groupReverbDialId; groupReverbDialDiv.classList.add('send-control-wrapper');
+        const groupReverbLabel = document.createElement('label'); groupReverbLabel.textContent = "REVERB";
+        sendsDiv.appendChild(groupReverbLabel); sendsDiv.appendChild(groupReverbDialDiv);
+        nexusElementsToInitialize.push({
+            id: groupReverbDialId, type: 'Dial', options: {'size':[38,38],'interaction':'radial','mode':'relative','min':0,'max':1,'step':0.01,'value':initialGroupReverbSend},
+            changeCallback: function(v) { setSpecificGroupReverbSend(group.id, v); saveState(); }
+        });
+        strip.appendChild(sendsDiv);
+
+        const groupFaderAndMeterContainer = document.createElement("div"); groupFaderAndMeterContainer.classList.add("fader-and-meter-container");
+        const groupVolumeMeterId = `nexus-group-volume-meter-${group.id.replace(/\s+/g, '_')}`;
+        const groupVolumeMeterDiv = document.createElement('div'); groupVolumeMeterDiv.id = groupVolumeMeterId;
+        groupFaderAndMeterContainer.appendChild(groupVolumeMeterDiv);
+        const groupVolumeSliderId = `nexus-group-volume-slider-${group.id.replace(/\s+/g, '_')}`;
+        const groupVolumeSliderDiv = document.createElement('div'); groupVolumeSliderDiv.id = groupVolumeSliderId;
+        groupFaderAndMeterContainer.appendChild(groupVolumeSliderDiv);
+        strip.appendChild(groupFaderAndMeterContainer);
+        const initialGroupVolumeVal = (group.gainNode ? group.gainNode.gain.value : group.volume) ?? 1.0;
+        nexusElementsToInitialize.push({
+            id: groupVolumeSliderId, type: 'Slider', options: {'size':[20,100],'mode':'absolute','min':0,'max':1.5,'step':0.01,'value':initialGroupVolumeVal},
+            isVolumeSlider: true, meterId: groupVolumeMeterId, groupId: group.id, gainNodeToControl: group.gainNode
+        });
+        nexusElementsToInitialize.push({id: groupVolumeMeterId, type: 'Meter', options: {'size':[15,100]}, audioNodeToAnalyze: group.gainNode });
+        
+        const groupLabelP = document.createElement("p"); groupLabelP.classList.add("channel-label");
+        groupLabelP.textContent = group.userDefined ? `USER ${group.id.split('_')[1] || (index + 1)}` : `GROUP ${group.id.split('_')[1] || (index + 1)}`;
+        strip.appendChild(groupLabelP);
+        fragment.appendChild(strip);
+    });
+
+    globalEffectsSection.appendChild(globalEffectsFragment);
     mixerGroupControlsContainer.appendChild(fragment);
 
-    if (mixerGroupControlsContainer.childElementCount === 0) {
+    const reverbTimeAmountWrapper = document.createElement('div');
+    reverbTimeAmountWrapper.classList.add('nexus-position-wrapper');
+    const reverbTimeAmountLabel = document.createElement('label');
+    reverbTimeAmountLabel.textContent = 'Reverb Time (X) & Wet (Y)';
+    reverbTimeAmountWrapper.appendChild(reverbTimeAmountLabel);
+    const reverbTimeAmountPositionId = 'nexus-reverb-time-amount';
+    const reverbTimeAmountDiv = document.createElement('div');
+    reverbTimeAmountDiv.id = reverbTimeAmountPositionId;
+    reverbTimeAmountWrapper.appendChild(reverbTimeAmountDiv);
+    advancedControlsFragment.appendChild(reverbTimeAmountWrapper);
+    
+    nexusPositionElementsToInitialize.push({
+        id: reverbTimeAmountPositionId, type: 'Position',
+        options: {
+            'size': [120, 100], 
+            'mode': 'absolute',
+            'x': reverbPreDelayNode ? reverbPreDelayNode.delayTime.value : 0.02,
+            'minX': 0.001, 'maxX': 0.2, 'stepX': 0.001,
+            'y': reverbWetGain ? reverbWetGain.gain.value : 0.5,
+            'minY': 0, 'maxY': 1, 'stepY': 0.01
+        },
+        changeCallback: function(pos) {
+            if (reverbPreDelayNode) reverbPreDelayNode.delayTime.setTargetAtTime(pos.x, now, timeConstant);
+            if (reverbWetGain) reverbWetGain.gain.setTargetAtTime(pos.y, now, timeConstant);
+            saveState();
+        }
+    });
+
+    const reverbToneWrapper = document.createElement('div');
+    reverbToneWrapper.classList.add('nexus-position-wrapper');
+    const reverbToneLabel = document.createElement('label');
+    reverbToneLabel.textContent = 'Reverb LP (X) & HP (Y)';
+    reverbToneWrapper.appendChild(reverbToneLabel);
+    const reverbTonePositionId = 'nexus-reverb-tone';
+    const reverbToneDiv = document.createElement('div');
+    reverbToneDiv.id = reverbTonePositionId;
+    reverbToneWrapper.appendChild(reverbToneDiv);
+    advancedControlsFragment.appendChild(reverbToneWrapper);
+
+    nexusPositionElementsToInitialize.push({
+        id: reverbTonePositionId, type: 'Position',
+        options: {
+            'size': [120, 100],
+            'mode': 'absolute',
+            'x': reverbLowPass ? reverbLowPass.frequency.value : 8000,
+            'minX': 200, 'maxX': 15000, 'stepX': 50, 
+            'y': reverbHighPass ? reverbHighPass.frequency.value : 100,
+            'minY': 20, 'maxY': 2000, 'stepY': 10 
+        },
+        changeCallback: function(pos) {
+            if (reverbLowPass) reverbLowPass.frequency.setTargetAtTime(pos.x, now, timeConstant);
+            if (reverbHighPass) reverbHighPass.frequency.setTargetAtTime(pos.y, now, timeConstant);
+            saveState();
+        }
+    });
+
+    advancedControlsSection.appendChild(advancedControlsFragment);
+
+
+    if (typeof Nexus === 'undefined') {
+        console.error("NexusUI library is not loaded. Cannot initialize mixer controls.");
+        mixerGroupControlsContainer.innerHTML = "<p style='color:red;'>Error: UI Library Missing for Mixer</p>";
+        globalEffectsSection.innerHTML = "";
+        advancedControlsSection.innerHTML = "";
+        return;
+    }
+    
+    const initializedMeters = {};
+    const initializedSliders = {};
+
+    nexusElementsToInitialize.forEach(config => {
+        let component;
+        const elementExists = document.getElementById(config.id);
+        if (!elementExists) {
+            console.error(`Container element with ID #${config.id} not found in DOM for NexusUI ${config.type}.`);
+            return;
+        }
+
+        try {
+            if (config.type === 'Slider') {
+                component = new Nexus.Slider(`#${config.id}`, config.options);
+                initializedSliders[config.id] = component;
+            } else if (config.type === 'Dial') {
+                component = new Nexus.Dial(`#${config.id}`, config.options);
+            } else if (config.type === 'Meter') {
+                component = new Nexus.Meter(`#${config.id}`, config.options);
+                initializedMeters[config.id] = component;
+                if (config.audioNodeToAnalyze && audioContext && component.connect) {
+                    try {
+                        const analyser = audioContext.createAnalyser();
+                        analyser.fftSize = config.options.fftSize || 256;
+                        config.audioNodeToAnalyze.connect(analyser);
+                        component.connect(analyser);
+                    } catch (e) {
+                         console.error(`Error connecting Nexus.Meter (ID: ${config.id}) to AnalyserNode:`, e);
+                    }
+                }
+            }
+
+            if (component && config.changeCallback && config.type !== 'Meter') {
+                 component.on('change', config.changeCallback);
+            }
+            
+            if (config.isVolumeSlider && config.meterId) {
+                const sliderInstance = initializedSliders[config.id];
+                const meterInstanceToLink = initializedMeters[config.meterId]; 
+                if(sliderInstance){
+                    sliderInstance.on('change', function(v_slider) {
+                        if(config.gainNodeToControl) {
+                           config.gainNodeToControl.gain.setTargetAtTime(v_slider, now, timeConstant);
+                        } else if (config.groupId) {
+                           setSpecificGroupVolume(config.groupId, v_slider);
+                        }
+                        if (meterInstanceToLink && !config.audioNodeToAnalyze) {
+                            meterInstanceToLink.value = v_slider;
+                        }
+                        saveState();
+                    });
+                }
+            }
+
+        } catch (e) {
+            console.error(`Error initializing NexusUI ${config.type} for ID #${config.id}:`, e);
+            if(elementExists) elementExists.innerHTML = `<span style="color:red; font-size:0.7em;">UI Error</span>`;
+        }
+    });
+
+    nexusPositionElementsToInitialize.forEach(config => {
+        const elementExists = document.getElementById(config.id);
+        if (!elementExists) {
+            console.error(`Container element with ID #${config.id} not found in DOM for NexusUI Position.`);
+            return;
+        }
+        try {
+            const positionControl = new Nexus.Position(`#${config.id}`, config.options);
+            if (config.changeCallback) {
+                positionControl.on('change', config.changeCallback);
+            }
+        } catch (e) {
+            console.error(`Error initializing NexusUI Position for ID #${config.id}:`, e);
+            if(elementExists) elementExists.innerHTML = `<span style="color:red; font-size:0.7em;">UI Error</span>`;
+        }
+    });
+
+
+    if (mixerGroupControlsContainer.childElementCount === 0 && fragment.childElementCount === 0 && nexusElementsToInitialize.length === 0 && nexusPositionElementsToInitialize.length === 0) {
         const noGroupMsg = document.createElement("small");
-        noGroupMsg.textContent = "(No mixer controls available)";
+        noGroupMsg.textContent = "(No channels to display)";
+        noGroupMsg.style.textAlign = "center"; noGroupMsg.style.width = "100%"; noGroupMsg.style.padding = "20px"; noGroupMsg.style.color = "#888";
         mixerGroupControlsContainer.appendChild(noGroupMsg);
     }
-    mixerGroupControlsContainer.style.display = "block";
 }
+
 
 function updateNodeAudioParams(node) {
   if (!node.audioNodes || !isAudioReady) return;
@@ -5156,26 +5065,26 @@ function playSingleRetrigger(
         console.log(`[Retrigger Sampler V3] Calculated TargetRate: ${targetRate} for sampler ${samplerId}`);
 
         source.playbackRate.setValueAtTime(targetRate, scheduledPlayTime);
-        source.connect(audioNodes.lowPassFilter); // Connect source to the node's filter
+        source.connect(audioNodes.lowPassFilter); 
 
-        const mainNodeGain = audioNodes.gainNode; // Node's main gain stage
+        const mainNodeGain = audioNodes.gainNode; 
         mainNodeGain.gain.cancelScheduledValues(scheduledPlayTime);
-        mainNodeGain.gain.setValueAtTime(0, scheduledPlayTime); // Start clean for this retrigger hit
+        mainNodeGain.gain.setValueAtTime(0, scheduledPlayTime); 
         mainNodeGain.gain.linearRampToValueAtTime(
-          currentVolume, // Apply this step's volume
-          scheduledPlayTime + 0.005 // Quick attack
+          currentVolume, 
+          scheduledPlayTime + 0.005 
         );
         mainNodeGain.gain.setTargetAtTime(
-          0.0001, // Decay to near silence
-          scheduledPlayTime + 0.005, // Start decay after attack
-          0.03 + (params.retriggerIntervalMs / 1000) * 0.15 // Decay relative to interval, but ensure it's short
+          0.0001, 
+          scheduledPlayTime + 0.005, 
+          0.03 + (params.retriggerIntervalMs / 1000) * 0.15 
         );
 
         source.start(scheduledPlayTime);
         
         const sampleDurationOriginal = definition.buffer.duration;
         const effectiveSampleDuration = targetRate > 0 ? sampleDurationOriginal / targetRate : sampleDurationOriginal;
-        const envelopeDuration = 0.005 + 3 * (0.03 + (params.retriggerIntervalMs / 1000) * 0.15); // Approx. duration of the gain envelope
+        const envelopeDuration = 0.005 + 3 * (0.03 + (params.retriggerIntervalMs / 1000) * 0.15); 
         const stopTimeOffset = Math.min(effectiveSampleDuration, envelopeDuration + 0.05);
 
 
@@ -5193,8 +5102,8 @@ function playSingleRetrigger(
         osc2Gain,
         gainNode,
         lowPassFilter,
-        modulatorOsc1, // Corrected reference from your original file
-        modulatorGain1, // Corrected reference
+        modulatorOsc1, 
+        modulatorGain1, 
       } = audioNodes;
       const nodeSpecificAmpEnv = tempAudioParamsForRetrigger.ampEnv;
       const generalAudibleDefaultEnv = { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.25 };
@@ -5681,7 +5590,7 @@ function updateAndDrawParticles(deltaTime, now) {
     return true;
   });
 
-  // Only create and draw windParticles if "swimming_stars" is active
+  
   if (currentBackgroundType === "swimming_stars") {
     if (Math.random() < 0.25) createWindParticles(1);
     
@@ -11676,10 +11585,10 @@ function draw() {
   drawBackground(now); 
 
   if (currentBackgroundType === "silent_night") {
-      // Reduced parallax factors for much slower movement
-      const parallaxFactorFar = 0.05;  // Was 0.15
-      const parallaxFactorMid = 0.15; // Was 0.35
-      const parallaxFactorNear = 0.30; // Was 0.65
+      
+      const parallaxFactorFar = 0.05;  
+      const parallaxFactorMid = 0.15; 
+      const parallaxFactorNear = 0.30; 
       
       const baseTranslateX = viewOffsetX / viewScale; 
       const baseTranslateY = viewOffsetY / viewScale;
@@ -12102,7 +12011,7 @@ function generateWaveformPath(audioBuffer, targetPointCount = 200) {
                   chunkMax = 0;
                }
           }
-          // Debug log for the first few chunks
+          
           if (samplesInThisChunk > 0 && i < 3) {
               console.log(`[generateWaveformPath DEBUG] Chunk ${i} for wavetrail: min=${chunkMin.toFixed(4)}, max=${chunkMax.toFixed(4)}, samplesInChunk: ${samplesInThisChunk}`);
           } else if (i < 3) {
@@ -17735,7 +17644,7 @@ function changeScale(scaleKey, skipNodeUpdate = false) {
   }
 
   if (!skipNodeUpdate) {
-      const newThemeMeteorColors = getThemeMeteorColors(); // Get colors for the new theme
+      const newThemeMeteorColors = getThemeMeteorColors(); 
 
       nodes.forEach((node) => {
           if (node.type === "sound" || node.type === "nebula") {
@@ -17837,29 +17746,364 @@ function updateInfoToggleUI() {
   toggleInfoTextBtn.classList.toggle("active", isInfoTextVisible);
 }
 
-function updateMixerUI() {
-  if (!isAudioReady) return;
-  if (masterGain && masterVolumeSlider && masterVolumeValue) {
-    masterVolumeSlider.value = masterGain.gain.value;
-    masterVolumeValue.textContent = parseFloat(
-      masterVolumeSlider.value,
-    ).toFixed(2);
-  }
-  if (masterDelaySendGain && delaySendSlider && delaySendValue) {
-    delaySendSlider.value = masterDelaySendGain.gain.value;
-    delaySendValue.textContent = parseFloat(delaySendSlider.value).toFixed(2);
-  }
-  if (delayNode && delayTimeSlider && delayTimeValue) {
-    delayTimeSlider.value = delayNode.delayTime.value;
-    delayTimeValue.textContent =
-      parseFloat(delayTimeSlider.value).toFixed(2) + "s";
-  }
-  if (delayFeedbackGain && delayFeedbackSlider && delayFeedbackValue) {
-    delayFeedbackSlider.value = delayFeedbackGain.gain.value;
-    delayFeedbackValue.textContent = parseFloat(
-      delayFeedbackSlider.value,
-    ).toFixed(2);
-  }
+function createNexusControl(parentElement, controlId, nexusType, nexusOptions, changeCallback, audioNodeToAnalyze = null) {
+    const containerDiv = document.createElement('div');
+    containerDiv.id = controlId;
+
+    if (nexusOptions.label) {
+        const label = document.createElement('label');
+        label.htmlFor = controlId;
+        label.textContent = nexusOptions.label;
+        label.style.display = 'block';
+        label.style.textAlign = 'center';
+        label.style.fontSize = '0.7em';
+        label.style.marginBottom = '2px';
+        parentElement.appendChild(label);
+    }
+    parentElement.appendChild(containerDiv); 
+
+    
+    
+    
+    
+    return controlId; 
+}
+
+function updateMixerGUI() {
+    if (!mixerGroupControlsContainer || !isAudioReady || !audioContext) {
+        if (mixerGroupControlsContainer) {
+            mixerGroupControlsContainer.innerHTML = "<small>(Mixer not ready or no groups to display)</small>";
+        }
+        return;
+    }
+
+    mixerGroupControlsContainer.innerHTML = ""; 
+    const fragment = document.createDocumentFragment();
+    const now = audioContext.currentTime;
+    const timeConstant = 0.01;
+
+    
+    
+    const nexusElementsToInitialize = [];
+
+    
+    const masterStrip = document.createElement("section");
+    masterStrip.classList.add("channel-strip");
+    masterStrip.id = "master-channel-strip";
+
+    const masterSendsDiv = document.createElement("div");
+    masterSendsDiv.classList.add("channel-sends");
+
+    
+    const masterDelaySendDialContainerId = 'nexus-master-delay-send-dial';
+    const masterDelaySendDialContainer = document.createElement('div');
+    masterDelaySendDialContainer.id = masterDelaySendDialContainerId;
+    const masterDelaySendLabel = document.createElement('label');
+    masterDelaySendLabel.textContent = "DELAY";
+    masterDelaySendLabel.style.display = 'block'; masterDelaySendLabel.style.textAlign = 'center'; masterDelaySendLabel.style.fontSize = '0.7em';
+    masterSendsDiv.appendChild(masterDelaySendLabel);
+    masterSendsDiv.appendChild(masterDelaySendDialContainer);
+    nexusElementsToInitialize.push({ 
+        id: masterDelaySendDialContainerId, type: 'Dial', 
+        options: {'size': [40, 40], 'interaction': 'radial', 'mode': 'relative', 'min': 0, 'max': 1, 'step': 0.01, 'value': masterDelaySendGain ? masterDelaySendGain.gain.value : 0.3},
+        changeCallback: function(v) { if (masterDelaySendGain) masterDelaySendGain.gain.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+
+    
+    const masterReverbSendDialContainerId = 'nexus-master-reverb-send-dial';
+    const masterReverbSendDialContainer = document.createElement('div');
+    masterReverbSendDialContainer.id = masterReverbSendDialContainerId;
+    const masterReverbSendLabel = document.createElement('label');
+    masterReverbSendLabel.textContent = "REVERB";
+    masterReverbSendLabel.style.display = 'block'; masterReverbSendLabel.style.textAlign = 'center'; masterReverbSendLabel.style.fontSize = '0.7em';
+    masterSendsDiv.appendChild(masterReverbSendLabel);
+    masterSendsDiv.appendChild(masterReverbSendDialContainer);
+    nexusElementsToInitialize.push({ 
+        id: masterReverbSendDialContainerId, type: 'Dial', 
+        options: {'size': [40, 40], 'interaction': 'radial', 'mode': 'relative', 'min': 0, 'max': 1, 'step': 0.01, 'value': reverbWetGain ? reverbWetGain.gain.value : 0.5},
+        changeCallback: function(v) { if (reverbWetGain) reverbWetGain.gain.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+    masterStrip.appendChild(masterSendsDiv);
+
+    const masterFaderContainer = document.createElement("div");
+    masterFaderContainer.classList.add("fader-container");
+    masterFaderContainer.style.display = 'flex'; masterFaderContainer.style.flexDirection = 'column'; masterFaderContainer.style.alignItems = 'center';
+    
+    const masterVolumeSliderContainerId = 'nexus-master-volume-slider';
+    const masterVolumeSliderDiv = document.createElement('div');
+    masterVolumeSliderDiv.id = masterVolumeSliderContainerId;
+    masterFaderContainer.appendChild(masterVolumeSliderDiv);
+
+    const masterVolumeMeterContainerId = 'nexus-master-volume-meter';
+    const masterVolumeMeterDiv = document.createElement('div');
+    masterVolumeMeterDiv.id = masterVolumeMeterContainerId;
+    masterVolumeMeterDiv.style.marginTop = '5px';
+    masterFaderContainer.appendChild(masterVolumeMeterDiv);
+    masterStrip.appendChild(masterFaderContainer);
+    
+    nexusElementsToInitialize.push({ 
+        id: masterVolumeSliderContainerId, type: 'Slider', 
+        options: {'size': [20, 100], 'mode': 'absolute', 'min': 0, 'max': 1.2, 'step': 0.01, 'value': masterGain ? masterGain.gain.value : 0.8},
+        isVolumeSlider: true, meterId: masterVolumeMeterContainerId 
+    });
+    nexusElementsToInitialize.push({ 
+        id: masterVolumeMeterContainerId, type: 'Meter', 
+        options: {'size': [20, 80]},
+        audioNodeToAnalyze: masterGain 
+    });
+
+
+    const masterLabelP = document.createElement("p");
+    masterLabelP.classList.add("channel-label");
+    masterLabelP.textContent = "MASTER";
+    masterStrip.appendChild(masterLabelP);
+
+    const globalEffectsControlsContainer = document.createElement("div");
+    globalEffectsControlsContainer.classList.add("global-effects-controls");
+    globalEffectsControlsContainer.style.width = "100%"; globalEffectsControlsContainer.style.marginTop = "10px";
+
+    const masterDelayTimeDialContainerId = 'nexus-master-delay-time-dial';
+    const masterDelayTimeDialContainer = document.createElement('div');
+    masterDelayTimeDialContainer.id = masterDelayTimeDialContainerId;
+    const masterDelayTimeLabel = document.createElement('label');
+    masterDelayTimeLabel.textContent = "DLY TIME";
+    masterDelayTimeLabel.style.display = 'block'; masterDelayTimeLabel.style.textAlign = 'center'; masterDelayTimeLabel.style.fontSize = '0.7em';
+    globalEffectsControlsContainer.appendChild(masterDelayTimeLabel);
+    globalEffectsControlsContainer.appendChild(masterDelayTimeDialContainer);
+    nexusElementsToInitialize.push({ 
+        id: masterDelayTimeDialContainerId, type: 'Dial', 
+        options: {'size': [40, 40], 'interaction': 'radial', 'mode': 'relative', 'min': 0.05, 'max': 1, 'step': 0.01, 'value': delayNode ? delayNode.delayTime.value : 0.25},
+        changeCallback: function(v) { if (delayNode) delayNode.delayTime.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+
+    const masterDelayFeedbackDialContainerId = 'nexus-master-delay-feedback-dial';
+    const masterDelayFeedbackDialContainer = document.createElement('div');
+    masterDelayFeedbackDialContainer.id = masterDelayFeedbackDialContainerId;
+    const masterDelayFeedbackLabel = document.createElement('label');
+    masterDelayFeedbackLabel.textContent = "DLY FDBK";
+    masterDelayFeedbackLabel.style.display = 'block'; masterDelayFeedbackLabel.style.textAlign = 'center'; masterDelayFeedbackLabel.style.fontSize = '0.7em';
+    globalEffectsControlsContainer.appendChild(masterDelayFeedbackLabel);
+    globalEffectsControlsContainer.appendChild(masterDelayFeedbackDialContainer);
+    nexusElementsToInitialize.push({ 
+        id: masterDelayFeedbackDialContainerId, type: 'Dial', 
+        options: {'size': [40, 40], 'interaction': 'radial', 'mode': 'relative', 'min': 0, 'max': 0.9, 'step': 0.01, 'value': delayFeedbackGain ? delayFeedbackGain.gain.value : 0.4},
+        changeCallback: function(v) { if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(v, now, timeConstant); saveState(); }
+    });
+    
+    const masterReverbTypeSelectContainer = document.createElement('div');
+    masterReverbTypeSelectContainer.classList.add('send-control');
+    const masterReverbTypeLabel = document.createElement('label');
+    masterReverbTypeLabel.htmlFor = 'mixerReverbTypeSelect';
+    masterReverbTypeLabel.textContent = 'REVERB TYPE';
+    masterReverbTypeSelectContainer.appendChild(masterReverbTypeLabel);
+    const masterReverbSelect = document.createElement("select");
+    masterReverbSelect.id = "mixerReverbTypeSelect";
+    masterReverbSelect.style.width = "calc(100% - 10px)"; masterReverbSelect.style.fontSize = "0.65em"; masterReverbSelect.style.margin = "0 5px"; masterReverbSelect.style.boxSizing = "border-box";
+    if (typeof impulseResponses !== 'undefined' && impulseResponses.length > 0) {
+        impulseResponses.forEach(ir => {
+            const option = document.createElement("option");
+            option.value = ir.url; option.textContent = ir.name;
+            if (currentIRUrl === ir.url) option.selected = true;
+            masterReverbSelect.appendChild(option);
+        });
+    }
+    masterReverbSelect.addEventListener("change", (e) => { if (typeof updateReverbIR === "function") updateReverbIR(e.target.value); });
+    masterReverbTypeSelectContainer.appendChild(masterReverbSelect);
+    globalEffectsControlsContainer.appendChild(masterReverbTypeSelectContainer);
+    masterStrip.appendChild(globalEffectsControlsContainer);
+    fragment.appendChild(masterStrip);
+
+    
+    const specialGroups = [
+        { id: "portalDrones", label: "PORTALS", volumeGainNode: portalGroupGain, getNodes: () => nodes.filter(n => n.type === PORTAL_NEBULA_TYPE && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))), defaultVolume: 0.7, defaultDelaySend: DEFAULT_DELAY_SEND * 1.2, defaultReverbSend: DEFAULT_REVERB_SEND * 1.5 },
+        { id: "nebulaSounds", label: "NEBULAE", volumeGainNode: originalNebulaGroupGain, getNodes: () => nodes.filter(n => n.type === "nebula" && !(userDefinedGroups || []).some(ug => ug.nodeIds.has(n.id))), defaultVolume: 0.8, defaultDelaySend: DEFAULT_DELAY_SEND, defaultReverbSend: DEFAULT_REVERB_SEND }
+    ];
+
+    specialGroups.forEach(sg => {
+        const groupNodes = sg.getNodes();
+        if (groupNodes.length === 0 && !(sg.volumeGainNode && sg.volumeGainNode.gain.value > 0.001)) {
+            if (!((sg.id === "portalDrones" && portalGroupGain && portalGroupGain.gain.value > 0.001) || (sg.id === "nebulaSounds" && originalNebulaGroupGain && originalNebulaGroupGain.gain.value > 0.001))) return;
+        }
+        const strip = document.createElement("section");
+        strip.classList.add("channel-strip", `special-group-${sg.id}`); strip.id = `channel-strip-${sg.id}`;
+        const sendsDiv = document.createElement("div");
+        sendsDiv.classList.add("channel-sends");
+
+        let initialDelaySend = sg.defaultDelaySend;
+        let initialReverbSend = sg.defaultReverbSend;
+        if (groupNodes.length > 0 && groupNodes[0].audioParams) {
+            initialDelaySend = groupNodes[0].audioParams.delaySend !== undefined ? groupNodes[0].audioParams.delaySend : sg.defaultDelaySend;
+            initialReverbSend = groupNodes[0].audioParams.reverbSend !== undefined ? groupNodes[0].audioParams.reverbSend : sg.defaultReverbSend;
+        }
+
+        const sgDelayDialId = `nexus-delay-dial-${sg.id}`;
+        const sgDelayDialDiv = document.createElement('div'); sgDelayDialDiv.id = sgDelayDialId;
+        const sgDelayLabel = document.createElement('label'); sgDelayLabel.textContent = "DELAY"; sgDelayLabel.style.display='block'; sgDelayLabel.style.textAlign='center'; sgDelayLabel.style.fontSize='0.7em';
+        sendsDiv.appendChild(sgDelayLabel); sendsDiv.appendChild(sgDelayDialDiv);
+        nexusElementsToInitialize.push({
+            id: sgDelayDialId, type: 'Dial', options: {'size': [40,40], 'interaction':'radial', 'mode':'relative', 'min':0,'max':1,'step':0.01, 'value':initialDelaySend},
+            changeCallback: function(v) { groupNodes.forEach(node => { if(node.audioNodes?.delaySendGain?.gain) { if(node.audioParams) node.audioParams.delaySend = v; node.audioNodes.delaySendGain.gain.setTargetAtTime(v, now, timeConstant);}}); saveState(); }
+        });
+
+        const sgReverbDialId = `nexus-reverb-dial-${sg.id}`;
+        const sgReverbDialDiv = document.createElement('div'); sgReverbDialDiv.id = sgReverbDialId;
+        const sgReverbLabel = document.createElement('label'); sgReverbLabel.textContent = "REVERB"; sgReverbLabel.style.display='block'; sgReverbLabel.style.textAlign='center'; sgReverbLabel.style.fontSize='0.7em';
+        sendsDiv.appendChild(sgReverbLabel); sendsDiv.appendChild(sgReverbDialDiv);
+        nexusElementsToInitialize.push({
+            id: sgReverbDialId, type: 'Dial', options: {'size': [40,40], 'interaction':'radial', 'mode':'relative', 'min':0,'max':1,'step':0.01, 'value':initialReverbSend},
+            changeCallback: function(v) { groupNodes.forEach(node => { if(node.audioNodes?.reverbSendGain?.gain) { if(node.audioParams) node.audioParams.reverbSend = v; node.audioNodes.reverbSendGain.gain.setTargetAtTime(v, now, timeConstant);}}); saveState(); }
+        });
+        strip.appendChild(sendsDiv);
+
+        const sgFaderContainer = document.createElement("div"); sgFaderContainer.classList.add("fader-container"); sgFaderContainer.style.display='flex'; sgFaderContainer.style.flexDirection='column'; sgFaderContainer.style.alignItems='center';
+        const sgVolumeSliderId = `nexus-volume-slider-${sg.id}`;
+        const sgVolumeSliderDiv = document.createElement('div'); sgVolumeSliderDiv.id = sgVolumeSliderId;
+        sgFaderContainer.appendChild(sgVolumeSliderDiv);
+        const sgVolumeMeterId = `nexus-volume-meter-${sg.id}`;
+        const sgVolumeMeterDiv = document.createElement('div'); sgVolumeMeterDiv.id = sgVolumeMeterId; sgVolumeMeterDiv.style.marginTop = '5px';
+        sgFaderContainer.appendChild(sgVolumeMeterDiv);
+        strip.appendChild(sgFaderContainer);
+        const initialSgVolume = sg.volumeGainNode ? sg.volumeGainNode.gain.value : sg.defaultVolume;
+        nexusElementsToInitialize.push({
+            id: sgVolumeSliderId, type: 'Slider', options: {'size':[20,100],'mode':'absolute','min':0,'max':1.5,'step':0.01,'value':initialSgVolume},
+            isVolumeSlider: true, meterId: sgVolumeMeterId, gainNodeToControl: sg.volumeGainNode
+        });
+        nexusElementsToInitialize.push({id: sgVolumeMeterId, type: 'Meter', options: {'size':[20,80]}, audioNodeToAnalyze: sg.volumeGainNode });
+
+        const sgLabelP = document.createElement("p"); sgLabelP.classList.add("channel-label"); sgLabelP.textContent = sg.label;
+        strip.appendChild(sgLabelP);
+        fragment.appendChild(strip);
+    });
+
+    
+    const allOtherGroups = identifiedGroups.filter(g => g.nodeIds && g.nodeIds.size > 0);
+    allOtherGroups.forEach((group, index) => {
+        const strip = document.createElement("section");
+        strip.classList.add("channel-strip", group.userDefined ? "user-group" : "auto-group"); strip.id = `channel-strip-${group.id.replace(/\s+/g, '_')}`;
+        const sendsDiv = document.createElement("div"); sendsDiv.classList.add("channel-sends");
+
+        const groupDelaySendNode = group.userDefined ? group.delaySendGainNode : null;
+        let initialGroupDelaySend = DEFAULT_DELAY_SEND;
+        if(groupDelaySendNode) initialGroupDelaySend = groupDelaySendNode.gain.value;
+        else if (!group.userDefined && group.nodeIds.size > 0) { const firstNode = findNodeById(group.nodeIds.values().next().value); if (firstNode?.audioParams) initialGroupDelaySend = firstNode.audioParams.delaySend ?? DEFAULT_DELAY_SEND; }
+
+        const groupDelayDialId = `nexus-group-delay-dial-${group.id.replace(/\s+/g, '_')}`;
+        const groupDelayDialDiv = document.createElement('div'); groupDelayDialDiv.id = groupDelayDialId;
+        const groupDelayLabel = document.createElement('label'); groupDelayLabel.textContent = "DELAY"; groupDelayLabel.style.display='block'; groupDelayLabel.style.textAlign='center'; groupDelayLabel.style.fontSize='0.7em';
+        sendsDiv.appendChild(groupDelayLabel); sendsDiv.appendChild(groupDelayDialDiv);
+        nexusElementsToInitialize.push({
+            id: groupDelayDialId, type: 'Dial', options: {'size':[40,40],'interaction':'radial','mode':'relative','min':0,'max':1,'step':0.01,'value':initialGroupDelaySend},
+            changeCallback: function(v) { setSpecificGroupDelaySend(group.id, v); saveState(); }
+        });
+
+        const groupReverbSendNode = group.userDefined ? group.reverbSendGainNode : null;
+        let initialGroupReverbSend = DEFAULT_REVERB_SEND;
+        if(groupReverbSendNode) initialGroupReverbSend = groupReverbSendNode.gain.value;
+        else if (!group.userDefined && group.nodeIds.size > 0) { const firstNode = findNodeById(group.nodeIds.values().next().value); if (firstNode?.audioParams) initialGroupReverbSend = firstNode.audioParams.reverbSend ?? DEFAULT_REVERB_SEND; }
+
+        const groupReverbDialId = `nexus-group-reverb-dial-${group.id.replace(/\s+/g, '_')}`;
+        const groupReverbDialDiv = document.createElement('div'); groupReverbDialDiv.id = groupReverbDialId;
+        const groupReverbLabel = document.createElement('label'); groupReverbLabel.textContent = "REVERB"; groupReverbLabel.style.display='block'; groupReverbLabel.style.textAlign='center'; groupReverbLabel.style.fontSize='0.7em';
+        sendsDiv.appendChild(groupReverbLabel); sendsDiv.appendChild(groupReverbDialDiv);
+        nexusElementsToInitialize.push({
+            id: groupReverbDialId, type: 'Dial', options: {'size':[40,40],'interaction':'radial','mode':'relative','min':0,'max':1,'step':0.01,'value':initialGroupReverbSend},
+            changeCallback: function(v) { setSpecificGroupReverbSend(group.id, v); saveState(); }
+        });
+        strip.appendChild(sendsDiv);
+
+        const groupFaderContainer = document.createElement("div"); groupFaderContainer.classList.add("fader-container"); groupFaderContainer.style.display='flex'; groupFaderContainer.style.flexDirection='column'; groupFaderContainer.style.alignItems='center';
+        const groupVolumeSliderId = `nexus-group-volume-slider-${group.id.replace(/\s+/g, '_')}`;
+        const groupVolumeSliderDiv = document.createElement('div'); groupVolumeSliderDiv.id = groupVolumeSliderId;
+        groupFaderContainer.appendChild(groupVolumeSliderDiv);
+        const groupVolumeMeterId = `nexus-group-volume-meter-${group.id.replace(/\s+/g, '_')}`;
+        const groupVolumeMeterDiv = document.createElement('div'); groupVolumeMeterDiv.id = groupVolumeMeterId; groupVolumeMeterDiv.style.marginTop = '5px';
+        groupFaderContainer.appendChild(groupVolumeMeterDiv);
+        strip.appendChild(groupFaderContainer);
+        const initialGroupVolumeVal = (group.gainNode ? group.gainNode.gain.value : group.volume) ?? 1.0;
+        nexusElementsToInitialize.push({
+            id: groupVolumeSliderId, type: 'Slider', options: {'size':[20,100],'mode':'absolute','min':0,'max':1.5,'step':0.01,'value':initialGroupVolumeVal},
+            isVolumeSlider: true, meterId: groupVolumeMeterId, groupId: group.id, gainNodeToControl: group.gainNode
+        });
+        nexusElementsToInitialize.push({id: groupVolumeMeterId, type: 'Meter', options: {'size':[20,80]}, audioNodeToAnalyze: group.gainNode });
+        
+        const groupLabelP = document.createElement("p"); groupLabelP.classList.add("channel-label");
+        groupLabelP.textContent = group.userDefined ? `USER ${group.id.split('_')[1] || (index + 1)}` : `GROUP ${group.id.split('_')[1] || (index + 1)}`;
+        strip.appendChild(groupLabelP);
+        fragment.appendChild(strip);
+    });
+
+    
+    mixerGroupControlsContainer.appendChild(fragment);
+
+    
+    if (typeof Nexus === 'undefined') {
+        console.error("NexusUI library is not loaded. Cannot initialize mixer controls.");
+        mixerGroupControlsContainer.innerHTML = "<p style='color:red;'>Error: UI Library Missing for Mixer</p>";
+        return;
+    }
+    
+    const initializedMeters = {};
+
+    nexusElementsToInitialize.forEach(config => {
+        let component;
+        const elementExists = document.getElementById(config.id);
+        if (!elementExists) {
+            console.error(`Container element with ID #${config.id} not found in DOM for NexusUI ${config.type}.`);
+            return;
+        }
+
+        try {
+            if (config.type === 'Slider') {
+                component = new Nexus.Slider(`#${config.id}`, config.options);
+                if (config.changeCallback) component.on('change', config.changeCallback);
+                
+                
+                if (config.isVolumeSlider && config.meterId) {
+                    const meterToLink = initializedMeters[config.meterId]; 
+                    component.on('change', function(v_slider) {
+                        if(config.gainNodeToControl) { 
+                           config.gainNodeToControl.gain.setTargetAtTime(v_slider, now, timeConstant);
+                        } else if (config.groupId) { 
+                           setSpecificGroupVolume(config.groupId, v_slider);
+                        } else if (config.id.includes('master-volume-slider')) { 
+                           if(masterGain) masterGain.gain.setTargetAtTime(v_slider, now, timeConstant);
+                        }
+                        
+                        
+                        saveState();
+                    });
+                }
+
+            } else if (config.type === 'Dial') {
+                component = new Nexus.Dial(`#${config.id}`, config.options);
+                if (config.changeCallback) component.on('change', config.changeCallback);
+            } else if (config.type === 'Meter') {
+                component = new Nexus.Meter(`#${config.id}`, config.options);
+                initializedMeters[config.id] = component; 
+                if (config.audioNodeToAnalyze && audioContext && component.connect) {
+                    try {
+                        const analyser = audioContext.createAnalyser();
+                        analyser.fftSize = config.options.fftSize || 256;
+                        config.audioNodeToAnalyze.connect(analyser);
+                        component.connect(analyser);
+                    } catch (e) {
+                         console.error(`Error connecting Nexus.Meter (ID: ${config.id}) to AnalyserNode:`, e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(`Error initializing NexusUI ${config.type} for ID #${config.id}:`, e);
+            if(elementExists) elementExists.innerHTML = `<span style="color:red; font-size:0.7em;">UI Error</span>`;
+        }
+    });
+
+
+    if (mixerGroupControlsContainer.childElementCount === 0 && fragment.childElementCount === 0 && nexusElementsToInitialize.length === 0) {
+        const noGroupMsg = document.createElement("small");
+        noGroupMsg.textContent = "(No channels to display)";
+        noGroupMsg.style.textAlign = "center"; noGroupMsg.style.width = "100%"; noGroupMsg.style.padding = "20px"; noGroupMsg.style.color = "#888";
+        mixerGroupControlsContainer.appendChild(noGroupMsg);
+    }
 }
 
 function hideOverlappingPanels() {
@@ -18618,7 +18862,7 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
 }
 
 function getThemeMeteorColors() {
-  const styles = getComputedStyle(document.body); // Get styles from the body (where theme class is applied)
+  const styles = getComputedStyle(document.body); 
   const colors = [];
   const color1 = styles.getPropertyValue('--meteorshower-style-color-1').trim();
   const color2 = styles.getPropertyValue('--meteorshower-style-color-2').trim();
@@ -18628,12 +18872,12 @@ function getThemeMeteorColors() {
   if (color2) colors.push(color2);
   if (color3) colors.push(color3);
 
-  // Fallback if CSS variables are not defined for some reason
+  
   if (colors.length === 0) {
       return [
-          'rgba(255,100,100,0.7)', // Default Reddish
-          'rgba(100,255,100,0.7)', // Default Greenish
-          'rgba(100,100,255,0.7)'  // Default Bluish
+          'rgba(255,100,100,0.7)', 
+          'rgba(100,255,100,0.7)', 
+          'rgba(100,100,255,0.7)'  
       ];
   }
   return colors;
@@ -18668,9 +18912,9 @@ function startMeteorShower(originConfig) {
       isCollisionProduct = false;
       canSpawnFromCollisionUntil = 0;
 
-      // --- KERN VAN DE KLEUR CORRECTIE HIER ---
+      
       if (originConfig.previousShowerColor && typeof originConfig.previousShowerColor === 'string' && originConfig.previousShowerColor.startsWith('rgba')) {
-          // Dit is voor volgende regens die door node-hits worden veroorzaakt, kleur wordt overgeërfd/gemuteerd.
+          
           try {
               const match = originConfig.previousShowerColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
               if (match) {
@@ -18678,14 +18922,14 @@ function startMeteorShower(originConfig) {
                   const newR = Math.min(255, Math.max(0, rVal + generation * 10 + 10));
                   const newG = Math.min(255, Math.max(0, gVal - generation * 15 - 10));
                   const newB = Math.min(255, Math.max(0, bVal + generation * 5 + 5));
-                  // Verminder alpha iets bij elke generatie voor propagatie, maar niet te veel
+                  
                   color = `rgba(${newR},${newG},${newB},${Math.max(0.1, parseFloat(aVal) * 0.85).toFixed(2)})`;
-              } else { color = 'rgba(225, 120, 150, 0.6)'; } // Fallback
+              } else { color = 'rgba(225, 120, 150, 0.6)'; } 
           } catch (e) { color = 'rgba(225, 120, 150, 0.6)'; }
       } else if (sourceNode.color && typeof sourceNode.color === 'string') {
-          // Een node (INCLUSIEF pulsar_meteorshower) start een *nieuwe* regen.
-          // Gebruik de kleur van de node zelf, zorg voor juiste alpha voor de regen.
-          const showerAlpha = 0.7; // Standaard alpha voor een nieuwe regen
+          
+          
+          const showerAlpha = 0.7; 
           if (sourceNode.color.startsWith('rgba')) {
               try {
                   const match = sourceNode.color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
@@ -18696,22 +18940,22 @@ function startMeteorShower(originConfig) {
               } catch (e) { color = `rgba(200, 200, 200, ${showerAlpha})`; }
           } else if (sourceNode.color.startsWith('#')) {
               color = hexToRgba(sourceNode.color, showerAlpha) || `rgba(200, 200, 200, ${showerAlpha})`;
-          } else { // Fallback voor onbekende node.color formaten
-              // Voor pulsar_meteorshower zou addNode en changeScale al een valide kleur moeten hebben ingesteld.
-              // Dit is een extra vangnet.
+          } else { 
+              
+              
               const pulsarDef = pulsarTypes.find(p => p.type === sourceNode.type);
               if (pulsarDef && pulsarDef.type === 'pulsar_meteorshower') {
-                   color = `rgba(255, 150, 50, ${showerAlpha})`; // Specifieke fallback voor meteorshower
+                   color = `rgba(255, 150, 50, ${showerAlpha})`; 
               } else {
                    color = `rgba(200, 220, 255, ${showerAlpha})`;
               }
           }
       } else {
-          // Ultieme fallback als sourceNode geen .color heeft (zou niet mogen voor pulsar_meteorshower)
+          
           const defaultMeteorColors = [`rgba(255,100,100,0.7)`, `rgba(100,255,100,0.7)`, `rgba(100,100,255,0.7)`];
           color = defaultMeteorColors[Math.floor(Math.random() * defaultMeteorColors.length)];
       }
-      // --- EINDE KLEUR CORRECTIE ---
+      
 
   } else if (originConfig.type === 'collision') {
       if (originConfig.generation >= MAX_METEOR_SHOWER_GENERATIONS) {
@@ -18720,7 +18964,7 @@ function startMeteorShower(originConfig) {
       originX = originConfig.x;
       originY = originConfig.y;
       generation = originConfig.generation || 0;
-      // De gemengde kleur wordt hier direct doorgegeven vanuit updateAndDrawMeteorShowers
+      
       color = originConfig.color || 'rgba(180, 220, 255, 0.7)'; 
       maxRadius = originConfig.maxRadius || METEOR_SHOWER_DEFAULT_MAX_RADIUS * 0.6;
       growthRate = originConfig.growthRate || METEOR_SHOWER_DEFAULT_GROWTH_RATE * 1.2;
@@ -18747,14 +18991,14 @@ function startMeteorShower(originConfig) {
       currentRadius: 0,
       maxRadius: maxRadius,
       growthRate: growthRate,
-      color: color, // De nu correct ingestelde kleur
+      color: color, 
       startTime: currentTime,
       sourceNodeId: sourceNodeIdForTracking,
       triggeredNodes: new Set(),
       generation: generation,
       pulseData: {
           intensity: pulseIntensity,
-          color: color // Zorg dat pulseData ook de juiste kleur heeft
+          color: color 
       },
       isCollisionProduct: isCollisionProduct,
       canSpawnFromCollisionUntil: canSpawnFromCollisionUntil
@@ -18765,7 +19009,7 @@ function updateAndDrawMeteorShowers(deltaTime, now) {
   const currentShowersToProcess = [...activeMeteorShowers];
   const survivors = [];
   const collisionSpawnConfigs = [];
-  // const interactedShowerPairsThisFrame = new Set(); // Vervangen door recentlyInteractedShowerPairs
+  
 
   if (Math.random() < 0.01) {
       for (const [key, expiry] of recentlyInteractedShowerPairs) {
@@ -18845,14 +19089,14 @@ function updateAndDrawMeteorShowers(deltaTime, now) {
                       shower1.triggeredNodes.add(node.id);
                       const pulseId = `meteor_${shower1.id}_${node.id}`;
 
-                      // ***** DYNAMISCHE INTENSITEIT BEREKENING *****
+                      
                       const initialIntensity = shower1.pulseData?.intensity || DEFAULT_PULSE_INTENSITY;
                       const expansionProgressForSound = Math.min(1.0, shower1.currentRadius / shower1.maxRadius);
-                      // Hoe stiller het wordt aan de rand: 0.1 = 10% volume, 0.3 = 30% volume
+                      
                       const minIntensityFactorAtEdge = 0.25; 
                       const dynamicIntensity = initialIntensity * (1.0 - expansionProgressForSound * (1.0 - minIntensityFactorAtEdge));
                       const finalSoundIntensity = Math.max(initialIntensity * minIntensityFactorAtEdge, dynamicIntensity);
-                      // ***** EINDE DYNAMISCHE INTENSITEIT *****
+                      
 
                       propagateTrigger(node, 0, pulseId, shower1.sourceNodeId, Infinity, {
                           type: "trigger",
@@ -18942,8 +19186,8 @@ function updateAndDrawMeteorShowers(deltaTime, now) {
 }
 
 function createCollisionImpactVisual(x, y, baseColorString) {
-    const numImpactParticles = 15 + Math.floor(Math.random() * 10); // 15-24 deeltjes
-    let particleColorForFlash = 'rgba(250, 250, 250, 0.9)'; // Een helder wit als fallback
+    const numImpactParticles = 15 + Math.floor(Math.random() * 10); 
+    let particleColorForFlash = 'rgba(250, 250, 250, 0.9)'; 
 
     if (baseColorString && typeof baseColorString === 'string') {
         if (baseColorString.startsWith('rgba')) {
@@ -18951,20 +19195,20 @@ function createCollisionImpactVisual(x, y, baseColorString) {
                 const match = baseColorString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d\.]+))?\)/);
                 if (match) {
                     const [r, g, b] = match.slice(1).map(Number);
-                    // Gebruik de RGB van de baseColorString (mergedColor), maar met een vaste hoge alpha voor de flits
+                    
                     particleColorForFlash = `rgba(${r},${g},${b},0.9)`; 
                 }
-                // Als de regex faalt, wordt de fallback hierboven gebruikt.
+                
             } catch (e) {
-                // Fallback naar helder wit als er een parseerfout is.
+                
                 particleColorForFlash = 'rgba(250, 250, 250, 0.9)';
             }
         } else if (baseColorString.startsWith('#')) {
-            // Als mergedColor (onwaarschijnlijk) een hex is, converteer naar RGBA met hoge alpha
+            
             particleColorForFlash = hexToRgba(baseColorString, 0.9) || 'rgba(250, 250, 250, 0.9)';
         } else {
-            // Als het een benoemde kleur is of een ander formaat, probeer het direct te gebruiken
-            // of gebruik de fallback. Voor nu, fallback voor onbekende formaten.
+            
+            
             particleColorForFlash = 'rgba(250, 250, 250, 0.9)';
         }
     }
@@ -18984,7 +19228,7 @@ function createCollisionImpactVisual(x, y, baseColorString) {
                 life: life,
                 maxLife: life,
                 radius: 1.8 + Math.random() * 2.2,
-                color: particleColorForFlash, // Gebruik de aangepaste kleur
+                color: particleColorForFlash, 
             });
         }
     }
@@ -19384,46 +19628,6 @@ if (mixerToggleBtn) {
 } else {
   console.error("#mixerToggleBtn not found during listener setup!");
 }
-masterVolumeSlider.addEventListener("input", (e) => {
-  if (masterGain)
-    masterGain.gain.setTargetAtTime(
-      parseFloat(e.target.value),
-      audioContext.currentTime,
-      0.01,
-    );
-  masterVolumeValue.textContent = parseFloat(e.target.value).toFixed(2);
-});
-masterVolumeSlider.addEventListener("change", saveState);
-delaySendSlider.addEventListener("input", (e) => {
-  if (masterDelaySendGain)
-    masterDelaySendGain.gain.setTargetAtTime(
-      parseFloat(e.target.value),
-      audioContext.currentTime,
-      0.01,
-    );
-  delaySendValue.textContent = parseFloat(e.target.value).toFixed(2);
-});
-delaySendSlider.addEventListener("change", saveState);
-delayTimeSlider.addEventListener("input", (e) => {
-  if (delayNode)
-    delayNode.delayTime.setTargetAtTime(
-      parseFloat(e.target.value),
-      audioContext.currentTime,
-      0.01,
-    );
-  delayTimeValue.textContent = parseFloat(e.target.value).toFixed(2) + "s";
-});
-delayTimeSlider.addEventListener("change", saveState);
-delayFeedbackSlider.addEventListener("input", (e) => {
-  if (delayFeedbackGain)
-    delayFeedbackGain.gain.setTargetAtTime(
-      parseFloat(e.target.value),
-      audioContext.currentTime,
-      0.01,
-    );
-  delayFeedbackValue.textContent = parseFloat(e.target.value).toFixed(2);
-});
-delayFeedbackSlider.addEventListener("change", saveState);
 
 window.addEventListener("keydown", (e) => {
   const targetIsInput = ["input", "select", "textarea"].includes(
@@ -19695,7 +19899,7 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
             const fileNameDisplay = document.getElementById(`edit-wavetrail-filename-${connection.id}`);
             if (fileNameDisplay) fileNameDisplay.textContent = `Error: Invalid data for ${connection.audioParams.fileName || "file"}`;
         }
-        populateEditPanel(); // Ensure UI reflects potential failure
+        populateEditPanel(); 
         return;
     }
 
@@ -19705,9 +19909,9 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
     try {
         console.log(`[Wavetrail Debug] loadAndDecodeAudio: Attempting to decode audio data for ${connection.id}...`);
         let decodedBuffer;
-        if (audioContext.decodeAudioData.length !== 1) { // Modern promise-based
+        if (audioContext.decodeAudioData.length !== 1) { 
             decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        } else { // Older callback-based
+        } else { 
             decodedBuffer = await new Promise((resolve, reject) => {
                 audioContext.decodeAudioData(arrayBuffer, resolve, reject);
             });
@@ -19728,7 +19932,7 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
             console.log(`[Wavetrail Debug] loadAndDecodeAudio: Waveform path generated for ${connection.id}, points: ${connection.audioParams.waveformPath.length}`);
         } else {
             console.warn(`[Wavetrail Debug] loadAndDecodeAudio: Failed to generate a valid waveform path for ${connection.id}. Buffer duration: ${decodedBuffer?.duration}`);
-            // Keep buffer, but path might be minimal or null. UI might show dashed line.
+            
         }
 
         if (fileNameDisplay) fileNameDisplay.textContent = `Current: ${connection.audioParams.fileName || "Unnamed"}`;
@@ -19738,7 +19942,7 @@ async function loadAndDecodeAudio(arrayBuffer, connection) {
         }
 
         populateEditPanel();
-        saveState(); // This is for saving the fileName and other params, not the buffer itself to JSON.
+        saveState(); 
 
     } catch (error) {
         console.error(`[Wavetrail Debug] Error in loadAndDecodeAudio for connection ${connection.id} (${connection.audioParams.fileName || 'unknown file'}):`, error);
@@ -19980,11 +20184,11 @@ function hexToRgba(hex, alpha = 1) {
 function hexToRgbForGradient(hex) {
   if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return null;
   let r = 0, g = 0, b = 0;
-  if (hex.length === 4) { // #RGB
+  if (hex.length === 4) { 
       r = parseInt(hex[1] + hex[1], 16);
       g = parseInt(hex[2] + hex[2], 16);
       b = parseInt(hex[3] + hex[3], 16);
-  } else if (hex.length === 7) { // #RRGGBB
+  } else if (hex.length === 7) { 
       r = parseInt(hex.substring(1, 3), 16);
       g = parseInt(hex.substring(3, 5), 16);
       b = parseInt(hex.substring(5, 7), 16);
@@ -20275,199 +20479,195 @@ window.addEventListener("resize", () => {
   }
 });
 window.addEventListener("load", () => {
-  if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
-  }
+    if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+    }
 
-  pianoRollCanvas = document.getElementById("pianoRollCanvas");
-  if (pianoRollCanvas) {
-      pianoRollCtx = pianoRollCanvas.getContext("2d");
-      try {
-          pianoRollCanvas.width = pianoRollCanvas.clientWidth;
-          pianoRollCanvas.height = pianoRollCanvas.clientHeight;
-      } catch (e) {
-          pianoRollCanvas.width = 300;
-          pianoRollCanvas.height = 80;
-      }
-      pianoRollCanvas.addEventListener("mousedown", handlePianoRollClick);
-  }
+    pianoRollCanvas = document.getElementById("pianoRollCanvas");
+    if (pianoRollCanvas) {
+        pianoRollCtx = pianoRollCanvas.getContext("2d");
+        try {
+            pianoRollCanvas.width = pianoRollCanvas.clientWidth;
+            pianoRollCanvas.height = pianoRollCanvas.clientHeight;
+        } catch (e) {
+            pianoRollCanvas.width = 300;
+            pianoRollCanvas.height = 80;
+        }
+        pianoRollCanvas.addEventListener("mousedown", handlePianoRollClick);
+    }
 
-  if (tapeLoopSetLoopPointsBtn) {
-      tapeLoopSetLoopPointsBtn.addEventListener("click", () => {
-          if (!tapeLoopBuffer) return;
-          let newStart = parseFloat(tapeLoopStartInput.value);
-          let newEnd = parseFloat(tapeLoopEndInput.value);
-          const bufferDuration = tapeLoopBuffer.duration;
-          if (isNaN(newStart) || newStart < 0 || newStart >= bufferDuration) {
-              newStart = 0;
-          }
-          if (isNaN(newEnd) || newEnd <= newStart || newEnd > bufferDuration) {
-              newEnd = bufferDuration;
-          }
-          userDefinedLoopStart = newStart;
-          userDefinedLoopEnd =
-              Math.abs(newEnd - bufferDuration) < 0.005 && newEnd > newStart ?
-              -1 :
-              newEnd;
-          tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
-          tapeLoopEndInput.value = (
-              userDefinedLoopEnd === -1 || userDefinedLoopEnd > bufferDuration ?
-              bufferDuration :
-              userDefinedLoopEnd
-          ).toFixed(2);
-          updateLoopRegionAndInputs();
-          if (isTapeLoopPlaying && tapeLoopSourceNode) {
-              const wasPlaying = isTapeLoopPlaying;
-              const currentTime =
-                  tapeLoopSourceNode.loopStart +
-                  (((audioContext.currentTime - tapeLoopSourceNodeStartTime) *
-                          tapeLoopSourceNode.playbackRate.value) %
-                      (tapeLoopSourceNode.loopEnd - tapeLoopSourceNode.loopStart));
-              stopTapeLoopPlayback();
-              if (wasPlaying) {
-                  playTapeLoop(audioContext.currentTime, currentTime);
-              }
-          }
-          saveState();
-      });
-  }
+    if (tapeLoopSetLoopPointsBtn) {
+        tapeLoopSetLoopPointsBtn.addEventListener("click", () => {
+            if (!tapeLoopBuffer) return;
+            let newStart = parseFloat(tapeLoopStartInput.value);
+            let newEnd = parseFloat(tapeLoopEndInput.value);
+            const bufferDuration = tapeLoopBuffer.duration;
+            if (isNaN(newStart) || newStart < 0 || newStart >= bufferDuration) {
+                newStart = 0;
+            }
+            if (isNaN(newEnd) || newEnd <= newStart || newEnd > bufferDuration) {
+                newEnd = bufferDuration;
+            }
+            userDefinedLoopStart = newStart;
+            userDefinedLoopEnd =
+                Math.abs(newEnd - bufferDuration) < 0.005 && newEnd > newStart ?
+                -1 :
+                newEnd;
+            tapeLoopStartInput.value = userDefinedLoopStart.toFixed(2);
+            tapeLoopEndInput.value = (
+                userDefinedLoopEnd === -1 || userDefinedLoopEnd > bufferDuration ?
+                bufferDuration :
+                userDefinedLoopEnd
+            ).toFixed(2);
+            updateLoopRegionAndInputs();
+            if (isTapeLoopPlaying && tapeLoopSourceNode) {
+                const wasPlaying = isTapeLoopPlaying;
+                const currentTime =
+                    tapeLoopSourceNode.loopStart +
+                    (((audioContext.currentTime - tapeLoopSourceNodeStartTime) *
+                            tapeLoopSourceNode.playbackRate.value) %
+                        (tapeLoopSourceNode.loopEnd - tapeLoopSourceNode.loopStart));
+                stopTapeLoopPlayback();
+                if (wasPlaying) {
+                    playTapeLoop(audioContext.currentTime, currentTime);
+                }
+            }
+            saveState();
+        });
+    }
 
-  if (tapeLoopSpeedSlider) {
-      tapeLoopSpeedSlider.addEventListener("input", () => {
-          currentPlaybackRate = parseFloat(tapeLoopSpeedSlider.value);
-          if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
-              tapeLoopSourceNode.playbackRate.value = currentPlaybackRate;
-          }
-          if (tapeLoopSpeedValue)
-              tapeLoopSpeedValue.textContent = currentPlaybackRate.toFixed(2) + "x";
-      });
-      tapeLoopSpeedSlider.addEventListener("change", () => {
-          if (!isGlobalSyncEnabled) saveState();
-      });
-  }
+    if (tapeLoopSpeedSlider) {
+        tapeLoopSpeedSlider.addEventListener("input", () => {
+            currentPlaybackRate = parseFloat(tapeLoopSpeedSlider.value);
+            if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
+                tapeLoopSourceNode.playbackRate.value = currentPlaybackRate;
+            }
+            if (tapeLoopSpeedValue)
+                tapeLoopSpeedValue.textContent = currentPlaybackRate.toFixed(2) + "x";
+        });
+        tapeLoopSpeedSlider.addEventListener("change", () => {
+            if (!isGlobalSyncEnabled) saveState();
+        });
+    }
 
-  if (tapeLoopResetSpeedBtn) {
-      tapeLoopResetSpeedBtn.addEventListener("click", () => {
-          currentPlaybackRate = 1.0;
-          if (tapeLoopSpeedSlider) tapeLoopSpeedSlider.value = 1.0;
-          if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
-              tapeLoopSourceNode.playbackRate.value = 1.0;
-          }
-          if (tapeLoopSpeedValue) tapeLoopSpeedValue.textContent = "1.00x";
-          if (!isGlobalSyncEnabled) saveState();
-      });
-  }
+    if (tapeLoopResetSpeedBtn) {
+        tapeLoopResetSpeedBtn.addEventListener("click", () => {
+            currentPlaybackRate = 1.0;
+            if (tapeLoopSpeedSlider) tapeLoopSpeedSlider.value = 1.0;
+            if (tapeLoopSourceNode && !isGlobalSyncEnabled) {
+                tapeLoopSourceNode.playbackRate.value = 1.0;
+            }
+            if (tapeLoopSpeedValue) tapeLoopSpeedValue.textContent = "1.00x";
+            if (!isGlobalSyncEnabled) saveState();
+        });
+    }
 
-  const tapeLoopFitToLoopBtn = document.getElementById("tapeLoopFitToLoopBtn");
-  const tapeLoopResetZoomBtn = document.getElementById("tapeLoopResetZoomBtn");
+    const tapeLoopFitToLoopBtn = document.getElementById("tapeLoopFitToLoopBtn");
+    const tapeLoopResetZoomBtn = document.getElementById("tapeLoopResetZoomBtn");
 
-  if (tapeLoopFitToLoopBtn) {
-      tapeLoopFitToLoopBtn.addEventListener("click", () => {
-          const hasContent =
-              !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
-          if (!hasContent) return;
-          const loopStartToUse = userDefinedLoopStart;
-          let loopEndToUse = userDefinedLoopEnd;
-          const maxDuration = tapeLoopBuffer ?
-              (tapeLoopEffectivelyRecordedDuration > 0 ?
-                  tapeLoopEffectivelyRecordedDuration :
-                  tapeLoopBuffer.duration) :
-              configuredTapeLoopDurationSeconds;
-          if (
-              loopEndToUse === -1 ||
-              loopEndToUse > maxDuration ||
-              loopEndToUse <= loopStartToUse
-          ) {
-              loopEndToUse = maxDuration;
-          }
-          if (loopEndToUse > loopStartToUse) {
-              tapeDisplayStartTime = loopStartToUse;
-              tapeDisplayEndTime = loopEndToUse;
-              waveformPathData = null;
-              drawTapeWaveform();
-              updateLoopRegionAndInputs();
-          }
-      });
-  }
+    if (tapeLoopFitToLoopBtn) {
+        tapeLoopFitToLoopBtn.addEventListener("click", () => {
+            const hasContent =
+                !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+            if (!hasContent) return;
+            const loopStartToUse = userDefinedLoopStart;
+            let loopEndToUse = userDefinedLoopEnd;
+            const maxDuration = tapeLoopBuffer ?
+                (tapeLoopEffectivelyRecordedDuration > 0 ?
+                    tapeLoopEffectivelyRecordedDuration :
+                    tapeLoopBuffer.duration) :
+                configuredTapeLoopDurationSeconds;
+            if (
+                loopEndToUse === -1 ||
+                loopEndToUse > maxDuration ||
+                loopEndToUse <= loopStartToUse
+            ) {
+                loopEndToUse = maxDuration;
+            }
+            if (loopEndToUse > loopStartToUse) {
+                tapeDisplayStartTime = loopStartToUse;
+                tapeDisplayEndTime = loopEndToUse;
+                waveformPathData = null;
+                drawTapeWaveform();
+                updateLoopRegionAndInputs();
+            }
+        });
+    }
 
-  if (tapeLoopResetZoomBtn) {
-      tapeLoopResetZoomBtn.addEventListener("click", () => {
-          const hasContent =
-              !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
-          if (!hasContent) return;
-          tapeDisplayStartTime = 0;
-          tapeDisplayEndTime = tapeLoopBuffer ?
-              (tapeLoopEffectivelyRecordedDuration > 0 ?
-                  tapeLoopEffectivelyRecordedDuration :
-                  tapeLoopBuffer.duration) :
-              configuredTapeLoopDurationSeconds;
-          if (tapeDisplayEndTime <= tapeDisplayStartTime)
-              tapeDisplayEndTime = tapeDisplayStartTime + 0.1;
-          waveformPathData = null;
-          drawTapeWaveform();
-          updateLoopRegionAndInputs();
-      });
-  }
+    if (tapeLoopResetZoomBtn) {
+        tapeLoopResetZoomBtn.addEventListener("click", () => {
+            const hasContent =
+                !!tapeLoopBuffer || configuredTapeLoopDurationSeconds > 0.01;
+            if (!hasContent) return;
+            tapeDisplayStartTime = 0;
+            tapeDisplayEndTime = tapeLoopBuffer ?
+                (tapeLoopEffectivelyRecordedDuration > 0 ?
+                    tapeLoopEffectivelyRecordedDuration :
+                    tapeLoopBuffer.duration) :
+                configuredTapeLoopDurationSeconds;
+            if (tapeDisplayEndTime <= tapeDisplayStartTime)
+                tapeDisplayEndTime = tapeDisplayStartTime + 0.1;
+            waveformPathData = null;
+            drawTapeWaveform();
+            updateLoopRegionAndInputs();
+        });
+    }
 
-  Object.keys(scales).forEach((key) => {
-      const o = document.createElement("option");
-      o.value = key;
-      o.textContent = scales[key].name;
-      scaleSelectTransport.appendChild(o.cloneNode(true));
-  });
+    Object.keys(scales).forEach((key) => {
+        const o = document.createElement("option");
+        o.value = key;
+        o.textContent = scales[key].name;
+        scaleSelectTransport.appendChild(o.cloneNode(true));
+    });
 
-  scaleSelectTransport.value = currentScaleKey;
+    scaleSelectTransport.value = currentScaleKey;
 
-  // Event listener for the main "Appearance" menu item that opens the submenu
-  // For the fly-out menu, this item ("Background") itself doesn't need a direct JS click listener
-  // if the fly-out is CSS-driven on hover/focus.
-  // However, if you want to ensure other panels close when "Appearance" is interacted with,
-  // you might add a listener to the parent ".app-menu-dropdown" or the "Appearance" button.
+    const appMenuBgNone = document.getElementById("app-menu-bg-none");
+    const appMenuBgStars = document.getElementById("app-menu-bg-stars");
+    const appMenuBgSilentNight = document.getElementById("app-menu-bg-silent-night");
 
-  // Direct event listeners for the actual background selection items
-  const appMenuBgNone = document.getElementById("app-menu-bg-none");
-  const appMenuBgStars = document.getElementById("app-menu-bg-stars");
-  const appMenuBgSilentNight = document.getElementById("app-menu-bg-silent-night");
+    if (appMenuBgNone) appMenuBgNone.addEventListener("click", (e) => { e.preventDefault(); applyBackground("none"); });
+    if (appMenuBgStars) appMenuBgStars.addEventListener("click", (e) => { e.preventDefault(); applyBackground("swimming_stars"); });
+    if (appMenuBgSilentNight) appMenuBgSilentNight.addEventListener("click", (e) => { e.preventDefault(); applyBackground("silent_night"); });
 
-  if (appMenuBgNone) appMenuBgNone.addEventListener("click", (e) => { e.preventDefault(); applyBackground("none"); });
-  if (appMenuBgStars) appMenuBgStars.addEventListener("click", (e) => { e.preventDefault(); applyBackground("swimming_stars"); });
-  if (appMenuBgSilentNight) appMenuBgSilentNight.addEventListener("click", (e) => { e.preventDefault(); applyBackground("silent_night"); });
+    setActiveTool("edit");
+    resetSideToolbars();
+    hideOverlappingPanels();
+    noteSelectElement = null;
+    noteSelectContainer = null;
 
+    startMessage.style.display = "block";
+    setupLoopHandles();
 
-  setActiveTool("edit");
-  resetSideToolbars();
-  hideOverlappingPanels();
-  noteSelectElement = null;
-  noteSelectContainer = null;
-
-  startMessage.style.display = "block";
-  setupLoopHandles();
-
-  setupAudio()
-      .then((context) => {
-          if (context) {
-              isAudioReady = true;
-              if (typeof applyBackground === "function"){ // Ensure applyBackground is defined
-                  applyBackground(currentBackgroundType); // Apply initial/loaded background
-              }
-              updateMixerUI();
-              updateScaleAndTransposeUI();
-              identifyAndRouteAllGroups();
-              drawPianoRoll();
-              setActiveTool("edit");
-              resetSideToolbars();
-              hideOverlappingPanels();
-              updateTapeLooperUI();
-          } else {
-              startMessage.textContent = "Error loading audio.";
-              startMessage.style.display = "block";
-              if (loadingIndicator) loadingIndicator.style.display = "none";
-          }
-      })
-      .catch((err) => {
-          startMessage.textContent = "Error loading audio.";
-          startMessage.style.display = "block";
-          if (loadingIndicator) loadingIndicator.style.display = "none";
-      });
+    setupAudio()
+        .then((context) => {
+            if (context) {
+                isAudioReady = true;
+                if (typeof applyBackground === "function"){
+                    applyBackground(currentBackgroundType);
+                }
+                
+                updateMixerGUI(); 
+                updateScaleAndTransposeUI();
+                identifyAndRouteAllGroups(); 
+                drawPianoRoll();
+                setActiveTool("edit"); 
+                resetSideToolbars();
+                hideOverlappingPanels();
+                updateTapeLooperUI(); 
+            } else {
+                startMessage.textContent = "Error loading audio.";
+                startMessage.style.display = "block";
+                if (loadingIndicator) loadingIndicator.style.display = "none";
+            }
+        })
+        .catch((err) => {
+            console.error("Error during initial audio setup on load:", err);
+            startMessage.textContent = "Error loading audio.";
+            startMessage.style.display = "block";
+            if (loadingIndicator) loadingIndicator.style.display = "none";
+        });
 });
+
+
