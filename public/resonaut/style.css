@@ -62,9 +62,8 @@
     --beat-indicator-color: rgba(180, 210, 255, 0.5);
     --button-disabled-bg: #2a355a;
     --button-disabled-color: #7788aa;
-    --toolbar-width: 52px; 
-    --app-menu-bar-height: 40px; 
-    --side-toolbar-width: 240px;
+    --toolbar-width: 52px;
+    --app-menu-bar-height: 40px;
     --hamburger-panel-width: 240px;
     --mixer-button-width: 30px;
     --hex-note-size: 26px;
@@ -89,6 +88,16 @@
     --meteorshower-style-color-1: rgba(255, 180, 120, 0.7);
     --meteorshower-style-color-2: rgba(150, 220, 255, 0.7);
     --meteorshower-style-color-3: rgba(220, 150, 255, 0.7);
+
+    --nexus-slider-fill: var(--button-active);
+    --nexus-slider-bar: var(--button-bg);
+    --nexus-dial-fill: var(--button-bg);
+    --nexus-dial-accent: var(--button-active);
+    --nexus-dial-border: var(--button-hover);
+    --nexus-meter-level: var(--gate-node-border);
+    --nexus-meter-bar: var(--button-disabled-bg);
+    --nexus-position-fill: var(--button-active);
+    --nexus-position-border: var(--button-hover);
 }
 
 body.theme-minor-pentatonic {
@@ -112,40 +121,18 @@ body.theme-minor-pentatonic {
     --start-node-border: rgba(255, 230, 255, 1);
     --start-node-disabled-color: rgba(160, 120, 160, 0.5);
     --start-node-disabled-border: rgba(180, 150, 180, 0.7);
-    --pulsar-standard-color: var(--start-node-color);
-    --pulsar-standard-border: var(--start-node-border);
-    --pulsar-random-volume-color: rgba(255, 200, 220, 0.9);
-    --pulsar-random-volume-border: rgba(255, 220, 230, 1);
-    --pulsar-random-particles-color: rgba(220, 200, 255, 0.9);
-    --pulsar-random-particles-border: rgba(230, 220, 255, 1);
-    --pulsar-triggerable-color: rgba(255, 200, 200, 0.9);
-    --pulsar-triggerable-border: rgba(255, 220, 220, 1);
-    --drum-kick-color: rgba(255, 160, 200, 0.8);
-    --drum-kick-border: rgba(255, 190, 220, 1);
-    --drum-snare-color: rgba(160, 255, 200, 0.8);
-    --drum-snare-border: rgba(190, 255, 220, 1);
-    --drum-hihat-color: rgba(200, 200, 255, 0.8);
-    --drum-hihat-border: rgba(220, 220, 255, 1);
-    --drum-clap-color: rgba(160, 200, 255, 0.8);
-    --drum-clap-border: rgba(190, 220, 255, 1);
-    --drum-tom1-color: rgba(255, 160, 160, 0.8);
-    --drum-tom1-border: rgba(255, 190, 190, 1);
-    --drum-tom2-color: rgba(255, 180, 160, 0.8);
-    --drum-tom2-border: rgba(255, 200, 190, 1);
-    --drum-cowbell-color: rgba(180, 160, 255, 0.8);
-    --drum-cowbell-border: rgba(200, 180, 255, 1);
     --connection-color: rgba(150, 110, 180, 0.4);
     --string-violin-connection-color: rgba(220, 180, 200, 0.6);
     --string-violin-pulse-color: rgba(240, 200, 220, 1);
     --pulse-color: rgba(255, 240, 255, 1);
     --pulse-logic-color: rgba(255, 180, 255, 1);
-    --pulse-visual-color: var(--pulse-color);
     --particle-color: rgba(230, 200, 255, 0.8);
     --wind-particle-color: rgba(190, 160, 220, 0.1);
     --panel-bg: rgba(40, 25, 60, 0.9);
     --button-bg: #503070;
     --button-hover: #684088;
     --button-active: #8860b0;
+    --text-color: #eeddee;
     --selection-rect-color: rgba(200, 150, 255, 0.3);
     --grid-color: rgba(150, 110, 180, 0.15);
     --constellation-highlight: rgba(255, 200, 255, 0.15);
@@ -165,6 +152,16 @@ body.theme-minor-pentatonic {
     --meteorshower-style-color-1: rgba(200, 130, 255, 0.7);
     --meteorshower-style-color-2: rgba(130, 200, 220, 0.7);
     --meteorshower-style-color-3: rgba(255, 170, 200, 0.7);
+
+    --nexus-slider-fill: var(--button-active);
+    --nexus-slider-bar: var(--button-bg);
+    --nexus-dial-fill: var(--button-bg);
+    --nexus-dial-accent: var(--button-active);
+    --nexus-dial-border: var(--button-hover);
+    --nexus-meter-level: var(--gate-node-border);
+    --nexus-meter-bar: var(--button-disabled-bg);
+    --nexus-position-fill: var(--button-active);
+    --nexus-position-border: var(--button-hover);
 }
 
 body.theme-major {
@@ -188,40 +185,18 @@ body.theme-major {
     --start-node-border: rgba(230, 255, 240, 1);
     --start-node-disabled-color: rgba(120, 160, 130, 0.5);
     --start-node-disabled-border: rgba(150, 180, 160, 0.7);
-    --pulsar-standard-color: var(--start-node-color);
-    --pulsar-standard-border: var(--start-node-border);
-    --pulsar-random-volume-color: rgba(180, 255, 200, 0.9);
-    --pulsar-random-volume-border: rgba(200, 255, 220, 1);
-    --pulsar-random-particles-color: rgba(200, 220, 255, 0.9);
-    --pulsar-random-particles-border: rgba(220, 230, 255, 1);
-    --pulsar-triggerable-color: rgba(255, 220, 200, 0.9);
-    --pulsar-triggerable-border: rgba(255, 230, 220, 1);
-    --drum-kick-color: rgba(180, 255, 180, 0.8);
-    --drum-kick-border: rgba(200, 255, 200, 1);
-    --drum-snare-color: rgba(180, 220, 255, 0.8);
-    --drum-snare-border: rgba(200, 230, 255, 1);
-    --drum-hihat-color: rgba(255, 200, 180, 0.8);
-    --drum-hihat-border: rgba(255, 220, 200, 1);
-    --drum-clap-color: rgba(160, 255, 220, 0.8);
-    --drum-clap-border: rgba(190, 255, 230, 1);
-    --drum-tom1-color: rgba(140, 220, 180, 0.8);
-    --drum-tom1-border: rgba(170, 240, 200, 1);
-    --drum-tom2-color: rgba(140, 200, 180, 0.8);
-    --drum-tom2-border: rgba(170, 220, 200, 1);
-    --drum-cowbell-color: rgba(160, 255, 160, 0.8);
-    --drum-cowbell-border: rgba(190, 255, 190, 1);
     --connection-color: rgba(100, 180, 150, 0.4);
     --string-violin-connection-color: rgba(180, 230, 180, 0.6);
     --string-violin-pulse-color: rgba(200, 250, 200, 1);
     --pulse-color: rgba(230, 255, 255, 1);
     --pulse-logic-color: rgba(180, 255, 200, 1);
-    --pulse-visual-color: var(--pulse-color);
     --particle-color: rgba(180, 255, 230, 0.8);
     --wind-particle-color: rgba(150, 220, 190, 0.1);
     --panel-bg: rgba(20, 55, 50, 0.9);
     --button-bg: #307060;
     --button-hover: #408870;
     --button-active: #60b090;
+    --text-color: #ddffee;
     --selection-rect-color: rgba(150, 255, 200, 0.3);
     --grid-color: rgba(100, 180, 150, 0.15);
     --constellation-highlight: rgba(200, 255, 220, 0.15);
@@ -241,6 +216,16 @@ body.theme-major {
     --meteorshower-style-color-1: rgba(130, 255, 180, 0.7);
     --meteorshower-style-color-2: rgba(130, 180, 255, 0.7);
     --meteorshower-style-color-3: rgba(255, 220, 130, 0.7);
+
+    --nexus-slider-fill: var(--button-active);
+    --nexus-slider-bar: var(--button-bg);
+    --nexus-dial-fill: var(--button-bg);
+    --nexus-dial-accent: var(--button-active);
+    --nexus-dial-border: var(--button-hover);
+    --nexus-meter-level: var(--gate-node-border);
+    --nexus-meter-bar: var(--button-disabled-bg);
+    --nexus-position-fill: var(--button-active);
+    --nexus-position-border: var(--button-hover);
 }
 
 body.theme-minor {
@@ -264,40 +249,18 @@ body.theme-minor {
     --start-node-border: rgba(255, 230, 210, 1);
     --start-node-disabled-color: rgba(160, 130, 110, 0.5);
     --start-node-disabled-border: rgba(180, 150, 130, 0.7);
-    --pulsar-standard-color: var(--start-node-color);
-    --pulsar-standard-border: var(--start-node-border);
-    --pulsar-random-volume-color: rgba(255, 180, 180, 0.9);
-    --pulsar-random-volume-border: rgba(255, 200, 200, 1);
-    --pulsar-random-particles-color: rgba(255, 220, 180, 0.9);
-    --pulsar-random-particles-border: rgba(255, 230, 200, 1);
-    --pulsar-triggerable-color: rgba(220, 180, 255, 0.9);
-    --pulsar-triggerable-border: rgba(230, 200, 255, 1);
-    --drum-kick-color: rgba(255, 180, 160, 0.8);
-    --drum-kick-border: rgba(255, 200, 180, 1);
-    --drum-snare-color: rgba(255, 220, 160, 0.8);
-    --drum-snare-border: rgba(255, 230, 180, 1);
-    --drum-hihat-color: rgba(200, 255, 160, 0.8);
-    --drum-hihat-border: rgba(220, 255, 180, 1);
-    --drum-clap-color: rgba(255, 160, 180, 0.8);
-    --drum-clap-border: rgba(255, 190, 200, 1);
-    --drum-tom1-color: rgba(220, 180, 140, 0.8);
-    --drum-tom1-border: rgba(240, 200, 170, 1);
-    --drum-tom2-color: rgba(220, 160, 140, 0.8);
-    --drum-tom2-border: rgba(240, 180, 170, 1);
-    --drum-cowbell-color: rgba(255, 220, 100, 0.8);
-    --drum-cowbell-border: rgba(255, 230, 130, 1);
     --connection-color: rgba(180, 130, 110, 0.4);
     --string-violin-connection-color: rgba(230, 180, 160, 0.6);
     --string-violin-pulse-color: rgba(250, 200, 180, 1);
     --pulse-color: rgba(255, 245, 230, 1);
     --pulse-logic-color: rgba(255, 180, 180, 1);
-    --pulse-visual-color: var(--pulse-color);
     --particle-color: rgba(255, 220, 200, 0.8);
     --wind-particle-color: rgba(220, 180, 160, 0.1);
     --panel-bg: rgba(60, 35, 30, 0.9);
     --button-bg: #704040;
     --button-hover: #885050;
     --button-active: #b07070;
+    --text-color: #ffeedd;
     --selection-rect-color: rgba(255, 180, 150, 0.3);
     --grid-color: rgba(180, 130, 110, 0.15);
     --constellation-highlight: rgba(255, 210, 180, 0.15);
@@ -317,6 +280,16 @@ body.theme-minor {
     --meteorshower-style-color-1: rgba(255, 130, 130, 0.7);
     --meteorshower-style-color-2: rgba(255, 180, 130, 0.7);
     --meteorshower-style-color-3: rgba(180, 130, 255, 0.7);
+
+    --nexus-slider-fill: var(--button-active);
+    --nexus-slider-bar: var(--button-bg);
+    --nexus-dial-fill: var(--button-bg);
+    --nexus-dial-accent: var(--button-active);
+    --nexus-dial-border: var(--button-hover);
+    --nexus-meter-level: var(--gate-node-border);
+    --nexus-meter-bar: var(--button-disabled-bg);
+    --nexus-position-fill: var(--button-active);
+    --nexus-position-border: var(--button-hover);
 }
 
 body.theme-chromatic {
@@ -340,40 +313,18 @@ body.theme-chromatic {
     --start-node-border: rgba(230, 230, 230, 1);
     --start-node-disabled-color: rgba(160, 160, 160, 0.5);
     --start-node-disabled-border: rgba(180, 180, 180, 0.7);
-    --pulsar-standard-color: var(--start-node-color);
-    --pulsar-standard-border: var(--start-node-border);
-    --pulsar-random-volume-color: rgba(230, 230, 230, 0.9);
-    --pulsar-random-volume-border: rgba(240, 240, 240, 1);
-    --pulsar-random-particles-color: rgba(210, 210, 210, 0.9);
-    --pulsar-random-particles-border: rgba(225, 225, 225, 1);
-    --pulsar-triggerable-color: rgba(190, 190, 190, 0.9);
-    --pulsar-triggerable-border: rgba(215, 215, 215, 1);
-    --drum-kick-color: rgba(200, 200, 200, 0.8);
-    --drum-kick-border: rgba(220, 220, 220, 1);
-    --drum-snare-color: rgba(180, 180, 180, 0.8);
-    --drum-snare-border: rgba(200, 200, 200, 1);
-    --drum-hihat-color: rgba(220, 220, 220, 0.8);
-    --drum-hihat-border: rgba(240, 240, 240, 1);
-    --drum-clap-color: rgba(170, 170, 170, 0.8);
-    --drum-clap-border: rgba(190, 190, 190, 1);
-    --drum-tom1-color: rgba(190, 190, 190, 0.8);
-    --drum-tom1-border: rgba(210, 210, 210, 1);
-    --drum-tom2-color: rgba(180, 180, 180, 0.8);
-    --drum-tom2-border: rgba(200, 200, 200, 1);
-    --drum-cowbell-color: rgba(210, 210, 210, 0.8);
-    --drum-cowbell-border: rgba(230, 230, 230, 1);
     --connection-color: rgba(150, 150, 160, 0.4);
     --string-violin-connection-color: rgba(200, 200, 200, 0.6);
     --string-violin-pulse-color: rgba(220, 220, 220, 1);
     --pulse-color: rgba(255, 255, 255, 1);
     --pulse-logic-color: rgba(200, 200, 255, 1);
-    --pulse-visual-color: var(--pulse-color);
     --particle-color: rgba(220, 220, 230, 0.8);
     --wind-particle-color: rgba(180, 180, 190, 0.1);
     --panel-bg: rgba(50, 50, 60, 0.9);
     --button-bg: #555;
     --button-hover: #666;
     --button-active: #888;
+    --text-color: #f0f0f0;
     --selection-rect-color: rgba(200, 200, 200, 0.3);
     --grid-color: rgba(150, 150, 160, 0.15);
     --constellation-highlight: rgba(220, 220, 220, 0.15);
@@ -393,6 +344,16 @@ body.theme-chromatic {
     --meteorshower-style-color-1: rgba(200, 200, 200, 0.7);
     --meteorshower-style-color-2: rgba(220, 220, 255, 0.7);
     --meteorshower-style-color-3: rgba(255, 220, 220, 0.7);
+
+    --nexus-slider-fill: var(--button-active);
+    --nexus-slider-bar: var(--button-bg);
+    --nexus-dial-fill: var(--button-bg);
+    --nexus-dial-accent: var(--button-active);
+    --nexus-dial-border: var(--button-hover);
+    --nexus-meter-level: var(--gate-node-border);
+    --nexus-meter-bar: var(--button-disabled-bg);
+    --nexus-position-fill: var(--button-active);
+    --nexus-position-border: var(--button-hover);
 }
 
 body {
@@ -587,15 +548,15 @@ body {
 .app-menu-submenu {
     display: none;
     position: absolute;
-    left: 100%; 
-    top: -5px; 
+    left: 100%;
+    top: -5px;
     background-color: var(--panel-bg, rgba(25, 35, 60, 0.98));
-    min-width: 220px; 
+    min-width: 220px;
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 4px;
     padding: 5px 0;
-    z-index: 1002; 
+    z-index: 1002;
 }
 
 .app-menu-item-with-submenu:hover > .app-menu-submenu,
@@ -626,7 +587,7 @@ body.bg-silent-night-active #mainCanvas {
 }
 
 body.bg-none-active #mainCanvas {
-    background: #0a0f1a !important; 
+    background: #0a0f1a !important;
 }
 
 #silent-night-bg {
@@ -637,9 +598,9 @@ body.bg-none-active #mainCanvas {
     height: 100%;
     pointer-events: none;
     overflow: hidden;
-    background-color: #00000c; 
+    background-color: #00000c;
     display: none;
-    z-index: -10; 
+    z-index: -10;
 }
 
 body.bg-silent-night-active #silent-night-bg {
@@ -648,23 +609,23 @@ body.bg-silent-night-active #silent-night-bg {
 
 .star-layer {
     position: absolute;
-    top: -50%; 
+    top: -50%;
     left: -50%;
     width: 200%;
     height: 200%;
     background-repeat: repeat;
-    transition: transform 0.5s linear; /* Slower transition for parallax */
+    transition: transform 0.5s linear;
     will-change: transform;
-    opacity: 0; 
+    opacity: 0;
 }
 
 body.bg-silent-night-active .star-layer {
-    opacity: 1; 
-    transition: opacity 0.5s ease-in-out, transform 0.5s linear; /* Slower transition for parallax */
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out, transform 0.5s linear;
 }
 
 #stars-far {
-    background-image: 
+    background-image:
         radial-gradient(0.7px 0.7px at 50px 80px, rgba(180,190,220,0.3), transparent),
         radial-gradient(0.9px 0.9px at 150px 120px, rgba(200,210,240,0.4), transparent),
         radial-gradient(0.6px 0.6px at 250px 200px, rgba(170,180,210,0.25), transparent),
@@ -708,7 +669,6 @@ body.bg-silent-night-active .star-layer {
     background-position: 8px 41px;
     z-index: -7;
 }
-
 
 #startMessage, #loadingIndicator {
     position: fixed;
@@ -864,7 +824,7 @@ body.bg-silent-night-active .star-layer {
 
 #sideToolbar {
     left: calc(var(--toolbar-width) * 2 + 20px);
-    width: var(--side-toolbar-width);
+    width: var(--side-toolbar-width, 240px);
     transform: translateX(-100%);
     z-index: 8;
 }
@@ -874,7 +834,6 @@ body.bg-silent-night-active .star-layer {
 
 .right-panel {
     right: 0;
-    width: var(--side-toolbar-width);
     transform: translateX(100%);
     z-index: 7;
     top: calc(var(--app-menu-bar-height) + 10px);
@@ -1162,13 +1121,13 @@ body.bg-silent-night-active .star-layer {
 }
 
 #mixerToggleBtn.active {
-    right: var(--side-toolbar-width);
+    right: calc(min(1200px, 75%) + 1px);
     background-color: var(--button-active);
     color: white;
     border-color: var(--text-color);
-    border-right: 1px solid var(--button-hover);
-    border-left: none;
-    border-radius: 0 8px 8px 0;
+    border-left: 1px solid var(--button-hover);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
 }
 
 #mixerToggleBtn.active span {
@@ -1181,115 +1140,6 @@ body.bg-silent-night-active .star-layer {
     font-size: 1.1em;
     line-height: 1;
     text-align: center;
-    width: 100%;
-}
-
-#mixerPanel h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.1em;
-    font-weight: bold;
-    border-bottom: 1px solid var(--button-bg);
-    padding-bottom: 8px;
-}
-
-#mixerPanel .panel-section {
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--button-bg);
-}
-#mixerPanel .panel-section:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-#mixerPanel label {
-    font-size: 0.9em;
-    margin: 5px 0 2px 0;
-    display: inline-block;
-    width: auto;
-    margin-right: 8px;
-    vertical-align: middle;
-    opacity: 0.9;
-}
-
-#mixerPanel input[type="range"] {
-    width: calc(100% - 110px);
-    display: inline-block;
-    vertical-align: middle;
-    margin-bottom: 5px;
-}
-#mixerPanel select {
-     width: auto;
-     display: inline-block;
-     vertical-align: middle;
-     margin-bottom: 5px;
-     margin-right: 15px;
-     min-width: 80px;
-}
-
-#mixerPanel span {
-    display: inline-block;
-    width: 35px;
-    text-align: right;
-    font-size: 0.85em;
-    opacity: 0.8;
-    vertical-align: middle;
-    margin-left: 5px;
-}
-
-#mixerGroupControlsContainer {
-    min-height: 30px;
-    padding-top: 5px;
-    padding-bottom: 15px;
-}
-
-.mixer-group-control-section {
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid var(--button-bg);
-}
-.mixer-group-control-section:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.mixer-control-item {
-     display: flex;
-     align-items: center;
-     margin-bottom: 5px;
-}
-
-#mixerGroupControlsContainer label {
-    flex-basis: 110px;
-    flex-shrink: 0;
-    margin-right: 8px;
-    text-align: right;
-    font-size: 0.85em;
-    opacity: 0.9;
-}
-
-#mixerGroupControlsContainer input[type="range"] {
-    flex-grow: 1;
-    width: auto;
-    margin-right: 5px;
-    margin-bottom: 0;
-}
-
- #mixerGroupControlsContainer span {
-    flex-basis: 35px;
-    flex-shrink: 0;
-    text-align: right;
-    font-size: 0.8em;
-    opacity: 0.8;
-}
-
-#mixerGroupControlsContainer small {
-    display: block;
-    text-align: center;
-    opacity: 0.7;
-    margin-top: 10px;
     width: 100%;
 }
 
@@ -1530,7 +1380,7 @@ body.bg-silent-night-active .star-layer {
 #tapeLooperPanel.cassette-panel {
     position: fixed;
     bottom: 20px;
-    right: -350px; 
+    right: -350px;
     width: 320px;
     padding: 15px;
     background-color: #3c3c4c;
@@ -1686,13 +1536,13 @@ body.bg-silent-night-active .star-layer {
 .tape-visual-playhead {
     position: absolute;
     top: 0;
-    left: 0; 
+    left: 0;
     width: 2px;
     height: 100%;
     background-color: #ff6060;
     box-shadow: 0 0 3px #ff6060;
     z-index: 3;
-    transition: left 0.05s linear; 
+    transition: left 0.05s linear;
 }
 
 .cassette-reels {
@@ -1986,8 +1836,8 @@ body.bg-silent-night-active .star-layer {
     display: block;
     box-sizing: border-box;
     position: absolute;
-    left: 4px; 
-    top: 2px;  
+    left: 4px;
+    top: 2px;
     width: 5px;
     height: 8px;
     border: solid var(--text-color);
@@ -2074,4 +1924,275 @@ label.retrigger-step-mute-toggle-label:has(input.retrigger-step-mute-toggle-inpu
     color: var(--text-color);
     font-weight: bold;
     box-shadow: none;
+}
+
+/* --- Mixer Styles --- */
+#mixerPanel {
+    display: flex;
+    flex-direction: column;
+    background-color: #282c30;
+    border-left: 1px solid #1a1e21;
+    box-shadow: -3px 0px 10px rgba(0,0,0,0.4);
+    width: 75%;
+    max-width: 1200px;
+    min-width: 360px;
+}
+
+#mixerPanel h3 { /* This was the "Mixer" title, now hidden */
+    display: none;
+}
+
+#mixerGlobalEffectsSection {
+    padding: 12px 15px;
+    background-color: #30353a;
+    border-bottom: 1px solid #454a4f;
+    flex-shrink: 0;
+    display: flex;
+    gap: 25px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.global-effect-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px; /* Reduced gap for tighter packing */
+}
+
+.global-effect-group h4 {
+    font-size: 0.75em; /* Smaller title */
+    color: #a0a5aa;
+    margin: 0 0 3px 0;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+#mixerGroupControlsContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    padding: 15px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-grow: 1;
+    background-color: #2c3135; /* Slightly darker than global effects for contrast */
+    min-height: 250px; /* Adjusted min-height */
+    align-items: flex-start; /* Align strips to the top */
+}
+
+.channel-strip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #383d42; /* Darker strip */
+    border: 1px solid #202326;
+    border-radius: 5px;
+    padding: 8px 6px; /* Tighter padding */
+    width: 65px; /* Narrower strips */
+    min-width: 60px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.2), 0 1px 1px rgba(255,255,255,0.02);
+    position: relative;
+    flex-shrink: 0;
+    height: 100%; /* Make strips take full available height in the container */
+    justify-content: space-between; /* Distribute space for controls */
+}
+
+.channel-sends {
+    width: 100%;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.send-control-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.send-control-wrapper label {
+    display: block;
+    font-size: 0.6em; /* Even smaller */
+    color: #90959a;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+div[id*="-dial-"] { /* Nexus.Dial container */
+    margin: 0 auto; /* Centering the dial if its container is wider */
+    display: flex; /* Helps in centering if needed */
+    justify-content: center;
+}
+
+div[id*="-dial-"] svg .disc {
+    fill: var(--nexus-dial-fill);
+}
+div[id*="-dial-"] svg .pointer {
+    fill: var(--nexus-dial-accent);
+}
+div[id*="-dial-"] svg circle {
+    stroke: var(--nexus-dial-border);
+    stroke-width: 1px;
+}
+
+.fader-and-meter-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row; /* Meter on left, Slider on right */
+    justify-content: center;
+    align-items: flex-end; /* Align to bottom */
+    width: 100%;
+    min-height: 100px; /* Default height for group sliders */
+    margin-bottom: 6px;
+    gap: 4px; /* Space between meter and slider */
+}
+
+/* Nexus.Slider container */
+div[id*="-volume-slider-"] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%; /* Allow slider to take height from parent */
+}
+div[id*="-volume-slider-"] svg .fill {
+    fill: var(--nexus-slider-fill);
+}
+div[id*="-volume-slider-"] svg .bar {
+    fill: var(--nexus-slider-bar);
+}
+div[id*="-volume-slider-"] svg .handle {
+    fill: var(--text-color);
+}
+
+/* Nexus.Meter container */
+div[id*="-volume-meter-"] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%; /* Allow meter to take height from parent */
+}
+div[id*="-volume-meter-"] svg rect.level {
+    fill: var(--nexus-meter-level);
+}
+div[id*="-volume-meter-"] svg rect.bar {
+    fill: var(--nexus-meter-bar);
+}
+
+
+.channel-label {
+    font-size: 0.65em;
+    color: #a8afb6;
+    margin-top: 5px;
+    margin-bottom: 6px;
+    text-align: center;
+    width: 100%;
+    background-color: #2a2e32;
+    padding: 2px 0;
+    border-radius: 2px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.2);
+    font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.channel-mute-btn {
+    background-color: #50555a;
+    color: #bbb;
+    border: 1px solid #383d42;
+    border-radius: 3px;
+    padding: 4px 0;
+    width: 35px;
+    height: 22px;
+    font-size: 0.65em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-weight: bold;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-top: auto;
+}
+
+.channel-mute-btn:hover {
+    background-color: #60656a;
+}
+
+.channel-mute-btn.active {
+    background-color: #d9534f; /* Bootstrap danger red */
+    color: white;
+    border-color: #c9302c;
+}
+.channel-mute-btn:not(.active) {
+     background-color: #5cb85c; /* Bootstrap success green */
+     color: white;
+     border-color: #4cae4c;
+}
+
+#mixerPanel .panel-section { /* This is for #mixerGroupControlsContainer */
+    background-color: #2c3135;
+    padding: 15px;
+    margin: 0;
+    border-radius: 0; /* No rounding if it's not the last element */
+    border-top: 1px solid #3a3f44;
+}
+
+#mixerAdvancedControlsSection {
+    padding: 15px;
+    background-color: #30353a; /* Same as global effects */
+    border-top: 1px solid #454a4f;
+    display: flex;
+    justify-content: space-around; /* Distribute Nexus.Position controls */
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.nexus-position-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.nexus-position-wrapper label {
+    font-size: 0.7em;
+    color: #a0a5aa;
+    text-transform: uppercase;
+}
+
+/* Nexus.Position styling (targeting container div) */
+div[id^="nexus-position-"] {
+    /* NexusUI will create its own SVG here */
+}
+
+div[id^="nexus-position-"] svg rect { /* Main background rectangle */
+    fill: var(--nexus-slider-bar); /* Use slider bar color for background */
+    stroke: var(--nexus-position-border);
+    stroke-width: 1px;
+}
+
+div[id^="nexus-position-"] svg circle { /* The draggable circle */
+    fill: var(--nexus-position-fill);
+    stroke: var(--nexus-dial-border); /* Use dial border for circle */
+    stroke-width: 1px;
+}
+
+
+#mixerGlobalEffectsSection select {
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    border: 1px solid var(--button-hover);
+    padding: 4px 6px; /* Adjusted padding */
+    border-radius: 3px;
+    font-size: 0.7em; /* Smaller font */
+    min-width: 80px;
+    box-sizing: border-box;
 }
