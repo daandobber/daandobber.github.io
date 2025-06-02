@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resonaut</title>
     <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" src="NexusUI.js"></script>
 </head>
 <body class="theme-major-pentatonic">
 
@@ -129,7 +130,7 @@
     <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
     <button id="app-menu-record-btn" class="app-menu-bar-button" title="Record Session">🔴 Record</button>
     <button id="app-menu-toggle-tape-looper-btn" class="app-menu-bar-button" title="Toggle Tape Looper">📼 Tape</button>
-    <div class="app-menu-spacer"></div> 
+    <div class="app-menu-spacer"></div>
     <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
 </div>
 
@@ -212,63 +213,26 @@
 
 <div id="transportControls">
     <select id="scaleSelectTransport" title="Change musical scale and theme"></select>
-    <div class="transport-divider"></div> 
-    <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button> 
     <div class="transport-divider"></div>
-    <canvas id="pianoRollCanvas"></canvas> 
+    <button id="toggleInfoTextBtn" title="Toggle Node Info Text (I)">Info: ON</button>
+    <div class="transport-divider"></div>
+    <canvas id="pianoRollCanvas"></canvas>
 </div>
 
 <div id="mixerPanel" class="panel right-panel slide-panel hidden">
-    <h3>Mixer</h3>
-    <div class="panel-section">
-        <label for="masterVolumeSlider">Master Volume:</label>
-        <input type="range" id="masterVolumeSlider" min="0" max="1.2" step="0.01" value="0.8" title="Global Master Volume">
-        <span id="masterVolumeValue">0.80</span>
-    </div>
-    <div id="mixerGroupControlsContainer" class="panel-section"></div>
-    <div class="panel-section">
-        <label for="delaySendSlider">Delay Send:</label>
-        <input type="range" id="delaySendSlider" min="0" max="1" step="0.01" value="0.3" title="Global Delay Send Amount">
-        <span id="delaySendValue">0.30</span>
-        <label for="delayTimeSlider">Delay Time:</label>
-        <input type="range" id="delayTimeSlider" min="0.05" max="1.0" step="0.01" value="0.25" title="Delay Time (seconds)">
-        <span id="delayTimeValue">0.25s</span>
-         <label for="delayFeedbackSlider">Delay Feedback:</label>
-        <input type="range" id="delayFeedbackSlider" min="0" max="0.9" step="0.01" value="0.4" title="Delay Feedback Amount">
-        <span id="delayFeedbackValue">0.40</span>
-        <div class="mixer-control-item">
-            <label for="reverbIRSelect">Reverb Type (IR):</label>
-            <select id="reverbIRSelect"></select>
+    <div id="mixerGlobalEffectsSection">
         </div>
-        <div class="mixer-control-item">
-            <label for="reverbWetSlider">Reverb Wet Level:</label>
-            <input type="range" id="reverbWetSlider" min="0" max="1" step="0.01" value="0.5">
-            <span id="reverbWetValue">0.50</span>
+    <div id="mixerGroupControlsContainer" class="panel-section">
         </div>
-        <div class="mixer-control-item">
-            <label for="reverbPreDelaySlider">Pre-delay:</label>
-            <input type="range" id="reverbPreDelaySlider" min="0" max="0.5" step="0.001" value="0.020">
-            <span id="reverbPreDelayValue">0.020s</span>
+    <div id="mixerAdvancedControlsSection">
         </div>
-        <div class="mixer-control-item">
-            <label for="reverbDampingSlider">Damping (LPF):</label>
-            <input type="range" id="reverbDampingSlider" min="500" max="20000" step="100" value="8000">
-            <span id="reverbDampingValue">8000Hz</span>
-        </div>
-        <div class="mixer-control-item">
-            <label for="reverbLowCutSlider">Low Cut (HPF):</label>
-            <input type="range" id="reverbLowCutSlider" min="20" max="1000" step="10" value="100">
-            <span id="reverbLowCutValue">100Hz</span>
-        </div>
-    </div>
 </div>
-
 <div id="mixerToggleBtn" title="Open/Close Mixer">
     <span>Mixer</span>
 </div>
 
 <div id="help-popup" class="floating-panel hidden">
-    <button id="close-help-popup-btn" class="close-panel-button">&times;</button> 
+    <button id="close-help-popup-btn" class="close-panel-button">&times;</button>
     <h3>Help</h3>
     <p>Coming Soon...</p>
 </div>
