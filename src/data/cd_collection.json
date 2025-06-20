@@ -406,6 +406,68 @@
       "folder_id": 1
     },
     {
+      "id": 170713,
+      "instance_id": 2034040631,
+      "date_added": "2025-06-19T12:22:31-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 170713,
+        "master_id": 9330,
+        "master_url": "https://api.discogs.com/masters/9330",
+        "resource_url": "https://api.discogs.com/releases/170713",
+        "thumb": "https://i.discogs.com/AntnubSWo_FStR8BCKJmSN5wSdkDRGe3_4uQECUEQ0s/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE3MDcx/My0xNDU1MjM4MzM0/LTgxNDAuanBlZw.jpeg",
+        "cover_image": "https://i.discogs.com/kiz6SO-F2mDgh9elX9dOYqT2fOsQKn9rkdezLQXreOk/rs:fit/g:sm/q:90/h:600/w:598/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE3MDcx/My0xNDU1MjM4MzM0/LTgxNDAuanBlZw.jpeg",
+        "title": "Quiet Is The New Loud",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Repress"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Astralwerks",
+            "catno": "ASW29072-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 188,
+            "resource_url": "https://api.discogs.com/labels/188"
+          },
+          {
+            "name": "Source",
+            "catno": "7 2435 2 9072 2 5",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 22255,
+            "resource_url": "https://api.discogs.com/labels/22255"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Kings Of Convenience",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 12634,
+            "resource_url": "https://api.discogs.com/artists/12634"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Folk Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 1135113,
       "instance_id": 2009215248,
       "date_added": "2025-04-26T08:36:30-07:00",
@@ -895,6 +957,77 @@
         ],
         "styles": [
           "Alternative Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 11288918,
+      "instance_id": 2034038994,
+      "date_added": "2025-06-19T12:16:43-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 11288918,
+        "master_id": 3228,
+        "master_url": "https://api.discogs.com/masters/3228",
+        "resource_url": "https://api.discogs.com/releases/11288918",
+        "thumb": "https://i.discogs.com/Zp8XCkHMQLHjAS2sBMXdwngJfy-_eQtpEkHzLHn4cA8/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMjg4/OTE4LTE1MTM1ODgw/MTItODExNS5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/JmWN-hpCg1fTTHNKVl-WGEptMiVyoivbI_B2Eol4c_0/rs:fit/g:sm/q:90/h:596/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTExMjg4/OTE4LTE1MTM1ODgw/MTItODExNS5qcGVn.jpeg",
+        "title": "Radio-Activity",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Capitol Records",
+            "catno": "0777 7464742 7",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 654,
+            "resource_url": "https://api.discogs.com/labels/654"
+          },
+          {
+            "name": "Capitol Records",
+            "catno": "0777 7 46474 2 7",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 654,
+            "resource_url": "https://api.discogs.com/labels/654"
+          },
+          {
+            "name": "EMI",
+            "catno": "CDEMS 1524",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26126,
+            "resource_url": "https://api.discogs.com/labels/26126"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Kraftwerk",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 4654,
+            "resource_url": "https://api.discogs.com/artists/4654"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "Electro",
+          "Synth-pop"
         ]
       },
       "folder_id": 1
@@ -1842,6 +1975,178 @@
       "folder_id": 1
     },
     {
+      "id": 13589481,
+      "instance_id": 2034040336,
+      "date_added": "2025-06-19T12:21:32-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 13589481,
+        "master_id": 1008028,
+        "master_url": "https://api.discogs.com/masters/1008028",
+        "resource_url": "https://api.discogs.com/releases/13589481",
+        "thumb": "https://i.discogs.com/aoXFo7TcaEglivRuk36k5jFjkCgCsqba2Epyc_NWopA/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNTg5/NDgxLTE1NTcwNjUy/MDktMTQ3NC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/miDKgK7ybYjk8q5UkUGq-6hd_H7kI4qLBw0PSbTIuh0/rs:fit/g:sm/q:90/h:320/w:320/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEzNTg5/NDgxLTE1NTcwNjUy/MDktMTQ3NC5qcGVn.jpeg",
+        "title": "Ash & Ice",
+        "year": 2016,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Domino",
+            "catno": "WIG289D",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26465,
+            "resource_url": "https://api.discogs.com/labels/26465"
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Kills",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 202601,
+            "resource_url": "https://api.discogs.com/artists/202601"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Garage Rock",
+          "Lo-Fi",
+          "Indie Rock"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 10147386,
+      "instance_id": 2034045556,
+      "date_added": "2025-06-19T12:38:30-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 10147386,
+        "master_id": 64940,
+        "master_url": "https://api.discogs.com/masters/64940",
+        "resource_url": "https://api.discogs.com/releases/10147386",
+        "thumb": "https://i.discogs.com/P2LtRVKkprfoaNPqfSMNN5ygEIni_3E9gCWufnjlaAw/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMTQ3/Mzg2LTE0OTI0NDU5/MTItMzYzMi5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/NuJsud_VlIUgvAouiK1srvDcLDBJyXSFKxS948hLPKY/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMTQ3/Mzg2LTE0OTI0NDU5/MTItMzYzMi5qcGVn.jpeg",
+        "title": "Keep On Your Mean Side",
+        "year": 2003,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Domino",
+            "catno": "WIGCD124",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 26465,
+            "resource_url": "https://api.discogs.com/labels/26465"
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Kills",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 202601,
+            "resource_url": "https://api.discogs.com/artists/202601"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Indie Rock",
+          "Garage Rock",
+          "Post-Punk"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 981925,
+      "instance_id": 2034040451,
+      "date_added": "2025-06-19T12:21:55-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 981925,
+        "master_id": 0,
+        "master_url": null,
+        "resource_url": "https://api.discogs.com/releases/981925",
+        "thumb": "https://i.discogs.com/MjJ-DpGQExnADeRE7v7onLZ50XxGGVVSQZl_K-sexfM/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk4MTky/NS0xMjI0NzU3NjY3/LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/w4LCuRh6Wovux-L8ae3P1_Y8xD00yfDlOGenIr9WzN8/rs:fit/g:sm/q:90/h:596/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTk4MTky/NS0xMjI0NzU3NjY3/LmpwZWc.jpeg",
+        "title": "The Masters",
+        "year": 1998,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Compilation"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Eagle Records",
+            "catno": "EAB CD 111",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2054,
+            "resource_url": "https://api.discogs.com/labels/2054"
+          },
+          {
+            "name": "Eagle Records",
+            "catno": "GAS 0000111 EAB",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 2054,
+            "resource_url": "https://api.discogs.com/labels/2054"
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Stranglers",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 71891,
+            "resource_url": "https://api.discogs.com/artists/71891"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Pop Rock",
+          "Punk"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 2417320,
       "instance_id": 1992475596,
       "date_added": "2025-04-11T23:11:50-07:00",
@@ -1981,6 +2286,62 @@
           "House",
           "Electro",
           "Electro House"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
+      "id": 5277642,
+      "instance_id": 2034038936,
+      "date_added": "2025-06-19T12:16:29-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 5277642,
+        "master_id": 45347,
+        "master_url": "https://api.discogs.com/masters/45347",
+        "resource_url": "https://api.discogs.com/releases/5277642",
+        "thumb": "https://i.discogs.com/sKp09w8vCcHMtRA1amUCu4557adIr1JdU1TrlRxV46k/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUyNzc2/NDItMTM4OTQ3NTkz/OS0yMDE5LmpwZWc.jpeg",
+        "cover_image": "https://i.discogs.com/ONLdZshbpDIA-RLsK-5h0EhIYtI57Er0dorCvAf2OBI/rs:fit/g:sm/q:90/h:593/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTUyNzc2/NDItMTM4OTQ3NTkz/OS0yMDE5LmpwZWc.jpeg",
+        "title": "The Doors",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Elektra",
+            "catno": "7559-74007-2",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 651,
+            "resource_url": "https://api.discogs.com/labels/651"
+          }
+        ],
+        "artists": [
+          {
+            "name": "The Doors",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 56798,
+            "resource_url": "https://api.discogs.com/artists/56798"
+          }
+        ],
+        "genres": [
+          "Rock"
+        ],
+        "styles": [
+          "Blues Rock",
+          "Psychedelic Rock",
+          "Classic Rock"
         ]
       },
       "folder_id": 1
@@ -2672,359 +3033,6 @@
         ],
         "styles": [
           "Indie Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 3787137,
-      "instance_id": 1992473508,
-      "date_added": "2025-04-11T23:06:44-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 3787137,
-        "master_id": 94751,
-        "master_url": "https://api.discogs.com/masters/94751",
-        "resource_url": "https://api.discogs.com/releases/3787137",
-        "thumb": "https://i.discogs.com/zhi2-GAFO017bQrj04LJrUbRpvGgPDvdcl8TqGJ7Z5Y/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM3ODcx/MzctMTQ5MzkxODQ4/MS04MTA5LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/XA1OEUO8jqFja61VA0AITtompw0mk-QVFsuqtz7xZeM/rs:fit/g:sm/q:90/h:591/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTM3ODcx/MzctMTQ5MzkxODQ4/MS04MTA5LmpwZWc.jpeg",
-        "title": "Leisure",
-        "year": 2012,
-        "formats": [
-          {
-            "name": "Vinyl",
-            "qty": "1",
-            "text": "180 Gram",
-            "descriptions": [
-              "LP",
-              "Album",
-              "Reissue",
-              "Remastered"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "Food",
-            "catno": "FOODLPX6",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 6124,
-            "resource_url": "https://api.discogs.com/labels/6124"
-          },
-          {
-            "name": "Parlophone",
-            "catno": "5099962483216",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2294,
-            "resource_url": "https://api.discogs.com/labels/2294"
-          }
-        ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Alternative Rock",
-          "Indie Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 4750153,
-      "instance_id": 1970320688,
-      "date_added": "2025-03-20T23:27:18-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 4750153,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/4750153",
-        "thumb": "https://i.discogs.com/-5DS5Q9Gp_gAtSv2FYivwsiLGGKPN3HhGd4y84ka9Tg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3NTAx/NTMtMTQ2MjQ3NDcx/Mi0yMzA3LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/cYs06Fhl_cdk-ML799yU4jeZcqGIKvXijjLvmZwkKfo/rs:fit/g:sm/q:90/h:566/w:560/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTQ3NTAx/NTMtMTQ2MjQ3NDcx/Mi0yMzA3LmpwZWc.jpeg",
-        "title": "Gold",
-        "year": 1993,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "Gold",
-            "catno": "GOLD 050",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 60909,
-            "resource_url": "https://api.discogs.com/labels/60909"
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Yardbirds",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 262455,
-            "resource_url": "https://api.discogs.com/artists/262455"
-          }
-        ],
-        "genres": [
-          "Rock",
-          "Blues"
-        ],
-        "styles": [
-          "Rhythm & Blues"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 12091601,
-      "instance_id": 2006789844,
-      "date_added": "2025-04-24T00:36:49-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 12091601,
-        "master_id": 0,
-        "master_url": null,
-        "resource_url": "https://api.discogs.com/releases/12091601",
-        "thumb": "https://i.discogs.com/VXEaFEJPciTGjX1ZDtF9afFFQFWUxFFoQUbD2cwNQbg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMDkx/NjAxLTE1MzExNjUy/ODUtNzg3NC5wbmc.jpeg",
-        "cover_image": "https://i.discogs.com/jrBlMCD1cTBVsHX-rc4UeDe1mtU3qbqmXyYB-9HW1Rw/rs:fit/g:sm/q:90/h:599/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEyMDkx/NjAxLTE1MzExNjUy/ODUtNzg3NC5wbmc.jpeg",
-        "title": "The Dubliners",
-        "year": 1998,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Compilation"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "Green Velvet",
-            "catno": "GV 98012",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 722302,
-            "resource_url": "https://api.discogs.com/labels/722302"
-          }
-        ],
-        "artists": [
-          {
-            "name": "The Dubliners",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 274143,
-            "resource_url": "https://api.discogs.com/artists/274143"
-          }
-        ],
-        "genres": [
-          "Folk, World, & Country"
-        ],
-        "styles": [
-          "Celtic"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 5986653,
-      "instance_id": 2009217129,
-      "date_added": "2025-04-26T08:37:59-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 5986653,
-        "master_id": 102104,
-        "master_url": "https://api.discogs.com/masters/102104",
-        "resource_url": "https://api.discogs.com/releases/5986653",
-        "thumb": "https://i.discogs.com/3gl3MvJRhp-5halO_ltctMw-Ff-_FHQuKwDMgN8UJwQ/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU5ODY2/NTMtMTQwODEzMjA2/My0xNTkyLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/DOZ96PbD36xCRKW59CM27Iv87x3iwk3N0v9spsxr2tU/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTU5ODY2/NTMtMTQwODEzMjA2/My0xNTkyLmpwZWc.jpeg",
-        "title": "Good Stuff",
-        "year": 1992,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "Hed-Arzi",
-            "catno": "9 26943-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 55856,
-            "resource_url": "https://api.discogs.com/labels/55856"
-          },
-          {
-            "name": "Reprise Records",
-            "catno": "9 26943-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 157,
-            "resource_url": "https://api.discogs.com/labels/157"
-          }
-        ],
-        "artists": [
-          {
-            "name": "The B-52's",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 242415,
-            "resource_url": "https://api.discogs.com/artists/242415"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
-          "Pop Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 1012693,
-      "instance_id": 1992475206,
-      "date_added": "2025-04-11T23:10:53-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 1012693,
-        "master_id": 111851,
-        "master_url": "https://api.discogs.com/masters/111851",
-        "resource_url": "https://api.discogs.com/releases/1012693",
-        "thumb": "https://i.discogs.com/P8ywmxwlwhULMqAxVY7DHlhrV1ml4ZW3ycD1TX2VsV0/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMTI2/OTMtMTYxNjk1NTQ4/OC02MDU5LmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/zIckkOUzxwZIhxc-DCCUjNEuR9f3pPVkPUHyevfo71M/rs:fit/g:sm/q:90/h:598/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTEwMTI2/OTMtMTYxNjk1NTQ4/OC02MDU5LmpwZWc.jpeg",
-        "title": "Hoezo?",
-        "year": 1989,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "HKM",
-            "catno": "655.289-2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 161519,
-            "resource_url": "https://api.discogs.com/labels/161519"
-          },
-          {
-            "name": "HKM",
-            "catno": "655.289 - 2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 161519,
-            "resource_url": "https://api.discogs.com/labels/161519"
-          }
-        ],
-        "artists": [
-          {
-            "name": "Clouseau",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 169165,
-            "resource_url": "https://api.discogs.com/artists/169165"
-          }
-        ],
-        "genres": [
-          "Rock",
-          "Pop"
-        ],
-        "styles": [
-          "Pop Rock",
-          "Synth-pop"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 7985941,
-      "instance_id": 1985625252,
-      "date_added": "2025-04-05T00:26:41-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 7985941,
-        "master_id": 11767,
-        "master_url": "https://api.discogs.com/masters/11767",
-        "resource_url": "https://api.discogs.com/releases/7985941",
-        "thumb": "https://i.discogs.com/PvzU8sSUCgqf9RVwOQ1tI9PZDwjLroOWxpZ09VCeChc/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc5ODU5/NDEtMTU0MzgzMzA0/Mi00MDkwLmpwZWc.jpeg",
-        "cover_image": "https://i.discogs.com/J8dkxpHjfi7pgc_vU2l3EDhin09hGbubkCfZULDZs-w/rs:fit/g:sm/q:90/h:594/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTc5ODU5/NDEtMTU0MzgzMzA0/Mi00MDkwLmpwZWc.jpeg",
-        "title": "Burial",
-        "year": 0,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Album"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "Hyperdub",
-            "catno": "HDBCD001",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 25386,
-            "resource_url": "https://api.discogs.com/labels/25386"
-          }
-        ],
-        "artists": [
-          {
-            "name": "Burial",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 306157,
-            "resource_url": "https://api.discogs.com/artists/306157"
-          }
-        ],
-        "genres": [
-          "Electronic"
-        ],
-        "styles": [
-          "Abstract",
-          "Dubstep",
-          "UK Garage",
-          "Ambient"
         ]
       },
       "folder_id": 1
