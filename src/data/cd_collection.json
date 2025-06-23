@@ -285,6 +285,65 @@
       "folder_id": 1
     },
     {
+      "id": 21905371,
+      "instance_id": 2034805990,
+      "date_added": "2025-06-22T05:36:19-07:00",
+      "rating": 0,
+      "basic_information": {
+        "id": 21905371,
+        "master_id": 565,
+        "master_url": "https://api.discogs.com/masters/565",
+        "resource_url": "https://api.discogs.com/releases/21905371",
+        "thumb": "https://i.discogs.com/NKgMLge-Y4svMjABIjOPfWp894ns8WjFppKBaj0PG4Q/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxOTA1/MzcxLTE2NDMyNDM1/OTUtMzk1MC5qcGVn.jpeg",
+        "cover_image": "https://i.discogs.com/t-c0AbqCONwToAhWnx0hM4EQsyqpMhyQlfNIiKwQlw8/rs:fit/g:sm/q:90/h:600/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTIxOTA1/MzcxLTE2NDMyNDM1/OTUtMzk1MC5qcGVn.jpeg",
+        "title": "Selected Ambient Works 85-92",
+        "year": 0,
+        "formats": [
+          {
+            "name": "CD",
+            "qty": "1",
+            "descriptions": [
+              "Album",
+              "Reissue",
+              "Remastered"
+            ]
+          }
+        ],
+        "labels": [
+          {
+            "name": "Apollo",
+            "catno": "AMB9322CD",
+            "entity_type": "1",
+            "entity_type_name": "Label",
+            "id": 683,
+            "resource_url": "https://api.discogs.com/labels/683"
+          }
+        ],
+        "artists": [
+          {
+            "name": "Aphex Twin",
+            "anv": "",
+            "join": "",
+            "role": "",
+            "tracks": "",
+            "id": 45,
+            "resource_url": "https://api.discogs.com/artists/45"
+          }
+        ],
+        "genres": [
+          "Electronic"
+        ],
+        "styles": [
+          "IDM",
+          "Techno",
+          "Electro",
+          "Experimental",
+          "Ambient"
+        ]
+      },
+      "folder_id": 1
+    },
+    {
       "id": 374951,
       "instance_id": 2006789679,
       "date_added": "2025-04-24T00:36:28-07:00",
@@ -2963,75 +3022,6 @@
         "styles": [
           "Alternative Rock",
           "Britpop",
-          "Indie Rock"
-        ]
-      },
-      "folder_id": 1
-    },
-    {
-      "id": 607798,
-      "instance_id": 1992473223,
-      "date_added": "2025-04-11T23:06:01-07:00",
-      "rating": 0,
-      "basic_information": {
-        "id": 607798,
-        "master_id": 46410,
-        "master_url": "https://api.discogs.com/masters/46410",
-        "resource_url": "https://api.discogs.com/releases/607798",
-        "thumb": "https://i.discogs.com/jRfOHciQIakP8pddswaVES_fn7Nz8Meo4nVHzCMHS4A/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYwNzc5/OC0xNTEwMjEyMjEy/LTQ3OTAuanBlZw.jpeg",
-        "cover_image": "https://i.discogs.com/MEbuGsXDB5pA4VC3p8EfifN1dmDGm5zdwBoztTCdjcU/rs:fit/g:sm/q:90/h:523/w:600/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTYwNzc5/OC0xNTEwMjEyMjEy/LTQ3OTAuanBlZw.jpeg",
-        "title": "There's No Other Way",
-        "year": 1991,
-        "formats": [
-          {
-            "name": "CD",
-            "qty": "1",
-            "descriptions": [
-              "Single"
-            ]
-          }
-        ],
-        "labels": [
-          {
-            "name": "Food",
-            "catno": "20 4272 2",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 6124,
-            "resource_url": "https://api.discogs.com/labels/6124"
-          },
-          {
-            "name": "Food",
-            "catno": "CDFOOD 29",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 6124,
-            "resource_url": "https://api.discogs.com/labels/6124"
-          },
-          {
-            "name": "Parlophone",
-            "catno": "2042722",
-            "entity_type": "1",
-            "entity_type_name": "Label",
-            "id": 2294,
-            "resource_url": "https://api.discogs.com/labels/2294"
-          }
-        ],
-        "artists": [
-          {
-            "name": "Blur",
-            "anv": "",
-            "join": "",
-            "role": "",
-            "tracks": "",
-            "id": 7551,
-            "resource_url": "https://api.discogs.com/artists/7551"
-          }
-        ],
-        "genres": [
-          "Rock"
-        ],
-        "styles": [
           "Indie Rock"
         ]
       },
