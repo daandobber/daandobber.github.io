@@ -94,6 +94,9 @@
   --timeline-grid-default-border-color: var(--gate-node-border, rgba(210, 190, 255, 0.8));
   --timeline-grid-default-scanline-color: var(--start-node-color, rgba(255, 255, 200, 0.9));
   --timeline-grid-internal-lines-color: var(--grid-color, rgba(100, 130, 180, 0.25));
+  --spaceradar-border-color: var(--gate-node-border, rgba(150, 220, 150, 0.8));
+  --spaceradar-scanline-color: var(--start-node-color, rgba(255, 255, 220, 0.9));
+  --spaceradar-internal-lines-color: var(--grid-color, rgba(100, 130, 180, 0.25));
   --prorb-color: rgba(200, 210, 220, 0.75);
   --prorb-border-color: rgba(0, 0, 0, 0.9);
   --prorb-text-color: rgba(50, 60, 70, 0.9);
@@ -112,6 +115,9 @@
   --meter-fill-mid: rgba(0,191,255,0.9);
   --meter-fill-end: rgba(138,43,226,0.9);
   --meter-gain-indicator-color: rgba(255, 255, 255, 0.7);
+  --timeline-pixels-per-second: 100;
+  --timeline-loop-bar-height: 20px;
+  --timeline-track-header-height: 32px;
 }
 
 body.theme-minor-pentatonic {
@@ -1558,4 +1564,279 @@ margin-top: 6px;
   font-size: 0.7em;
   margin-top: 2px;
   color: var(--text-color);
+}
+#radioSamplerPanel.radio-panel { position: fixed; bottom: 20px; left: -320px; width: 300px; padding: 15px; background-color: #3c3c4c; border: 2px solid #2a2a3a; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); z-index: 1050; transition: left 0.4s ease-in-out; color: #ddd; font-family: 'Courier New', Courier, monospace; }
+#radioSamplerPanel.radio-panel:not(.hidden) { left: 20px; }
+#radioSamplerPanel h3 { margin-top: 0; text-align: center; font-size: 1em; }
+#radioSamplerGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 10px 0; }
+#radioSamplerGrid .radio-pad {
+  width: 100%;
+  background-color: #444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  padding-bottom: 22px;
+}
+#radioSamplerGrid .radio-pad.playing { background-color: var(--button-active, #8860b0); box-shadow: 0 0 6px var(--button-active, #8860b0); }
+#radioSamplerGrid canvas { width: 100%; height: 40px; display: block; }
+#radioSamplerGrid .pad-controls {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px;
+  box-sizing: border-box;
+}
+#radioSamplerGrid .pad-rec-btn { font-size: 0.7em; padding: 2px 4px; background-color: #800; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+#radioSamplerGrid .pad-rec-btn.recording { background-color: #f00; }
+#radioSamplerGrid .pad-step-toggle {
+  font-size: 0.7em;
+  padding: 2px 4px;
+  background-color: #222;
+  color: #fff;
+  border: 1px solid #555;
+  border-radius: 3px;
+  cursor: pointer;
+}
+#radioSamplerGrid .pad-step-toggle.on {
+  background-color: #6c6;
+  border-color: #8f8;
+}
+#radioPadEditor { margin-top: 8px; }
+#radioWaveformCanvas { width: 100%; height: 60px; background-color: #222; border: 1px solid #111; border-radius: 3px; }
+.radio-edit-fields { display: flex; justify-content: space-between; margin-top: 4px; }
+.radio-edit-fields label { font-size: 0.8em; color: #ccc; }
+.radio-edit-fields input { width: 60px; background-color: rgba(20,20,30,0.5); color: #fff; border: 1px solid #666; border-radius: 3px; padding: 2px; }
+.radio-slider-wrapper { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.radio-slider-wrapper label { font-size: 0.75em; margin-bottom: 2px; color: #ccc; }
+.radio-extra-fields { display: flex; justify-content: space-between; margin-top: 4px; }
+.radio-extra-fields label { font-size: 0.8em; color: #ccc; display: flex; flex-direction: column; align-items: center; }
+.radio-extra-fields input[type=range] { width: 80px; }
+#radioSamplerControls { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+#radioSamplerControls select,
+#radioSamplerControls button { flex: 1; font-size: 0.8em; padding: 4px; background-color: #444; color: #fff; border: none; border-radius: 4px; }
+#radioSamplerControls button.active { background-color: #663; }
+#radioStationSlider { flex: 1; }
+#radioVolumeSlider { flex: 1; }
+#radioSeqSteps.radio-step-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin-bottom: 6px; }
+.radio-step { height: 8px; background-color: #333; }
+.radio-step.active { background-color: #8af; }
+.radio-step.selected { background-color: #f66; }
+
+.radio-sampler-tabs { display:flex; gap:4px; margin-bottom:6px; }
+.radio-sampler-tabs .radio-tab { flex:1; font-size:0.8em; padding:4px; background-color:#444; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+.radio-sampler-tabs .radio-tab.active { background-color:#663; }
+.radio-tab-content.hidden { display:none; }
+#radioFxPad { width:100%; height:150px; background:#222; border:1px solid #111; border-radius:3px; margin:6px 0; touch-action:none; }
+.radio-fx-assign { display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap; }
+.radio-fx-axis { display:flex; align-items:center; gap:4px; flex:1; }
+.radio-fx-axis span { font-size:0.8em; color:#ccc; }
+.radio-fx-axis select { flex:1; }
+
+#radioFxControls { display:flex; gap:4px; margin-top:6px; }
+#radioFxControls button { flex:1; font-size:0.8em; padding:4px; background-color:#444; color:#fff; border:none; border-radius:4px; }
+#radioFxControls button.active { background-color:#663; }
+
+#timelineView {
+  position: absolute;
+  top: var(--app-menu-bar-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--panel-bg, #101020);
+  color: var(--text-color, #ddeeff);
+  z-index: 900;
+  overflow: auto;
+  padding: 8px;
+}
+#timelineView.hidden { display: none; }
+.timeline-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.timeline-controls button {
+  background: var(--button-bg, #304070);
+  color: var(--text-color, #ddeeff);
+  border: 1px solid var(--button-hover, #405088);
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.timeline-controls button:hover {
+  background: var(--button-hover, #405088);
+}
+.loop-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8em;
+}
+#timelineScroll {
+  overflow-x: auto;
+  position: relative;
+}
+#timelineLoopBar {
+  height: var(--timeline-loop-bar-height);
+  border-bottom: 1px solid var(--timeline-grid-default-border-color);
+  position: relative;
+  cursor: crosshair;
+}
+#timelineTracks {
+  position: relative;
+  width: calc(60 * var(--timeline-pixels-per-second, 100px));
+}
+.timeline-track {
+  border: 1px solid var(--button-hover, #555);
+  margin-bottom: 8px;
+  padding: 4px;
+  background: var(--flat-bg-color, #101020);
+}
+.track-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.track-header select,
+.track-header button,
+.track-header input[type="range"] {
+  background: var(--button-bg, #304070);
+  color: var(--text-color, #ddeeff);
+  border: 1px solid var(--button-hover, #405088);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+.track-header input[type="range"] {
+  cursor: pointer;
+}
+.track-header button:hover {
+  background: var(--button-hover, #405088);
+}
+.track-header .track-rec-btn.recording {
+  background: #800;
+  color: #fff;
+}
+.track-header .track-del-btn {
+  background: #600;
+  color: #fff;
+}
+.slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.75em;
+}
+.slider-wrapper span {
+  min-width: 2em;
+  text-align: center;
+}
+.slider-wrapper input[type="range"] {
+  flex: 1;
+}
+.track-body {
+  position: relative;
+  height: 60px;
+  background: #222;
+  overflow: hidden;
+  border: 1px solid var(--timeline-grid-default-border-color);
+}
+.timeline-segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #555;
+  cursor: grab;
+  overflow: hidden;
+}
+.timeline-segment.recording {
+  background: rgba(200, 0, 0, 0.5);
+}
+.timeline-segment.dragging {
+  opacity: 0.7;
+  cursor: grabbing;
+  pointer-events: none;
+  z-index: 1000;
+}
+.segment-handle {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: rgba(200,200,255,0.3);
+  cursor: ew-resize;
+}
+.segment-handle.left { left: 0; }
+.segment-handle.right { right: 0; }
+.segment-delete-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  font-size: 12px;
+  text-align: center;
+  background: rgba(80, 0, 0, 0.7);
+  color: #fff;
+  cursor: pointer;
+}
+.waveform-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  pointer-events: none;
+}
+.timeline-segment.selected {
+  outline: 2px solid #0af;
+}
+.time-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+.time-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--timeline-grid-internal-lines-color, rgba(255, 255, 255, 0.1));
+}
+#timelinePlayhead {
+  position: absolute;
+  top: calc(var(--timeline-loop-bar-height) + var(--timeline-track-header-height));
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 902;
+}
+#timelineLoopRegion {
+  position: absolute;
+  top: calc(var(--timeline-loop-bar-height) + var(--timeline-track-header-height));
+  bottom: 0;
+  background: rgba(0, 150, 200, 0.2);
+  border: 1px solid rgba(0, 150, 200, 0.5);
+  pointer-events: none;
+  z-index: 901;
+}
+#timelineLoopRegion.hidden {
+  display: none;
+}
+#timelinePlayhead.hidden {
+  display: none;
 }

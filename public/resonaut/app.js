@@ -11,8 +11,6 @@ const startEngineBtn = document.getElementById("startEngineBtn");
 let selectedMode = "chill";
 let samplesLoadedCount = 0;
 let totalSamples = 0;
-
-// Wrap console logging functions to prepend ISO timestamps for easier debugging
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
@@ -154,6 +152,9 @@ const resonauterPanelCloseBtn = document.getElementById('resonauter-panel-close-
 const samplerPanel = document.getElementById("sampler-panel");
 const samplerPanelContent = document.getElementById("sampler-panel-content");
 const samplerPanelCloseBtn = document.getElementById("sampler-panel-close-btn");
+const radioOrbPanel = document.getElementById('radio-orb-panel');
+const radioOrbPanelContent = document.getElementById('radio-orb-panel-content');
+const radioOrbPanelCloseBtn = document.getElementById('radio-orb-panel-close-btn');
 const combulaPanel = document.getElementById('combula-panel');
 const combulaPanelContent = document.getElementById('combula-panel-content');
 const combulaPanelCloseBtn = document.getElementById('combula-panel-close-btn');
@@ -175,6 +176,7 @@ let alienLfoToggles = {};
 let alienEngineOrbs = [];
 let combulaSliders = {};
 let currentCombulaNode = null;
+let currentRadioOrbNode = null;
 let alienEngine = 0;
 let currentAlienNode = null;
 let alienLfoRate = 1.0;
@@ -257,12 +259,15 @@ let alienOrbCtx = null;
 let resonauterOrbCtx = null;
 let resonauterSpinPhase = 0;
 let resonauterSpinSpeed = 0;
+let currentResonauterTab = 'exc';
 const TIMELINE_GRID_TYPE = "timeline_grid";
+const SPACERADAR_TYPE = "spaceradar";
 const PRORB_TYPE = "prorb";
 const MIDI_ORB_TYPE = "midi_orb";
 const ALIEN_ORB_TYPE = "alien_orb";
 const RESONAUTER_TYPE = "resonauter";
 const COMBULA_TYPE = "combula";
+const RADIO_ORB_TYPE = "radio_orb";
 const TIMELINE_GRID_DEFAULT_WIDTH = 250;
 const TIMELINE_GRID_DEFAULT_HEIGHT = 400;
 const TIMELINE_GRID_DEFAULT_SPEED = 4.0;
@@ -271,7 +276,17 @@ const TIMELINE_GRID_DEFAULT_PULSE_INTENSITY = 0.9;
 const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_ENABLED = false;
 const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SPEED_MANUAL = 0.005; 
 const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_DIRECTION = "clockwise"; 
-const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8; 
+const TIMELINE_GRID_DEFAULT_AUTO_ROTATE_SYNC_SUBDIVISION_INDEX = 8;
+const SPACERADAR_DEFAULT_RADIUS = 250;
+const SPACERADAR_DEFAULT_SPEED = 4.0;
+const SPACERADAR_DEFAULT_COLOR = "rgba(150, 220, 150, 0.7)";
+const SPACERADAR_DEFAULT_PULSE_INTENSITY = 0.9;
+const SPACERADAR_DEFAULT_MUSICAL_BARS = 1;
+const SPACERADAR_MODE_NORMAL = "normal";
+const SPACERADAR_MODE_REVERSE = "reverse";
+const SPACERADAR_MODE_PENDULUM = "pendulum";
+const SPACERADAR_DEFAULT_MODE = SPACERADAR_MODE_NORMAL;
+const SPACERADAR_ANGLE_OFFSET = -Math.PI / 2;
 const addTimelineGridBtn = document.getElementById("addTimelineGridBtn");
 if (addTimelineGridBtn) {
   addTimelineGridBtn.addEventListener("click", (e) => {
@@ -279,6 +294,14 @@ if (addTimelineGridBtn) {
   });
 } else {
   console.warn("#addTimelineGridBtn not found in DOM!");
+}
+const addSpaceRadarBtn = document.getElementById("addSpaceRadarBtn");
+if (addSpaceRadarBtn) {
+  addSpaceRadarBtn.addEventListener("click", (e) => {
+    setupAddTool(e.currentTarget, SPACERADAR_TYPE, false);
+  });
+} else {
+  console.warn("#addSpaceRadarBtn not found in DOM!");
 }
 const addPrOrbBtn = document.getElementById("addPrOrbBtn");
 const addMidiOrbBtn = document.getElementById("addMidiOrbBtn");
@@ -326,6 +349,7 @@ let reverbWetGain;
 let delayNode;
 let delayFeedbackGain;
 let masterDelaySendGain;
+let delayReturnGain;
 let isReverbReady = false;
 let isDelayReady = false;
 const REVERB_IR_URL = "reverb.wav";
@@ -378,6 +402,14 @@ let tapeLoopSourceNode = null;
 let isTapeLoopRecording = false;
 let isTapeLoopPlaying = false;
 let scriptNodeForTapeLoop = null;
+
+let radioGainNode = null;
+let radioAnalyserNode = null;
+let radioPannerNode = null;
+let radioDelaySendGainNode = null;
+let radioReverbSendGainNode = null;
+let radioMuteState = false;
+let radioSoloState = false;
 let tapeLoopWritePosition = 0;
 let tapeLoopEffectivelyRecordedDuration = 0;
 let tapeLoopRecordedAtBPM = 0;
@@ -419,7 +451,7 @@ function startApplication() {
         console.log('[Audio] context state after setup:', context.state);
         isAudioReady = true;
         nodes.forEach((n) => {
-          if (!n.audioNodes && n.type !== TIMELINE_GRID_TYPE && n.type !== "global_key_setter") {
+          if (!n.audioNodes && n.type !== TIMELINE_GRID_TYPE && n.type !== SPACERADAR_TYPE && n.type !== "global_key_setter") {
             n.audioNodes = createAudioNodesForNode(n);
             if (n.audioNodes) updateNodeAudioParams(n);
           }
@@ -518,9 +550,21 @@ let isAudioReady = false;
 let currentGlobalPulseId = 0;
 let previousFrameTime = 0;
 let bgAngle = Math.random() * Math.PI * 2;
-let backgroundMode = 'stardrops';
+// Set the default background to the parallax starfield
+// instead of the neural network
+let backgroundMode = 'starfield';
 let starfieldLayers = null;
 let neuralNodes = [];
+let neuralConnections = [];
+let maxNeuralNodes = 60; // fewer nodes for a calmer look
+let neuralGrowthCooldown = 0;
+let neuralWindPhase = 0;
+const NEURAL_SPRING_RADIUS = 90;
+const NEURAL_SPRING_STRENGTH = 0.002;
+const NEURAL_FRICTION = 0.96;
+const NEURAL_WIND_STRENGTH_X = 6;
+const NEURAL_WIND_STRENGTH_Y = 4;
+const NEURAL_ZOOM = 1.5; // scale up the neural background
 let pianoRollCanvas = null;
 let pianoRollCtx = null;
 let pianoRollHexagons = [];
@@ -568,14 +612,30 @@ function initStarfield() {
 
 function initNeuralBackground() {
   neuralNodes = [];
+  neuralConnections = [];
   for (let i = 0; i < 40; i++) {
     neuralNodes.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
       angle: Math.random() * Math.PI * 2,
-      speed: Math.random() * 0.5 + 0.2,
+      speed: Math.random() * 0.3 + 0.1,
+      vx: 0,
+      vy: 0,
     });
   }
+}
+
+function spawnNeuralNode(base) {
+  const node = {
+    x: (base ? base.x : Math.random() * canvas.width) + (Math.random() - 0.5) * 30,
+    y: (base ? base.y : Math.random() * canvas.height) + (Math.random() - 0.5) * 30,
+    angle: Math.random() * Math.PI * 2,
+    speed: Math.random() * 0.3 + 0.1,
+    vx: 0,
+    vy: 0,
+  };
+  neuralNodes.push(node);
+  if (neuralNodes.length > maxNeuralNodes) neuralNodes.shift();
 }
 
 const NODE_RADIUS_BASE = 12;
@@ -646,8 +706,6 @@ const STRING_VIOLIN_DEFAULTS = {
   filterFreqFactor: 2.5,
   filterQ: 1.5,
   vibratoRate: 4,
-  // Depth in cents for vibrato modulation
-  // Increased to make the effect more noticeable
   vibratoDepth: 20,
   volume: 0.4,
   scaleIndex: 0,
@@ -2103,7 +2161,8 @@ function isPlayableNode(node) {
     node.type === PRORB_TYPE ||
     node.type === MIDI_ORB_TYPE ||
     node.type === ALIEN_ORB_TYPE ||
-    node.type === RESONAUTER_TYPE
+    node.type === RESONAUTER_TYPE ||
+    node.type === RADIO_ORB_TYPE
   );
 }
 
@@ -2258,6 +2317,11 @@ function findNodeAt(worldX, worldY) {
       ) {
         return n;
       }
+    } else if (n.type === SPACERADAR_TYPE) {
+      const d = distance(worldX, worldY, n.x, n.y);
+      if (d <= n.radius) {
+        return n;
+      }
     } else {
       const apparentRadius = NODE_RADIUS_BASE * n.size * 1.15;
       const d = distance(worldX, worldY, n.x, n.y);
@@ -2280,7 +2344,7 @@ function findConnectionById(id) {
 function findNearestOrb(x, y, maxDist) {
   let nearest = null;
   let best = maxDist;
-  const orbTypes = ["sound", PRORB_TYPE, MIDI_ORB_TYPE, ALIEN_ORB_TYPE, RESONAUTER_TYPE, COMBULA_TYPE];
+  const orbTypes = ["sound", PRORB_TYPE, MIDI_ORB_TYPE, ALIEN_ORB_TYPE, RESONAUTER_TYPE, COMBULA_TYPE, RADIO_ORB_TYPE];
   for (const n of nodes) {
     if (!orbTypes.includes(n.type)) continue;
     const d = distance(x, y, n.x, n.y);
@@ -2344,6 +2408,35 @@ function hslToRgba(h, s, l, a = 1) {
   return `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(
     b * 255,
   )}, ${a})`;
+}
+
+function rgbaToHsl(rgba) {
+  const match = rgba && rgba.match(/rgba?\(([^)]+)\)/);
+  if (!match) return { h: 0, s: 0, l: 0 };
+  const parts = match[1].split(/,\s*/).slice(0, 3).map(Number);
+  const r = parts[0] / 255;
+  const g = parts[1] / 255;
+  const b = parts[2] / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
 }
 
 function getWorldCoords(screenX, screenY) {
@@ -2490,7 +2583,7 @@ let currentIRUrl = impulseResponses[0].url;
 async function setupAudio() {
   if (audioContext) return audioContext;
   try {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext = window.audioContext || (window.audioContext = new (window.AudioContext || window.webkitAudioContext)());
     audioContext.onstatechange = () => {
       console.log('[Audio] statechange event:', audioContext.state);
     };
@@ -2583,6 +2676,27 @@ async function setupAudio() {
         tapeTrackAnalyserNodes[i] = analyser;
       }
 
+      if (window.radioGainNode && window.radioAnalyserNode) {
+        try { window.radioGainNode.disconnect(); } catch (e) {}
+        try { window.radioAnalyserNode.disconnect(); } catch (e) {}
+
+        radioPannerNode = audioContext.createStereoPanner();
+        radioPannerNode.pan.value = 0;
+
+        radioDelaySendGainNode = audioContext.createGain();
+        radioDelaySendGainNode.gain.value = DEFAULT_DELAY_SEND;
+
+        radioReverbSendGainNode = audioContext.createGain();
+        radioReverbSendGainNode.gain.value = DEFAULT_REVERB_SEND;
+
+        window.radioGainNode.connect(radioPannerNode);
+        radioPannerNode.connect(window.radioAnalyserNode);
+        window.radioAnalyserNode.connect(masterGain);
+
+        radioGainNode = window.radioGainNode;
+        radioAnalyserNode = window.radioAnalyserNode;
+      }
+
       portalGroupGain = audioContext.createGain();
       portalGroupGain.gain.value = 0.7;
       portalGroupGain.connect(masterGain); 
@@ -2643,6 +2757,19 @@ async function setupAudio() {
       delayReturnAnalyser.connect(originalMasterGainDestination);
 
       isDelayReady = true;
+
+      if (window.radioGainNode) {
+        try { window.radioGainNode.disconnect(radioDelaySendGainNode); } catch(e) {}
+        try { window.radioGainNode.disconnect(radioReverbSendGainNode); } catch(e) {}
+        if (radioDelaySendGainNode && masterDelaySendGain) {
+          window.radioGainNode.connect(radioDelaySendGainNode);
+          radioDelaySendGainNode.connect(masterDelaySendGain);
+        }
+        if (radioReverbSendGainNode && reverbPreDelayNode) {
+          window.radioGainNode.connect(radioReverbSendGainNode);
+          radioReverbSendGainNode.connect(reverbPreDelayNode);
+        }
+      }
 
       mistEffectInput = audioContext.createGain();
       mistDelay = audioContext.createDelay();
@@ -3293,12 +3420,12 @@ function createAudioNodesForNode(node) {
         );
         return null;
     }
-    if (node.type === TIMELINE_GRID_TYPE) {
+    if (node.type === TIMELINE_GRID_TYPE || node.type === SPACERADAR_TYPE) {
         return null;
     }
 
     if (
-        ![PRORB_TYPE, "sound", "nebula", PORTAL_NEBULA_TYPE, ALIEN_ORB_TYPE, RESONAUTER_TYPE].includes(node.type) &&
+        ![PRORB_TYPE, "sound", "nebula", PORTAL_NEBULA_TYPE, ALIEN_ORB_TYPE, RESONAUTER_TYPE, COMBULA_TYPE, RADIO_ORB_TYPE].includes(node.type) &&
         !isDrumType(node.type)
     ) {
         return null;
@@ -3309,7 +3436,46 @@ function createAudioNodesForNode(node) {
     const startDelay = now + 0.02;
 
     try {
-        if (node.type === PRORB_TYPE) {
+        if (node.type === RESONAUTER_TYPE) {
+            const audioNodes = {
+                output: audioContext.createGain(),
+                reverbSendGain: audioContext.createGain(),
+                delaySendGain: audioContext.createGain(),
+                effectInput: audioContext.createGain(),
+                gran: createResonauterGranularNode(),
+                mistSendGain: audioContext.createGain(),
+                crushSendGain: audioContext.createGain(),
+            };
+
+            // Correcte interne routing: exciter -> gran -> output
+            audioNodes.effectInput.connect(audioNodes.gran);
+            audioNodes.gran.connect(audioNodes.output);
+            
+            // Sends voor Reverb en Delay
+            audioNodes.output.connect(audioNodes.reverbSendGain);
+            audioNodes.output.connect(audioNodes.delaySendGain);
+            audioNodes.reverbSendGain.gain.value = node.audioParams.reverbSend ?? 0.2;
+            audioNodes.delaySendGain.gain.value = node.audioParams.delaySend ?? 0.1;
+
+            if (isReverbReady && reverbPreDelayNode) audioNodes.reverbSendGain.connect(reverbPreDelayNode);
+            if (isDelayReady && masterDelaySendGain) audioNodes.delaySendGain.connect(masterDelaySendGain);
+            
+            if (mistEffectInput) {
+                audioNodes.mistSendGain.gain.value = 0;
+                audioNodes.output.connect(audioNodes.mistSendGain);
+                audioNodes.mistSendGain.connect(mistEffectInput);
+            }
+            if (crushEffectInput) {
+                audioNodes.crushSendGain.gain.value = 0;
+                audioNodes.output.connect(audioNodes.crushSendGain);
+                audioNodes.crushSendGain.connect(crushEffectInput);
+            }
+
+            // Verbind de uiteindelijke output naar de master
+            audioNodes.output.connect(masterGain);
+            
+            return audioNodes;
+        } else if (node.type === PRORB_TYPE) {
             console.log(`[PrOrb] Creating audio nodes for PrOrb #${node.id}`);
             const p = node.audioParams;
             const audioNodes = {
@@ -3611,35 +3777,6 @@ function createAudioNodesForNode(node) {
                 audioNodes.crushSendGain.connect(crushEffectInput);
             }
             return audioNodes;
-        } else if (node.type === RESONAUTER_TYPE) {
-            const audioNodes = {
-                output: audioContext.createGain(),
-                reverbSendGain: audioContext.createGain(),
-                delaySendGain: audioContext.createGain(),
-            };
-            audioNodes.output.connect(audioNodes.reverbSendGain);
-            audioNodes.output.connect(audioNodes.delaySendGain);
-            audioNodes.reverbSendGain.gain.value = node.audioParams.reverbSend ?? 0.2;
-            audioNodes.delaySendGain.gain.value = node.audioParams.delaySend ?? 0.1;
-            if (isReverbReady && reverbPreDelayNode) audioNodes.reverbSendGain.connect(reverbPreDelayNode);
-            if (isDelayReady && masterDelaySendGain) audioNodes.delaySendGain.connect(masterDelaySendGain);
-            audioNodes.output.connect(masterGain);
-            if (typeof resonauterAudioNodes?.effectInput !== 'undefined') {
-                audioNodes.output.connect(resonauterAudioNodes.effectInput);
-            }
-            if (mistEffectInput) {
-                audioNodes.mistSendGain = audioContext.createGain();
-                audioNodes.mistSendGain.gain.value = 0;
-                audioNodes.output.connect(audioNodes.mistSendGain);
-                audioNodes.mistSendGain.connect(mistEffectInput);
-            }
-            if (crushEffectInput) {
-                audioNodes.crushSendGain = audioContext.createGain();
-                audioNodes.crushSendGain.gain.value = 0;
-                audioNodes.output.connect(audioNodes.crushSendGain);
-                audioNodes.crushSendGain.connect(crushEffectInput);
-            }
-            return audioNodes;
         } else if (node.type === COMBULA_TYPE) {
             const audioNodes = {
                 combInput: audioContext.createGain(),
@@ -3717,6 +3854,11 @@ function createAudioNodesForNode(node) {
                 audioNodes.output.connect(audioNodes.crushSendGain);
                 audioNodes.crushSendGain.connect(crushEffectInput);
             }
+            return audioNodes;
+        } else if (node.type === RADIO_ORB_TYPE) {
+            const audioNodes = { gainNode: audioContext.createGain() };
+            audioNodes.gainNode.gain.value = 1.0;
+            audioNodes.gainNode.connect(masterGain);
             return audioNodes;
         } else if (node.type === "nebula") {
             const audioNodes = {};
@@ -3962,8 +4104,6 @@ function createAudioNodesForNode(node) {
     }
     return null;
 }
-
-
 
 function createDialControlForMixer(uniqueIdBase, labelTextContent, currentValue, minValue, maxValue, stepValue, audioUpdateFn, displayFormatFn) {
   const controlDiv = document.createElement("div");
@@ -4378,6 +4518,26 @@ function updateMixerGUI() {
                 applySoloMuteToAllGroupsAudio();
                 updateMixerGUI();
             });
+        } else if (id === 'radio') {
+            soloBtn.addEventListener('click', () => {
+                radioSoloState = !radioSoloState;
+                if (radioSoloState) {
+                    tapeTrackSoloStates.forEach((_, i) => tapeTrackSoloStates[i] = false);
+                    identifiedGroups.forEach(g => g.soloState = false);
+                    radioMuteState = false;
+                }
+                applySoloMuteToAllGroupsAudio();
+                updateMixerGUI();
+            });
+            muteBtn.addEventListener('click', () => {
+                radioMuteState = !radioMuteState;
+                if (radioMuteState && radioSoloState) radioSoloState = false;
+                if (radioMuteState && radioGainNode && radioGainNode._originalGainBeforeMute === undefined) {
+                    radioGainNode._originalGainBeforeMute = radioGainNode.gain.value;
+                }
+                applySoloMuteToAllGroupsAudio();
+                updateMixerGUI();
+            });
         } else {
             soloBtn.style.display = 'none';
             muteBtn.addEventListener('click', () => {
@@ -4533,6 +4693,24 @@ function updateMixerGUI() {
         mixerPanControls.appendChild(createPanRow(group.id, name, group.pannerNode, group));
     });
 
+    if (window.radioSamplerInfo && (window.radioSamplerInfo.isPlaying || window.radioSamplerInfo.hasRecording)) {
+        mixerVolumeControls.appendChild(
+            createVolumeRow(
+                'radio',
+                'Radio',
+                window.radioSamplerInfo.gainNode,
+                window.radioSamplerInfo.analyserNode,
+                window.radioSamplerInfo.soloState,
+                window.radioSamplerInfo.muteState,
+                null
+            )
+        );
+        mixerSendControls.appendChild(
+            createSendRow('radio', 'Radio', { delaySendGainNode: radioDelaySendGainNode, reverbSendGainNode: radioReverbSendGainNode })
+        );
+        mixerPanControls.appendChild(createPanRow('radio', 'Radio', radioPannerNode, null));
+    }
+
     if ((isTapeLoopPlaying || isTapeLoopRecording)) {
         tapeTracks.forEach((track, idx) => {
             const hasAudio = track.buffer || (isTapeLoopRecording && idx === currentTapeTrack);
@@ -4559,6 +4737,7 @@ function updateMixerGUI() {
     if (reverbWetGain && reverbReturnAnalyser) {
         mixerVolumeControls.appendChild(createVolumeRow('reverb-return', 'Reverb FX', reverbWetGain, reverbReturnAnalyser, reverbWetGain.isSoloed, reverbWetGain.isMuted, null));
     }
+    window.dispatchEvent(new Event('groups-updated'));
 }
 
 
@@ -4569,7 +4748,8 @@ function applySoloMuteToAllGroupsAudio() {
   const anyGroupSoloActive = identifiedGroups.some(g => g.soloState);
   const anyFxSoloActive = (delayReturnGain && delayReturnGain.isSoloed) || (reverbWetGain && reverbWetGain.isSoloed);
   const anyTapeSoloActive = tapeTrackSoloStates.some(s => s);
-  const anySoloOverall = anyGroupSoloActive || anyFxSoloActive || anyTapeSoloActive;
+  const anyRadioSoloActive = radioSoloState;
+  const anySoloOverall = anyGroupSoloActive || anyFxSoloActive || anyTapeSoloActive || anyRadioSoloActive;
 
   identifiedGroups.forEach(group => {
       if (!group.gainNode) return;
@@ -4623,6 +4803,23 @@ function applySoloMuteToAllGroupsAudio() {
           targetReverbReturnGain = intendedGain;
       }
       reverbWetGain.gain.setTargetAtTime(targetReverbReturnGain, audioContext.currentTime, timeConstant);
+  }
+
+  if (radioGainNode) {
+      let intended = radioGainNode._originalGainBeforeMute !== undefined ? radioGainNode._originalGainBeforeMute : 1.0;
+      let target;
+      if (radioMuteState) {
+          target = 0;
+      } else if (anySoloOverall) {
+          if (radioSoloState) {
+              target = intended;
+          } else {
+              target = 0;
+          }
+      } else {
+          target = intended;
+      }
+      radioGainNode.gain.setTargetAtTime(target, audioContext.currentTime, timeConstant);
   }
 
   tapeTrackGainNodes.forEach((gainNode, idx) => {
@@ -5563,6 +5760,8 @@ function updateNodeAudioParams(node) {
         combVerb.gain.setTargetAtTime(params.reverbSend ?? 0.1, now, generalUpdateTimeConstant);
       if (isDelayReady && combDelaySend)
         combDelaySend.gain.setTargetAtTime(params.delaySend ?? 0.1, now, generalUpdateTimeConstant);
+    } else if (node.type === RADIO_ORB_TYPE) {
+      // no dynamic params yet
     } else if (isDrumType(node.type)) {
       const {
         mainGain,
@@ -5765,6 +5964,7 @@ function triggerNodeEffect(
   const now = audioContext.currentTime;
   const params = node.audioParams;
   const intensity = pulseData.intensity ?? 1.0;
+  if ('fromTimeline' in pulseData) delete pulseData.fromTimeline;
 
   const baseVolumeSettingForFinalEnvelope = 1.0;
   const oscillatorVolumeMultiplier = 0.75;
@@ -5998,9 +6198,6 @@ function triggerNodeEffect(
             0.0001,
             naturalStopTime,
           );
-
-          // The buffer will stop automatically after the scheduled playDur,
-          // but we enforce a stop at the exact end to ensure cleanup.
           source.stop(naturalStopTime);
           source.onended = () => {
             try {
@@ -6174,6 +6371,38 @@ function triggerNodeEffect(
       5 + Math.floor(node.size * 3) * (pulseData.particleMultiplier ?? 1.0),
     );
     createParticles(node.x, node.y, particleCount);
+  } else if (node.type === SPACERADAR_TYPE) {
+    const currentStylesRadar = getComputedStyle(document.documentElement);
+    const radarStroke =
+      currentStylesRadar
+        .getPropertyValue("--spaceradar-border-color")
+        .trim() || SPACERADAR_DEFAULT_COLOR;
+    const scanColor =
+      currentStylesRadar
+        .getPropertyValue("--spaceradar-scanline-color")
+        .trim() || radarStroke;
+    ctx.beginPath();
+    ctx.fillStyle = radarStroke.replace(/[\d\.]+\)$/g, "0.05)");
+    ctx.strokeStyle = radarStroke;
+    ctx.lineWidth = Math.max(1 / viewScale, 2 / viewScale);
+    ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const angle = ((node.scanAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    ctx.save();
+    ctx.translate(node.x, node.y);
+    ctx.rotate(angle + SPACERADAR_ANGLE_OFFSET);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(node.radius, 0);
+    ctx.strokeStyle = scanColor;
+    ctx.lineWidth = Math.max(1 / viewScale, 2 / viewScale);
+    ctx.shadowColor = scanColor;
+    ctx.shadowBlur = 5 / viewScale;
+    ctx.stroke();
+    ctx.restore();
+    ctx.shadowBlur = 0;
   } else if (node.type === PRORB_TYPE) {
       if (!node.audioNodes) return;
       const p = node.audioParams;
@@ -6263,6 +6492,17 @@ function triggerNodeEffect(
     node.isTriggered = true;
     node.animationState = 1;
     playCombulaSound(node, effectivePitch, intensity);
+    setTimeout(() => {
+      const stillNode = findNodeById(node.id);
+      if (stillNode) stillNode.isTriggered = false;
+    }, 500);
+  } else if (node.type === RADIO_ORB_TYPE) {
+    node.isTriggered = true;
+    node.animationState = 1;
+    if (typeof window.radioSamplerPlayPad === 'function') {
+      const idx = node.audioParams.sampleIndex ?? 0;
+      window.radioSamplerPlayPad(idx);
+    }
     setTimeout(() => {
       const stillNode = findNodeById(node.id);
       if (stillNode) stillNode.isTriggered = false;
@@ -6667,7 +6907,8 @@ function propagateTrigger(
          currentNode.type === PRORB_TYPE ||
          currentNode.type === MIDI_ORB_TYPE ||
          currentNode.type === ALIEN_ORB_TYPE ||
-        currentNode.type === RESONAUTER_TYPE)
+         currentNode.type === RESONAUTER_TYPE ||
+         currentNode.type === RADIO_ORB_TYPE)
       ) {
         isGlideArrival = true;
         playPrimaryAudioEffect = true;
@@ -6682,7 +6923,8 @@ function propagateTrigger(
             currentNode.type === PRORB_TYPE ||
             currentNode.type === MIDI_ORB_TYPE ||
             currentNode.type === ALIEN_ORB_TYPE ||
-            currentNode.type === RESONAUTER_TYPE
+            currentNode.type === RESONAUTER_TYPE ||
+            currentNode.type === RADIO_ORB_TYPE
         ) {
              if (currentNode.audioParams && currentNode.audioParams.retriggerEnabled) {
                 startRetriggerSequence(currentNode, { ...incomingPulse.data });
@@ -9751,7 +9993,6 @@ function animateSamplerPlayhead(node, startFrac, endFrac, duration, attack = 0, 
   samplerVisualPlayhead.style.transition = "none";
   samplerVisualPlayhead.style.display = "block";
   samplerVisualPlayhead.style.left = `${startFrac * 100}%`;
-  // force reflow
   void samplerVisualPlayhead.offsetWidth;
   samplerVisualPlayhead.style.transition = `left ${duration}s linear`;
   samplerVisualPlayhead.style.left = `${endFrac * 100}%`;
@@ -10648,6 +10889,15 @@ function animationLoop() {
   if (reverbReturnMeterFillElement && reverbReturnAnalyser) {
     updateMeterVisual(reverbReturnAnalyser, reverbReturnMeterFillElement);
   }
+
+  const radioMeterFillElement = document.getElementById('meterFill-radio');
+  if (radioMeterFillElement && radioAnalyserNode) {
+    updateMeterVisual(radioAnalyserNode, radioMeterFillElement);
+  }
+  const radioSendMeterFillElement = document.getElementById('meterFill-radio-send');
+  if (radioSendMeterFillElement && radioAnalyserNode) {
+    updateMeterVisual(radioAnalyserNode, radioSendMeterFillElement);
+  }
   
   identifiedGroups.forEach(group => {
       if (group.analyserNode) {
@@ -10676,6 +10926,10 @@ function animationLoop() {
 
   try {
     nodes.forEach((node) => {
+      if (node.type === SPACERADAR_TYPE) {
+        updateSpaceRadar(node, deltaTime);
+        return;
+      }
       if (
         node.isStartNode &&
         node.isEnabled &&
@@ -11084,6 +11338,7 @@ function animationLoop() {
                         node.audioParams.color :
                         TIMELINE_GRID_DEFAULT_COLOR,
                       particleMultiplier: 0.6,
+                      fromTimeline: true,
                     };
 
                     let transpositionOverride = null;
@@ -11532,7 +11787,7 @@ function drawNode(node) {
   const bloomFactor = 1 + node.animationState * 0.5 + preTriggerFlash * 0.6;
   const currentRadius = NODE_RADIUS_BASE * node.size * bloomFactor;
   const r = currentRadius;
-  let fillColor, borderColor, glowColor, osc2Color;
+  let fillColor, borderColor, glowColor, osc2Color, accentColor;
   const styles = getComputedStyle(document.documentElement);
   const scaleBase = currentScale.baseHSL || {
     h: 200,
@@ -11627,6 +11882,16 @@ function drawNode(node) {
     fillColor = hslToRgba(nodeBaseHue, saturation, lightness, Math.min(0.95, baseAlpha));
     borderColor = hslToRgba(nodeBaseHue, saturation * 0.8, lightness * 0.6, 0.9);
     glowColor = borderColor;
+  } else if (node.type === RADIO_ORB_TYPE) {
+    const nodeBaseHue =
+      (scaleBase.h + ((params?.scaleIndex || 0) % currentScale.notes.length) * HUE_STEP) %
+      360;
+    const lightness = scaleBase.l * (0.8 + node.size * 0.2);
+    const saturation = scaleBase.s;
+    fillColor = hslToRgba(nodeBaseHue, saturation, lightness, Math.min(0.95, baseAlpha));
+    borderColor = hslToRgba(nodeBaseHue, saturation * 0.8, lightness * 0.6, 0.9);
+    accentColor = hslToRgba(nodeBaseHue, saturation * 0.9, lightness * 0.3, Math.min(0.95, baseAlpha));
+    glowColor = borderColor;
   } else if (
     node.type === "sound" ||
     node.type === ALIEN_ORB_TYPE ||
@@ -11689,6 +11954,15 @@ function drawNode(node) {
       node.audioParams.color !== null
         ? node.audioParams.color
         : gridBoxStrokeFromCSSTimeline;
+  } else if (node.type === SPACERADAR_TYPE) {
+    const currentStylesRadar = getComputedStyle(document.documentElement);
+    const radarStroke =
+      currentStylesRadar
+        .getPropertyValue("--spaceradar-border-color")
+        .trim() || SPACERADAR_DEFAULT_COLOR;
+    fillColor = radarStroke.replace(/[\d\.]+\)$/g, "0.05)");
+    borderColor = radarStroke;
+    glowColor = radarStroke;
   } else {
     fillColor = "grey";
     borderColor = "darkgrey";
@@ -11703,7 +11977,7 @@ function drawNode(node) {
         node.type === "reflector" ||
         node.type === "switch"
       ? 1.0
-      : node.type === TIMELINE_GRID_TYPE || node.type === PRORB_TYPE
+      : node.type === TIMELINE_GRID_TYPE || node.type === SPACERADAR_TYPE || node.type === PRORB_TYPE
         ? 2.0
         : 1.5;
   ctx.lineWidth = Math.max(
@@ -11752,7 +12026,8 @@ function drawNode(node) {
   if (
     node.isInConstellation &&
     currentTool === "edit" &&
-    node.type !== TIMELINE_GRID_TYPE
+    node.type !== TIMELINE_GRID_TYPE &&
+    node.type !== SPACERADAR_TYPE
   ) {
     const highlightRadius = NODE_RADIUS_BASE * node.size + 5;
     ctx.fillStyle =
@@ -11772,7 +12047,8 @@ function drawNode(node) {
       node.type === PORTAL_NEBULA_TYPE ||
       node.type === PRORB_TYPE) &&
     !isStartNodeDisabled &&
-    node.type !== TIMELINE_GRID_TYPE
+    node.type !== TIMELINE_GRID_TYPE &&
+    node.type !== SPACERADAR_TYPE
   ) {
     ctx.shadowColor = glowColor;
     let glowAmount =
@@ -11875,8 +12151,8 @@ function drawNode(node) {
       ctx.strokeRect(rectX, rectY, node.width, node.height);
     }
     if (
-      node.type !== TIMELINE_GRID_TYPE ||
-      (node.type === TIMELINE_GRID_TYPE &&
+      (node.type !== TIMELINE_GRID_TYPE && node.type !== SPACERADAR_TYPE) ||
+      ((node.type === TIMELINE_GRID_TYPE || node.type === SPACERADAR_TYPE) &&
         ctx.shadowBlur !== 0 &&
         !(isSelectedAndOutlineNeeded || node.isInResizeMode))
     ) {
@@ -12077,6 +12353,62 @@ function drawNode(node) {
         ctx.restore();
       }
     }
+  } else if (node.type === SPACERADAR_TYPE) {
+    const currentStylesRadar = getComputedStyle(document.documentElement);
+    const radarStroke =
+      currentStylesRadar
+        .getPropertyValue("--spaceradar-border-color")
+        .trim() || SPACERADAR_DEFAULT_COLOR;
+    const scanlineColor =
+      currentStylesRadar
+        .getPropertyValue("--spaceradar-scanline-color")
+        .trim() || radarStroke;
+    const internalLineColor =
+      currentStylesRadar
+        .getPropertyValue("--spaceradar-internal-lines-color")
+        .trim() || radarStroke.replace(/[\d\.]+\)$/g, "0.25)");
+
+    ctx.beginPath();
+    ctx.fillStyle = radarStroke.replace(/[\d\.]+\)$/g, "0.05)");
+    ctx.strokeStyle = radarStroke;
+    ctx.lineWidth = Math.max(1 / viewScale, 2 / viewScale);
+    ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (node.showInternalGrid && node.internalGridDivisions > 1) {
+      const originalStroke = ctx.strokeStyle;
+      const originalWidth = ctx.lineWidth;
+      ctx.strokeStyle = internalLineColor;
+      ctx.lineWidth = Math.max(0.5 / viewScale, 1 / viewScale);
+      ctx.beginPath();
+      for (let i = 1; i < node.internalGridDivisions; i++) {
+        const ang = (i / node.internalGridDivisions) * Math.PI * 2 + SPACERADAR_ANGLE_OFFSET;
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(
+          node.x + Math.cos(ang) * node.radius,
+          node.y + Math.sin(ang) * node.radius,
+        );
+      }
+      ctx.stroke();
+      ctx.strokeStyle = originalStroke;
+      ctx.lineWidth = originalWidth;
+    }
+
+    const angle = ((node.scanAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    ctx.save();
+    ctx.translate(node.x, node.y);
+    ctx.rotate(angle + SPACERADAR_ANGLE_OFFSET);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(node.radius, 0);
+    ctx.strokeStyle = scanlineColor;
+    ctx.lineWidth = Math.max(1 / viewScale, 2 / viewScale);
+    ctx.shadowColor = scanlineColor;
+    ctx.shadowBlur = 5 / viewScale;
+    ctx.stroke();
+    ctx.restore();
+    ctx.shadowBlur = 0;
   } else if (node.type === PRORB_TYPE) {
     const r = NODE_RADIUS_BASE * node.size;
     const shape1 = prorbShapeForWaveform(params.osc1Waveform);
@@ -12107,7 +12439,7 @@ function drawNode(node) {
     ctx.strokeStyle = borderColor;
     ctx.fill();
     ctx.stroke();
-  } else if ((node.type === "sound" || node.type === RESONAUTER_TYPE) && visualStyle) {
+  } else if ((node.type === "sound" || node.type === RESONAUTER_TYPE || node.type === RADIO_ORB_TYPE) && visualStyle) {
     const planetColorsInternal = {
       planet_mercury: {
         fill: hslToRgba(30, 10, 55, baseAlpha),
@@ -12202,6 +12534,11 @@ function drawNode(node) {
         fill: hslToRgba(30, 70, 55, baseAlpha),
         border: hslToRgba(30, 70, 40, 0.9),
       },
+      radio_orb_default: {
+        fill: fillColor,
+        border: borderColor,
+        accent: accentColor || borderColor,
+      },
     };
     const currentPlanetColors = planetColorsInternal[visualStyle];
     if (currentPlanetColors) {
@@ -12210,9 +12547,11 @@ function drawNode(node) {
       ctx.fillStyle = fillColor;
       ctx.strokeStyle = borderColor;
     }
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
-    ctx.fill();
+    if (visualStyle !== "radio_orb_default") {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
     if (currentPlanetColors) {
       switch (visualStyle) {
         case "planet_mercury":
@@ -12509,6 +12848,29 @@ function drawNode(node) {
           ctx.fill();
           ctx.stroke();
           break;
+        case "radio_orb_default": {
+          const bodyW = r * 1.6;
+          const bodyH = r * 1.1;
+          ctx.beginPath();
+          ctx.rect(node.x - bodyW / 2, node.y - bodyH / 2, bodyW, bodyH);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = accentColor || currentPlanetColors.accent;
+          ctx.beginPath();
+          ctx.arc(node.x - bodyW * 0.25, node.y, r * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(node.x + bodyW * 0.25, node.y + bodyH * 0.2, r * 0.15, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(node.x + bodyW * 0.4, node.y - bodyH / 2);
+          ctx.lineTo(node.x + bodyW * 0.4, node.y - bodyH * 0.9);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(node.x + bodyW * 0.4, node.y - bodyH * 0.9, r * 0.12, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+        }
         default:
           const waveform = params?.waveform;
           if (waveform === "sine" || !waveform) {
@@ -13187,6 +13549,7 @@ function drawNode(node) {
     node.type !== "pulsar_rocket" &&
     node.type !== "pulsar_ufo" &&
     node.type !== TIMELINE_GRID_TYPE &&
+    node.type !== SPACERADAR_TYPE &&
     node.type !== PRORB_TYPE
   ) {
     const originalShadowBlur = ctx.shadowBlur;
@@ -13206,8 +13569,8 @@ function drawNode(node) {
     ctx.restore();
   }
   if (
-    node.type !== TIMELINE_GRID_TYPE ||
-    (node.type === TIMELINE_GRID_TYPE &&
+    (node.type !== TIMELINE_GRID_TYPE && node.type !== SPACERADAR_TYPE) ||
+    ((node.type === TIMELINE_GRID_TYPE || node.type === SPACERADAR_TYPE) &&
       ctx.shadowBlur !== 0 &&
       !(isSelectedAndOutlineNeeded || node.isInResizeMode))
   ) {
@@ -13369,6 +13732,8 @@ function drawNode(node) {
   } else if (node.type === MIDI_ORB_TYPE) {
     labelText = getNoteNameFromScaleIndex(currentScale, params.scaleIndex);
     secondLineText = "MIDI";
+  } else if (node.type === RADIO_ORB_TYPE) {
+    labelText = `Pad ${(params.sampleIndex ?? 0) + 1}`;
   } else if (node.type === ALIEN_ORB_TYPE) {
     labelText = getNoteNameFromScaleIndex(currentScale, params.scaleIndex);
     secondLineText = "Alien Technology";
@@ -13707,22 +14072,105 @@ function drawBackgroundNeural(now) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Zoom in on the neural pattern
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.scale(NEURAL_ZOOM, NEURAL_ZOOM);
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+  const delta = Math.max(0, Math.min(0.1, now - (previousFrameTime || now)));
+
   let amp = 0;
+  let bass = 0;
+  let mid = 0;
+  let treble = 0;
+
   if (masterAnalyser) {
     const data = new Uint8Array(masterAnalyser.frequencyBinCount);
     masterAnalyser.getByteFrequencyData(data);
     amp = data.reduce((a, b) => a + b, 0) / data.length / 255;
+    const third = Math.floor(data.length / 3);
+    for (let i = 0; i < data.length; i++) {
+      if (i < third) bass += data[i];
+      else if (i < third * 2) mid += data[i];
+      else treble += data[i];
+    }
+    bass /= third;
+    mid /= third;
+    treble /= data.length - third * 2;
   }
+
+  // Basic wind-like motion derived from audio levels
+  neuralWindPhase += delta * (1 + amp * 5);
+  const bassAmp = bass / 255;
+  const trebleAmp = treble / 255;
+  const windX = Math.sin(neuralWindPhase * 0.6) * bassAmp * NEURAL_WIND_STRENGTH_X;
+  const windY = Math.cos(neuralWindPhase * 0.4) * trebleAmp * NEURAL_WIND_STRENGTH_Y;
+
+  neuralGrowthCooldown -= delta;
+  if (amp > 0.4 && neuralGrowthCooldown <= 0 && neuralNodes.length < maxNeuralNodes) {
+    const base = neuralNodes[Math.floor(Math.random() * neuralNodes.length)];
+    spawnNeuralNode(base);
+    neuralGrowthCooldown = 0.05;
+  } else if (amp < 0.05 && neuralNodes.length > 40 && Math.random() < 0.02) {
+    neuralNodes.shift();
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const orbHsl1 = rgbaToHsl(styles.getPropertyValue('--prorb-color').trim());
+  const orbHsl2 = rgbaToHsl(styles.getPropertyValue('--midi-orb-color').trim());
+  const orbHue = (orbHsl1.h + orbHsl2.h) / 2 || 200;
+
   for (const node of neuralNodes) {
-    node.angle += node.speed * 0.01;
-    node.x += Math.cos(node.angle) * node.speed;
-    node.y += Math.sin(node.angle) * node.speed;
+    // React faster when the audio is loud
+    const speedFactor = 0.5 + amp;
+    node.angle += node.speed * speedFactor * 0.002;
+    node.vx += Math.cos(node.angle) * node.speed * speedFactor * 0.05;
+    node.vy += Math.sin(node.angle) * node.speed * speedFactor * 0.05;
+    node.vx += windX * delta * 0.5;
+    node.vy += windY * delta * 0.5;
+
+    // Elastic pull toward nearby nodes for a sticky effect
+    let nx = 0, ny = 0, count = 0;
+    for (const other of neuralNodes) {
+      if (other === node) continue;
+      const dx = other.x - node.x;
+      const dy = other.y - node.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < NEURAL_SPRING_RADIUS) {
+        nx += other.x;
+        ny += other.y;
+        count++;
+      }
+    }
+    if (count > 0) {
+      nx /= count;
+      ny /= count;
+      node.vx += (nx - node.x) * NEURAL_SPRING_STRENGTH;
+      node.vy += (ny - node.y) * NEURAL_SPRING_STRENGTH;
+    }
+
+    node.vx *= NEURAL_FRICTION;
+    node.vy *= NEURAL_FRICTION;
+    node.x += node.vx;
+    node.y += node.vy;
+
     if (node.x < 0) node.x += canvas.width;
     if (node.x > canvas.width) node.x -= canvas.width;
     if (node.y < 0) node.y += canvas.height;
     if (node.y > canvas.height) node.y -= canvas.height;
   }
-  ctx.strokeStyle = `rgba(150,200,255,${0.2 + amp * 0.8})`;
+
+  // Base hue derived from the current musical scale blended with orb colours
+  let hue = (currentScale && currentScale.baseHSL) ? currentScale.baseHSL.h : 200;
+  if (bass > mid && bass > treble) hue = (hue - 40 + 360) % 360;
+  else if (treble > mid && treble > bass) hue = (hue + 40) % 360;
+  hue = (hue * 0.7 + orbHue * 0.3) % 360;
+  const sat = (currentScale && currentScale.baseHSL) ? currentScale.baseHSL.s : 80;
+  const light = (currentScale && currentScale.baseHSL) ? currentScale.baseHSL.l : 65;
+  const strokeColor = `hsla(${hue}, ${sat}%, ${light}%, ${0.2 + amp * 0.8})`;
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1 + amp * 2;
+
   for (let i = 0; i < neuralNodes.length; i++) {
     for (let j = i + 1; j < neuralNodes.length; j++) {
       const a = neuralNodes[i];
@@ -13738,6 +14186,33 @@ function drawBackgroundNeural(now) {
       }
     }
   }
+
+  // Spawn temporary connection flashes when audio is strong
+  const flashChance = amp * 0.3;
+  if (Math.random() < flashChance) {
+    const a = neuralNodes[Math.floor(Math.random() * neuralNodes.length)];
+    const b = neuralNodes[Math.floor(Math.random() * neuralNodes.length)];
+    if (a && b && a !== b) {
+      neuralConnections.push({ a, b, life: 0.3 + Math.random() * 0.4 });
+    }
+  }
+
+  ctx.shadowColor = strokeColor;
+  neuralConnections = neuralConnections.filter((conn) => {
+    conn.life -= delta;
+    if (conn.life <= 0) return false;
+    const alpha = Math.min(1, conn.life * 3);
+    ctx.shadowBlur = 20 * alpha * (0.5 + amp);
+    ctx.lineWidth = 2 + amp * 2;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(conn.a.x, conn.a.y);
+    ctx.lineTo(conn.b.x, conn.b.y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    return true;
+  });
+  ctx.shadowBlur = 0;
   ctx.restore();
 }
 
@@ -14630,6 +15105,146 @@ function checkRocketConnectionCollision(rocket) {
   return null;
 }
 
+function updateSpaceRadar(node, deltaTime) {
+  if (!node.radarIsPlaying) return;
+  let duration;
+  if (isGlobalSyncEnabled && node.radarMusicalDurationBars && globalBPM > 0) {
+    const beatsPerBar = 4;
+    duration = node.radarMusicalDurationBars * beatsPerBar * (60.0 / globalBPM);
+  } else {
+    duration = node.radarSpeed > 0 ? node.radarSpeed : SPACERADAR_DEFAULT_SPEED;
+  }
+  let increment = (2 * Math.PI * deltaTime) / duration;
+  if (node.radarMode === SPACERADAR_MODE_PENDULUM) {
+    node.radarPendulumVel = node.radarPendulumVel || 1.0;
+    increment *= node.radarPendulumVel;
+  }
+  let angle = node.scanAngle || 0;
+  let dir = node.radarDirection || 1;
+  const segments = [];
+
+  function addSegment(start, end, d) {
+    segments.push({ start, end, dir: d });
+  }
+
+  if (node.radarMode === SPACERADAR_MODE_REVERSE || node.radarMode === SPACERADAR_MODE_PENDULUM) {
+    let remaining = increment;
+    while (remaining > 0) {
+      if (dir === 1) {
+        const toEdge = Math.PI * 2 - angle;
+        if (remaining <= toEdge) {
+          addSegment(angle, angle + remaining, 1);
+          angle += remaining;
+          remaining = 0;
+        } else {
+          addSegment(angle, Math.PI * 2, 1);
+          remaining -= toEdge;
+          angle = Math.PI * 2;
+          dir = -1;
+          if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear();
+          else node.triggeredInThisSweep = new Set();
+        }
+      } else {
+        const toEdge = angle;
+        if (remaining <= toEdge) {
+          addSegment(angle, angle - remaining, -1);
+          angle -= remaining;
+          remaining = 0;
+        } else {
+          addSegment(angle, 0, -1);
+          remaining -= toEdge;
+          angle = 0;
+          dir = 1;
+          if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear();
+          else node.triggeredInThisSweep = new Set();
+        }
+      }
+    }
+    if (node.radarMode === SPACERADAR_MODE_PENDULUM) {
+      if (dir !== node.radarDirection) {
+        node.radarPendulumVel = (node.radarPendulumVel || 1.0) * 0.9;
+        if (node.radarPendulumVel < 0.1) {
+          node.radarPendulumVel = 1.0;
+          angle = 0;
+          dir = 1;
+        }
+      }
+    }
+  } else {
+    const prevAngle = angle;
+    angle = (angle + increment) % (Math.PI * 2);
+    if (angle < prevAngle) {
+      addSegment(prevAngle, Math.PI * 2, 1);
+      addSegment(0, angle, 1);
+      if (node.triggeredInThisSweep) node.triggeredInThisSweep.clear();
+      else node.triggeredInThisSweep = new Set();
+    } else {
+      addSegment(prevAngle, angle, 1);
+    }
+  }
+
+  node.scanAngle = angle;
+  node.radarDirection = dir;
+  nodes.forEach((otherNode) => {
+    if (
+      otherNode.id === node.id ||
+      otherNode.type === SPACERADAR_TYPE ||
+      otherNode.type === TIMELINE_GRID_TYPE
+    )
+      return;
+    if (
+      !otherNode.audioParams &&
+      !isDrumType(otherNode.type) &&
+      otherNode.type !== "sound" &&
+      otherNode.type !== PRORB_TYPE &&
+      otherNode.type !== "nebula" &&
+      otherNode.type !== PORTAL_NEBULA_TYPE &&
+      otherNode.type !== "global_key_setter"
+    )
+      return;
+
+    const nodeApparentRadius = NODE_RADIUS_BASE * otherNode.size;
+    const dx = otherNode.x - node.x;
+    const dy = otherNode.y - node.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist - nodeApparentRadius > node.radius) return;
+    const ang =
+      ((Math.atan2(dy, dx) + Math.PI / 2) % (2 * Math.PI) + 2 * Math.PI) %
+      (2 * Math.PI);
+    for (const seg of segments) {
+      const inSeg =
+        seg.dir === 1
+          ? seg.start <= seg.end
+            ? ang >= seg.start && ang <= seg.end
+            : ang >= seg.start || ang <= seg.end
+          : seg.start >= seg.end
+          ? ang <= seg.start && ang >= seg.end
+          : ang <= seg.start || ang >= seg.end;
+      if (inSeg) {
+        if (!node.triggeredInThisSweep || !node.triggeredInThisSweep.has(otherNode.id)) {
+          const pulse = {
+            intensity: node.radarPulseIntensity || SPACERADAR_DEFAULT_PULSE_INTENSITY,
+            color: SPACERADAR_DEFAULT_COLOR,
+            particleMultiplier: 0.6,
+            fromTimeline: true,
+          };
+          triggerNodeEffect(otherNode, pulse);
+          if (!node.triggeredInThisSweep) node.triggeredInThisSweep = new Set();
+          node.triggeredInThisSweep.add(otherNode.id);
+          otherNode.animationState = 1.0;
+          setTimeout(() => {
+            const still = findNodeById(otherNode.id);
+            if (still && !still.isTriggered && (!still.activeRetriggers || still.activeRetriggers.length === 0)) {
+              still.animationState = 0;
+            }
+          }, 250);
+        }
+        break;
+      }
+    }
+  });
+}
+
 function toggleUfoMode() {
   isUfoModeActive = !isUfoModeActive;
   if (isUfoModeActive) {
@@ -15135,7 +15750,6 @@ function handleMouseDown(event) {
 
   if (!isPlaying && event.target === canvas) {
     togglePlayPause();
-    // allow the click to continue so objects are placed immediately
   }
 
   const targetIsPanelControl =
@@ -15486,7 +16100,8 @@ function handleMouseDown(event) {
       event.shiftKey &&
       currentTool === "edit" &&
       node &&
-      node.type !== TIMELINE_GRID_TYPE
+      node.type !== TIMELINE_GRID_TYPE &&
+      node.type !== SPACERADAR_TYPE
     ) {
       isResizing = true;
       resizeStartSize = node.size;
@@ -15518,7 +16133,7 @@ function handleMouseDown(event) {
       ) {
         if (
           node &&
-          !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(
+          !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE, SPACERADAR_TYPE].includes(
             node.type,
           )
         ) {
@@ -15909,7 +16524,7 @@ function handleMouseMove(event) {
           let targetY = dragStartPos.y + offset.y + dy_world;
 
           let snappedToAnInternalGrid = false;
-          if (n.type !== TIMELINE_GRID_TYPE) {
+          if (n.type !== TIMELINE_GRID_TYPE && n.type !== SPACERADAR_TYPE) {
             for (const timelineGridNode of nodes) {
               if (
                 timelineGridNode.type === TIMELINE_GRID_TYPE &&
@@ -15953,6 +16568,32 @@ function handleMouseMove(event) {
                     );
                     targetX = internalSnapPos.x;
                     targetY = internalSnapPos.y;
+                    snappedToAnInternalGrid = true;
+                    break;
+                  }
+                }
+              }
+            }
+            if (!snappedToAnInternalGrid) {
+              for (const radarNode of nodes) {
+                if (
+                  radarNode.type === SPACERADAR_TYPE &&
+                  radarNode.snapToInternalGrid &&
+                  radarNode.internalGridDivisions > 1
+                ) {
+                  const distToRadarCenter = distance(
+                    targetX,
+                    targetY,
+                    radarNode.x,
+                    radarNode.y,
+                  );
+                  if (distToRadarCenter <= radarNode.radius) {
+                    const snapPos = snapToSpaceRadarInternalGrid(
+                      { x: targetX, y: targetY },
+                      radarNode,
+                    );
+                    targetX = snapPos.x;
+                    targetY = snapPos.y;
                     snappedToAnInternalGrid = true;
                     break;
                   }
@@ -16141,7 +16782,7 @@ function handleMouseMove(event) {
           currentTool === "connect_glide" ||
           currentTool === "connect_wavetrail") &&
         hN &&
-        !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(hN.type)
+        !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE, SPACERADAR_TYPE].includes(hN.type)
       ) {
         canvas.style.cursor = "grab";
       } else if ((currentTool === "delete" || currentTool === "eraser") && (hN || hC)) {
@@ -16356,7 +16997,7 @@ function handleMouseUp(event) {
             connectingNode &&
             nodeUnderCursorOnUp &&
             nodeUnderCursorOnUp !== connectingNode &&
-            !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE].includes(
+            !["nebula", PORTAL_NEBULA_TYPE, TIMELINE_GRID_TYPE, SPACERADAR_TYPE].includes(
                 nodeUnderCursorOnUp.type,
             )
         ) {
@@ -16571,6 +17212,7 @@ function handleMouseUp(event) {
                                 } else if (
                                     node &&
                                     node.type !== TIMELINE_GRID_TYPE &&
+                                    node.type !== SPACERADAR_TYPE &&
                                     node.hasOwnProperty("isInResizeMode")
                                 )
                                     node.isInResizeMode = false;
@@ -16620,9 +17262,16 @@ function handleMouseUp(event) {
                 elementClickedStartOriginal.type === "node" &&
                 elementClickedStartOriginal.nodeRef &&
                 elementClickedStartOriginal.nodeRef.type === TIMELINE_GRID_TYPE;
+            const clickedOnSpaceRadarOriginal =
+                elementClickedStartOriginal &&
+                elementClickedStartOriginal.type === "node" &&
+                elementClickedStartOriginal.nodeRef &&
+                elementClickedStartOriginal.nodeRef.type === SPACERADAR_TYPE;
             const clickedOnEmptySpaceOriginal = !elementClickedStartOriginal;
             const canPlaceNodeHereOriginal =
-                clickedOnEmptySpaceOriginal || clickedOnTimelineGridOriginal;
+                clickedOnEmptySpaceOriginal ||
+                clickedOnTimelineGridOriginal ||
+                clickedOnSpaceRadarOriginal;
 
             if (canPlaceNodeHereOriginal) {
                 const canActuallyAddThisNode =
@@ -16649,7 +17298,7 @@ function handleMouseUp(event) {
                     const effectiveGlobalSnapForAdd =
                         isSnapEnabled && !(event && event.shiftKey);
 
-                    if (nodeTypeToAdd !== TIMELINE_GRID_TYPE) {
+                    if (nodeTypeToAdd !== TIMELINE_GRID_TYPE && nodeTypeToAdd !== SPACERADAR_TYPE) {
                         for (const timelineGridNode of nodes) {
                             if (
                                 timelineGridNode.type === TIMELINE_GRID_TYPE &&
@@ -16683,6 +17332,26 @@ function handleMouseUp(event) {
                                 }
                             }
                         }
+                        if (finalX === mousePos.x && finalY === mousePos.y) {
+                            for (const radarNode of nodes) {
+                                if (
+                                    radarNode.type === SPACERADAR_TYPE &&
+                                    radarNode.snapToInternalGrid &&
+                                    radarNode.internalGridDivisions > 1
+                                ) {
+                                    const distToCenter = distance(mousePos.x, mousePos.y, radarNode.x, radarNode.y);
+                                    if (distToCenter <= radarNode.radius) {
+                                        const snapPos = snapToSpaceRadarInternalGrid(
+                                            { x: mousePos.x, y: mousePos.y },
+                                            radarNode,
+                                        );
+                                        finalX = snapPos.x;
+                                        finalY = snapPos.y;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if (
@@ -16713,6 +17382,20 @@ function handleMouseUp(event) {
                                 ) {
                                     wasSnappedToInternal = true;
                                     break;
+                                }
+                            }
+                        }
+                        if (!wasSnappedToInternal) {
+                            for (const radarNode of nodes) {
+                                if (
+                                    radarNode.type === SPACERADAR_TYPE &&
+                                    radarNode.snapToInternalGrid
+                                ) {
+                                    const dist = distance(mousePos.x, mousePos.y, radarNode.x, radarNode.y);
+                                    if (dist <= radarNode.radius) {
+                                        wasSnappedToInternal = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -16837,18 +17520,27 @@ function handleMouseUp(event) {
             hidePrOrbMenu();
             hideAlienOrbMenu();
             hideResonauterOrbMenu();
+            hideRadioOrbMenu();
+        } else if (selectedNode && selectedNode.type === RADIO_ORB_TYPE) {
+            showRadioOrbMenu(selectedNode);
+            hidePrOrbMenu();
+            hideAlienOrbMenu();
+            hideResonauterOrbMenu();
+            hideCombulaOrbMenu();
         } else if (selectedNode && selectedNode.type === "sound" && selectedNode.audioParams.waveform && selectedNode.audioParams.waveform.startsWith("sampler_")) {
             showSamplerOrbMenu(selectedNode);
             hidePrOrbMenu();
             hideAlienOrbMenu();
             hideResonauterOrbMenu();
             hideCombulaOrbMenu();
+            hideRadioOrbMenu();
         } else {
             console.log("[handleMouseUp] A non-PrOrb node is selected. Hiding menu.");
             hidePrOrbMenu();
             hideAlienOrbMenu();
             hideResonauterOrbMenu();
             hideCombulaOrbMenu();
+            hideRadioOrbMenu();
             hideStringConnectionMenu();
             hidePrOrbPanel();
             hideAlienPanel();
@@ -16866,6 +17558,7 @@ function handleMouseUp(event) {
             hideResonauterOrbMenu();
             hideCombulaOrbMenu();
             hideSamplerOrbMenu();
+            hideRadioOrbMenu();
         } else {
             hideStringConnectionMenu();
             hidePrOrbMenu();
@@ -16873,6 +17566,7 @@ function handleMouseUp(event) {
             hideResonauterOrbMenu();
             hideCombulaOrbMenu();
             hideSamplerOrbMenu();
+            hideRadioOrbMenu();
             hideStringPanel();
         }
     } else {
@@ -16882,6 +17576,7 @@ function handleMouseUp(event) {
         hideResonauterOrbMenu();
         hideCombulaOrbMenu();
         hideSamplerOrbMenu();
+        hideRadioOrbMenu();
         hideStringConnectionMenu();
         hidePrOrbPanel();
         hideAlienPanel();
@@ -16946,6 +17641,28 @@ function snapToInternalGrid(positionToSnap, timelineGridNode) {
   const snappedWorldY = rotatedSnappedY + gridCenterY;
 
   return { x: snappedWorldX, y: snappedWorldY };
+}
+
+function snapToSpaceRadarInternalGrid(positionToSnap, radarNode) {
+  if (
+    !radarNode ||
+    radarNode.type !== SPACERADAR_TYPE ||
+    !radarNode.snapToInternalGrid ||
+    radarNode.internalGridDivisions <= 1
+  ) {
+    return { x: positionToSnap.x, y: positionToSnap.y };
+  }
+  const { x: worldX, y: worldY } = positionToSnap;
+  const dx = worldX - radarNode.x;
+  const dy = worldY - radarNode.y;
+  const angle = Math.atan2(dy, dx) + Math.PI / 2;
+  const radius = Math.min(radarNode.radius, Math.hypot(dx, dy));
+  const divisionAngle = (Math.PI * 2) / radarNode.internalGridDivisions;
+  const snappedAngle = Math.round(angle / divisionAngle) * divisionAngle;
+  return {
+    x: radarNode.x + Math.cos(snappedAngle - Math.PI / 2) * radius,
+    y: radarNode.y + Math.sin(snappedAngle - Math.PI / 2) * radius,
+  };
 }
 
 function handleWheel(event) {
@@ -17216,8 +17933,6 @@ function createHexNoteSelectorDOM(
     if (isEditing && targetElementsData.length > 0) {
       applyRandomScaleIndexToSelection(targetElementsData);
     }
-
-    // Clicking while already in random mode simply re-randomizes the selection
   });
   parentElement.insertBefore(randomToggleButton, parentElement.firstChild);
 
@@ -17244,8 +17959,8 @@ function createHexNoteSelectorDOM(
     }
   }
 
-  const horizontalStep = 2; // semitones between adjacent columns
-  const verticalStep = 7; // semitones between rows (Wicki-Hayden style)
+  const horizontalStep = 2;
+  const verticalStep = 7;
 
   for (const [colIndex, hexesInColumn] of hexColumnsLayout.entries()) {
     const columnDiv = document.createElement("div");
@@ -18439,6 +19154,214 @@ function populateEditPanel() {
                 section.appendChild(autoRotateSection);
                 fragment.appendChild(section);
 
+            } else if (node && node.type === SPACERADAR_TYPE) {
+                const section = document.createElement("div");
+                section.classList.add("panel-section");
+
+                const playLabel = document.createElement("label");
+                playLabel.htmlFor = `edit-radar-playing-${node.id}`;
+                playLabel.textContent = "Playing:";
+                section.appendChild(playLabel);
+                const playCheckbox = document.createElement("input");
+                playCheckbox.type = "checkbox";
+                playCheckbox.id = `edit-radar-playing-${node.id}`;
+                playCheckbox.checked = node.radarIsPlaying;
+                playCheckbox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === SPACERADAR_TYPE) {
+                            n.radarIsPlaying = e.target.checked;
+                            if (n.audioParams) n.audioParams.radarIsPlaying = n.radarIsPlaying;
+                        }
+                    });
+                    saveState();
+                });
+                section.appendChild(playCheckbox);
+                section.appendChild(document.createElement("br"));
+
+                if (isGlobalSyncEnabled) {
+                    const durLabel = document.createElement("label");
+                    durLabel.htmlFor = `edit-radar-duration-bars-${node.id}`;
+                    durLabel.textContent = "Duration (Bars):";
+                    section.appendChild(durLabel);
+                    const durSelect = document.createElement("select");
+                    durSelect.id = `edit-radar-duration-bars-${node.id}`;
+                    const barOpts = [
+                        { label: "1/4", value: 0.25 },
+                        { label: "1/2", value: 0.5 },
+                        { label: "1", value: 1 },
+                        { label: "2", value: 2 },
+                        { label: "4", value: 4 },
+                        { label: "8", value: 8 },
+                    ];
+                    let curBars = node.radarMusicalDurationBars || SPACERADAR_DEFAULT_MUSICAL_BARS;
+                    barOpts.forEach((opt) => {
+                        const optionEl = document.createElement("option");
+                        optionEl.value = opt.value;
+                        optionEl.textContent = opt.label;
+                        if (parseFloat(opt.value) === parseFloat(curBars)) optionEl.selected = true;
+                        durSelect.appendChild(optionEl);
+                    });
+                    durSelect.addEventListener("change", (e) => {
+                        const newBars = parseFloat(e.target.value);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === SPACERADAR_TYPE) {
+                                n.radarMusicalDurationBars = newBars;
+                                if (n.audioParams) n.audioParams.radarMusicalDurationBars = newBars;
+                            }
+                        });
+                        saveState();
+                    });
+                    section.appendChild(durSelect);
+                } else {
+                    const curSpeed = node.radarSpeed || SPACERADAR_DEFAULT_SPEED;
+                    const speedSlider = createSlider(
+                        `edit-radar-speed-${node.id}`,
+                        `Speed (${curSpeed.toFixed(1)}s):`,
+                        0.2,
+                        30,
+                        0.1,
+                        curSpeed,
+                        saveState,
+                        (e_input) => {
+                            const newSpeed = parseFloat(e_input.target.value);
+                            selectedArray.forEach((elData) => {
+                                const n = findNodeById(elData.id);
+                                if (n && n.type === SPACERADAR_TYPE) {
+                                    n.radarSpeed = newSpeed;
+                                    if (n.audioParams) n.audioParams.radarSpeed = newSpeed;
+                                }
+                            });
+                            e_input.target.previousElementSibling.textContent = `Speed (${newSpeed.toFixed(1)}s):`;
+                        }
+                    );
+                    section.appendChild(speedSlider);
+                }
+
+                const radiusSlider = createSlider(
+                    `edit-radar-radius-${node.id}`,
+                    `Radius (${Math.round(node.radius)}):`,
+                    30,
+                    600,
+                    1,
+                    node.radius,
+                    saveState,
+                    (e_input) => {
+                        const newR = parseFloat(e_input.target.value);
+                        selectedArray.forEach((elData) => {
+                            const n = findNodeById(elData.id);
+                            if (n && n.type === SPACERADAR_TYPE) {
+                                n.radius = newR;
+                                if (n.audioParams) n.audioParams.radius = newR;
+                            }
+                        });
+                        e_input.target.previousElementSibling.textContent = `Radius (${Math.round(newR)}):`;
+                    }
+                );
+                section.appendChild(radiusSlider);
+
+                const modeLabel = document.createElement("label");
+                modeLabel.textContent = "Mode:";
+                const modeSelect = document.createElement("select");
+                [
+                    { val: SPACERADAR_MODE_NORMAL, text: "Normal" },
+                    { val: SPACERADAR_MODE_REVERSE, text: "Reverse Sweep" },
+                    { val: SPACERADAR_MODE_PENDULUM, text: "Pendulum" },
+                ].forEach(opt => {
+                    const o = document.createElement("option");
+                    o.value = opt.val;
+                    o.textContent = opt.text;
+                    if ((node.radarMode || SPACERADAR_DEFAULT_MODE) === opt.val) o.selected = true;
+                    modeSelect.appendChild(o);
+                });
+                modeSelect.addEventListener("change", e => {
+                    selectedArray.forEach(el => {
+                        const n = findNodeById(el.id);
+                        if (n && n.type === SPACERADAR_TYPE) {
+                            n.radarMode = e.target.value;
+                            if (n.audioParams) n.audioParams.radarMode = n.radarMode;
+                        }
+                    });
+                    saveState();
+                });
+                section.appendChild(modeLabel);
+                section.appendChild(modeSelect);
+                section.appendChild(document.createElement("br"));
+
+                const gridSection = document.createElement("div");
+                gridSection.classList.add("panel-section");
+                gridSection.style.borderTop = "1px solid var(--button-hover)";
+                gridSection.style.marginTop = "10px";
+                gridSection.style.paddingTop = "10px";
+
+                const showLabel = document.createElement("label");
+                showLabel.textContent = "Show Internal Grid: ";
+                const showBox = document.createElement("input");
+                showBox.type = "checkbox";
+                showBox.checked = node.showInternalGrid !== undefined ? node.showInternalGrid : true;
+                showBox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === SPACERADAR_TYPE) {
+                            n.showInternalGrid = e.target.checked;
+                            if (n.audioParams) n.audioParams.showInternalGrid = n.showInternalGrid;
+                        }
+                    });
+                    saveState();
+                });
+                gridSection.appendChild(showLabel);
+                gridSection.appendChild(showBox);
+                gridSection.appendChild(document.createElement("br"));
+
+                const snapLabel = document.createElement("label");
+                snapLabel.textContent = "Snap Nodes to Internal Grid: ";
+                const snapBox = document.createElement("input");
+                snapBox.type = "checkbox";
+                snapBox.checked = node.snapToInternalGrid !== undefined ? node.snapToInternalGrid : true;
+                snapBox.addEventListener("change", (e) => {
+                    selectedArray.forEach((elData) => {
+                        const n = findNodeById(elData.id);
+                        if (n && n.type === SPACERADAR_TYPE) {
+                            n.snapToInternalGrid = e.target.checked;
+                            if (n.audioParams) n.audioParams.snapToInternalGrid = n.snapToInternalGrid;
+                        }
+                    });
+                    saveState();
+                });
+                gridSection.appendChild(snapLabel);
+                gridSection.appendChild(snapBox);
+                gridSection.appendChild(document.createElement("br"));
+
+                const divLabel = document.createElement("label");
+                divLabel.textContent = "Internal Divisions:";
+                const divSelect = document.createElement("select");
+                const divOpts = [1,2,3,4,6,8,12,16,24,32,64];
+                let curDiv = node.internalGridDivisions || 8;
+                divOpts.forEach((val)=>{
+                    const optEl = document.createElement("option");
+                    optEl.value = val;
+                    optEl.textContent = val.toString();
+                    if (val === curDiv) optEl.selected = true;
+                    divSelect.appendChild(optEl);
+                });
+                divSelect.addEventListener("change", (e)=>{
+                    const newDiv = parseInt(e.target.value,10);
+                    selectedArray.forEach((elData)=>{
+                        const n = findNodeById(elData.id);
+                        if(n && n.type === SPACERADAR_TYPE){
+                            n.internalGridDivisions = newDiv;
+                            if(n.audioParams) n.audioParams.internalGridDivisions = newDiv;
+                        }
+                    });
+                    saveState();
+                });
+                gridSection.appendChild(divLabel);
+                gridSection.appendChild(divSelect);
+                section.appendChild(gridSection);
+
+                fragment.appendChild(section);
+
             } else if (node && node.type === "global_key_setter") {
                 const keySetterSection = document.createElement("div");
                 keySetterSection.classList.add("panel-section");
@@ -19327,7 +20250,6 @@ function populateEditPanel() {
                 section.classList.add("panel-section");
 
                 if (connection.type === "string_violin") {
-                    // parameters handled in string panel
                 } else if (connection.type === "wavetrail") {
                     section.classList.add("panel-section");
 
@@ -19680,6 +20602,7 @@ function openReplaceInstrumentMenu() {
     { icon: "🔔", label: "FM Synth", handler: () => populateReplacePresetMenu('fmSynths', 'FM Synths') },
     { icon: "🛰️", label: "Sampler", handler: () => populateReplacePresetMenu('samplers', 'Samplers') },
     { icon: "🥁", label: "Drum", handler: () => populateReplacePresetMenu('drumElements', 'Drum Elements') },
+    { icon: "📻", label: "Radio Orb", handler: () => populateReplacePresetMenu('radio', 'Radio Pads') },
   ];
 
   instruments.forEach(inst => {
@@ -19710,6 +20633,7 @@ function populateReplacePresetMenu(contentType, title) {
   else if (contentType === 'fmSynths') presets = fmSynthPresets;
   else if (contentType === 'samplers') presets = samplerWaveformTypes;
   else if (contentType === 'drumElements') presets = drumElementTypes;
+  else if (contentType === 'radio') presets = Array.from({length:8}, (_,i)=>({type:`radio_pad_${i}`,label:`Pad ${i+1}`}));
 
   presets.forEach(p => {
     const btn = document.createElement('button');
@@ -19741,6 +20665,12 @@ function applyReplacement(presetType, contentType) {
       if (!node.audioParams) node.audioParams = {};
       const def = DRUM_ELEMENT_DEFAULTS[presetType] || {};
       Object.assign(node.audioParams, def);
+    } else if (contentType === 'radio') {
+      node.type = RADIO_ORB_TYPE;
+      if (!node.audioParams) node.audioParams = {};
+      const idx = parseInt(presetType.replace('radio_pad_','')) || 0;
+      node.audioParams.sampleIndex = idx;
+      node.audioParams.visualStyle = 'radio_orb_default';
     } else {
       node.type = 'sound';
       if (!node.audioParams) node.audioParams = {};
@@ -19791,6 +20721,11 @@ function populateInstrumentMenu() {
       label: "Sampler",
       handler: () =>
         setupAddTool(null, "sound", true, "samplers", "Samplers"),
+    },
+    {
+      icon: "📻",
+      label: "Radio Orb",
+      handler: () => setupAddTool(null, RADIO_ORB_TYPE, false),
     },
     {
       icon: "🥁",
@@ -20152,6 +21087,28 @@ function showSamplerPanel(node) {
 
 function hideSamplerPanel() {
     if (samplerPanel) samplerPanel.classList.add("hidden");
+}
+
+function positionRadioOrbPanel(node) {
+    if (!radioOrbPanel) return;
+    const coords = getScreenCoords(node.x, node.y);
+    const offsetX = 80;
+    radioOrbPanel.style.position = 'fixed';
+    radioOrbPanel.style.left = `${coords.x + offsetX}px`;
+    radioOrbPanel.style.top = `${coords.y}px`;
+    radioOrbPanel.style.right = 'auto';
+    radioOrbPanel.style.transform = 'translate(0, -50%)';
+}
+
+function showRadioOrbPanel(node) {
+    if (!radioOrbPanel) return;
+    radioOrbPanel.classList.remove('hidden');
+    radioOrbPanel.dataset.nodeId = node.id;
+    positionRadioOrbPanel(node);
+}
+
+function hideRadioOrbPanel() {
+    if (radioOrbPanel) radioOrbPanel.classList.add('hidden');
 }
 
 function positionCombulaPanel(node) {
@@ -20742,6 +21699,7 @@ function hideResonauterOrbMenu() {
     if (existing) existing.remove();
     if (resonauterPanelContent) resonauterPanelContent.innerHTML = '';
     currentResonauterNode = null;
+    stopResonauterVisuals();
 }
 function hideSamplerOrbMenu() {
     const existing = document.getElementById('sampler-orb-container');
@@ -20842,6 +21800,45 @@ function showCombulaOrbMenu(node) {
     container.appendChild(mixRow);
 }
 
+function hideRadioOrbMenu() {
+    const existing = document.getElementById('radio-orb-container');
+    if (existing) existing.remove();
+    if (radioOrbPanelContent) radioOrbPanelContent.innerHTML = '';
+    currentRadioOrbNode = null;
+}
+
+function showRadioOrbMenu(node) {
+    hideRadioOrbMenu();
+    hideSamplerOrbMenu();
+    if (!node || node.type !== RADIO_ORB_TYPE) return;
+    currentRadioOrbNode = node;
+    showRadioOrbPanel(node);
+    if (!radioOrbPanelContent) return;
+    const container = document.createElement('div');
+    container.id = 'radio-orb-container';
+    container.className = 'panel-section';
+    container.dataset.nodeId = node.id;
+    radioOrbPanelContent.innerHTML = '';
+    radioOrbPanelContent.appendChild(container);
+
+    const label = document.createElement('label');
+    label.textContent = 'Sample Pad:';
+    const select = document.createElement('select');
+    for (let i = 0; i < 8; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Pad ${i + 1}`;
+        if ((node.audioParams.sampleIndex ?? 0) === i) opt.selected = true;
+        select.appendChild(opt);
+    }
+    select.addEventListener('change', e => {
+        node.audioParams.sampleIndex = parseInt(e.target.value);
+        saveState();
+    });
+    container.appendChild(label);
+    container.appendChild(select);
+}
+
 function hideStringConnectionMenu() {
     const existing = document.getElementById('string-connection-container');
     if (existing) existing.remove();
@@ -20873,7 +21870,6 @@ function showStringConnectionMenu(connection) {
     addSlider(`string-vol-${connection.id}`, 'Volume', 0, 1, 0.01, params.volume ?? d.volume, 'volume', v=>v.toFixed(2));
     addSlider(`string-attack-${connection.id}`, 'Attack', 0.01, 1, 0.01, params.attack ?? d.attack, 'attack', v=>v.toFixed(2)+'s');
     addSlider(`string-release-${connection.id}`, 'Release', 0.1, 5, 0.01, params.release ?? d.release, 'release', v=>v.toFixed(2)+'s');
-    // Allow a wider range for vibrato depth to emphasize the effect
     addSlider(
         `string-vdepth-${connection.id}`,
         'Vibrato Amt',
@@ -21036,18 +22032,6 @@ function showAlienOrbMenu(node) {
     alienPanelContent.innerHTML = '';
     alienPanelContent.appendChild(container);
 
-    const displayRow = document.createElement('div');
-    displayRow.className = 'op1-display-row';
-    const displayWrap = document.createElement('div');
-    displayWrap.className = 'op1-display';
-    alienOrbCanvas = document.createElement('canvas');
-    alienOrbCanvas.id = 'alienOrbCanvas';
-    alienOrbCanvas.className = 'prorb-display-screen';
-    alienOrbCanvas.width = 240;
-    alienOrbCanvas.height = 80;
-    displayWrap.appendChild(alienOrbCanvas);
-    displayRow.appendChild(displayWrap);
-    container.appendChild(displayRow);
 
     const barRow = document.createElement('div');
     barRow.className = 'prorb-bar-row';
@@ -21968,7 +22952,7 @@ function changeScale(scaleKey, skipNodeUpdate = false) {
 }
 function updateSyncUI() {
   if (appMenuSyncToggleBtn) {
-    appMenuSyncToggleBtn.textContent = `Sync: ${isGlobalSyncEnabled ? "ON" : "OFF"}`;
+    appMenuSyncToggleBtn.textContent = "Sync";
     appMenuSyncToggleBtn.classList.toggle("active", isGlobalSyncEnabled);
   }
   if (appMenuBpmControls) {
@@ -22015,7 +22999,7 @@ function updateReplaceMenuState() {
 }
 
 function updateInfoToggleUI() {
-  toggleInfoTextBtn.textContent = `Info: ${isInfoTextVisible ? "ON" : "OFF"}`;
+  toggleInfoTextBtn.textContent = "Info";
   toggleInfoTextBtn.classList.toggle("active", isInfoTextVisible);
 }
 
@@ -22302,7 +23286,6 @@ function showResonauterOrbMenu(node) {
     hideResonauterOrbMenu();
     hideSamplerOrbMenu();
     if (!node || (node.type !== RESONAUTER_TYPE)) return;
-    stopResonauterSynth();
     currentResonauterNode = node;
     showResonauterPanel(node);
     if (!resonauterPanelContent) return;
@@ -22313,17 +23296,6 @@ function showResonauterOrbMenu(node) {
     resonauterPanelContent.innerHTML = '';
     resonauterPanelContent.appendChild(container);
 
-    const displayRow = document.createElement('div');
-    displayRow.className = 'op1-display-row';
-    const displayWrap = document.createElement('div');
-    displayWrap.className = 'op1-display';
-    resonauterOrbCanvas = document.createElement('canvas');
-    resonauterOrbCanvas.width = 240;
-    resonauterOrbCanvas.height = 80;
-    resonauterOrbCanvas.className = 'prorb-display-screen';
-    displayWrap.appendChild(resonauterOrbCanvas);
-    displayRow.appendChild(displayWrap);
-    container.appendChild(displayRow);
 
     const tabs = document.createElement('div');
     tabs.className = 'retrigger-editor-tabs';
@@ -22427,6 +23399,7 @@ function showResonauterOrbMenu(node) {
     container.appendChild(rowFx);
 
     function switchTab(t){
+        currentResonauterTab = t; // <-- DEZE REGEL IS TOEGEVOEGD
         rowExc.style.display = t==='exc' ? 'flex' : 'none';
         rowMat.style.display = t==='mat' ? 'flex' : 'none';
         rowMot.style.display = t==='mot' ? 'flex' : 'none';
@@ -22441,8 +23414,6 @@ function showResonauterOrbMenu(node) {
     btnMot.addEventListener('click', ()=>switchTab('mot'));
     btnFx.addEventListener('click', ()=>switchTab('fx'));
     switchTab('exc');
-
-    startResonauterSynth();
 }
 
 function getAlienParamVal(key) {
@@ -22671,7 +23642,7 @@ function playResonauterSound(node, pitch, intensity = 1) {
   const pan = audioContext.createStereoPanner();
   pan.pan.value = (p.position ?? 0.5) * 2 - 1;
   limiter.connect(pan);
-    pan.connect(node.audioNodes.output);
+    pan.connect(node.audioNodes.effectInput); 
 
     noiseSrc.start(now);
     noiseSrc.stop(now + Math.max(bufDur, totalDur));
@@ -22710,31 +23681,27 @@ function playResonauterSound(node, pitch, intensity = 1) {
  }
 }
 
+function startResonauterVisuals() {
+    resonauterVisualRunning = true;
+
+    function resonauterVisualLoop() {
+        if (!resonauterVisualRunning) return;
+        updateResonauterVisual();
+        requestAnimationFrame(resonauterVisualLoop);
+    }
+    resonauterVisualLoop();
+}
+
+function stopResonauterVisuals() {
+    resonauterVisualRunning = false;
+}
+
 function startAlienSynth() {
   setupAudio().then(() => {
     if (!alienAudioNodes) {
       alienAudioNodes = createAlienSynth(alienEngine);
       alienAnalyser = alienAudioNodes.analyser;
-      if (alienOrbCanvas) {
-        alienOrbCtx = alienOrbCanvas.getContext('2d');
-        alienOrbCanvas.addEventListener('pointerdown', () => {
-          if (alienAudioNodes) {
-            const g = alienAudioNodes.baseGain || 1;
-            alienAudioNodes.mix.gain.setTargetAtTime(g, audioContext.currentTime, 0.01);
-          }
-        });
-        alienOrbCanvas.addEventListener('pointerup', () => {
-          if (alienAudioNodes) {
-            alienAudioNodes.mix.gain.setTargetAtTime(0.0, audioContext.currentTime, 0.2);
-          }
-        });
-      }
       updateAlienParams();
-    }
-    if (!alienVisualRunning) {
-      alienVisualRunning = true;
-      alienLastVisualTime = performance.now();
-      requestAnimationFrame(updateAlienVisual);
     }
   });
 }
@@ -22826,53 +23793,6 @@ function createResonauterGranularNode() {
   return proc;
 }
 
-function startResonauterSynth() {
-  setupAudio().then(() => {
-    if (!resonauterAudioNodes) {
-      resonauterAudioNodes = { analyser: audioContext.createAnalyser() };
-      resonauterAudioNodes.analyser.fftSize = 256;
-      resonauterAudioNodes.effectInput = audioContext.createGain();
-      resonauterAudioNodes.gran = createResonauterGranularNode();
-      resonauterAudioNodes.wet = audioContext.createGain();
-      resonauterAudioNodes.reverbSendGain = audioContext.createGain();
-      resonauterAudioNodes.wet.gain.value = resonauterGranParams.gMix;
-      resonauterAudioNodes.reverbSendGain.gain.value = 0.2;
-      resonauterAudioNodes.effectInput.connect(resonauterAudioNodes.gran);
-      resonauterAudioNodes.gran.connect(resonauterAudioNodes.wet);
-      resonauterAudioNodes.wet.connect(resonauterAudioNodes.analyser);
-      resonauterAudioNodes.wet.connect(resonauterAudioNodes.reverbSendGain);
-      if (isReverbReady && reverbPreDelayNode)
-        resonauterAudioNodes.reverbSendGain.connect(reverbPreDelayNode);
-      if (masterGain) resonauterAudioNodes.analyser.connect(masterGain); else resonauterAudioNodes.analyser.connect(audioContext.destination);
-
-      
-      for (const n of nodes) {
-        if (n.audioNodes?.output) {
-          try {
-            n.audioNodes.output.connect(resonauterAudioNodes.effectInput);
-          } catch(e){}
-        }
-      }
-    }
-    resonauterVisualRunning = true;
-    resonauterLastTime = performance.now();
-    requestAnimationFrame(updateResonauterVisual);
-  });
-}
-
-function stopResonauterSynth() {
-  if (resonauterAudioNodes) {
-    try { resonauterAudioNodes.gran.disconnect(); } catch(e){}
-    try { resonauterAudioNodes.effectInput.disconnect(); } catch(e){}
-    try { resonauterAudioNodes.wet.disconnect(); } catch(e){}
-    try { resonauterAudioNodes.reverbSendGain.disconnect(); } catch(e){}
-    resonauterAudioNodes = null;
-  }
-  resonauterVisualRunning = false;
-  currentResonauterNode = null;
-  resonauterClouds = [];
-}
-
 function playCombulaSound(node, pitch, intensity = 1) {
   const now = audioContext.currentTime;
   const dur = 0.02;
@@ -22959,68 +23879,194 @@ let resonauterVisualRunning = false;
 let resonauterLastTime = 0;
 let resonauterClouds = [];
 function updateResonauterVisual() {
-  if (!resonauterVisualRunning || !resonauterOrbCanvas) return;
-  if (!resonauterOrbCtx) resonauterOrbCtx = resonauterOrbCanvas.getContext('2d');
-  const ctx = resonauterOrbCtx;
-  const w = resonauterOrbCanvas.width;
-  const h = resonauterOrbCanvas.height;
-  ctx.clearRect(0,0,w,h);
-  const now = performance.now();
-  const dt = (now - resonauterLastTime)/1000;
-  resonauterLastTime = now;
-  resonauterSpinPhase += resonauterSpinSpeed * dt;
-  resonauterSpinSpeed *= Math.pow(0.9, dt * 60);
-  const p = currentResonauterNode ? currentResonauterNode.audioParams : {strength:0.5,brightness:0.5,geometry:0.5,position:0.5,material:0.5};
-  const g = resonauterGranParams;
-  const baseR = 20 + p.strength*20;
-  const sat = 40 + (p.material ?? 0.5) * 60;
-  const hueShift = (g.gPitch - 0.5) * 180;
+    if (!resonauterVisualRunning || !resonauterOrbCanvas) return;
+    if (!resonauterOrbCtx) resonauterOrbCtx = resonauterOrbCanvas.getContext('2d');
+    const ctx = resonauterOrbCtx;
+    const w = resonauterOrbCanvas.width;
+    const h = resonauterOrbCanvas.height;
+    ctx.clearRect(0, 0, w, h);
 
-  const ringHue = p.geometry * 360 + hueShift;
-  const orbColor = `hsl(${ringHue},${Math.min(100, sat + 20)}%,45%)`;
-  const ringColor = `hsl(${ringHue},${sat}%,65%)`;
+    const now = performance.now();
+    const dt = (now - resonauterLastTime) / 1000;
+    resonauterLastTime = now;
 
-  ctx.fillStyle = orbColor;
-  ctx.beginPath();
-  ctx.arc(w / 2, h / 2, baseR * 0.6, 0, Math.PI * 2);
-  ctx.fill();
+    resonauterSpinPhase += resonauterSpinSpeed * dt;
+    resonauterSpinSpeed *= Math.pow(0.95, dt * 60);
 
-  ctx.strokeStyle = ringColor;
-  ctx.shadowColor = `hsla(${ringHue},${sat}%,80%,${g.gTexture*0.3})`;
-  ctx.shadowBlur = g.gTexture*20;
-  for(let i=0;i<3;i++){
-    const phase = resonauterSpinPhase + i * Math.PI * 2 / 3;
-    const baseRing = baseR + i * 4;
-    ctx.beginPath();
-    for(let a=0;a<Math.PI*2;a+=0.05){
-      const mod = Math.sin(a*3 + now/300) * p.brightness*10;
-      const flutter = Math.sin(a*10 + now/100) * g.gDensity * 5;
-      const r = baseRing + mod + flutter;
-      const x = w/2 + Math.cos(a + phase)*r*(1+p.position*0.3)*(1 + p.geometry*0.5);
-      const y = h/2 + Math.sin(a + phase)*r*(1-p.position*0.3)*(1 + (1 - p.geometry)*0.5);
-      if(a===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    const p = currentResonauterNode ? currentResonauterNode.audioParams : { strength: 0.5, brightness: 0.5, geometry: 0.5, position: 0.5, material: 0.5, damping: 0.5 };
+    const g = resonauterGranParams;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    switch (currentResonauterTab) {
+        case 'exc':
+            drawExcitersVisual(ctx, w, h, p, now);
+            break;
+        case 'mat':
+            drawMaterialVisual(ctx, w, h, p, now);
+            break;
+        case 'mot':
+            drawMotionVisual(ctx, w, h, p);
+            break;
+        case 'fx':
+            drawEffectsVisual(ctx, w, h, p, g, dt);
+            break;
+        default:
+            drawMaterialVisual(ctx, w, h, p, now);
     }
-    ctx.closePath();
-    ctx.stroke();
-  }
+}
 
-  if (Math.random() < g.gDensity * dt * 2) {
-    resonauterClouds.push({x: Math.random()*w, y: Math.random()*h, life:1});
-  }
-  ctx.fillStyle = `hsla(${p.geometry*360 + hueShift},50%,70%,0.3)`;
-  const newClouds = [];
-  for(const c of resonauterClouds){
-    ctx.globalAlpha = c.life * g.gMix;
+function drawResonatorShape(ctx, cx, cy, radius, geometry, material, brightness, damping, now) {
+    const sides = 3 + Math.floor(geometry * 7);
+    const angleOffset = resonauterSpinPhase * 0.1;
     ctx.beginPath();
-    ctx.arc(c.x, c.y, 10 + g.gTexture*20*(1-c.life), 0, Math.PI*2);
+    for (let i = 0; i <= sides; i++) {
+        const angle = (i / sides) * Math.PI * 2 + angleOffset;
+        const r = radius * (1 + Math.sin(angle * (sides / 2) + now / 500) * geometry * 0.1);
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    const hue = 200 + brightness * 60;
+    const sat = 50 + material * 40;
+    const light = 40 + brightness * 30;
+    ctx.fillStyle = `hsla(${hue}, ${sat}%, ${light}%, 0.8)`;
+    ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${light + 20}%, 1)`;
+    ctx.lineWidth = 1 + (1 - damping) * 3;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = (1 - damping) * 15;
     ctx.fill();
-    c.y += dt * 10 * (g.gTexture*0.5+0.2);
-    c.life -= dt * (0.3 + g.gTexture*0.7);
-    if(c.life>0) newClouds.push(c);
-  }
-  resonauterClouds = newClouds;
-  ctx.globalAlpha = 1.0;
-  if(resonauterVisualRunning) requestAnimationFrame(updateResonauterVisual);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+}
+
+function drawExcitersVisual(ctx, w, h, p, now) {
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = 15 + (p.strength ?? 0.5) * 10;
+    
+    drawResonatorShape(ctx, cx, cy, radius, p.geometry ?? 0.5, p.material ?? 0.5, p.brightness ?? 0.5, p.damping ?? 0.5, now);
+
+    const exciters = { bow: p.bow, blow: p.blow, strike: p.strike, mallet: p.mallet, hammer: p.hammer };
+    const dominantExciter = Object.keys(exciters).reduce((a, b) => (exciters[a] ?? 0) > (exciters[b] ?? 0) ? a : b);
+    const exciterValue = exciters[dominantExciter] ?? 0;
+
+    if (exciterValue > 0.1) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 200, ${0.5 + exciterValue * 0.5})`;
+        ctx.lineWidth = 1 + exciterValue * 3;
+        switch (dominantExciter) {
+            case 'strike':
+            case 'mallet':
+            case 'hammer':
+                const angle = (now / 200) % (Math.PI * 2);
+                const x = cx + Math.cos(angle) * (radius + 10);
+                const y = cy + Math.sin(angle) * (radius + 10);
+                ctx.beginPath();
+                ctx.arc(x, y, 3 + exciterValue * 5, 0, Math.PI * 2);
+                ctx.stroke();
+                break;
+            case 'bow':
+                const bowPos = (Math.sin(now / 1000) * (radius + 5));
+                ctx.beginPath();
+                ctx.moveTo(cx + bowPos, cy - radius - 10);
+                ctx.lineTo(cx + bowPos, cy + radius + 10);
+                ctx.stroke();
+                break;
+            case 'blow':
+                for (let i = 0; i < 5; i++) {
+                    const prog = ((now / 100) + i * 0.2) % 1;
+                    ctx.beginPath();
+                    ctx.arc(cx - radius - 15 + prog * 10, cy + (i-2)*5, 1 + exciterValue * 2, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(200, 220, 255, ${0.1 + exciterValue * 0.4 * (1-prog)})`;
+                    ctx.fill();
+                }
+                break;
+        }
+        ctx.restore();
+    }
+}
+
+function drawMaterialVisual(ctx, w, h, p, now) {
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = 25;
+    drawResonatorShape(ctx, cx, cy, radius, p.geometry ?? 0.5, p.material ?? 0.5, p.brightness ?? 0.5, p.damping ?? 0.5, now);
+}
+
+function drawMotionVisual(ctx, w, h, p) {
+    const cx = w / 2;
+    const cy = h / 2;
+    ctx.strokeStyle = '#9ab';
+    ctx.lineWidth = 1.5;
+
+    // Envelope
+    const envX = 20, envY = h-15, envW = 80, envH = 30;
+    const att = (p.contour ?? 0.5) * envW * 0.5;
+    const len = (p.length ?? 0.5);
+    const sus = len * envH * 0.8;
+    const rel = (p.release ?? 0.5) * 40;
+    
+    ctx.beginPath();
+    ctx.moveTo(envX, envY);
+    ctx.lineTo(envX + att, envY - envH);
+    ctx.lineTo(envX + att + len * envW * 0.6, envY - sus);
+    ctx.lineTo(envX + att + len * envW * 0.6 + rel, envY);
+    ctx.stroke();
+
+    // Strum/Repeat
+    const repeats = 1 + Math.round((p.repeat ?? 0) * 8);
+    const strum = (p.strum ?? 0) * 40;
+    for(let i=0; i < repeats; i++) {
+        const posX = w - 60 + Math.sin(i * 0.5) * strum;
+        const posY = h - 15 - i * 5;
+        ctx.fillStyle = `rgba(200, 220, 255, ${0.2 + (1 - i/repeats)*0.6})`;
+        ctx.beginPath();
+        ctx.arc(posX, posY, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawEffectsVisual(ctx, w, h, p, g, dt) {
+    if (Math.random() < g.gDensity * dt * 60) {
+        resonauterClouds.push({
+            x: w/2 + (Math.random() - 0.5) * w * 0.8, 
+            y: h * g.gPos, 
+            life: 1.0, 
+            vx: (Math.random() - 0.5) * (g.gTexture * 40),
+            vy: (g.gPitch - 0.5) * -30,
+            hue: Math.random() * 60 + 180,
+            size: 5 + g.gSize * 15
+        });
+    }
+    ctx.globalCompositeOperation = 'lighter';
+    const newClouds = [];
+    for(const c of resonauterClouds){
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.life -= dt * 0.5;
+        if(c.life > 0) {
+            newClouds.push(c);
+            const alpha = c.life * g.gMix * 0.7;
+            if (alpha > 0.01) {
+                ctx.fillStyle = `hsla(${c.hue}, 70%, 60%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.size * c.life, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    resonauterClouds = newClouds;
+    ctx.globalCompositeOperation = 'source-over';
+    
+    // Space (Reverb)
+    const space = p.space ?? 0;
+    if (space > 0.05) {
+        ctx.strokeStyle = `rgba(180, 200, 240, ${space * 0.2})`;
+        ctx.lineWidth = 1 + space * 10;
+        ctx.strokeRect(2, 2, w - 4, h - 4);
+    }
 }
 
 function togglePlayPause() {
@@ -23458,6 +24504,11 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     }
     visualStyle = "combula_default";
     nodeSubtypeForAudioParams = null;
+  } else if (type === RADIO_ORB_TYPE) {
+    initialScaleIndex = noteIndexToAdd !== -1 && noteIndexToAdd !== null ? noteIndexToAdd : 0;
+    initialPitch = getFrequency(currentScale, initialScaleIndex);
+    visualStyle = "radio_orb_default";
+    nodeSubtypeForAudioParams = null;
   } else if (type === "nebula") {
     initialBaseHue = Math.random() * 360;
     nodeSubtypeForAudioParams =
@@ -23689,6 +24740,14 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
         visualStyle: "combula_default",
         ignoreGlobalSync: false,
     };
+  } else if (type === RADIO_ORB_TYPE) {
+    newNode.audioParams = {
+        pitch: initialPitch,
+        scaleIndex: initialScaleIndex,
+        sampleIndex: 0,
+        visualStyle: "radio_orb_default",
+        ignoreGlobalSync: false,
+    };
   } else {
     const initialLowPassFreq =
       audioDetails.lowPassFreq !== undefined ?
@@ -23864,6 +24923,36 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     delete newNode.baseHue;
     delete newNode.color;
   }
+  if (type === SPACERADAR_TYPE) {
+    newNode.radius = optionalDimensions ? optionalDimensions.width / 2 : SPACERADAR_DEFAULT_RADIUS;
+    newNode.radarSpeed = SPACERADAR_DEFAULT_SPEED;
+    newNode.radarMusicalDurationBars = SPACERADAR_DEFAULT_MUSICAL_BARS;
+    newNode.radarIsPlaying = true;
+    newNode.scanAngle = 0;
+    newNode.triggeredInThisSweep = new Set();
+    newNode.radarPulseIntensity = SPACERADAR_DEFAULT_PULSE_INTENSITY;
+    newNode.internalGridDivisions = 8;
+    newNode.showInternalGrid = true;
+    newNode.snapToInternalGrid = true;
+    newNode.radarMode = SPACERADAR_DEFAULT_MODE;
+    newNode.radarDirection = 1;
+
+    if (!newNode.audioParams) newNode.audioParams = {};
+    newNode.audioParams.radarSpeed = newNode.radarSpeed;
+    newNode.audioParams.radarIsPlaying = newNode.radarIsPlaying;
+    newNode.audioParams.radarMusicalDurationBars = newNode.radarMusicalDurationBars;
+    newNode.audioParams.radarPulseIntensity = newNode.radarPulseIntensity;
+    newNode.audioParams.radius = newNode.radius;
+    newNode.audioParams.internalGridDivisions = newNode.internalGridDivisions;
+    newNode.audioParams.showInternalGrid = newNode.showInternalGrid;
+    newNode.audioParams.snapToInternalGrid = newNode.snapToInternalGrid;
+    newNode.audioParams.radarMode = newNode.radarMode;
+    newNode.isStartNode = false;
+    newNode.audioNodes = null;
+    delete newNode.starPoints;
+    delete newNode.baseHue;
+    delete newNode.color;
+  }
 
   if (isStartNodeType && newNode.isEnabled && audioContext) {
     const nowTime = audioContext.currentTime;
@@ -23901,12 +24990,12 @@ function addNode(x, y, type, subtype = null, optionalDimensions = null) {
     }
   }
 
-  if (isAudioReady && newNode.type !== TIMELINE_GRID_TYPE && newNode.type !== "global_key_setter") {
+  if (isAudioReady && newNode.type !== TIMELINE_GRID_TYPE && newNode.type !== SPACERADAR_TYPE && newNode.type !== "global_key_setter") {
     newNode.audioNodes = createAudioNodesForNode(newNode);
     if (newNode.audioNodes) {
       updateNodeAudioParams(newNode);
     }
-  } else if (newNode.type === TIMELINE_GRID_TYPE || newNode.type === "global_key_setter") {
+  } else if (newNode.type === TIMELINE_GRID_TYPE || newNode.type === SPACERADAR_TYPE || newNode.type === "global_key_setter") {
     newNode.audioNodes = null;
   }
 
@@ -24431,7 +25520,7 @@ if (pianoRollModeSelect) {
 if (backgroundSelect) {
   backgroundSelect.value = backgroundMode;
   backgroundSelect.addEventListener("change", (e) => {
-    backgroundMode = e.target.value || 'stardrops';
+    backgroundMode = e.target.value || 'starfield';
     if (backgroundMode === 'starfield') initStarfield();
     if (backgroundMode === 'neural') initNeuralBackground();
     if (backgroundMode !== 'stardrops') windParticles = [];
@@ -24890,7 +25979,7 @@ if (alienPanelCloseBtn) {
 if (resonauterPanelCloseBtn) {
   resonauterPanelCloseBtn.addEventListener('click', () => {
     hideResonauterPanel();
-    stopResonauterSynth();
+    hideResonauterOrbMenu();
   });
 }
 if (combulaPanelCloseBtn) {
@@ -24905,6 +25994,12 @@ if (samplerPanelCloseBtn) {
     hideSamplerOrbMenu();
   });
 }
+if (radioOrbPanelCloseBtn) {
+  radioOrbPanelCloseBtn.addEventListener('click', () => {
+    hideRadioOrbPanel();
+    hideRadioOrbMenu();
+  });
+}
 if (stringPanelCloseBtn) {
   stringPanelCloseBtn.addEventListener('click', () => {
     hideStringPanel();
@@ -24915,14 +26010,12 @@ if (stringPanelCloseBtn) {
 if (appMenuGridToggleBtn) {
   appMenuGridToggleBtn.addEventListener("click", () => {
     isGridVisible = !isGridVisible;
-    appMenuGridToggleBtn.textContent = `Grid: ${isGridVisible ? "ON" : "OFF"}`;
     appMenuGridToggleBtn.classList.toggle("active", isGridVisible);
   });
 }
 if (appMenuGridSnapBtn) {
   appMenuGridSnapBtn.addEventListener("click", () => {
     isSnapEnabled = !isSnapEnabled;
-    appMenuGridSnapBtn.textContent = `Snap: ${isSnapEnabled ? "ON" : "OFF"}`;
     appMenuGridSnapBtn.classList.toggle("active", isSnapEnabled);
   });
 }
@@ -27467,6 +28560,4 @@ window.addEventListener("load", () => {
   makePanelDraggable(stringPanel, stringHeader || stringPanel);
   updatePresetExportText();
   updateReplaceMenuState();
-
-
 });

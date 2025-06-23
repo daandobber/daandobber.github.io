@@ -96,6 +96,169 @@
         <button id="tapeLoopResetSpeedBtn" title="Reset Speed">Reset</button>
     </div>
 </div>
+  <div id="radioSamplerPanel" class="floating-panel radio-panel hidden">
+    <button class="close-panel-button" id="closeRadioSamplerPanelBtn">&times;</button>
+    <h3>Radio Sampler</h3>
+    <div class="radio-sampler-tabs">
+      <button class="radio-tab active" data-tab="pads">Pads</button>
+      <button class="radio-tab" data-tab="effects">Effects</button>
+    </div>
+    <audio id="radioStream" crossorigin="anonymous" src="https://icecast.omroep.nl/radio1-bb-mp3"></audio>
+    <div id="radioSamplerTabPads" class="radio-tab-content">
+      <div id="radioSamplerControls">
+        <div class="radio-slider-wrapper">
+          <label for="radioStationSlider">Frequency</label>
+          <input id="radioStationSlider" type="range" min="0" max="6" step="0.01">
+        </div>
+        <div class="radio-slider-wrapper">
+          <label for="radioVolumeSlider">Volume</label>
+          <input id="radioVolumeSlider" type="range" min="0" max="1" step="0.01" value="1">
+        </div>
+        <button id="radioPlayBtn">Play Radio</button>
+        <button id="radioRecordSeqBtn">Record Sequence</button>
+      </div>
+    <div id="radioSeqSteps" class="radio-step-grid">
+      <div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div>
+      <div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div>
+      <div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div>
+      <div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div><div class="radio-step"></div>
+    </div>
+    <div id="radioSamplerGrid">
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+      <div class="radio-pad">
+        <canvas width="70" height="40"></canvas>
+        <div class="pad-controls">
+          <button class="pad-rec-btn" title="Record">Smpl</button>
+          <button class="pad-step-toggle" title="Toggle step">Step</button>
+        </div>
+      </div>
+  </div>
+    <div id="radioPadEditor" class="hidden">
+      <canvas id="radioWaveformCanvas" width="260" height="60"></canvas>
+      <div class="radio-edit-fields">
+        <label>Start <input type="number" id="radioPadStart" min="0" step="0.01"></label>
+        <label>End <input type="number" id="radioPadEnd" min="0" step="0.01"></label>
+      </div>
+      <div class="radio-extra-fields">
+        <label>Pitch <input type="range" id="radioPadPitch" min="0.5" max="2" step="0.01" value="1"></label>
+        <label>Vol <input type="range" id="radioPadVolume" min="0" max="1" step="0.01" value="1"></label>
+        <label><input type="checkbox" id="radioPadReverse"> Reverse</label>
+      </div>
+    </div>
+  </div>
+  <div id="radioSamplerTabEffects" class="radio-tab-content hidden">
+    <div class="radio-fx-assign">
+      <div class="radio-fx-axis">
+        <span>X:</span>
+        <select id="radioFxSelectX1" class="radioFxSelectX">
+          <option value="none">None</option>
+          <option value="delay">Delay</option>
+          <option value="filter">Filter</option>
+          <option value="distortion">Distortion</option>
+          <option value="pitch">Pitch</option>
+        </select>
+        <select id="radioFxSelectX2" class="radioFxSelectX">
+          <option value="none">None</option>
+          <option value="delay">Delay</option>
+          <option value="filter">Filter</option>
+          <option value="distortion">Distortion</option>
+          <option value="pitch">Pitch</option>
+        </select>
+        <select id="radioFxSelectX3" class="radioFxSelectX">
+          <option value="none">None</option>
+          <option value="delay">Delay</option>
+          <option value="filter">Filter</option>
+          <option value="distortion">Distortion</option>
+          <option value="pitch">Pitch</option>
+        </select>
+      </div>
+      <div class="radio-fx-axis">
+        <span>Y:</span>
+        <select id="radioFxSelectY1" class="radioFxSelectY">
+          <option value="none">None</option>
+          <option value="delay">Delay</option>
+          <option value="filter">Filter</option>
+          <option value="distortion">Distortion</option>
+          <option value="pitch">Pitch</option>
+        </select>
+        <select id="radioFxSelectY2" class="radioFxSelectY">
+          <option value="none">None</option>
+          <option value="delay">Delay</option>
+          <option value="filter">Filter</option>
+          <option value="distortion">Distortion</option>
+          <option value="pitch">Pitch</option>
+        </select>
+        <select id="radioFxSelectY3" class="radioFxSelectY">
+          <option value="none">None</option>
+          <option value="delay">Delay</option>
+          <option value="filter">Filter</option>
+          <option value="distortion">Distortion</option>
+          <option value="pitch">Pitch</option>
+        </select>
+      </div>
+    </div>
+    <canvas id="radioFxPad" width="200" height="150"></canvas>
+      <div id="radioFxControls">
+        <button id="radioFxRecordBtn">Record FX</button>
+        <button id="radioFxDeleteBtn" disabled>Delete FX</button>
+      </div>
+  </div>
+</div>
     <div id="app-menu-bar">
         <div class="app-menu-dropdown">
             <button class="app-menu-button">File</button>
@@ -134,22 +297,22 @@
                 <a href="#" id="app-menu-enter-ufo-mode">UFO Mode</a>
                 <label for="background-select">Background:</label>
                 <select id="background-select">
-                    <option value="stardrops" selected>Stardrops</option>
+                    <option value="stardrops">Stardrops</option>
                     <option value="neural">Organic Neural Network</option>
                     <option value="flat">Flat Color Theme</option>
-                    <option value="starfield">Parallax Starfield</option>
+                    <option value="starfield" selected>Parallax Starfield</option>
                 </select>
                 <a href="#" id="app-menu-open-preset-tester">Preset Tester</a>
             </div>
         </div>
 
         <div class="app-menu-separator"></div>
-        <button id="app-menu-grid-toggle-btn" class="app-menu-bar-button" title="Toggle Grid Visibility (G)">Grid: OFF</button>
-        <button id="app-menu-grid-snap-btn" class="app-menu-bar-button" title="Toggle Snap to Grid (N)">Snap: OFF</button>
+        <button id="app-menu-grid-toggle-btn" class="app-menu-bar-button" title="Toggle Grid Visibility (G)">Grid</button>
+        <button id="app-menu-grid-snap-btn" class="app-menu-bar-button" title="Toggle Snap to Grid (N)">Snap</button>
 
         <div class="app-menu-separator"></div>
 
-        <button id="app-menu-sync-toggle-btn" class="app-menu-bar-button" title="Toggle Global Tempo Sync (Y)">Sync: OFF</button>
+        <button id="app-menu-sync-toggle-btn" class="app-menu-bar-button" title="Toggle Global Tempo Sync (Y)">Sync</button>
         <div id="app-menu-bpm-controls" class="app-menu-bar-item hidden">
              <label for="app-menu-bpm-input">BPM:</label>
              <input type="number" id="app-menu-bpm-input" min="30" max="300" step="1" value="120" title="Global Beats Per Minute">
@@ -157,14 +320,33 @@
         <button id="app-menu-play-pause-btn" class="app-menu-bar-button">Play ▶</button>
         <button id="app-menu-stop-btn" class="app-menu-bar-button" title="Stop">Stop ⏹</button>
         <div id="app-menu-beat-indicator" class="app-menu-bar-beat-indicator"></div>
-        <button id="toggleInfoTextBtn" class="app-menu-bar-button" title="Toggle Node Info Text (I)">Info: ON</button>
+        <button id="metronomeToggleBtn" class="app-menu-bar-button" title="Toggle Metronome">Met</button>
+        <button id="toggleInfoTextBtn" class="app-menu-bar-button" title="Toggle Node Info Text (I)">Info</button>
         <button id="app-menu-record-btn" class="app-menu-bar-button" title="Record Session">🔴 Record</button>
         <button id="app-menu-toggle-tape-looper-btn" class="app-menu-bar-button" title="Toggle Tape Looper">📼 Tape</button>
+        <button id="app-menu-radio-sampler-btn" class="app-menu-bar-button" title="Toggle Radio Sampler">📻 Radio</button>
+        <button id="app-menu-toggle-timeline-btn" class="app-menu-bar-button" title="Toggle Timeline">🕒 Timeline</button>
         <div class="app-menu-spacer"></div> <button id="app-menu-help-btn" class="app-menu-bar-button" title="Help">?</button>
     </div>
     <canvas id="mainCanvas"></canvas>
     <div id="mistLayer"></div>
     <div id="crushLayer"></div>
+
+    <div id="timelineView" class="hidden">
+        <div class="timeline-controls">
+            <button id="closeTimelineBtn">Back</button>
+            <button id="addTrackBtn">Add Track</button>
+            <button id="playTimelineBtn">Play</button>
+            <button id="stopTimelineBtn" disabled>Stop</button>
+            <label class="loop-toggle"><input type="checkbox" id="timelineLoopToggle"> Loop</label>
+        </div>
+        <div id="timelineScroll">
+            <div id="timelineLoopBar"></div>
+            <div id="timelineTracks"></div>
+            <div id="timelineLoopRegion" class="hidden"></div>
+            <div id="timelinePlayhead" class="hidden"></div>
+        </div>
+    </div>
 
     <div id="toolbar">
         <div id="toolbar-column-left">
@@ -172,6 +354,7 @@
             <div id="toolbar-pulsars">
                 <button id="addPulsarBtn" title="Add Pulsar (P)">🔆</button>
                 <button id="addTimelineGridBtn" title="Add Timeline Grid">⏳</button>
+                <button id="addSpaceRadarBtn" title="Add Space Radar">📡</button>
                 <button id="addMeteorShowerBtn" title="Add Meteor Shower Pulsar">☄️</button>
             </div>
             <hr class="toolbar-divider-compact">
@@ -357,6 +540,14 @@
         <div id="sampler-panel-content"></div>
     </div>
 
+    <div id="radio-orb-panel" class="panel prorb-panel hidden">
+        <div id="radio-orb-panel-header">
+            <h3>Radio Orb Settings</h3>
+            <button id="radio-orb-panel-close-btn" class="close-panel-button">&times;</button>
+        </div>
+        <div id="radio-orb-panel-content"></div>
+    </div>
+
     <div id="string-panel" class="floating-panel hidden">
         <button id="string-panel-close-btn" class="close-panel-button">&times;</button>
         <h3>String Settings</h3>
@@ -420,6 +611,8 @@
     </div>
     <div id="loadingIndicator" style="display:none;">Loading Samples... 0%</div>
     <script src="samplers.js"></script>
+    <script src="radioSampler.js"></script>
+    <script src="timeline.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
