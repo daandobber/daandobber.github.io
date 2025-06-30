@@ -2418,14 +2418,15 @@
         "thumb": "https://i.discogs.com/t0HFBiq7mM2ri8qFUjfMC_-lKHCcDWlWbrnDdbknkOg/rs:fit/g:sm/q:40/h:150/w:150/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MTcx/MjItMTI1MzM1MTk5/My5qcGVn.jpeg",
         "cover_image": "https://i.discogs.com/j1OMOEkCu-2tkmvJ4Tlh_XgxTYHVq9pMI6ZWeg76bVA/rs:fit/g:sm/q:90/h:596/w:599/czM6Ly9kaXNjb2dz/LWRhdGFiYXNlLWlt/YWdlcy9SLTE4MTcx/MjItMTI1MzM1MTk5/My5qcGVn.jpeg",
         "title": "Trainspotting (Music From The Motion Picture)",
-        "year": 1996,
+        "year": 0,
         "formats": [
           {
             "name": "CD",
             "qty": "1",
             "descriptions": [
               "Compilation",
-              "Club Edition"
+              "Club Edition",
+              "Reissue"
             ]
           }
         ],
