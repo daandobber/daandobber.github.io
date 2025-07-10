@@ -24,9 +24,9 @@
       "minplaytime": 30,
       "maxplaytime": 30,
       "minage": 10,
-      "weight": 2.2249,
+      "weight": 2.225,
       "rating": null,
-      "average_rating": 8.08596,
+      "average_rating": 8.08577,
       "categories": [
         "Ancient",
         "Card Game",
@@ -80,7 +80,7 @@
       "minage": 12,
       "weight": 3.5,
       "rating": null,
-      "average_rating": 7.75057,
+      "average_rating": 7.75475,
       "categories": [
         "Animals",
         "Economic",
@@ -287,7 +287,7 @@
       "minage": 8,
       "weight": 1.8041,
       "rating": null,
-      "average_rating": 7.4665,
+      "average_rating": 7.46645,
       "categories": [
         "Abstract Strategy",
         "Ancient",
@@ -408,7 +408,7 @@
       "minage": 12,
       "weight": 2.3978,
       "rating": null,
-      "average_rating": 7.01567,
+      "average_rating": 7.01572,
       "categories": [
         "Adventure",
         "Exploration",
@@ -455,7 +455,7 @@
       "minage": 12,
       "weight": 1.667,
       "rating": null,
-      "average_rating": 7.07201,
+      "average_rating": 7.07202,
       "categories": [
         "Card Game",
         "Farming",
@@ -497,7 +497,7 @@
       "minage": 7,
       "weight": 1.8878,
       "rating": null,
-      "average_rating": 7.41247,
+      "average_rating": 7.41253,
       "categories": [
         "Medieval",
         "Territory Building"
@@ -543,7 +543,7 @@
       "minage": 7,
       "weight": 1.9552,
       "rating": null,
-      "average_rating": 8.06263,
+      "average_rating": 8.06274,
       "categories": [
         "City Building",
         "Medieval",
@@ -621,7 +621,7 @@
       "minage": 7,
       "weight": 1.8415,
       "rating": null,
-      "average_rating": 8.02851,
+      "average_rating": 8.02817,
       "categories": [
         "City Building",
         "Medieval",
@@ -1163,7 +1163,7 @@
       "minage": 8,
       "weight": 1.9266,
       "rating": null,
-      "average_rating": 7.64111,
+      "average_rating": 7.64115,
       "categories": [
         "Expansion for Base-game",
         "City Building",
@@ -1242,7 +1242,7 @@
       "minage": 13,
       "weight": 2.0579,
       "rating": null,
-      "average_rating": 7.61982,
+      "average_rating": 7.61995,
       "categories": [
         "Expansion for Base-game",
         "City Building",
@@ -1366,7 +1366,7 @@
       "minage": 8,
       "weight": 2.019,
       "rating": null,
-      "average_rating": 7.14688,
+      "average_rating": 7.14667,
       "categories": [
         "Expansion for Base-game",
         "City Building",
@@ -1525,7 +1525,7 @@
       "minage": 8,
       "weight": 1.922,
       "rating": null,
-      "average_rating": 7.13621,
+      "average_rating": 7.13606,
       "categories": [
         "Prehistoric",
         "Territory Building"
@@ -1838,7 +1838,7 @@
       "minage": 8,
       "weight": 1.9837,
       "rating": null,
-      "average_rating": 7.10546,
+      "average_rating": 7.10545,
       "categories": [
         "City Building",
         "Medieval"
@@ -2182,7 +2182,7 @@
       "minage": 10,
       "weight": 2.2867,
       "rating": null,
-      "average_rating": 7.09223,
+      "average_rating": 7.09219,
       "categories": [
         "Economic",
         "Negotiation"
@@ -2232,7 +2232,7 @@
       "minage": 8,
       "weight": 1.0998,
       "rating": null,
-      "average_rating": 6.80367,
+      "average_rating": 6.80334,
       "categories": [
         "Bluffing",
         "Card Game",
@@ -2272,7 +2272,7 @@
       "minage": 10,
       "weight": 2.0375,
       "rating": null,
-      "average_rating": 8.0902,
+      "average_rating": 8.09001,
       "categories": [
         "Adventure",
         "Card Game",
@@ -2316,7 +2316,7 @@
       "minage": 10,
       "weight": 1.9572,
       "rating": null,
-      "average_rating": 7.77459,
+      "average_rating": 7.77466,
       "categories": [
         "Card Game",
         "Science Fiction",
@@ -2358,7 +2358,7 @@
       "minage": 12,
       "weight": 1.8319,
       "rating": null,
-      "average_rating": 7.76669,
+      "average_rating": 7.76701,
       "categories": [
         "Deduction",
         "Party Game",
@@ -2400,7 +2400,7 @@
       "minage": 13,
       "weight": 3.5,
       "rating": null,
-      "average_rating": 8.71516,
+      "average_rating": 8.7147,
       "categories": [
         "Movies / TV / Radio theme",
         "Novel-based",
@@ -2451,7 +2451,7 @@
       "minage": 14,
       "weight": 1.8055,
       "rating": null,
-      "average_rating": 7.50821,
+      "average_rating": 7.50829,
       "categories": [
         "Card Game",
         "Fantasy"
@@ -2492,7 +2492,7 @@
       "minage": 8,
       "weight": 1.389,
       "rating": null,
-      "average_rating": 5.67713,
+      "average_rating": 5.67715,
       "categories": [
         "Card Game"
       ],
@@ -2529,7 +2529,7 @@
       "minage": 10,
       "weight": 1.2514,
       "rating": null,
-      "average_rating": 7.26158,
+      "average_rating": 7.26166,
       "categories": [
         "Card Game",
         "Economic"
@@ -2570,7 +2570,7 @@
       "minage": 12,
       "weight": 3.6974,
       "rating": null,
-      "average_rating": 8.16673,
+      "average_rating": 8.16687,
       "categories": [
         "American West",
         "Animals",
@@ -2613,7 +2613,7 @@
       "minage": 10,
       "weight": 2.1914,
       "rating": null,
-      "average_rating": 8.01902,
+      "average_rating": 8.01924,
       "categories": [
         "Racing",
         "Sports"
@@ -2660,7 +2660,7 @@
       "minage": 14,
       "weight": 3.4467,
       "rating": null,
-      "average_rating": 7.85892,
+      "average_rating": 7.85952,
       "categories": [
         "Adventure",
         "Exploration",
@@ -2717,7 +2717,7 @@
       "minage": 9,
       "weight": 2.2312,
       "rating": null,
-      "average_rating": 7.69333,
+      "average_rating": 7.69315,
       "categories": [
         "Abstract Strategy",
         "Animals"
@@ -2761,7 +2761,7 @@
       "minage": 13,
       "weight": 2.0594,
       "rating": null,
-      "average_rating": 6.78646,
+      "average_rating": 6.78632,
       "categories": [
         "Card Game",
         "Dice"
@@ -2889,7 +2889,7 @@
       "minage": 12,
       "weight": 2.1532,
       "rating": null,
-      "average_rating": 7.07199,
+      "average_rating": 7.07182,
       "categories": [
         "Animals",
         "Fighting",
@@ -2980,7 +2980,7 @@
       "minage": 8,
       "weight": 1.2311,
       "rating": null,
-      "average_rating": 7.29616,
+      "average_rating": 7.2961,
       "categories": [
         "Abstract Strategy",
         "Medieval",
@@ -3065,7 +3065,7 @@
       "minage": 10,
       "weight": 1.9405,
       "rating": null,
-      "average_rating": 7.80897,
+      "average_rating": 7.80912,
       "categories": [
         "Fantasy",
         "Medieval"
@@ -3113,7 +3113,7 @@
       "minage": 12,
       "weight": 2.5319,
       "rating": null,
-      "average_rating": 6.73499,
+      "average_rating": 6.73526,
       "categories": [
         "Adventure",
         "Fantasy",
@@ -3156,7 +3156,7 @@
       "minage": 10,
       "weight": 1.4752,
       "rating": null,
-      "average_rating": 7.252,
+      "average_rating": 7.25205,
       "categories": [
         "Card Game",
         "Exploration",
@@ -3199,7 +3199,7 @@
       "minage": 10,
       "weight": 1.1152,
       "rating": null,
-      "average_rating": 7.51151,
+      "average_rating": 7.51116,
       "categories": [
         "Card Game",
         "Deduction",
@@ -3241,7 +3241,7 @@
       "minage": 8,
       "weight": 1.0775,
       "rating": null,
-      "average_rating": 6.7367,
+      "average_rating": 6.73661,
       "categories": [
         "Card Game",
         "Number"
@@ -3280,7 +3280,7 @@
       "minage": 8,
       "weight": 1.3421,
       "rating": null,
-      "average_rating": 6.8951,
+      "average_rating": 6.89282,
       "categories": [
         "Card Game",
         "Deduction",
@@ -3320,7 +3320,7 @@
       "minage": 8,
       "weight": 2.1132,
       "rating": null,
-      "average_rating": 7.30456,
+      "average_rating": 7.30501,
       "categories": [
         "Medieval"
       ],
@@ -3357,7 +3357,7 @@
       "minage": 8,
       "weight": 1.7143,
       "rating": null,
-      "average_rating": 7.18785,
+      "average_rating": 7.18615,
       "categories": [
         "Animals",
         "Dice",
@@ -3398,7 +3398,7 @@
       "minage": 10,
       "weight": 2.3714,
       "rating": null,
-      "average_rating": 7.0327,
+      "average_rating": 7.03326,
       "categories": [
         "Bluffing",
         "Card Game",
@@ -3440,7 +3440,7 @@
       "minage": 8,
       "weight": 1.3762,
       "rating": null,
-      "average_rating": 7.04058,
+      "average_rating": 7.04031,
       "categories": [
         "Bluffing",
         "Card Game",
@@ -3485,7 +3485,7 @@
       "minage": 10,
       "weight": 1.5966,
       "rating": null,
-      "average_rating": 7.04024,
+      "average_rating": 7.04014,
       "categories": [
         "Card Game",
         "Exploration",
@@ -3528,7 +3528,7 @@
       "minage": 10,
       "weight": 2.6466,
       "rating": null,
-      "average_rating": 7.67108,
+      "average_rating": 7.6713,
       "categories": [
         "Card Game",
         "Exploration",
@@ -3572,7 +3572,7 @@
       "minage": 8,
       "weight": 2.3969,
       "rating": null,
-      "average_rating": 7.52358,
+      "average_rating": 7.5235,
       "categories": [
         "Medical",
         "Travel"
@@ -3622,7 +3622,7 @@
       "minage": 8,
       "weight": 1.2048,
       "rating": null,
-      "average_rating": 7.08221,
+      "average_rating": 7.08461,
       "categories": [
         "Animals",
         "Card Game",
@@ -3741,7 +3741,7 @@
       "minage": 6,
       "weight": 1.584,
       "rating": null,
-      "average_rating": 6.77488,
+      "average_rating": 6.77482,
       "categories": [
         "Abstract Strategy"
       ],
@@ -3817,7 +3817,7 @@
       "minage": 14,
       "weight": 2.2635,
       "rating": null,
-      "average_rating": 7.77953,
+      "average_rating": 7.77965,
       "categories": [
         "Card Game",
         "Fighting",
@@ -3860,7 +3860,7 @@
       "minage": 8,
       "weight": 1.4492,
       "rating": null,
-      "average_rating": 7.15907,
+      "average_rating": 7.15919,
       "categories": [
         "Dice",
         "Trains"
@@ -3904,7 +3904,7 @@
       "minage": 10,
       "weight": 2.5111,
       "rating": null,
-      "average_rating": 6.90227,
+      "average_rating": 6.90051,
       "categories": [
         "Farming",
         "Industry / Manufacturing",
@@ -3943,7 +3943,7 @@
       "minage": 13,
       "weight": 1.7392,
       "rating": null,
-      "average_rating": 7.50143,
+      "average_rating": 7.5014,
       "categories": [
         "Bluffing",
         "Card Game",
@@ -3993,7 +3993,7 @@
       "minage": 8,
       "weight": 1.6818,
       "rating": null,
-      "average_rating": 7.36577,
+      "average_rating": 7.36567,
       "categories": [
         "Card Game"
       ],
@@ -4032,7 +4032,7 @@
       "minage": 10,
       "weight": 1.9444,
       "rating": null,
-      "average_rating": 6.50723,
+      "average_rating": 6.50731,
       "categories": [
         "Deduction",
         "Travel"
@@ -4072,7 +4072,7 @@
       "minage": 8,
       "weight": 1.477,
       "rating": null,
-      "average_rating": 7.48949,
+      "average_rating": 7.48984,
       "categories": [
         "Animals",
         "Card Game"
@@ -4114,7 +4114,7 @@
       "minage": 8,
       "weight": 1.3721,
       "rating": null,
-      "average_rating": 7.78244,
+      "average_rating": 7.78255,
       "categories": [
         "Expansion for Base-game"
       ],
@@ -4191,7 +4191,7 @@
       "minage": 10,
       "weight": 1.1128,
       "rating": null,
-      "average_rating": 7.18165,
+      "average_rating": 7.1818,
       "categories": [
         "Bluffing",
         "Card Game",
@@ -4233,7 +4233,7 @@
       "minage": 14,
       "weight": 2.2714,
       "rating": null,
-      "average_rating": 7.7332,
+      "average_rating": 7.73356,
       "categories": [
         "Territory Building"
       ],
@@ -4275,7 +4275,7 @@
       "minage": 10,
       "weight": 2.0029,
       "rating": null,
-      "average_rating": 7.8973,
+      "average_rating": 7.89737,
       "categories": [
         "Card Game",
         "Economic",
@@ -4316,7 +4316,7 @@
       "minage": 12,
       "weight": 2.0,
       "rating": null,
-      "average_rating": 7.8644,
+      "average_rating": 7.85799,
       "categories": [
         "Card Game",
         "Fighting",
@@ -4359,7 +4359,7 @@
       "minage": 12,
       "weight": 1.8954,
       "rating": null,
-      "average_rating": 7.79137,
+      "average_rating": 7.79119,
       "categories": [
         "Card Game",
         "Fighting",
@@ -4629,7 +4629,7 @@
       "minage": 12,
       "weight": 1.9623,
       "rating": null,
-      "average_rating": 7.70146,
+      "average_rating": 7.70159,
       "categories": [
         "Expansion for Base-game",
         "Card Game",
@@ -4711,7 +4711,7 @@
       "minage": 12,
       "weight": 1.9796,
       "rating": null,
-      "average_rating": 7.6975,
+      "average_rating": 7.69764,
       "categories": [
         "Expansion for Base-game",
         "Card Game",
@@ -4921,7 +4921,7 @@
       "minage": 12,
       "weight": 1.9091,
       "rating": null,
-      "average_rating": 7.80284,
+      "average_rating": 7.80157,
       "categories": [
         "Expansion for Base-game",
         "Card Game",
@@ -5249,7 +5249,7 @@
       "minage": 12,
       "weight": 2.9597,
       "rating": null,
-      "average_rating": 7.43837,
+      "average_rating": 7.43835,
       "categories": [
         "Civilization",
         "Territory Building"
@@ -5394,7 +5394,7 @@
       "minage": 12,
       "weight": 3.2662,
       "rating": null,
-      "average_rating": 8.34836,
+      "average_rating": 8.34832,
       "categories": [
         "Civilization",
         "Economic",
@@ -5448,7 +5448,7 @@
       "minage": 6,
       "weight": 1.1028,
       "rating": null,
-      "average_rating": 5.46839,
+      "average_rating": 5.46854,
       "categories": [
         "Card Game",
         "Children's Game",
@@ -5568,9 +5568,9 @@
       "minplaytime": 40,
       "maxplaytime": 70,
       "minage": 10,
-      "weight": 2.4716,
+      "weight": 2.4718,
       "rating": null,
-      "average_rating": 8.01652,
+      "average_rating": 8.01633,
       "categories": [
         "Animals",
         "Card Game",
@@ -5616,7 +5616,7 @@
       "minage": 10,
       "weight": 2.4245,
       "rating": null,
-      "average_rating": 8.33313,
+      "average_rating": 8.33328,
       "categories": [
         "Expansion for Base-game",
         "Animals",
